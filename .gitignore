@@ -1,12 +1,59 @@
+# Secrets and local environment
 .env
-.venv/
+.env.*
+!.env.example
+
+# Working memory for agents; never committed
+scratchpads/
+
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+.hypothesis/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Node and frontend
 node_modules/
 web/dist/
+web/.vite/
+*.tsbuildinfo
+npm-debug.log*
+pnpm-debug.log*
+
+# Databases and container data
 data/
 *.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Logs and temporary files
+*.log
+tmp/
+*.tmp
+
+# Editors and operating systems
 .DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+
+# Agent tooling state
+.claude/settings.local.json
+.serena/
+.code-review-graph/

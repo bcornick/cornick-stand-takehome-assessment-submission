@@ -92,9 +92,9 @@ Seed-42 leads, read from the stored queue. Expected first-pass results are fixed
 | 000 | Pier foundation supporting living area; primary home unoccupied 8 months; no address | Proposed decline for the underwriter. No producer request. |
 | 001 | No street address; several lookups blocked on it | Routine request including the address |
 | 002 | KYC 8 | Request for missing fields; liability exclusion carried to the quote |
-| 003 | Fire probability 0.79; wood shake siding; primary home unoccupied 3 months | One underwriter card (failed fire simulation). A sensitive request with the registry asks and the occupancy confirmation waits for review. Mitigation questions are held until the choice is made. |
-| 004 | Zero residents on an owner-occupied home; animals | Sensitive request with a confirmation question |
-| 005 | KYC 6; zero residents; pool type missing | Sensitive request with a confirmation and follow-on pool questions |
+| 003 | Fire probability 0.79; wood shake siding; primary home unoccupied 3 months | One underwriter card (failed fire simulation). A routine request with the registry asks and the occupancy confirmation sends automatically. Mitigation questions are held until the choice is made. |
+| 004 | Zero residents on an owner-occupied home; animals | Routine request with a confirmation question |
+| 005 | KYC 6; zero residents; pool type missing | Routine request with a confirmation and follow-on pool questions |
 | 006 | Fire probability 0.89; wood shake siding; roof material missing | One underwriter card (failed fire simulation). A routine request with the registry asks, including roof material, sends automatically. |
 | 007 | KYC 9 | Request for missing fields; liability exclusion carried to the quote |
 | 008 | Two missing fields | Routine request. With the full-reply fixture, this lead reaches an approved quote packet: the demo case. |
@@ -511,10 +511,12 @@ These rulings are this submission's reading, not Stand's. Brett reviews every ro
 
 | Class | Recipient | Built from |
 |---|---|---|
-| Routine request | producer or applicant | field requests and follow-on questions only |
-| Sensitive request | producer or applicant | any confirmation of a conflicting value, document request or catalogue question about mitigation |
+| Routine request | producer or applicant | field requests, follow-on questions and code-rendered confirmations of a conflicting value |
+| Sensitive request | producer or applicant | any document request or catalogue question, or any draft a person has edited |
 | Quote packet | producer or applicant | the action plan |
 | Decline notice | producer or applicant | a fixed template, sent after the underwriter approves the decline |
+
+A confirmation is rendered from a fixed neutral template and states no consequence, so it carries no more risk than a field request. The class a confirmation-only request takes is one registration value (`confirmation_only_class`, set to `routine`), so an underwriter who wants to see confirmations first changes one value.
 
 One open message per lead. A second request is allowed only after a reply. After two rounds the lead goes to the underwriter.
 
@@ -685,7 +687,6 @@ One experiment answers "where is the agent?" with a measurement: the ten seed-42
 2. Jev's access and live output shape are unverified until a key exists.
 3. Interpretation rows are our reading. Rows marked U interrupt the underwriter on every matching lead until a ruling turns them into A rows.
 4. The generator draws six states; Stand writes in two. No eligibility rule by state is invented.
-5. Whether a code-rendered, neutrally worded confirmation question sends automatically is Brett's decision (critique C13). Section 10.1 classes it sensitive.
 
 ## 16. Resolved issues
 
@@ -705,7 +706,7 @@ Dispositions of `docs/critique.md` findings.
 | C10 validators fitted to the generator | Accepted. Sources stated; occupancy threshold agrees with I06; roof-before-build and two validators the generator does not inject are added. | 9.5 |
 | C11 path exploration | Accepted. Three-valued evaluation. | 9.6 |
 | C12 skill status | Accepted. | 8, A.4 |
-| C13 over-escalation | Partly accepted: one card per lead and a headline escalation rate. Whether confirmations send automatically is open issue 5. | 11, 13.3, 15 |
+| C13 over-escalation | Accepted. Code-rendered confirmations are routine; one card per lead; a headline escalation rate. Three seed-42 leads need the underwriter on the first pass (000, 003, 006). | 10.1, 11, 13.3 |
 | C14 eval topology | Accepted. | 13.1, 14 |
 | C15 packaging | Accepted. | 14 |
 | C16 reply confirming a conflict | Accepted. | 7.3 rule 6 |

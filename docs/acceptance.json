@@ -513,7 +513,7 @@
   {
     "id": "S08-A14",
     "stage": 8,
-    "description": "Tier 1. The seed-42 run row reports the escalation rate with a reason per lead. Expect: exit 0. The rate meets the target of at most 4 of 10 only if confirmations send automatically (the pending decision).",
+    "description": "Tier 1. The seed-42 run row reports the escalation rate with a reason per lead. Expect: exit 0. The rate is 3 of 10 (leads 000, 003, 006), within the target of at most 4.",
     "command": "docker compose --profile eval run --rm eval --suite seed42; tail -1 evals/results.jsonl | jq -e '.scores.escalation | has(\"rate\") and has(\"reasons\")'",
     "passes": false
   },

@@ -1,6 +1,6 @@
 # Development plan: underwriting triage harness
 
-This plan implements `docs/architecture.md`, cited as §n and A.n for its appendix. It adds no scope. Each stage is executable from this plan and the architecture. `AGENTS.md` holds the working rules; `.agents/skills/stage/SKILL.md` is the procedure for running one stage. One decision is pending with Brett; it is listed under "Questions for the architecture" at the end.
+This plan implements `docs/architecture.md`, cited as §n and A.n for its appendix. It adds no scope. Each stage is executable from this plan and the architecture. `AGENTS.md` holds the working rules; `.agents/skills/stage/SKILL.md` is the procedure for running one stage.
 
 ## Stage dependencies
 
@@ -320,7 +320,7 @@ Expect: exit 0, no warnings or errors.
 3. **interpretation.yaml, catalogue.yaml, wording.yaml** (tier 0). Test: `tests/rules/test_rules_data.py` asserts rows I01 to I56, each with id, source page, ruling, kind and rationale, and each kind equal to §9.7; `catalogue.yaml` holds exactly the A.7 ids with wording, answer type and row; `wording.yaml` holds a question for every producer-editable registry field and a neutral confirmation template for every §9.5 validator, keyed by a validator id that stage 6 uses -> red. Build: the three files under `src/uwh/rules/data/` -> green.
 4. **Human gate: interpretation rows** (tier 0). Brett reviews every row, the §9.7 lenient rows first, and adds `reviewed_by: Brett` to each row he accepts -> S03-A4.
 5. **Cases for the tier-0 pages** (tier 0). Test: `tests/evals/test_case_coverage.py` parses the Mermaid in `docs/playbook/02-*`, `03-*`, `04-*`, `05-*`, `06-*`, `07-*` and `12-*` `flowchart.md`, lists every terminal box and each edge into it, and asserts one case per incoming edge in `src/uwh/skills/evaluate_playbook/cases/<page>/`, each naming its expected path as the ordered `board_node` list from the page root to the outcome (§13.2; for example ending `07:LIVING`, `07:D1`), plus one case per §9.7 boundary on those pages, listed in `evals/labels/boundaries.yaml` with its row. Cases validate against `evals/labels/schema.py` -> red. Build: the cases, including the I12 hand cases at `p_f` 0.21 and 0.54, the I07 two-month choice, the I52 case for a 2001 asphalt roof at `p_f` 0.6, and the §9.6 Post & Pier acceptance case. `src/uwh/skills/triage_fields/cases/` covers the §9.2 table and the null-versus-present rule -> green.
-6. **Seed-42 labels** (tier 0). Test: `tests/evals/test_labels.py` asserts ten files `evals/labels/seed-42/LEAD-00000042-00N.yaml` that validate against the label schema: expected status, open blocker kinds, primary next action, message class, expected asks (kind and field or catalogue id), the expected `board_node` path for each decline and requirement, the reason the lead needs the underwriter where it does, `underwriter_actions` (the scripted underwriter the eval plays), and `signed_by`. Whether a lead needs the underwriter (the Escalation positive class) is derived from its expected blockers and message class, so the pending confirmation decision (§15 item 5) touches one label field per affected lead: `message_class` -> red. Build: the ten labels -> green.
+6. **Seed-42 labels** (tier 0). Test: `tests/evals/test_labels.py` asserts ten files `evals/labels/seed-42/LEAD-00000042-00N.yaml` that validate against the label schema: expected status, open blocker kinds, primary next action, message class, expected asks (kind and field or catalogue id), the expected `board_node` path for each decline and requirement, the reason the lead needs the underwriter where it does, `underwriter_actions` (the scripted underwriter the eval plays), and `signed_by`. Whether a lead needs the underwriter (the Escalation positive class) is derived from its expected blockers and message class, and a request whose only non-field asks are confirmations has `message_class: routine` (§10.1) -> red. Build: the ten labels -> green.
 7. **Reply fixtures** (tier 0). Test: `tests/evals/test_reply_fixtures.py` asserts four fixtures (full for lead 008; partial, contradicting and instruction-bearing on leads the author names), each with expected facts and spans, classification and lead state, every span occurring verbatim in its body; bodies sit in `fixtures/replies/` and expected results in `evals/labels/replies/` (§13.2) -> red. Build: the fixtures, with producer answers written by hand -> green.
 8. **Human gate: labels and case sample** (tier 0). Brett reads the ten labels and the boundary list, adds `signed_by: Brett` to each label he accepts, and checks a random sample of 20 per-outcome cases recorded by id in `evals/labels/case_sample.yaml`. The sample is drawn at the last stage-3 gate reached, over all cases present then -> S03-A6, S03-A7.
 9. **Labelling function** (tier 1). Test: `tests/evals/test_labelling.py` asserts, on hand-built leads, every §9.2 rule, the six fields of the §9.2 table, and the §9.3 defaults, including the combined knob-and-tube question below 1950 and the ask at 1950 or later (I51) -> red. Build: `evals/labelling.py`, the §13.2 function with its own condition handling; it imports no Python from `uwh.rules` -> green.
@@ -729,9 +729,9 @@ Expect: exit 0.
 
 **Depends on.** 7.
 
-**Architecture sections.** §10.1, §10.2, §10.3, §10.5, §7.4, §7.5, §8 (`plan_asks`, `render_message`, `build_quote_packet`), §13.3, §13.4, A.7, A.8, A.10, §15 item 5.
+**Architecture sections.** §10.1, §10.2, §10.3, §10.5, §7.4, §7.5, §8 (`plan_asks`, `render_message`, `build_quote_packet`), §13.3, §13.4, A.7, A.8, A.10.
 
-**Open issue 5 dependency.** Whether a code-rendered confirmation sends automatically is Brett's pending decision (§15 item 5; see the end of this plan). The build holds it in one place: the message class of a request whose only sensitive asks are confirmations is one value in the vertical registration, `confirmation_only_class` in `src/uwh/skills/vertical.py`, set to `sensitive` per §10.1. It is not a settings key, because A.11 fixes those. The labels hold the matching `message_class` field (stage 3). The decision is then one registration value and one label field per affected lead. The escalation target of at most 4 of 10 (§13.3) depends on it.
+**Confirmation class.** The message class of a request whose only non-field asks are confirmations is one value in the vertical registration, `confirmation_only_class` in `src/uwh/skills/vertical.py`, set to `routine` per §10.1. It is not a settings key, because A.11 fixes those. The labels hold the matching `message_class` field (stage 3).
 
 **Tasks.**
 
@@ -828,7 +828,7 @@ Expect: all pass.
 ```sh
 docker compose --profile eval run --rm eval --suite seed42; tail -1 evals/results.jsonl | jq -e '.scores.escalation | has("rate") and has("reasons")'
 ```
-Expect: exit 0. The rate meets the target of at most 4 of 10 only if confirmations send automatically (the pending decision).
+Expect: exit 0. The rate is 3 of 10 (leads 000, 003, 006), within the target of at most 4.
 
 **Implemented after this stage.** Tier 0: `plan_asks`, `render_message`, recipients by source, `build_quote_packet`, decline notice, dispatch, `confirmation_only_class`, two controls. Tier 1: four controls, stop on real requests, escalation headline.
 
@@ -1208,4 +1208,4 @@ Expect: exit 0.
 
 ## Questions for the architecture
 
-- **Pending decision (§15 item 5, §13.3): whether code-rendered confirmations send automatically.** Brett decides. §10.1 classes a request whose only sensitive asks are confirmations as sensitive, so it waits for review. The decision touches one registration value, `confirmation_only_class` in `src/uwh/skills/vertical.py` (stage 8), and one label field, `message_class`, on each affected seed-42 lead (stage 3; leads 003, 004 and 005 by §5). With confirmations sensitive, five seed-42 leads need the underwriter on the first pass (000, 003, 004, 005, 006), above the §13.3 target of at most 4 of 10; with them automatic, three do (000, 003, 006). Moderate confidence: this counts a draft awaiting review as needing the underwriter.
+None open.
