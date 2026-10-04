@@ -1,0 +1,772 @@
+[
+  {
+    "id": "S01-A1",
+    "stage": 1,
+    "description": "Tier 0. All three services start and report healthy. Expect: exactly three lines, `app healthy`, `leadgen healthy`, `mailbox healthy`.",
+    "command": "docker compose up -d --build --wait && docker compose ps --format '{{.Service}} {{.Health}}'",
+    "passes": false
+  },
+  {
+    "id": "S01-A2",
+    "stage": 1,
+    "description": "Tier 0. The bootstrap posts seed 42, reads ten leads and round-trips the probe. Expect: exit 0.",
+    "command": "docker compose exec -T app python -m uwh.runtime.bootstrap | jq -e '(.lead_ids | length) == 10 and .lead_ids[0] == \"LEAD-00000042-000\" and .lead_ids[9] == \"LEAD-00000042-009\" and .probe.metadata_round_trip == true'",
+    "passes": false
+  },
+  {
+    "id": "S01-A3",
+    "stage": 1,
+    "description": "Tier 0. The probe is in the real mailbox with its metadata, read independently of the bootstrap. Expect: exit 0.",
+    "command": "id=$(curl -s \"http://localhost:8025/emails?limit=1\" | jq -r '.[0].id'); curl -s \"http://localhost:8025/emails/$id\" | jq -e '(.lead_id | startswith(\"BOOTSTRAP-\")) and .metadata.probe == true and (.metadata.run_id | type) == \"string\"'",
+    "passes": false
+  },
+  {
+    "id": "S01-A4",
+    "stage": 1,
+    "description": "Tier 0. The answer key is off by default and no application source names the debug path. Expect: `false`, then exit 0.",
+    "command": "docker compose config --format json | jq -r '.services.leadgen.environment.DEBUG' && test -d src/uwh && ! grep -rn '/debug' src/",
+    "passes": false
+  },
+  {
+    "id": "S01-A5",
+    "stage": 1,
+    "description": "Tier 0. Stand's code is unchanged since the root commit and clean in the working tree. Expect: exit 0.",
+    "command": "git diff --quiet \"$(git rev-list --max-parents=0 HEAD)\" HEAD -- sim-harness && test -z \"$(git status --porcelain -- sim-harness)\"",
+    "passes": false
+  },
+  {
+    "id": "S01-A6",
+    "stage": 1,
+    "description": "Tier 0. Every tracked text file has LF line endings. Expect: `0`.",
+    "command": "git ls-files --eol | awk '$1 != \"i/lf\" && $1 != \"i/-text\" && $1 != \"i/none\"' | wc -l",
+    "passes": false
+  },
+  {
+    "id": "S01-A7",
+    "stage": 1,
+    "description": "Tier 0. The check command is clean. Expect: exit 0, no warnings or errors in the output.",
+    "command": "make check",
+    "passes": false
+  },
+  {
+    "id": "S01-A8",
+    "stage": 1,
+    "description": "Tier 0. The client and bootstrap integration tests pass against the containers. Expect: all pass.",
+    "command": "uv run pytest -m integration tests/integration/test_harness_clients.py tests/integration/test_bootstrap.py",
+    "passes": false
+  },
+  {
+    "id": "S01-A9",
+    "stage": 1,
+    "description": "Tier 0. `.env.example` documents the six variables and the default model. Expect: `6`, then exit 0.",
+    "command": "grep -cE '^(ANTHROPIC_API_KEY|ANTHROPIC_MODEL|TYPESAFE_API_KEY|RUN_MODE|SEED|DEBUG)=' .env.example && grep -q '^ANTHROPIC_MODEL=claude-sonnet-5-5$' .env.example",
+    "passes": false
+  },
+  {
+    "id": "S01-A10",
+    "stage": 1,
+    "description": "Tier 0. The Anthropic SDK version is pinned and the SDK check is recorded. Expect: `1`, then a number of at least 1.",
+    "command": "grep -A1 '^name = \"anthropic\"$' uv.lock | grep -c '^version = ' && grep -c 'messages.parse' docs/progress.md",
+    "passes": false
+  },
+  {
+    "id": "S01-A11",
+    "stage": 1,
+    "description": "Tier 0. The app reports its mode and seed. Expect: exit 0.",
+    "command": "curl -s http://localhost:8000/api/run | jq -e '.mode == \"live\" and .seed == 42'",
+    "passes": false
+  },
+  {
+    "id": "S02-A1",
+    "stage": 2,
+    "description": "Tier 0. Contract tests pass. Expect: all pass.",
+    "command": "uv run pytest tests/skills/test_vertical.py tests/runtime/test_store.py tests/runtime/test_event_types.py tests/runtime/test_hashing.py tests/skills/test_digest.py tests/rules/test_models.py tests/providers/test_models.py tests/skills/test_contracts.py tests/api/test_routes.py tests/api/test_views.py",
+    "passes": false
+  },
+  {
+    "id": "S02-A2",
+    "stage": 2,
+    "description": "Tier 0. The committed OpenAPI file matches the app and holds the 14 A.5 paths. Expect: exit 0.",
+    "command": "uv run python tools/export_openapi.py --check && jq -e '(.paths | keys | length) == 14 and (.paths | has(\"/api/run/start\")) and (.paths | has(\"/api/replies/fixtures\"))' web/src/api/openapi.json",
+    "passes": false
+  },
+  {
+    "id": "S02-A3",
+    "stage": 2,
+    "description": "Tier 0. Generated TypeScript types match the committed copy. Expect: exit 0.",
+    "command": "pnpm --dir web run gen:types && git diff --exit-code -- web/src/api/",
+    "passes": false
+  },
+  {
+    "id": "S02-A4",
+    "stage": 2,
+    "description": "Tier 0. The stand-in API serves valid fixture data for every GET route and all ten leads. Expect: all pass.",
+    "command": "uv run pytest tests/tools/test_standin_api.py",
+    "passes": false
+  },
+  {
+    "id": "S02-A5",
+    "stage": 2,
+    "description": "Tier 0. Web unit tests pass. Expect: all pass.",
+    "command": "pnpm --dir web exec vitest run",
+    "passes": false
+  },
+  {
+    "id": "S02-A6",
+    "stage": 2,
+    "description": "Tier 0. The app container serves the built frontend. Expect: `1`.",
+    "command": "docker compose up -d --build --wait app && curl -s http://localhost:8000/ | grep -c 'id=\"root\"'",
+    "passes": false
+  },
+  {
+    "id": "S02-A7",
+    "stage": 2,
+    "description": "Tier 0. The check command, with its web step, is clean. Expect: exit 0, no warnings or errors.",
+    "command": "make check",
+    "passes": false
+  },
+  {
+    "id": "S03-A1",
+    "stage": 3,
+    "description": "Tier 0. The committed world fixture matches a fresh capture. Expect: exit 0.",
+    "command": "uv run python tools/capture_world.py --seed 42 --check",
+    "passes": false
+  },
+  {
+    "id": "S03-A2",
+    "stage": 3,
+    "description": "Tier 0. The captured leads equal the leadgen container's leads. Expect: all pass.",
+    "command": "uv run pytest -m integration tests/integration/test_world_matches_leadgen.py",
+    "passes": false
+  },
+  {
+    "id": "S03-A3",
+    "stage": 3,
+    "description": "Tier 0. Capture and rules-data tests pass. Expect: all pass.",
+    "command": "uv run pytest tests/tools/test_capture_world.py tests/rules/test_rules_data.py",
+    "passes": false
+  },
+  {
+    "id": "S03-A4",
+    "stage": 3,
+    "description": "Tier 0. Brett has reviewed all 56 interpretation rows. Expect: `56`.",
+    "command": "grep -c 'reviewed_by: Brett' src/uwh/rules/data/interpretation.yaml",
+    "passes": false
+  },
+  {
+    "id": "S03-A5",
+    "stage": 3,
+    "description": "Tier 0. Case coverage for the tier-0 pages, labels and reply fixtures pass. Expect: all pass.",
+    "command": "uv run pytest tests/evals/test_case_coverage.py tests/evals/test_labels.py tests/evals/test_reply_fixtures.py",
+    "passes": false
+  },
+  {
+    "id": "S03-A6",
+    "stage": 3,
+    "description": "Tier 0. Brett has signed all ten seed-42 labels. Expect: `10`.",
+    "command": "grep -l 'signed_by: Brett' evals/labels/seed-42/*.yaml | wc -l",
+    "passes": false
+  },
+  {
+    "id": "S03-A7",
+    "stage": 3,
+    "description": "Tier 0. Brett's sample of 20 per-outcome cases is recorded. Expect: `20`.",
+    "command": "uv run python -c \"import yaml; print(len(yaml.safe_load(open('evals/labels/case_sample.yaml'))['cases']))\"",
+    "passes": false
+  },
+  {
+    "id": "S03-A8",
+    "stage": 3,
+    "description": "Tier 0. Label code imports no rules Python. Expect: exit 0.",
+    "command": "test -d evals/labels && ! grep -rnE 'uwh\\.rules\\.(conditions|triage|validators|loader|interpreter|registry)' evals/ tests/evals/",
+    "passes": false
+  },
+  {
+    "id": "S03-A9",
+    "stage": 3,
+    "description": "Tier 0. Three held-back replies exist outside the shipped fixture folder. Expect: exit 0.",
+    "command": "test \"$(ls evals/labels/replies-held-back/*.yaml | wc -l)\" -eq 3",
+    "passes": false
+  },
+  {
+    "id": "S03-A10",
+    "stage": 3,
+    "description": "Tier 1. The labelling function, tier-1 page cases and packet cases pass. Expect: all pass.",
+    "command": "uv run pytest tests/evals/test_labelling.py tests/evals/test_case_coverage.py tests/evals/test_packet_cases.py",
+    "passes": false
+  },
+  {
+    "id": "S04-A1",
+    "stage": 4,
+    "description": "Tier 0. Runtime, skill-registry and API tests pass. Expect: all pass.",
+    "command": "uv run pytest tests/runtime tests/skills tests/api",
+    "passes": false
+  },
+  {
+    "id": "S04-A2",
+    "stage": 4,
+    "description": "Tier 0. Faults and startup reconcile against the mailbox container leave exactly one message per intent. Expect: all pass.",
+    "command": "uv run pytest -m integration tests/integration/test_send_faults.py",
+    "passes": false
+  },
+  {
+    "id": "S04-A3",
+    "stage": 4,
+    "description": "Tier 0. A waited run start ingests ten leads and reports the first pass complete. Expect: `true`, then `10`, then `10`.",
+    "command": "curl -s -X POST 'http://localhost:8000/api/run/start?wait=true' >/dev/null && curl -s http://localhost:8000/api/run | jq -e '.first_pass_complete == true' && echo \"SELECT count(*) FROM leads; SELECT count(*) FROM events WHERE type = 'lead_received';\" | docker compose exec -T app sh -c 'sqlite3 \"$UWH_DB\"'",
+    "passes": false
+  },
+  {
+    "id": "S04-A4",
+    "stage": 4,
+    "description": "Tier 0. A run start resets the interactive mailbox, so no bootstrap probe remains. Expect: exit 0.",
+    "command": "curl -s \"http://localhost:8025/emails?limit=1000\" | jq -e 'map(select(.lead_id | startswith(\"BOOTSTRAP-\"))) | length == 0'",
+    "passes": false
+  },
+  {
+    "id": "S04-A5",
+    "stage": 4,
+    "description": "Tier 0. Every event carries actor, run id, mode, ruleset hash and both timestamps. Expect: `1|0`.",
+    "command": "echo \"SELECT count(*) > 0, sum(actor IS NULL OR run_id IS NULL OR mode IS NULL OR ruleset_hash IS NULL OR real_ts IS NULL OR sim_ts IS NULL) FROM events;\" | docker compose exec -T app sh -c 'sqlite3 \"$UWH_DB\"'",
+    "passes": false
+  },
+  {
+    "id": "S04-A6",
+    "stage": 4,
+    "description": "Tier 0. The live event table is append-only. Expect: the first command prints the append-only trigger's error; the second prints `1`.",
+    "command": "echo \"DELETE FROM events;\" | docker compose exec -T app sh -c 'sqlite3 \"$UWH_DB\"'; echo \"SELECT count(*) > 0 FROM events;\" | docker compose exec -T app sh -c 'sqlite3 \"$UWH_DB\"'",
+    "passes": false
+  },
+  {
+    "id": "S04-A7",
+    "stage": 4,
+    "description": "Tier 0. The runtime holds no vertical vocabulary. Expect: passes.",
+    "command": "uv run pytest tests/runtime/test_vocabulary.py",
+    "passes": false
+  },
+  {
+    "id": "S04-A8",
+    "stage": 4,
+    "description": "Tier 1. A locked class cannot be set to `auto` on the running app. Expect: `\"review\"` (an absent key reads as the \u00a77.4 default), then `1`.",
+    "command": "curl -s -X POST http://localhost:8000/api/commands -H 'content-type: application/json' -d '{\"type\":\"change_setting\",\"payload\":{\"key\":\"autonomy.send_quote_packet\",\"value\":\"auto\"}}' >/dev/null; echo \"SELECT coalesce((SELECT value_json FROM settings WHERE key = 'autonomy.send_quote_packet'), '\\\"review\\\"'); SELECT count(*) > 0 FROM events WHERE type = 'command_refused';\" | docker compose exec -T app sh -c 'sqlite3 \"$UWH_DB\"'",
+    "passes": false
+  },
+  {
+    "id": "S04-A9",
+    "stage": 4,
+    "description": "Tier 1. The emergency stop engages and releases through commands on the running app. Expect: `true`, then `false`.",
+    "command": "curl -s -X POST http://localhost:8000/api/commands -H 'content-type: application/json' -d '{\"type\":\"emergency_stop\",\"payload\":{\"engaged\":true}}' >/dev/null; echo \"SELECT value_json FROM settings WHERE key = 'emergency_stop';\" | docker compose exec -T app sh -c 'sqlite3 \"$UWH_DB\"'; curl -s -X POST http://localhost:8000/api/commands -H 'content-type: application/json' -d '{\"type\":\"emergency_stop\",\"payload\":{\"engaged\":false}}' >/dev/null; echo \"SELECT value_json FROM settings WHERE key = 'emergency_stop';\" | docker compose exec -T app sh -c 'sqlite3 \"$UWH_DB\"'",
+    "passes": false
+  },
+  {
+    "id": "S04-A10",
+    "stage": 4,
+    "description": "Tier 1. Replay fails closed on a missing recording, and a second vertical runs with no runtime change. Expect: all pass.",
+    "command": "uv run pytest tests/runtime/test_modes.py tests/runtime/test_second_vertical.py",
+    "passes": false
+  },
+  {
+    "id": "S05-A1",
+    "stage": 5,
+    "description": "Tier 0. One eval run appends one complete `run` row. Expect: exit 0.",
+    "command": "before=$(wc -l < evals/results.jsonl); docker compose --profile eval run --rm eval --suite seed42; test $(( $(wc -l < evals/results.jsonl) - before )) -eq 1 && tail -1 evals/results.jsonl | jq -e '.type == \"run\" and (([\"run_id\",\"commit\",\"evaluator_hash\",\"case_set_id\",\"skill_digests\",\"status\",\"scores\",\"critical_errors\",\"injected_faults\",\"tokens\",\"cost_usd\",\"hypothesis\"] - keys) == [])'",
+    "passes": false
+  },
+  {
+    "id": "S05-A2",
+    "stage": 5,
+    "description": "Tier 0. A broken environment yields `invalid`, exit code 2 and no scores. Expect: exit 0.",
+    "command": "docker compose --profile eval run --rm eval --suite seed42 --mailbox-url http://mailbox-eval:9; test $? -eq 2 && tail -1 evals/results.jsonl | jq -e '.status == \"invalid\" and .scores == null'",
+    "passes": false
+  },
+  {
+    "id": "S05-A3",
+    "stage": 5,
+    "description": "Tier 0. The do-nothing variant is caught by Coverage. Expect: exit 0.",
+    "command": "docker compose --profile eval run --rm eval --control do_nothing && tail -1 evals/results.jsonl | jq -e '.control == \"do_nothing\" and .scores.coverage.passed == false'",
+    "passes": false
+  },
+  {
+    "id": "S05-A4",
+    "stage": 5,
+    "description": "Tier 0. All eight controls are registered and unfilled ones report `not_ready`. Expect: exit 0.",
+    "command": "docker compose --profile eval run --rm eval --controls all; tail -1 evals/results.jsonl | jq -e '(.controls | length) == 8 and .controls.do_nothing.caught == true and ([.controls[] | select(.state == \"not_ready\")] | length) == 7'",
+    "passes": false
+  },
+  {
+    "id": "S05-A5",
+    "stage": 5,
+    "description": "Tier 0. Runner, results, decision, grader and control tests pass. Expect: all pass.",
+    "command": "uv run pytest tests/evals tests/packaging/test_compose.py",
+    "passes": false
+  },
+  {
+    "id": "S05-A6",
+    "stage": 5,
+    "description": "Tier 0. The app container holds no labels and reads the results log through a read-only mount. Expect: exit 0.",
+    "command": "docker compose up -d --wait app && docker compose exec -T app sh -c 'test ! -e /app/evals/labels && test -r /app/evals/results.jsonl && ! touch /app/evals/results.jsonl 2>/dev/null'",
+    "passes": false
+  },
+  {
+    "id": "S05-A7",
+    "stage": 5,
+    "description": "Tier 0. On seed 42 Key isolation passes: no debug path in `src/` and no debug request seen by the transport recorder. Expect: exit 0.",
+    "command": "docker compose --profile eval run --rm eval --suite seed42; tail -1 evals/results.jsonl | jq -e '.scores.key_isolation.passed == true'",
+    "passes": false
+  },
+  {
+    "id": "S05-A8",
+    "stage": 5,
+    "description": "Tier 1. Stand's key leaves a zero residual across seeds 1 to 50. Expect: exit 0; counts per allowed disagreement class; residual `0`.",
+    "command": "uv run python -m evals.sweep --seeds 1-50 --grader stands_key",
+    "passes": false
+  },
+  {
+    "id": "S05-A9",
+    "stage": 5,
+    "description": "Tier 1. Skill status, dispatch, release check and the harness claim pass. Expect: all pass.",
+    "command": "uv run pytest tests/skills/test_status.py",
+    "passes": false
+  },
+  {
+    "id": "S06-A1",
+    "stage": 6,
+    "description": "Tier 0. Rules and skill tests pass. Expect: all pass.",
+    "command": "uv run pytest tests/rules tests/skills",
+    "passes": false
+  },
+  {
+    "id": "S06-A2",
+    "stage": 6,
+    "description": "Tier 0. The \u00a79.6 Post & Pier acceptance case passes. Expect: one test selected and passing.",
+    "command": "uv run pytest tests/rules/test_interpreter.py -k post_and_pier_deck_over_12_declines_on_every_branch",
+    "passes": false
+  },
+  {
+    "id": "S06-A3",
+    "stage": 6,
+    "description": "Tier 0. Every per-outcome and boundary case present passes. Expect: exit 0.",
+    "command": "docker compose --profile eval run --rm eval --suite cases",
+    "passes": false
+  },
+  {
+    "id": "S06-A4",
+    "stage": 6,
+    "description": "Tier 0. After a run, every seed-42 lead has a built plan. Expect: `10`.",
+    "command": "curl -s -X POST 'http://localhost:8000/api/run/start?wait=true' >/dev/null && echo \"SELECT count(DISTINCT lead_id) FROM events WHERE type = 'plan_built';\" | docker compose exec -T app sh -c 'sqlite3 \"$UWH_DB\"'",
+    "passes": false
+  },
+  {
+    "id": "S06-A5",
+    "stage": 6,
+    "description": "Tier 0. No lead holds more than one open underwriter card. Expect: `1`.",
+    "command": "echo \"SELECT coalesce(max(c), 0) <= 1 FROM (SELECT count(*) AS c FROM blockers WHERE kind = 'underwriter_question' AND closed_event_id IS NULL GROUP BY lead_id);\" | docker compose exec -T app sh -c 'sqlite3 \"$UWH_DB\"'",
+    "passes": false
+  },
+  {
+    "id": "S06-A6",
+    "stage": 6,
+    "description": "Tier 1. All twelve graphs load, no page is listed as not encoded, and every case passes. Expect: exit 0.",
+    "command": "test \"$(ls src/uwh/rules/data/graphs/*.yaml | grep -vc _not_encoded)\" -eq 12 && uv run python -c \"import yaml; d = yaml.safe_load(open('src/uwh/rules/data/graphs/_not_encoded.yaml')) or {}; raise SystemExit(len(d.get('pages') or []))\" && docker compose --profile eval run --rm eval --suite cases",
+    "passes": false
+  },
+  {
+    "id": "S06-A7",
+    "stage": 6,
+    "description": "Tier 1. The send-everything-to-the-underwriter variant is caught by Escalation precision. Expect: exit 0.",
+    "command": "docker compose --profile eval run --rm eval --control send_everything_to_underwriter && tail -1 evals/results.jsonl | jq -e '.scores.escalation.passed == false'",
+    "passes": false
+  },
+  {
+    "id": "S06-A8",
+    "stage": 6,
+    "description": "Tier 1. Triage agrees with the labelling function on seeds 1 to 50. Expect: exit 0; zero triage-versus-labelling disagreements.",
+    "command": "uv run python -m evals.sweep --seeds 1-50 --fail-on-disagreement",
+    "passes": false
+  },
+  {
+    "id": "S07-A1",
+    "stage": 7,
+    "description": "Tier 0. Provider and resolution tests pass. Expect: all pass.",
+    "command": "uv run pytest tests/providers tests/skills/resolve_data tests/skills/test_vertical.py",
+    "passes": false
+  },
+  {
+    "id": "S07-A2",
+    "stage": 7,
+    "description": "Tier 0. A fingerprint mismatch falls back to a marked synthetic value. Expect: at least one test selected; all pass.",
+    "command": "uv run pytest tests/providers/test_world.py -k fingerprint",
+    "passes": false
+  },
+  {
+    "id": "S07-A3",
+    "stage": 7,
+    "description": "Tier 0. On the live app, lead 001's address-dependent lookups are called and none returns a fetched value. Expect: `1|0`.",
+    "command": "curl -s -X POST 'http://localhost:8000/api/run/start?wait=true' >/dev/null && echo \"SELECT (SELECT count(*) FROM events WHERE lead_id = 'LEAD-00000042-001' AND type = 'provider_called') > 0, (SELECT count(*) FROM observations WHERE lead_id = 'LEAD-00000042-001' AND source = 'fetched' AND key IN ('replacement_cost', 'p_f', 'slope_angle_deg', 'vegetation_clearance', 'min_distance_to_neighbor_ft'));\" | docker compose exec -T app sh -c 'sqlite3 \"$UWH_DB\"'",
+    "passes": false
+  },
+  {
+    "id": "S07-A4",
+    "stage": 7,
+    "description": "Tier 1. Injected provider unavailability is scored with the fault recorded, not marked invalid. Expect: exit 0.",
+    "command": "docker compose --profile eval run --rm eval --suite seed42 --fault provider_unavailable; tail -1 evals/results.jsonl | jq -e '.status == \"scored\" and (.injected_faults | index(\"provider_unavailable\")) != null'",
+    "passes": false
+  },
+  {
+    "id": "S07-A5",
+    "stage": 7,
+    "description": "Tier 1. Field resolution on seed 42 agrees fully with the labelling function. Expect: exit 0.",
+    "command": "docker compose --profile eval run --rm eval --suite seed42; tail -1 evals/results.jsonl | jq -e '.scores.field_resolution.precision == 1 and .scores.field_resolution.recall == 1'",
+    "passes": false
+  },
+  {
+    "id": "S08-A1",
+    "stage": 8,
+    "description": "Tier 0. Message, recipient and packet tests pass. Expect: all pass.",
+    "command": "uv run pytest tests/skills tests/providers",
+    "passes": false
+  },
+  {
+    "id": "S08-A2",
+    "stage": 8,
+    "description": "Tier 0. Lead 008's request reaches the real mailbox with the expected asks. Expect: all pass.",
+    "command": "uv run pytest -m integration tests/integration/test_lead_008_request.py",
+    "passes": false
+  },
+  {
+    "id": "S08-A3",
+    "stage": 8,
+    "description": "Tier 0. After a run, the mailbox holds exactly one routine request for lead 008 with the A.8 sender, subject and \u00a77.5 metadata. Expect: exit 0.",
+    "command": "curl -s -X POST 'http://localhost:8000/api/run/start?wait=true' >/dev/null && curl -s http://localhost:8025/leads/LEAD-00000042-008/emails | jq -e 'length == 1 and .[0].from == \"uw@stand.com\" and (.[0].subject | startswith(\"Information needed for your quote: \")) and .[0].metadata.kind == \"routine_request\" and .[0].metadata.round == 1 and (.[0].metadata.intent_id | type) == \"string\" and (.[0].metadata.payload_hash | type) == \"string\"'",
+    "passes": false
+  },
+  {
+    "id": "S08-A4",
+    "stage": 8,
+    "description": "Tier 0. Run directly after S08-A3: lead 000, a proposed decline, has no message and an open underwriter blocker. Expect: exit 0 from `jq`, then `1`.",
+    "command": "curl -s http://localhost:8025/leads/LEAD-00000042-000/emails | jq -e 'length == 0' && echo \"SELECT count(*) > 0 FROM blockers WHERE lead_id = 'LEAD-00000042-000' AND kind = 'underwriter_review' AND closed_event_id IS NULL;\" | docker compose exec -T app sh -c 'sqlite3 \"$UWH_DB\"'",
+    "passes": false
+  },
+  {
+    "id": "S08-A5",
+    "stage": 8,
+    "description": "Tier 0. Run directly after S08-A3: the mailbox count across the ten leads equals the sent intents. Expect: two equal numbers.",
+    "command": "n=0; for i in 0 1 2 3 4 5 6 7 8 9; do c=$(curl -s \"http://localhost:8025/leads/LEAD-00000042-00$i/emails\" | jq length); n=$((n + c)); done; echo \"$n\"; echo \"SELECT count(*) FROM intents WHERE state = 'sent';\" | docker compose exec -T app sh -c 'sqlite3 \"$UWH_DB\"'",
+    "passes": false
+  },
+  {
+    "id": "S08-A6",
+    "stage": 8,
+    "description": "Tier 0. The seed-42 suite passes every registered grader with no critical error. Expect: exit 0.",
+    "command": "docker compose --profile eval run --rm eval --suite seed42",
+    "passes": false
+  },
+  {
+    "id": "S08-A7",
+    "stage": 8,
+    "description": "Tier 0. The email-every-missing-field variant is caught by Forbidden asks and Asks. Expect: exit 0.",
+    "command": "docker compose --profile eval run --rm eval --control email_every_missing_field && tail -1 evals/results.jsonl | jq -e '.scores.forbidden_asks.passed == false and .scores.asks.passed == false'",
+    "passes": false
+  },
+  {
+    "id": "S08-A8",
+    "stage": 8,
+    "description": "Tier 0. The send-twice variant is caught by Send safety with a duplicate-send critical error. Expect: exit 0.",
+    "command": "docker compose --profile eval run --rm eval --control send_twice && tail -1 evals/results.jsonl | jq -e '.scores.send_safety.passed == false and (.critical_errors | index(\"duplicate_send\")) != null'",
+    "passes": false
+  },
+  {
+    "id": "S08-A9",
+    "stage": 8,
+    "description": "Tier 1. The ignore-conflicts variant is caught by Asks. Expect: exit 0.",
+    "command": "docker compose --profile eval run --rm eval --control ignore_conflicts && tail -1 evals/results.jsonl | jq -e '.scores.asks.passed == false'",
+    "passes": false
+  },
+  {
+    "id": "S08-A10",
+    "stage": 8,
+    "description": "Tier 1. The drop-a-requirement variant is caught by Packet fidelity on the packet cases. Expect: exit 0.",
+    "command": "docker compose --profile eval run --rm eval --control drop_requirement && tail -1 evals/results.jsonl | jq -e '.scores.packet_fidelity.passed == false'",
+    "passes": false
+  },
+  {
+    "id": "S08-A11",
+    "stage": 8,
+    "description": "Tier 1. The stale-approval variant is caught by Approval binding. Expect: exit 0.",
+    "command": "docker compose --profile eval run --rm eval --control stale_approval && tail -1 evals/results.jsonl | jq -e '.scores.approval_binding.passed == false'",
+    "passes": false
+  },
+  {
+    "id": "S08-A12",
+    "stage": 8,
+    "description": "Tier 1. The bind-only-ask variant is caught by Stand's key and Forbidden asks. Expect: exit 0.",
+    "command": "docker compose --profile eval run --rm eval --control bind_only_ask && tail -1 evals/results.jsonl | jq -e '.scores.stands_key.passed == false and .scores.forbidden_asks.passed == false'",
+    "passes": false
+  },
+  {
+    "id": "S08-A13",
+    "stage": 8,
+    "description": "Tier 1. The emergency stop blocks dispatch on the workflow and REST paths, read from the mailbox. Expect: all pass.",
+    "command": "uv run pytest -m integration tests/integration/test_stop.py",
+    "passes": false
+  },
+  {
+    "id": "S08-A14",
+    "stage": 8,
+    "description": "Tier 1. The seed-42 run row reports the escalation rate with a reason per lead. Expect: exit 0. The rate meets the target of at most 4 of 10 only if confirmations send automatically (the pending decision).",
+    "command": "docker compose --profile eval run --rm eval --suite seed42; tail -1 evals/results.jsonl | jq -e '.scores.escalation | has(\"rate\") and has(\"reasons\")'",
+    "passes": false
+  },
+  {
+    "id": "S09-A1",
+    "stage": 9,
+    "description": "Tier 0. Reply endpoint, reading and apply tests pass. Expect: all pass.",
+    "command": "uv run pytest tests/api/test_replies.py tests/skills/read_reply && pnpm --dir web exec vitest run src/lead/PasteReplyBox.test.tsx",
+    "passes": false
+  },
+  {
+    "id": "S09-A2",
+    "stage": 9,
+    "description": "Tier 0. Lead 008 reaches a sent quote packet through the running app in record mode. Needs `ANTHROPIC_API_KEY` in `.env`. Expect: all pass.",
+    "command": "RUN_MODE=record RECORDINGS_ACCESS=rw docker compose up -d --wait --force-recreate app && uv run pytest -m integration tests/integration/test_lead_008_quote.py",
+    "passes": false
+  },
+  {
+    "id": "S09-A3",
+    "stage": 9,
+    "description": "Tier 0. Run directly after S09-A2: the mailbox holds lead 008's request and packet, and the lead's status is `quote_sent`. Expect: exit 0 from `jq`, then `quote_sent`.",
+    "command": "curl -s http://localhost:8025/leads/LEAD-00000042-008/emails | jq -e 'length == 2 and ([.[].metadata.kind] | sort) == [\"quote_packet\",\"routine_request\"]' && echo \"SELECT status FROM leads WHERE lead_id = 'LEAD-00000042-008';\" | docker compose exec -T app sh -c 'sqlite3 \"$UWH_DB\"'",
+    "passes": false
+  },
+  {
+    "id": "S09-A4",
+    "stage": 9,
+    "description": "Tier 0. `read_reply` recordings are committed. Expect: a number of at least 1.",
+    "command": "git ls-files recordings/read_reply | wc -l",
+    "passes": false
+  },
+  {
+    "id": "S09-A5",
+    "stage": 9,
+    "description": "Tier 0. An instruction-bearing reply changes nothing. Expect: all pass.",
+    "command": "uv run pytest -m integration tests/integration/test_reply_safety.py",
+    "passes": false
+  },
+  {
+    "id": "S09-A6",
+    "stage": 9,
+    "description": "Tier 0. The fixture-reply control exercises `read_reply` on several leads. Expect: `1`.",
+    "command": "curl -s -X POST 'http://localhost:8000/api/run/start?wait=true' >/dev/null && curl -s -X POST http://localhost:8000/api/replies/fixtures >/dev/null && echo \"SELECT count(DISTINCT lead_id) >= 2 FROM events WHERE type = 'reply_read';\" | docker compose exec -T app sh -c 'sqlite3 \"$UWH_DB\"'",
+    "passes": false
+  },
+  {
+    "id": "S09-A7",
+    "stage": 9,
+    "description": "Tier 0. The reply suite passes Reply reading (three agreeing repeats) with no critical error. Expect: exit 0.",
+    "command": "docker compose --profile eval run --rm eval --suite replies && tail -1 evals/results.jsonl | jq -e '.scores.reply_reading.passed and .critical_errors == []'",
+    "passes": false
+  },
+  {
+    "id": "S09-A8",
+    "stage": 9,
+    "description": "Tier 0. The held-back run is logged, and either a failing case led to a rerun with a `keep` decision row, or the log records that none failed. Expect: exit 0.",
+    "command": "jq -s -e '([.[] | select(.type == \"run\" and .case_set_id == \"replies-held-back\")] | length >= 1) and (([.[] | select(.type == \"decision\" and .decision == \"keep\")] | length >= 1) or ([.[] | select(.type == \"run\" and .case_set_id == \"replies-held-back\")][0].scores.reply_reading.passed == true))' evals/results.jsonl",
+    "passes": false
+  },
+  {
+    "id": "S09-A9",
+    "stage": 9,
+    "description": "Tier 1. A `read_reply` forced to `failing` hands the reply to the underwriter and the Skill gating grader passes. Expect: exit 0.",
+    "command": "docker compose --profile eval run --rm eval --suite replies && tail -1 evals/results.jsonl | jq -e '.scores.skill_gating.passed'",
+    "passes": false
+  },
+  {
+    "id": "S09-A10",
+    "stage": 9,
+    "description": "Tier 1. The reply suite replays from recordings with zero tokens. Expect: exit 0.",
+    "command": "docker compose --profile eval run --build --rm -e RUN_MODE=replay eval --suite replies && tail -1 evals/results.jsonl | jq -e '.tokens == 0'",
+    "passes": false
+  },
+  {
+    "id": "S10-A1",
+    "stage": 10,
+    "description": "Tier 0. API tests pass. Expect: all pass.",
+    "command": "uv run pytest tests/api",
+    "passes": false
+  },
+  {
+    "id": "S10-A2",
+    "stage": 10,
+    "description": "Tier 0. Web unit tests pass. Expect: all pass.",
+    "command": "pnpm --dir web exec vitest run",
+    "passes": false
+  },
+  {
+    "id": "S10-A3",
+    "stage": 10,
+    "description": "Tier 0. After a run, the live queue holds ten rows. Expect: exit 0.",
+    "command": "curl -s -X POST 'http://localhost:8000/api/run/start?wait=true' >/dev/null && curl -s http://localhost:8000/api/leads | jq -e 'length == 10'",
+    "passes": false
+  },
+  {
+    "id": "S10-A4",
+    "stage": 10,
+    "description": "Tier 0. No lead detail carries a confidence field. Expect: exit 0.",
+    "command": "for i in 0 1 2 3 4 5 6 7 8 9; do curl -s \"http://localhost:8000/api/leads/LEAD-00000042-00$i\"; done | jq -s -e 'length == 10 and ([.[] | .. | objects | keys[] | select(test(\"confidence\"; \"i\"))] | length) == 0'",
+    "passes": false
+  },
+  {
+    "id": "S10-A5",
+    "stage": 10,
+    "description": "Tier 1. The event stream emits event ids. Expect: a number of at least 1.",
+    "command": "curl -sN --max-time 3 http://localhost:8000/api/events/stream | grep -c '^id: '",
+    "passes": false
+  },
+  {
+    "id": "S10-A6",
+    "stage": 10,
+    "description": "Tier 1. The skills route reports a status for every skill. Expect: exit 0.",
+    "command": "curl -s http://localhost:8000/api/skills | jq -e 'length >= 7 and all(.[]; has(\"status\") and has(\"threshold\") and has(\"fallback\"))'",
+    "passes": false
+  },
+  {
+    "id": "S11-A1",
+    "stage": 11,
+    "description": "Tier 1. Tool, chat and grader tests pass. Expect: all pass.",
+    "command": "uv run pytest tests/api/test_tools.py tests/api/test_chat.py tests/chat tests/evals/test_graders.py",
+    "passes": false
+  },
+  {
+    "id": "S11-A2",
+    "stage": 11,
+    "description": "Tier 1. The MCP transport exposes five tools, binds its actor, refuses approval and respects the stop. Expect: all pass.",
+    "command": "uv run pytest -m integration tests/integration/test_mcp.py",
+    "passes": false
+  },
+  {
+    "id": "S11-A3",
+    "stage": 11,
+    "description": "Tier 1. Run directly after S11-A2: the event log holds the refused MCP approval. Expect: `1`.",
+    "command": "echo \"SELECT count(*) > 0 FROM events WHERE type = 'command_refused' AND actor = 'mcp_client';\" | docker compose exec -T app sh -c 'sqlite3 \"$UWH_DB\"'",
+    "passes": false
+  },
+  {
+    "id": "S11-A4",
+    "stage": 11,
+    "description": "Tier 1. The chat suite passes. Expect: exit 0.",
+    "command": "docker compose --profile eval run --rm eval --suite chat",
+    "passes": false
+  },
+  {
+    "id": "S11-A5",
+    "stage": 11,
+    "description": "Tier 1. The chat panel tests pass. Expect: all pass.",
+    "command": "pnpm --dir web exec vitest run src/chat",
+    "passes": false
+  },
+  {
+    "id": "S12-A1",
+    "stage": 12,
+    "description": "Tier 1. A human approval exports as a candidate eval case. Run after any stage 10 human gate run. Expect: a number of at least 1.",
+    "command": "docker compose exec -T app python -m uwh.runtime.export_candidates > evals/candidates/demo-run.yaml && grep -c '^actor: underwriter' evals/candidates/demo-run.yaml",
+    "passes": false
+  },
+  {
+    "id": "S12-A2",
+    "stage": 12,
+    "description": "Tier 2. The triage comparison writes its row to the results log. Expect: exit 0.",
+    "command": "docker compose --profile eval run --rm eval --suite triage-comparison; jq -s -e '[.[] | select(.type == \"run\" and .case_set_id == \"triage-comparison\")] | length >= 1' evals/results.jsonl",
+    "passes": false
+  },
+  {
+    "id": "S12-A3",
+    "stage": 12,
+    "description": "Tier 2. Proposal, form and comparison tests pass. Expect: all pass.",
+    "command": "uv run pytest tests/rules/test_proposals.py tests/api/test_proposals.py tests/evals/test_comparison.py && pnpm --dir web exec vitest run src/settings",
+    "passes": false
+  },
+  {
+    "id": "S12-A4",
+    "stage": 12,
+    "description": "Tier 2. The I35 change runs end to end through the running app with no mail sent by the dry run. Expect: all pass.",
+    "command": "uv run pytest -m integration tests/integration/test_rule_change.py",
+    "passes": false
+  },
+  {
+    "id": "S12-A5",
+    "stage": 12,
+    "description": "Tier 2. Run directly after S12-A4: the event log shows two ruleset versions and the applied change. Expect: `1|1`.",
+    "command": "echo \"SELECT count(DISTINCT ruleset_hash) >= 2, sum(type = 'rule_change_applied') >= 1 FROM events;\" | docker compose exec -T app sh -c 'sqlite3 \"$UWH_DB\"'",
+    "passes": false
+  },
+  {
+    "id": "S12-A6",
+    "stage": 12,
+    "description": "Tier 2. Jev classification rows are in the results log. Run only with a `TYPESAFE_API_KEY`; without one, report the check as not run and state it in the README's cut section. Expect: exit 0.",
+    "command": "uv run pytest tests/skills/read_reply/test_jev.py && jq -s -e '[.[] | select(.type == \"run\" and ((.hypothesis // \"\") | test(\"jev\"; \"i\")))] | length >= 1' evals/results.jsonl",
+    "passes": false
+  },
+  {
+    "id": "S13-A1",
+    "stage": 13,
+    "description": "Tier 0. The reference run passes every registered grader with no critical error. Expect: exit 0.",
+    "command": "docker compose --profile eval run --rm eval --suite all",
+    "passes": false
+  },
+  {
+    "id": "S13-A2",
+    "stage": 13,
+    "description": "Tier 0. Every ready control is caught by its named grader; `not_ready` appears only for controls of tiers not built. Expect: exit 0.",
+    "command": "docker compose --profile eval run --rm eval --controls all; tail -1 evals/results.jsonl | jq -e 'all(.controls[]; .state == \"not_ready\" or .caught == true)'",
+    "passes": false
+  },
+  {
+    "id": "S13-A3",
+    "stage": 13,
+    "description": "Tier 0. After a full demo on containers created with `--force-recreate`, the leadgen log shows the run and no debug request. Expect: exit 0.",
+    "command": "docker compose logs leadgen | grep -q 'POST /queue' && ! docker compose logs leadgen | grep -q '/debug'",
+    "passes": false
+  },
+  {
+    "id": "S13-A4",
+    "stage": 13,
+    "description": "Tier 0. The README carries every required section and its skills table matches the code. Expect: tests pass; `12`.",
+    "command": "uv run pytest tests/docs/test_readme.py && grep -cE '^## (Run it|Architecture overview|Human-in-the-loop|Queue orchestration|Outbound comms|Visualization|Integrations|Evals and iteration plan|Skills|Hit list|Cut and hand-waved|Platforms)$' README.md",
+    "passes": false
+  },
+  {
+    "id": "S13-A5",
+    "stage": 13,
+    "description": "Tier 0. App and eval images build for both architectures. Expect: exit 0.",
+    "command": "docker buildx build --platform linux/amd64,linux/arm64 --target app . && docker buildx build --platform linux/amd64,linux/arm64 --target eval .",
+    "passes": false
+  },
+  {
+    "id": "S13-A6",
+    "stage": 13,
+    "description": "Tier 0. A clean clone starts with the one command. Stop the main project first; it holds the same host ports. Expect: three lines, `app healthy`, `leadgen healthy`, `mailbox healthy`.",
+    "command": "d=$(mktemp -d) && git clone -q . \"$d\" && cd \"$d\" && cp .env.example .env && docker compose -p uwh-rehearsal up -d --build --wait && docker compose -p uwh-rehearsal ps --format '{{.Service}} {{.Health}}'",
+    "passes": false
+  },
+  {
+    "id": "S13-A7",
+    "stage": 13,
+    "description": "Tier 0. The README records a result for each of the three platforms. Expect: `3`.",
+    "command": "grep -cE '^\\| (macOS \\(arm64\\)|Linux \\(amd64\\)|Windows \\(WSL2\\)) \\|' README.md",
+    "passes": false
+  },
+  {
+    "id": "S13-A8",
+    "stage": 13,
+    "description": "Tier 1. Replay of seed 42 reproduces the recorded mailbox content with no replay miss. Expect: all pass.",
+    "command": "RUN_MODE=replay docker compose up -d --wait --force-recreate app && uv run pytest -m integration tests/integration/test_replay_seed42.py",
+    "passes": false
+  },
+  {
+    "id": "S13-A9",
+    "stage": 13,
+    "description": "Tier 1. No skill is `untested` at the release commit. Expect: exit 0.",
+    "command": "uv run python -m uwh.skills.status --release-check",
+    "passes": false
+  }
+]
