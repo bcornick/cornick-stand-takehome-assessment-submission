@@ -31,8 +31,10 @@ web/.vite/
 npm-debug.log*
 pnpm-debug.log*
 
-# Databases and container data
-data/
+# Databases and container data (anchored: src/uwh/rules/data and src/uwh/providers/data are tracked)
+/data/
+/sim-harness/data/*
+!/sim-harness/data/.gitkeep
 *.db
 *.db-journal
 *.db-wal

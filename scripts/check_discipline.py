@@ -21,7 +21,17 @@ EXEMPT_PREFIXES = (
     "recordings/",
     "fixtures/replies/",
 )
-EXEMPT_FILES = {"AGENTS.md", "CLAUDE.md", "scripts/check_discipline.py", "uv.lock", "web/pnpm-lock.yaml"}
+EXEMPT_FILES = {
+    "AGENTS.md",
+    "CLAUDE.md",
+    "scripts/check_discipline.py",
+    "uv.lock",
+    "web/pnpm-lock.yaml",
+    "web/src/api/types.ts",
+    "evals/results.jsonl",
+}
+# Text written in an applicant's or producer's voice, where everyday words are legitimate.
+QUOTED_VOICE = re.compile(r"^(evals/labels/replies[^/]*/|src/uwh/skills/[^/]+/cases/)")
 
 TEXT_SUFFIXES = {".py", ".md", ".yaml", ".yml", ".ts", ".tsx", ".sh", ".toml", ".css"}
 CODE_SUFFIXES = {".py", ".ts", ".tsx", ".sh"}
@@ -42,7 +52,19 @@ def tracked_and_untracked() -> list[str]:
 
 
 def exempt(path: str) -> bool:
-    return path in EXEMPT_FILES or path.startswith(EXEMPT_PREFIXES)
+    return (
+        path in EXEMPT_FILES
+        or path.startswith(EXEMPT_PREFIXES)
+        or QUOTED_VOICE.match(path) is not None
+    )
+
+
+def ignored_under_src() -> list[str]:
+    out = subprocess.run(
+        ["git", "ls-files", "--others", "--ignored", "--exclude-standard", "--", "src"],
+        cwd=ROOT, capture_output=True, text=True, check=True,
+    ).stdout
+    return [line for line in out.splitlines() if line and "__pycache__" not in line]
 
 
 def main() -> int:
@@ -62,6 +84,9 @@ def main() -> int:
             head = [line for line in text.splitlines()[:6] if "ABOUTME: " in line]
             if len(head) < 2:
                 problems.append(f"{rel}:1: missing two-line ABOUTME header")
+
+    for rel in ignored_under_src():
+        problems.append(f"{rel}: under src/ but ignored by git; it would be missing from a clone")
 
     test_names = {Path(p).name for p in paths if p.startswith("tests/")}
     for rel in paths:

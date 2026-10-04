@@ -2,7 +2,7 @@
   {
     "id": "S01-A1",
     "stage": 1,
-    "description": "Tier 0. All three services start and report healthy. Expect: exactly three lines, `app healthy`, `leadgen healthy`, `mailbox healthy`.",
+    "description": "Tier 0. All three services start and report healthy. Needs `.env`, copied from `.env.example`. Expect: exactly three lines, `app healthy`, `leadgen healthy`, `mailbox healthy`.",
     "command": "docker compose up -d --build --wait && docker compose ps --format '{{.Service}} {{.Health}}'",
     "passes": false
   },
@@ -37,8 +37,8 @@
   {
     "id": "S01-A6",
     "stage": 1,
-    "description": "Tier 0. Every tracked text file has LF line endings. Expect: `0`.",
-    "command": "git ls-files --eol | awk '$1 != \"i/lf\" && $1 != \"i/-text\" && $1 != \"i/none\"' | wc -l",
+    "description": "Tier 0. Every tracked text file has LF line endings; the tracked `.claude/skills` symlink reports an empty index field and is not counted. Expect: `0`.",
+    "command": "git ls-files --eol | awk '$1 != \"i/lf\" && $1 != \"i/-text\" && $1 != \"i/none\" && $1 != \"i/\"' | wc -l",
     "passes": false
   },
   {
@@ -93,8 +93,8 @@
   {
     "id": "S02-A3",
     "stage": 2,
-    "description": "Tier 0. Generated TypeScript types match the committed copy. Expect: exit 0.",
-    "command": "pnpm --dir web run gen:types && git diff --exit-code -- web/src/api/",
+    "description": "Tier 0. Generated TypeScript types are tracked and match the committed copy; an untracked or differing file fails. Expect: exit 0.",
+    "command": "pnpm --dir web run gen:types && git ls-files --error-unmatch web/src/api/types.ts web/src/api/openapi.json >/dev/null && test -z \"$(git status --porcelain -- web/src/api)\"",
     "passes": false
   },
   {
@@ -121,21 +121,28 @@
   {
     "id": "S02-A7",
     "stage": 2,
-    "description": "Tier 0. The check command, with its web step, is clean. Expect: exit 0, no warnings or errors.",
+    "description": "Tier 0. The check command, with its web steps, is clean. Expect: exit 0, no warnings or errors.",
     "command": "make check",
+    "passes": false
+  },
+  {
+    "id": "S02-A8",
+    "stage": 2,
+    "description": "Tier 0. Brett's approval of the contracts is recorded with the commit it covers. Expect: a number of at least 1.",
+    "command": "grep -cE 'Contracts approved by Brett at [0-9a-f]{7,40}' docs/progress.md",
     "passes": false
   },
   {
     "id": "S03-A1",
     "stage": 3,
-    "description": "Tier 0. The committed world fixture matches a fresh capture. Expect: exit 0.",
-    "command": "uv run python tools/capture_world.py --seed 42 --check",
+    "description": "Tier 0. The committed world fixtures for seeds 42, 1 and 2 match a fresh capture. Expect: exit 0.",
+    "command": "uv run python tools/capture_world.py --seed 42 --check && uv run python tools/capture_world.py --seed 1 --check && uv run python tools/capture_world.py --seed 2 --check",
     "passes": false
   },
   {
     "id": "S03-A2",
     "stage": 3,
-    "description": "Tier 0. The captured leads equal the leadgen container's leads. Expect: all pass.",
+    "description": "Tier 0. The captured leads for seeds 42, 1 and 2 equal the leadgen container's leads. Expect: all pass.",
     "command": "uv run pytest -m integration tests/integration/test_world_matches_leadgen.py",
     "passes": false
   },
@@ -149,7 +156,7 @@
   {
     "id": "S03-A4",
     "stage": 3,
-    "description": "Tier 0. Brett has reviewed all 56 interpretation rows. Expect: `56`.",
+    "description": "Tier 0. Brett has reviewed all 57 interpretation rows. Expect: `57`.",
     "command": "grep -c 'reviewed_by: Brett' src/uwh/rules/data/interpretation.yaml",
     "passes": false
   },
@@ -170,15 +177,15 @@
   {
     "id": "S03-A7",
     "stage": 3,
-    "description": "Tier 0. Brett's sample of 20 per-outcome cases is recorded. Expect: `20`.",
-    "command": "uv run python -c \"import yaml; print(len(yaml.safe_load(open('evals/labels/case_sample.yaml'))['cases']))\"",
+    "description": "Tier 0. Brett's sample holds 20 distinct case ids, each naming a case that exists. Expect: `20 20 0`.",
+    "command": "uv run python -c \"import glob, pathlib, yaml; ids = yaml.safe_load(open('evals/labels/case_sample.yaml'))['cases']; known = {pathlib.Path(p).stem for p in glob.glob('src/uwh/skills/evaluate_playbook/cases/**/*.yaml', recursive=True)}; print(len(ids), len(set(ids)), len(set(ids) - known))\"",
     "passes": false
   },
   {
     "id": "S03-A8",
     "stage": 3,
-    "description": "Tier 0. Label code imports no rules Python. Expect: exit 0.",
-    "command": "test -d evals/labels && ! grep -rnE 'uwh\\.rules\\.(conditions|triage|validators|loader|interpreter|registry)' evals/ tests/evals/",
+    "description": "Tier 0. Code under `evals/` and `tests/evals/` imports no `uwh.rules` module other than `uwh.rules.models`, in any import form. Expect: all pass. The test parses every Python file under `evals/` and `tests/evals/` with `ast` and fails on `import uwh.rules`, `import uwh.rules as r`, `import uwh.rules.<module>`, `from uwh.rules import <name>`, `from uwh.rules.<module> import <name>` and `from uwh import rules`, unless the module is `uwh.rules.models`. It first asserts that its detector flags each of those forms in literal source strings.",
+    "command": "uv run pytest tests/evals/test_label_independence.py",
     "passes": false
   },
   {
@@ -219,8 +226,8 @@
   {
     "id": "S04-A4",
     "stage": 4,
-    "description": "Tier 0. A run start resets the interactive mailbox, so no bootstrap probe remains. Expect: exit 0.",
-    "command": "curl -s \"http://localhost:8025/emails?limit=1000\" | jq -e 'map(select(.lead_id | startswith(\"BOOTSTRAP-\"))) | length == 0'",
+    "description": "Tier 0. A run start resets the interactive mailbox: a fresh bootstrap probe is present before the start and absent after it. Expect: `true`, then `true`, and exit 0.",
+    "command": "docker compose exec -T app python -m uwh.runtime.bootstrap >/dev/null && curl -s \"http://localhost:8025/emails?limit=1000\" | jq -e 'map(select(.lead_id | startswith(\"BOOTSTRAP-\"))) | length >= 1' && curl -s -X POST 'http://localhost:8000/api/run/start?wait=true' >/dev/null && curl -s \"http://localhost:8025/emails?limit=1000\" | jq -e 'map(select(.lead_id | startswith(\"BOOTSTRAP-\"))) | length == 0'",
     "passes": false
   },
   {
@@ -247,8 +254,8 @@
   {
     "id": "S04-A8",
     "stage": 4,
-    "description": "Tier 1. A locked class cannot be set to `auto` on the running app. Expect: `\"review\"` (an absent key reads as the \u00a77.4 default), then `1`.",
-    "command": "curl -s -X POST http://localhost:8000/api/commands -H 'content-type: application/json' -d '{\"type\":\"change_setting\",\"payload\":{\"key\":\"autonomy.send_quote_packet\",\"value\":\"auto\"}}' >/dev/null; echo \"SELECT coalesce((SELECT value_json FROM settings WHERE key = 'autonomy.send_quote_packet'), '\\\"review\\\"'); SELECT count(*) > 0 FROM events WHERE type = 'command_refused';\" | docker compose exec -T app sh -c 'sqlite3 \"$UWH_DB\"'",
+    "description": "Tier 1. A locked class cannot be set to `auto` on the running app. Expect: `true`, then `\"review\"` (an absent key reads as the §7.4 default).",
+    "command": "curl -s -X POST http://localhost:8000/api/commands -H 'content-type: application/json' -d '{\"type\":\"change_setting\",\"payload\":{\"key\":\"autonomy.send_quote_packet\",\"value\":\"auto\"}}' | jq -e '.accepted == false' && echo \"SELECT coalesce((SELECT value_json FROM settings WHERE key = 'autonomy.send_quote_packet'), '\\\"review\\\"');\" | docker compose exec -T app sh -c 'sqlite3 \"$UWH_DB\"'",
     "passes": false
   },
   {
@@ -266,37 +273,58 @@
     "passes": false
   },
   {
+    "id": "S04-A11",
+    "stage": 4,
+    "description": "Tier 0. A run start leaves one settled `runs` row and one `run_started` event. Expect: `1|settled`, then `1`.",
+    "command": "curl -s -X POST 'http://localhost:8000/api/run/start?wait=true' >/dev/null && echo \"SELECT count(*), max(status) FROM runs; SELECT count(*) FROM events WHERE type = 'run_started';\" | docker compose exec -T app sh -c 'sqlite3 \"$UWH_DB\"'",
+    "passes": false
+  },
+  {
+    "id": "S04-A12",
+    "stage": 4,
+    "description": "Tier 0. The named intent, approval and run-lifecycle cases pass. Expect: `6 passed`.",
+    "command": "uv run pytest tests/runtime/test_send.py tests/runtime/test_commands.py tests/runtime/test_runs.py -k \"restart_with_pending_draft or delivery_unknown_approve_rechecks or delivery_unknown_reject_closes_unsent or stale_artifact_hash_refused or start_while_processing_refused or stale_run_writes_nothing\"",
+    "passes": false
+  },
+  {
+    "id": "S04-A13",
+    "stage": 4,
+    "description": "Tier 1. Settings survive a run start: the stop engaged before a start reads engaged after it. Expect: `true`.",
+    "command": "curl -s -X POST http://localhost:8000/api/commands -H 'content-type: application/json' -d '{\"type\":\"emergency_stop\",\"payload\":{\"engaged\":true}}' >/dev/null && curl -s -X POST 'http://localhost:8000/api/run/start?wait=true' >/dev/null && echo \"SELECT value_json FROM settings WHERE key = 'emergency_stop';\" | docker compose exec -T app sh -c 'sqlite3 \"$UWH_DB\"'; curl -s -X POST http://localhost:8000/api/commands -H 'content-type: application/json' -d '{\"type\":\"emergency_stop\",\"payload\":{\"engaged\":false}}' >/dev/null",
+    "passes": false
+  },
+  {
     "id": "S05-A1",
     "stage": 5,
     "description": "Tier 0. One eval run appends one complete `run` row. Expect: exit 0.",
-    "command": "before=$(wc -l < evals/results.jsonl); docker compose --profile eval run --rm eval --suite seed42; test $(( $(wc -l < evals/results.jsonl) - before )) -eq 1 && tail -1 evals/results.jsonl | jq -e '.type == \"run\" and (([\"run_id\",\"commit\",\"evaluator_hash\",\"case_set_id\",\"skill_digests\",\"status\",\"scores\",\"critical_errors\",\"injected_faults\",\"tokens\",\"cost_usd\",\"hypothesis\"] - keys) == [])'",
+    "command": "before=$(wc -l < evals/results.jsonl); docker compose --profile eval run --rm eval --suite seed42; test $(( $(wc -l < evals/results.jsonl) - before )) -eq 1 && tail -1 evals/results.jsonl | jq -e '.type == \"run\" and (([\"run_id\",\"commit\",\"evaluator_hash\",\"case_set_id\",\"suite\",\"skill_digests\",\"skill_results\",\"status\",\"scores\",\"critical_errors\",\"injected_faults\",\"tokens\",\"cost_usd\",\"per_lead\",\"hypothesis\"] - keys) == [])'",
     "passes": false
   },
   {
     "id": "S05-A2",
     "stage": 5,
     "description": "Tier 0. A broken environment yields `invalid`, exit code 2 and no scores. Expect: exit 0.",
-    "command": "docker compose --profile eval run --rm eval --suite seed42 --mailbox-url http://mailbox-eval:9; test $? -eq 2 && tail -1 evals/results.jsonl | jq -e '.status == \"invalid\" and .scores == null'",
+    "command": "docker compose --profile eval run --rm -e MAILBOX_URL=http://mailbox-eval:9 eval --suite seed42; test $? -eq 2 && tail -1 evals/results.jsonl | jq -e '.status == \"invalid\" and .scores == null'",
     "passes": false
   },
   {
     "id": "S05-A3",
     "stage": 5,
-    "description": "Tier 0. The do-nothing variant is caught by Coverage. Expect: exit 0.",
-    "command": "docker compose --profile eval run --rm eval --control do_nothing && tail -1 evals/results.jsonl | jq -e '.control == \"do_nothing\" and .scores.coverage.passed == false'",
+    "description": "Tier 0. The `seed42` suite scores exactly its seven tier-0 graders. Expect: exit 0.",
+    "command": "docker compose --profile eval run --rm eval --suite seed42; tail -1 evals/results.jsonl | jq -e '.suite == \"seed42\" and .case_set_id == \"seed-42\" and (.scores | keys) == [\"asks\",\"coverage\",\"forbidden_asks\",\"key_isolation\",\"one_open_request\",\"send_safety\",\"stands_key\"]'",
     "passes": false
   },
   {
     "id": "S05-A4",
     "stage": 5,
-    "description": "Tier 0. All eight controls are registered and unfilled ones report `not_ready`. Expect: exit 0.",
-    "command": "docker compose --profile eval run --rm eval --controls all; tail -1 evals/results.jsonl | jq -e '(.controls | length) == 8 and .controls.do_nothing.caught == true and ([.controls[] | select(.state == \"not_ready\")] | length) == 7'",
+    "description": "Tier 0. All eight controls are registered, and each reports `not_ready` while the reference run does nothing. Expect: exit 0.",
+    "command": "docker compose --profile eval run --rm eval --controls all; tail -1 evals/results.jsonl | jq -e '(.controls | length) == 8 and all(.controls[]; .state == \"not_ready\" and .caught != true)'",
     "passes": false
   },
   {
     "id": "S05-A5",
     "stage": 5,
-    "description": "Tier 0. Runner, results, decision, grader and control tests pass. Expect: all pass.",
+    "description": "Tier 0. Suite, runner, results, decision, grader and control tests pass. Expect: all pass.",
     "command": "uv run pytest tests/evals tests/packaging/test_compose.py",
     "passes": false
   },
@@ -317,7 +345,7 @@
   {
     "id": "S05-A8",
     "stage": 5,
-    "description": "Tier 1. Stand's key leaves a zero residual across seeds 1 to 50. Expect: exit 0; counts per allowed disagreement class; residual `0`.",
+    "description": "Tier 1. Stand's key leaves a zero residual across seeds 1 to 50. Expect: exit 0; counts for each of the two allowed disagreement classes; residual `0`.",
     "command": "uv run python -m evals.sweep --seeds 1-50 --grader stands_key",
     "passes": false
   },
@@ -326,6 +354,13 @@
     "stage": 5,
     "description": "Tier 1. Skill status, dispatch, release check and the harness claim pass. Expect: all pass.",
     "command": "uv run pytest tests/skills/test_status.py",
+    "passes": false
+  },
+  {
+    "id": "S05-A10",
+    "stage": 5,
+    "description": "Tier 0. The eval container holds the eval code and Stand's generator and shared code, and mounts the recordings read-only. Expect: exit 0.",
+    "command": "docker compose --profile eval build eval && docker compose --profile eval run --rm --entrypoint sh eval -c 'test -f /app/evals/runner.py && test -f /app/sim-harness/leadgen/generator.py && test -f /app/sim-harness/shared/field_registry.json && test -d /app/recordings && ! touch /app/recordings/.probe 2>/dev/null'",
     "passes": false
   },
   {
@@ -338,15 +373,15 @@
   {
     "id": "S06-A2",
     "stage": 6,
-    "description": "Tier 0. The \u00a79.6 Post & Pier acceptance case passes. Expect: one test selected and passing.",
-    "command": "uv run pytest tests/rules/test_interpreter.py -k post_and_pier_deck_over_12_declines_on_every_branch",
+    "description": "Tier 0. The tier-0 acceptance cases of §9.6 pass: the two Post & Pier cases and lead 003's undecided Occupancy page. Expect: `3 passed`.",
+    "command": "uv run pytest tests/rules/test_interpreter.py tests/skills/evaluate_playbook/test_skill.py -k \"post_and_pier_deck_over_12_declines_on_every_branch or post_and_pier_reply_deck_15_declines or lead_003_occupancy_undecided_under_open_conflict\"",
     "passes": false
   },
   {
     "id": "S06-A3",
     "stage": 6,
-    "description": "Tier 0. Every per-outcome and boundary case present passes. Expect: exit 0.",
-    "command": "docker compose --profile eval run --rm eval --suite cases",
+    "description": "Tier 0. Every per-outcome, boundary and triage case present passes, and both skills ran a non-empty case set. Expect: exit 0.",
+    "command": "docker compose --profile eval run --rm eval --suite cases && tail -1 evals/results.jsonl | jq -e '.skill_results.triage_fields.cases_total > 0 and .skill_results.evaluate_playbook.cases_total > 0 and all(.skill_results[]; .passed == true)'",
     "passes": false
   },
   {
@@ -367,7 +402,7 @@
     "id": "S06-A6",
     "stage": 6,
     "description": "Tier 1. All twelve graphs load, no page is listed as not encoded, and every case passes. Expect: exit 0.",
-    "command": "test \"$(ls src/uwh/rules/data/graphs/*.yaml | grep -vc _not_encoded)\" -eq 12 && uv run python -c \"import yaml; d = yaml.safe_load(open('src/uwh/rules/data/graphs/_not_encoded.yaml')) or {}; raise SystemExit(len(d.get('pages') or []))\" && docker compose --profile eval run --rm eval --suite cases",
+    "command": "test \"$(ls src/uwh/rules/data/graphs/*.yaml | grep -vc _not_encoded)\" -eq 12 && uv run python -c \"import yaml; d = yaml.safe_load(open('src/uwh/rules/data/graphs/_not_encoded.yaml')) or {}; raise SystemExit(len(d.get('pages') or []))\" && docker compose --profile eval run --rm eval --suite cases && tail -1 evals/results.jsonl | jq -e '.skill_results.evaluate_playbook.cases_total > 0 and all(.skill_results[]; .passed == true)'",
     "passes": false
   },
   {
@@ -380,8 +415,36 @@
   {
     "id": "S06-A8",
     "stage": 6,
-    "description": "Tier 1. Triage agrees with the labelling function on seeds 1 to 50. Expect: exit 0; zero triage-versus-labelling disagreements.",
-    "command": "uv run python -m evals.sweep --seeds 1-50 --fail-on-disagreement",
+    "description": "Tier 1. With the rules Python in place, label code imports no rules module, and triage agrees with the labelling function on seeds 1 to 50. Expect: exit 0; zero triage-versus-labelling disagreements.",
+    "command": "uv run pytest tests/evals/test_label_independence.py && uv run python -m evals.sweep --seeds 1-50 --fail-on-disagreement",
+    "passes": false
+  },
+  {
+    "id": "S06-A9",
+    "stage": 6,
+    "description": "Tier 1. The PC 9 & 10 acceptance case of §9.6 passes. Expect: `1 passed`.",
+    "command": "uv run pytest tests/rules/test_interpreter.py -k pc_9_10_rural_declines_on_every_branch",
+    "passes": false
+  },
+  {
+    "id": "S06-A10",
+    "stage": 6,
+    "description": "Tier 0. Every seed-42 lead carries a `not_evaluated` note for each not-encoded page that applies to it. Expect: `1 passed`.",
+    "command": "uv run pytest tests/skills/evaluate_playbook/test_skill.py -k not_encoded_notes_on_seed_42_leads",
+    "passes": false
+  },
+  {
+    "id": "S06-A11",
+    "stage": 6,
+    "description": "Tier 0. The app container holds no skill `cases/` folder, and the eval container holds both skills' cases. Expect: exit 0.",
+    "command": "docker compose up -d --build --wait app && docker compose exec -T app sh -c 'test -z \"$(find /app -path \"*/uwh/skills/*/cases\" 2>/dev/null)\"' && docker compose --profile eval build eval && docker compose --profile eval run --rm --entrypoint sh eval -c 'test -d /app/src/uwh/skills/triage_fields/cases && test -d /app/src/uwh/skills/evaluate_playbook/cases'",
+    "passes": false
+  },
+  {
+    "id": "S06-A12",
+    "stage": 6,
+    "description": "Tier 0. The named triage cases on leads 002, 005 and 006, and the blocked protection-class dependents, pass. Expect: `4 passed`.",
+    "command": "uv run pytest tests/rules/test_triage.py -k \"lead_002_gated_community_inactive or lead_005_present_pool_values_not_asked or lead_006_present_pool_values_not_asked or protection_class_dependents_blocked\"",
     "passes": false
   },
   {
@@ -408,7 +471,7 @@
   {
     "id": "S07-A4",
     "stage": 7,
-    "description": "Tier 1. Injected provider unavailability is scored with the fault recorded, not marked invalid. Expect: exit 0.",
+    "description": "Tier 1. Provider unavailability, injected in a separate fault run on lead 008, is scored with the fault recorded, not marked invalid. Expect: exit 0.",
     "command": "docker compose --profile eval run --rm eval --suite seed42 --fault provider_unavailable; tail -1 evals/results.jsonl | jq -e '.status == \"scored\" and (.injected_faults | index(\"provider_unavailable\")) != null'",
     "passes": false
   },
@@ -420,9 +483,16 @@
     "passes": false
   },
   {
+    "id": "S07-A6",
+    "stage": 7,
+    "description": "Tier 0. The two `not_found` cases seed 42 lacks pass on the seed-1 and seed-2 fixtures, through the lookup and through `resolve_data`. Expect: `4 passed`.",
+    "command": "uv run pytest tests/providers/test_lookups.py tests/skills/resolve_data/test_skill.py -k \"kyc_not_found_on_seed_1 or protection_class_not_found_on_seed_2\"",
+    "passes": false
+  },
+  {
     "id": "S08-A1",
     "stage": 8,
-    "description": "Tier 0. Message, recipient and packet tests pass. Expect: all pass.",
+    "description": "Tier 0. Message, recipient, packet and item-action tests pass. Expect: all pass.",
     "command": "uv run pytest tests/skills tests/providers",
     "passes": false
   },
@@ -436,7 +506,7 @@
   {
     "id": "S08-A3",
     "stage": 8,
-    "description": "Tier 0. After a run, the mailbox holds exactly one routine request for lead 008 with the A.8 sender, subject and \u00a77.5 metadata. Expect: exit 0.",
+    "description": "Tier 0. After a run, the mailbox holds exactly one routine request for lead 008 with the A.8 sender, subject and §7.5 metadata. Expect: exit 0.",
     "command": "curl -s -X POST 'http://localhost:8000/api/run/start?wait=true' >/dev/null && curl -s http://localhost:8025/leads/LEAD-00000042-008/emails | jq -e 'length == 1 and .[0].from == \"uw@stand.com\" and (.[0].subject | startswith(\"Information needed for your quote: \")) and .[0].metadata.kind == \"routine_request\" and .[0].metadata.round == 1 and (.[0].metadata.intent_id | type) == \"string\" and (.[0].metadata.payload_hash | type) == \"string\"'",
     "passes": false
   },
@@ -457,7 +527,7 @@
   {
     "id": "S08-A6",
     "stage": 8,
-    "description": "Tier 0. The seed-42 suite passes every registered grader with no critical error. Expect: exit 0.",
+    "description": "Tier 0. The seed-42 suite passes every grader it scores with no critical error. Expect: exit 0.",
     "command": "docker compose --profile eval run --rm eval --suite seed42",
     "passes": false
   },
@@ -513,15 +583,36 @@
   {
     "id": "S08-A14",
     "stage": 8,
-    "description": "Tier 1. The seed-42 run row reports the escalation rate with a reason per lead. Expect: exit 0. The rate is 3 of 10 (leads 000, 003, 006), within the target of at most 4.",
-    "command": "docker compose --profile eval run --rm eval --suite seed42; tail -1 evals/results.jsonl | jq -e '.scores.escalation | has(\"rate\") and has(\"reasons\")'",
+    "description": "Tier 1. The seed-42 run row reports the escalation headline: 3 of 10 leads, exactly 000, 003 and 006, each with a reason. Expect: exit 0. The count is within the target of at most 4.",
+    "command": "docker compose --profile eval run --rm eval --suite seed42; tail -1 evals/results.jsonl | jq -e '.scores.escalation.count == 3 and .scores.escalation.total == 10 and (.scores.escalation.reasons | keys) == [\"LEAD-00000042-000\",\"LEAD-00000042-003\",\"LEAD-00000042-006\"] and all(.scores.escalation.reasons[]; (type == \"string\") and length > 0)'",
+    "passes": false
+  },
+  {
+    "id": "S08-A15",
+    "stage": 8,
+    "description": "Tier 0. With a passing reference run, the do-nothing variant is caught by Coverage. Expect: exit 0.",
+    "command": "docker compose --profile eval run --rm eval --control do_nothing && tail -1 evals/results.jsonl | jq -e '.control == \"do_nothing\" and .scores.coverage.passed == false'",
+    "passes": false
+  },
+  {
+    "id": "S08-A16",
+    "stage": 8,
+    "description": "Tier 0. Approving and rejecting draft items, `decline_lead`, and the stale payload-hash refusal work through the REST API, read from the mailbox and the event log. Expect: all pass.",
+    "command": "uv run pytest -m integration tests/integration/test_item_actions.py",
+    "passes": false
+  },
+  {
+    "id": "S08-A17",
+    "stage": 8,
+    "description": "Tier 0. The seed-42 row records the two send-safety fault runs on lead 008, and Send safety passes on them. Expect: exit 0.",
+    "command": "docker compose --profile eval run --rm eval --suite seed42; tail -1 evals/results.jsonl | jq -e '.scores.send_safety.passed == true and (.injected_faults | index(\"fail_after_acceptance\")) != null and (.injected_faults | index(\"empty_while_in_flight\")) != null'",
     "passes": false
   },
   {
     "id": "S09-A1",
     "stage": 9,
-    "description": "Tier 0. Reply endpoint, reading and apply tests pass. Expect: all pass.",
-    "command": "uv run pytest tests/api/test_replies.py tests/skills/read_reply && pnpm --dir web exec vitest run src/lead/PasteReplyBox.test.tsx",
+    "description": "Tier 0. Reply endpoint, reading, apply and fixture-reader tests pass. Expect: all pass.",
+    "command": "uv run pytest tests/api/test_replies.py tests/skills/read_reply tests/providers/test_fixture_replies.py && pnpm --dir web exec vitest run src/lead/PasteReplyBox.test.tsx",
     "passes": false
   },
   {
@@ -534,8 +625,8 @@
   {
     "id": "S09-A3",
     "stage": 9,
-    "description": "Tier 0. Run directly after S09-A2: the mailbox holds lead 008's request and packet, and the lead's status is `quote_sent`. Expect: exit 0 from `jq`, then `quote_sent`.",
-    "command": "curl -s http://localhost:8025/leads/LEAD-00000042-008/emails | jq -e 'length == 2 and ([.[].metadata.kind] | sort) == [\"quote_packet\",\"routine_request\"]' && echo \"SELECT status FROM leads WHERE lead_id = 'LEAD-00000042-008';\" | docker compose exec -T app sh -c 'sqlite3 \"$UWH_DB\"'",
+    "description": "Tier 0. Run directly after S09-A2: the mailbox holds lead 008's request and packet, both in round 1, and the lead's status is `quote_sent`. Expect: exit 0 from `jq`, then `quote_sent`.",
+    "command": "curl -s http://localhost:8025/leads/LEAD-00000042-008/emails | jq -e 'length == 2 and ([.[].metadata.kind] | sort) == [\"quote_packet\",\"routine_request\"] and ([.[].metadata.round] | unique) == [1]' && echo \"SELECT status FROM leads WHERE lead_id = 'LEAD-00000042-008';\" | docker compose exec -T app sh -c 'sqlite3 \"$UWH_DB\"'",
     "passes": false
   },
   {
@@ -555,36 +646,36 @@
   {
     "id": "S09-A6",
     "stage": 9,
-    "description": "Tier 0. The fixture-reply control exercises `read_reply` on several leads. Expect: `1`.",
+    "description": "Tier 0. The fixture-reply control exercises `read_reply` on several leads. Needs `ANTHROPIC_API_KEY` in `.env`. Expect: `1`.",
     "command": "curl -s -X POST 'http://localhost:8000/api/run/start?wait=true' >/dev/null && curl -s -X POST http://localhost:8000/api/replies/fixtures >/dev/null && echo \"SELECT count(DISTINCT lead_id) >= 2 FROM events WHERE type = 'reply_read';\" | docker compose exec -T app sh -c 'sqlite3 \"$UWH_DB\"'",
     "passes": false
   },
   {
     "id": "S09-A7",
     "stage": 9,
-    "description": "Tier 0. The reply suite passes Reply reading (three agreeing repeats) with no critical error. Expect: exit 0.",
-    "command": "docker compose --profile eval run --rm eval --suite replies && tail -1 evals/results.jsonl | jq -e '.scores.reply_reading.passed and .critical_errors == []'",
+    "description": "Tier 0. The reply suite passes Reply reading, with three agreeing live repeats and no critical error. Needs `ANTHROPIC_API_KEY` in `.env`. Expect: exit 0.",
+    "command": "docker compose --profile eval run --rm eval --suite replies && tail -1 evals/results.jsonl | jq -e '.scores.reply_reading.passed == true and .scores.reply_reading.repeat_agreement == \"passed\" and .critical_errors == []'",
     "passes": false
   },
   {
     "id": "S09-A8",
     "stage": 9,
-    "description": "Tier 0. The held-back run is logged, and either a failing case led to a rerun with a `keep` decision row, or the log records that none failed. Expect: exit 0.",
-    "command": "jq -s -e '([.[] | select(.type == \"run\" and .case_set_id == \"replies-held-back\")] | length >= 1) and (([.[] | select(.type == \"decision\" and .decision == \"keep\")] | length >= 1) or ([.[] | select(.type == \"run\" and .case_set_id == \"replies-held-back\")][0].scores.reply_reading.passed == true))' evals/results.jsonl",
+    "description": "Tier 0. The held-back run is logged, and either its first run passed, or a held-back rerun with a changed `read_reply` digest and a stated hypothesis is the run a `keep` decision row names. Expect: exit 0.",
+    "command": "jq -s -e '[.[] | select(.type == \"run\" and .case_set_id == \"replies-held-back\")] as $h | [.[] | select(.type == \"decision\" and .decision == \"keep\") | .run_id] as $k | ($h | length) >= 1 and ($h[0].scores.reply_reading.passed == true or any($h[1:][]; .run_id as $r | any($k[]; . == $r) and .skill_digests.read_reply != $h[0].skill_digests.read_reply and ((.hypothesis // \"\") | length) > 0))' evals/results.jsonl",
     "passes": false
   },
   {
     "id": "S09-A9",
     "stage": 9,
     "description": "Tier 1. A `read_reply` forced to `failing` hands the reply to the underwriter and the Skill gating grader passes. Expect: exit 0.",
-    "command": "docker compose --profile eval run --rm eval --suite replies && tail -1 evals/results.jsonl | jq -e '.scores.skill_gating.passed'",
+    "command": "docker compose --profile eval run --rm eval --suite replies && tail -1 evals/results.jsonl | jq -e '.scores.skill_gating.passed == true'",
     "passes": false
   },
   {
     "id": "S09-A10",
     "stage": 9,
-    "description": "Tier 1. The reply suite replays from recordings with zero tokens. Expect: exit 0.",
-    "command": "docker compose --profile eval run --build --rm -e RUN_MODE=replay eval --suite replies && tail -1 evals/results.jsonl | jq -e '.tokens == 0'",
+    "description": "Tier 1. The reply suite replays from recordings with zero tokens, and the repeat check reports not applicable. Expect: exit 0.",
+    "command": "docker compose --profile eval run --build --rm -e RUN_MODE=replay eval --suite replies && tail -1 evals/results.jsonl | jq -e '.tokens == 0 and .scores.reply_reading.repeat_agreement == \"not_applicable\"'",
     "passes": false
   },
   {
@@ -611,15 +702,15 @@
   {
     "id": "S10-A4",
     "stage": 10,
-    "description": "Tier 0. No lead detail carries a confidence field. Expect: exit 0.",
-    "command": "for i in 0 1 2 3 4 5 6 7 8 9; do curl -s \"http://localhost:8000/api/leads/LEAD-00000042-00$i\"; done | jq -s -e 'length == 10 and ([.[] | .. | objects | keys[] | select(test(\"confidence\"; \"i\"))] | length) == 0'",
+    "description": "Tier 0. Every lead detail answers HTTP 200 with the requested lead id, and none carries a confidence field. Expect: exit 0.",
+    "command": "for i in 0 1 2 3 4 5 6 7 8 9; do curl -s -w '\\n{\"http_status\": %{http_code}}\\n' \"http://localhost:8000/api/leads/LEAD-00000042-00$i\"; done | jq -s -e 'length == 20 and [.[range(1; 20; 2)].http_status] == [range(10) | 200] and [.[range(0; 20; 2)].lead_id] == [range(10) | \"LEAD-00000042-00\\(.)\"] and ([.[range(0; 20; 2)] | .. | objects | keys[] | select(test(\"confidence\"; \"i\"))] | length) == 0'",
     "passes": false
   },
   {
     "id": "S10-A5",
     "stage": 10,
-    "description": "Tier 1. The event stream emits event ids. Expect: a number of at least 1.",
-    "command": "curl -sN --max-time 3 http://localhost:8000/api/events/stream | grep -c '^id: '",
+    "description": "Tier 1. After a run start, the event stream emits event ids to a client with no `Last-Event-ID`. Expect: a number of at least 1.",
+    "command": "curl -s -X POST 'http://localhost:8000/api/run/start?wait=true' >/dev/null && curl -sN --max-time 3 http://localhost:8000/api/events/stream | grep -c '^id: '",
     "passes": false
   },
   {
@@ -653,7 +744,7 @@
   {
     "id": "S11-A4",
     "stage": 11,
-    "description": "Tier 1. The chat suite passes. Expect: exit 0.",
+    "description": "Tier 1. The chat suite passes. Needs `ANTHROPIC_API_KEY` in `.env`. Expect: exit 0.",
     "command": "docker compose --profile eval run --rm eval --suite chat",
     "passes": false
   },
@@ -667,7 +758,7 @@
   {
     "id": "S12-A1",
     "stage": 12,
-    "description": "Tier 1. A human approval exports as a candidate eval case. Run after any stage 10 human gate run. Expect: a number of at least 1.",
+    "description": "Tier 1. A human approval exports as a candidate eval case. Run directly after a run in which the underwriter approved at least one item. Expect: a number of at least 1.",
     "command": "docker compose exec -T app python -m uwh.runtime.export_candidates > evals/candidates/demo-run.yaml && grep -c '^actor: underwriter' evals/candidates/demo-run.yaml",
     "passes": false
   },
@@ -707,17 +798,31 @@
     "passes": false
   },
   {
+    "id": "S12-A7",
+    "stage": 12,
+    "description": "Tier 2. Run after S12-A4 and before any further run start: the `proposals` table holds the applied rule change, and `ruleset.active` names a ruleset directory on the app volume. Expect: `1`, then the active ruleset hash.",
+    "command": "echo \"SELECT count(*) >= 1 FROM proposals WHERE kind = 'rule_change' AND state = 'applied';\" | docker compose exec -T app sh -c 'sqlite3 \"$UWH_DB\"' && h=$(echo \"SELECT json_extract(value_json, '\\$') FROM settings WHERE key = 'ruleset.active';\" | docker compose exec -T app sh -c 'sqlite3 \"$UWH_DB\"') && test -n \"$h\" && docker compose exec -T app test -d \"/data/rulesets/$h\" && echo \"$h\"",
+    "passes": false
+  },
+  {
+    "id": "S12-A8",
+    "stage": 12,
+    "description": "Tier 2. Run after S12-A7: the next run start loads the active ruleset, so its `run_started` event carries the `ruleset.active` hash. Expect: `1`.",
+    "command": "curl -s -X POST 'http://localhost:8000/api/run/start?wait=true' >/dev/null && echo \"SELECT (SELECT ruleset_hash FROM events WHERE type = 'run_started') = (SELECT json_extract(value_json, '\\$') FROM settings WHERE key = 'ruleset.active');\" | docker compose exec -T app sh -c 'sqlite3 \"$UWH_DB\"'",
+    "passes": false
+  },
+  {
     "id": "S13-A1",
     "stage": 13,
-    "description": "Tier 0. The reference run passes every registered grader with no critical error. Expect: exit 0.",
+    "description": "Tier 0. The reference run passes every grader it scores with no critical error. Expect: exit 0.",
     "command": "docker compose --profile eval run --rm eval --suite all",
     "passes": false
   },
   {
     "id": "S13-A2",
     "stage": 13,
-    "description": "Tier 0. Every ready control is caught by its named grader; `not_ready` appears only for controls of tiers not built. Expect: exit 0.",
-    "command": "docker compose --profile eval run --rm eval --controls all; tail -1 evals/results.jsonl | jq -e 'all(.controls[]; .state == \"not_ready\" or .caught == true)'",
+    "description": "Tier 0. The three tier-0 controls are caught by name, and every other control is caught or `not_ready`; an empty controls object fails. Expect: exit 0.",
+    "command": "docker compose --profile eval run --rm eval --controls all; tail -1 evals/results.jsonl | jq -e '.controls.do_nothing.caught == true and .controls.email_every_missing_field.caught == true and .controls.send_twice.caught == true and all(.controls[]; .state == \"not_ready\" or .caught == true)'",
     "passes": false
   },
   {
@@ -738,7 +843,7 @@
     "id": "S13-A5",
     "stage": 13,
     "description": "Tier 0. App and eval images build for both architectures. Expect: exit 0.",
-    "command": "docker buildx build --platform linux/amd64,linux/arm64 --target app . && docker buildx build --platform linux/amd64,linux/arm64 --target eval .",
+    "command": "docker buildx inspect uwh-multi >/dev/null 2>&1 || docker buildx create --name uwh-multi --driver docker-container >/dev/null; docker buildx build --builder uwh-multi --platform linux/amd64,linux/arm64 --target app . && docker buildx build --builder uwh-multi --platform linux/amd64,linux/arm64 --target eval .",
     "passes": false
   },
   {
@@ -765,8 +870,15 @@
   {
     "id": "S13-A9",
     "stage": 13,
-    "description": "Tier 1. No skill is `untested` at the release commit. Expect: exit 0.",
+    "description": "Tier 1. No skill is `untested` or `failing` at the release commit. Expect: exit 0.",
     "command": "uv run python -m uwh.skills.status --release-check",
+    "passes": false
+  },
+  {
+    "id": "S13-A10",
+    "stage": 13,
+    "description": "Tier 1. In the tier-1 pass, all eight controls are caught. Expect: exit 0.",
+    "command": "docker compose --profile eval run --rm eval --controls all; tail -1 evals/results.jsonl | jq -e '(.controls | length) == 8 and all(.controls[]; .caught == true)'",
     "passes": false
   }
 ]

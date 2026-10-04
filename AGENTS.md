@@ -15,10 +15,10 @@ A take-home submission for Stand Insurance: a small skill-and-eval harness whose
 
 - `sim-harness/` is Stand's code. Never edit it.
 - `docs/brief/` and `docs/playbook/` are source material. Never edit them.
-- The application never reads the generator's debug answer key. Only `tools/` and `evals/` may run generator code.
+- Nothing under `src/` imports or runs Stand's generator or reads the debug answer key. `tools/`, `evals/` and `tests/` may import Stand's code.
 - `evals/labels/` is written without reading the Python under `src/uwh/rules/`. If you are implementing rules, do not edit a label to make a test pass; raise the disagreement.
-- Decision-path rules, thresholds and graders change only by a human-approved commit. Do not weaken a grader, a threshold or a test to get green.
-- Never commit `.env` or any key. Never write outside this repository.
+- Once Brett has reviewed the interpretation table at stage 3, that table, the thresholds and the graders change only with his approval. Graph files are built in stage 6 against the reviewed table. Do not weaken a grader, a threshold or a test to get green.
+- Never commit `.env` or any key. Never write outside this repository, except temporary directories for tests and for the fresh-clone rehearsal.
 
 ## Working with Brett
 
@@ -55,7 +55,9 @@ make test-slow   # slow and integration tests (containers running)
 make eval        # docker compose --profile eval run --rm eval
 ```
 
-`make check` must pass with clean output before any task is called done. The Stop hook runs it.
+`make check` must pass with clean output before any task is called done. The Stop hook runs the discipline check and `make check` on every stop.
+
+Prerequisites on the build machine: Docker with Compose 2.20 or later, `uv`, `jq`, Node 22 with pnpm through `corepack enable`. The `codex` CLI is used by cross-review when present. Before the first `make up`, run `cp .env.example .env`.
 
 ## Test-driven development
 
@@ -71,7 +73,7 @@ Testing rules:
 
 - Tests assert real behaviour. Never write a test whose assertion is satisfied by a mock; if you find one, stop and tell Brett.
 - No mocks in end-to-end or integration tests. They run against the real leadgen and mailbox containers.
-- Model calls in tests are served from `recordings/`, never from a hand-written response.
+- Model calls in tests are served from `recordings/`, never from a hand-written response. The plan names the few tasks that make a live call, to record an exchange or to rehearse.
 - Output is pristine. An expected error is captured and asserted.
 - A fixture must be able to separate the right answer from the wrong one. Check that a deliberately wrong implementation fails the test.
 - Tiers: fast (under 5 seconds, in `make check`), `@pytest.mark.slow`, `@pytest.mark.integration` (containers), eval (the eval runner).
@@ -104,12 +106,14 @@ After three failed fixes for one problem, stop and write up what was tried. Do n
 
 **Every code file starts with two comment lines beginning `ABOUTME: `** that say what the file does.
 
-**No temporal or historical language in any artifact:** code, comments, docs, test names, YAML, commit-independent notes. Describe what is. If an assessment proves wrong, rewrite the entry; do not annotate its history. History lives in git. `scripts/check_discipline.py` enforces a word list; the rule is wider than the list.
+**No temporal or historical language in any artifact:** code, comments, docs, test names, YAML, commit-independent notes. Describe what is. If an assessment proves wrong, rewrite the entry; do not annotate its history. History lives in git. `scripts/check_discipline.py` enforces a word list; the rule is wider than the list. Three places exist to record events in order and are outside this rule: `evals/results.jsonl`, `docs/progress.md` entries, and commit messages.
 
 ## Version control
 
 - Check `git status` before starting. If the tree is dirty, stop and ask Brett.
-- Work on a branch per stage: `stage-NN-short-name`. Brett merges.
+- Work on a branch per stage and tier pass: `stage-NN-short-name-tN` (for example `stage-04-runtime-t0`). Brett merges.
+- Branch from `main` when the previous stage is merged, otherwise from the previous stage's branch. Do not wait for a merge unless the stage has a human gate.
+- Stages that run in parallel each branch from the same base and touch only the files the plan assigns them.
 - Commit often. Claude-authored commit subjects start with `CLAUDE-<model-name>: `; other agents use their own model name the same way. If the model name is unknown, ask before committing.
 - Never `git add -A` without a fresh `git status`. Never `git add -f` an ignored file. Never skip, evade or disable a hook.
 
