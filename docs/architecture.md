@@ -625,7 +625,7 @@ Then code:
 
 Reply text is untrusted. It is length-capped, passed to the model as data, and cannot approve an action or change a setting. Accepted facts, round closure and re-evaluation commit in one transaction.
 
-**Classification cascade.** With a Jev key, Jev answers the classification as a choice question. The interface computes confidence from the returned probabilities, and when it is below the per-question threshold (default 0.7) Claude answers instead. Without a Jev key Claude answers every time. Stand's run has no Jev key; Jev results appear as recorded eval rows.
+**Classification cascade.** With a Jev key (`TYPESAFE_API_KEY`), Jev answers the classification as a choice question. The interface computes confidence from the returned probabilities, and when it is below the per-question threshold (default 0.7) Claude answers instead. Without a Jev key Claude answers every time, so the system works fully on Claude alone. Brett and Stand's reviewers both run with a Jev key; the Claude-only path is the fallback.
 
 ### 10.5 Quote packet and decline notice
 
