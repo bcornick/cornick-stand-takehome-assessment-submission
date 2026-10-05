@@ -181,18 +181,24 @@ Known gaps, recorded and not fixed: the fixtures show no `assumed` fact and no p
 | Item | Read from |
 |---|---|
 | `vertical.TRANSITIONS`, `TERMINAL_STATUSES`, `BLOCKER_KINDS_BY_PRIORITY` | stage 4 task 4 (workflow and waits) |
-| `vertical.COMMAND_CLASSES` (beyond the API's use of its names) | stage 4 task 6 (command layer) |
+| `vertical.COMMAND_CLASSES` (nothing in `src/` reads it; tests tie the API's class-name literals to it) | stage 4 task 6 (command layer) |
 | `vertical.REFERENCE_MORNING` | stage 4 task 2 (clock) |
 | `vertical.CONFIRMATION_ONLY_CLASS` | stage 8 task 1 (`plan_asks`) |
-| `Settings.db_path` | stage 4 task 1 (event log) |
+| `Settings.db_path` | stage 4, where the app first opens the store (the task text does not name `UWH_DB`; unverified which task) |
 | `Settings.git_commit` | stage 5 task 3 (results log) |
-| `Settings.registry_path` | stage 6 task 2 (triage) |
+| `Settings.registry_path` | stage 6 task 1 (registry loader) |
 | `Settings.model_id`, `Settings.model_base_url` | stage 9 task 2 (`read_reply`) |
 | `store.open_store`, `store.create_tables` | stage 4 tasks 1 and 9 |
 | `hashing.active_ruleset_dir` | stage 12 (rule change) |
 | the `*Output` aliases in `skills/contracts.py` | stages 6 to 9, one per skill |
-| `anthropic` (stage 9), `pyyaml` in `src/` (stage 3), the mypy override for Stand's modules (stage 3 task 1) | as named |
+| `hashing.plan_hash` | stage 4 task 6 (approval binding) |
+| `hashing.payload_hash` | stage 4 task 7 (intents) |
+| `hashing.ruleset_hash` | stage 4 task 1 (the event row's ruleset hash) |
+| `digest.skill_digest` | stage 5 task 7 (skill status) |
+| `anthropic` (stage 9), `pyyaml` in `src/` (stage 4 task 5, the skill manifests), the mypy override for Stand's modules (stage 3 task 1) | as named |
 
 Known and left: `web/components.json` still names an icon library and a utils alias the scaffold no longer has (it is read only by the shadcn CLI); the `.dark` theme block in `web/src/index.css` has no switch that sets it; stage 4 makes `src/uwh/runtime/` read `skills/vertical.py`, which itself imports `runtime/event_types.py`, a package-level loop with no module cycle; §1 and `AGENTS.md` still call underwriting triage the "first vertical".
 
 **Friction:** three review rounds in a row were blocked on the docs being out of step with the code after a shape change, not on the code. A grep of the architecture, plan and acceptance file for every name, field and file a round changed now runs before the reviewer does; it found one more stale passage (which message kinds are requests) that would have blocked a fourth round.
+
+Process, from Brett on 2026-10-05: the lead fixes a reviewer's blocker itself and sends the fix back to the reviewer when it needs no escalation and no decision from Brett, and stops only when a blocker needs his ruling. Under that, the review at bc543ce blocked on two items and both were fixed without a further round with Brett: a blocker that is not a review accepted a cause (the refusal went with `BlockerView.review_cause`; restored on `detail.cause` with its test), and §7 and plan stage 2 task 3 said every value set lives in `event_types.py` while `AutonomyLevel` sat in `vertical.py` and the run mode in `settings.py`. The lead offered Brett two options on the second and he did not pick; the lead took the one it had recommended: `AutonomyLevel` moves to `event_types.py`, and the docs name the run mode as the one set defined elsewhere.
