@@ -1,5 +1,5 @@
 # ABOUTME: Runs Stand's unmodified leadgen generator in process with a recording wrapper and writes the provider fixture for one seed.
-# ABOUTME: The wrapper records each lead's clean base and each archetype's effect; --check fails when the fixture file is absent or differs.
+# ABOUTME: The wrapper records each lead's clean base and each archetype's nulled fields; --check fails when the fixture file is absent or differs.
 import argparse
 import copy
 import difflib
@@ -51,7 +51,6 @@ class GuaranteePassFired(RuntimeError):
 @dataclass
 class ArchetypeEffect:
     archetype: str
-    set_values: dict[str, Any]  # field -> the value the archetype put on the lead
     nulled: list[str]  # fields the archetype set to None
 
 
@@ -107,11 +106,6 @@ def recording() -> Iterator[list[LeadRecord]]:
             current[0].effects.append(
                 ArchetypeEffect(
                     archetype=name,
-                    set_values={
-                        t["field"]: copy.deepcopy(fields[t["field"]])
-                        for t in touches
-                        if t["kind"] == "archetype_set"
-                    },
                     nulled=[t["field"] for t in touches if t["kind"] == "archetype_null"],
                 )
             )
@@ -159,14 +153,7 @@ def provider_entry(lead: dict[str, Any], record: LeadRecord) -> dict[str, Any]:
 
     `provider_values` holds what the provider returns for each provider field when the lead's
     value is missing: the clean base value, or not_found where the field's archetype nulled it.
-    `archetype_set` holds the provider fields' values an archetype set; they stay on the lead.
     """
-    archetype_set = {
-        name: value
-        for effect in record.effects
-        for name, value in effect.set_values.items()
-        if name in PROVIDER_FIELDS
-    }
     provider_values: dict[str, Any] = {}
     for name in PROVIDER_FIELDS:
         not_found = any(
@@ -180,7 +167,6 @@ def provider_entry(lead: dict[str, Any], record: LeadRecord) -> dict[str, Any]:
     return {
         "fingerprint": hash_json(lead["fields"]),
         "provider_values": provider_values,
-        "archetype_set": archetype_set,
         "fields": lead["fields"],
     }
 

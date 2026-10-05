@@ -3,7 +3,6 @@
   "difficulty": "mixed",
   "leads": {
     "LEAD-00000015-000": {
-      "archetype_set": {},
       "fields": {
         "above_ground_pool_ladder": null,
         "acreage": 0.29,
@@ -124,7 +123,6 @@
       }
     },
     "LEAD-00000015-001": {
-      "archetype_set": {},
       "fields": {
         "above_ground_pool_ladder": null,
         "acreage": 0.0,
@@ -245,7 +243,6 @@
       }
     },
     "LEAD-00000015-002": {
-      "archetype_set": {},
       "fields": {
         "above_ground_pool_ladder": null,
         "acreage": null,
@@ -366,9 +363,6 @@
       }
     },
     "LEAD-00000015-003": {
-      "archetype_set": {
-        "road_access": "Limited / Dead-end / No Turnaround"
-      },
       "fields": {
         "above_ground_pool_ladder": null,
         "acreage": 0.47,
@@ -489,9 +483,6 @@
       }
     },
     "LEAD-00000015-004": {
-      "archetype_set": {
-        "road_access": "Limited / Dead-end / No Turnaround"
-      },
       "fields": {
         "above_ground_pool_ladder": null,
         "acreage": null,
@@ -612,7 +603,6 @@
       }
     },
     "LEAD-00000015-005": {
-      "archetype_set": {},
       "fields": {
         "above_ground_pool_ladder": null,
         "acreage": 1.96,
@@ -733,7 +723,6 @@
       }
     },
     "LEAD-00000015-006": {
-      "archetype_set": {},
       "fields": {
         "above_ground_pool_ladder": null,
         "acreage": 1.66,
@@ -854,9 +843,6 @@
       }
     },
     "LEAD-00000015-007": {
-      "archetype_set": {
-        "road_access": "Limited / Dead-end / No Turnaround"
-      },
       "fields": {
         "above_ground_pool_ladder": null,
         "acreage": null,
@@ -977,7 +963,6 @@
       }
     },
     "LEAD-00000015-008": {
-      "archetype_set": {},
       "fields": {
         "above_ground_pool_ladder": null,
         "acreage": 0.81,
@@ -1098,7 +1083,6 @@
       }
     },
     "LEAD-00000015-009": {
-      "archetype_set": {},
       "fields": {
         "above_ground_pool_ladder": null,
         "acreage": 2.04,

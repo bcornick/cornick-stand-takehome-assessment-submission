@@ -62,9 +62,6 @@ def test_recording_is_non_empty_and_consistent_with_the_final_lead(
         assert record.lead_id == lead["lead_id"]
         assert len(record.base) == 73
         for effect in record.effects:
-            assert effect.set_values or effect.nulled
-            for name, value in effect.set_values.items():
-                assert lead["fields"][name] == value
             for name in effect.nulled:
                 assert lead["fields"][name] is None
 
@@ -126,9 +123,7 @@ def test_each_entry_holds_every_provider_field_and_a_fingerprint_of_the_final_le
                 assert record.base[name] is not None
             else:
                 assert result == {"status": "not_found", "value": None}
-        for name, value in entry["archetype_set"].items():
-            assert name in capture_world.PROVIDER_FIELDS
-            assert lead["fields"][name] == value
+        assert set(entry) == {"fingerprint", "provider_values", "fields"}
 
 
 def test_replacement_cost_holds_the_base_value_that_predates_the_archetype_nulling_it(
@@ -154,12 +149,11 @@ def test_replacement_cost_holds_the_base_value_that_predates_the_archetype_nulli
     assert not int(final_coverage * 0.95) <= result["value"] <= int(final_coverage * 1.1)
 
 
-def test_wildfire_archetype_values_are_recorded_as_set_and_the_base_value_is_kept_apart(
+def test_wildfire_archetype_value_stays_on_the_lead_and_the_base_value_is_kept_apart(
     worlds: dict[int, dict[str, Any]],
 ) -> None:
     entry = worlds[42]["leads"]["LEAD-00000042-003"]
-    assert entry["archetype_set"]["p_f"] == entry["fields"]["p_f"]
-    assert entry["archetype_set"]["p_f"] >= 0.55
+    assert entry["fields"]["p_f"] >= 0.55
     assert entry["provider_values"]["p_f"]["value"] <= 0.2
 
 

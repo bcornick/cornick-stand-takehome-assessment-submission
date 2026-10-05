@@ -3,7 +3,6 @@
   "difficulty": "mixed",
   "leads": {
     "LEAD-00000042-000": {
-      "archetype_set": {},
       "fields": {
         "above_ground_pool_ladder": null,
         "acreage": 0.32,
@@ -124,7 +123,6 @@
       }
     },
     "LEAD-00000042-001": {
-      "archetype_set": {},
       "fields": {
         "above_ground_pool_ladder": null,
         "acreage": 1.54,
@@ -245,9 +243,6 @@
       }
     },
     "LEAD-00000042-002": {
-      "archetype_set": {
-        "kyc_score": 8
-      },
       "fields": {
         "above_ground_pool_ladder": null,
         "acreage": 0.22,
@@ -368,12 +363,6 @@
       }
     },
     "LEAD-00000042-003": {
-      "archetype_set": {
-        "min_distance_to_neighbor_ft": 14,
-        "p_f": 0.79,
-        "slope_angle_deg": 30.0,
-        "vegetation_clearance": "Too Close"
-      },
       "fields": {
         "above_ground_pool_ladder": null,
         "acreage": 2.19,
@@ -494,7 +483,6 @@
       }
     },
     "LEAD-00000042-004": {
-      "archetype_set": {},
       "fields": {
         "above_ground_pool_ladder": null,
         "acreage": 1.06,
@@ -615,9 +603,6 @@
       }
     },
     "LEAD-00000042-005": {
-      "archetype_set": {
-        "kyc_score": 6
-      },
       "fields": {
         "above_ground_pool_ladder": null,
         "acreage": 2.38,
@@ -738,12 +723,6 @@
       }
     },
     "LEAD-00000042-006": {
-      "archetype_set": {
-        "min_distance_to_neighbor_ft": 14,
-        "p_f": 0.89,
-        "slope_angle_deg": 29.4,
-        "vegetation_clearance": "Too Close"
-      },
       "fields": {
         "above_ground_pool_ladder": null,
         "acreage": null,
@@ -864,9 +843,6 @@
       }
     },
     "LEAD-00000042-007": {
-      "archetype_set": {
-        "kyc_score": 9
-      },
       "fields": {
         "above_ground_pool_ladder": null,
         "acreage": 1.54,
@@ -987,7 +963,6 @@
       }
     },
     "LEAD-00000042-008": {
-      "archetype_set": {},
       "fields": {
         "above_ground_pool_ladder": null,
         "acreage": 2.47,
@@ -1108,7 +1083,6 @@
       }
     },
     "LEAD-00000042-009": {
-      "archetype_set": {},
       "fields": {
         "above_ground_pool_ladder": null,
         "acreage": null,

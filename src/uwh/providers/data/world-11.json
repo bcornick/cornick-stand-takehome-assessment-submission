@@ -3,7 +3,6 @@
   "difficulty": "mixed",
   "leads": {
     "LEAD-00000011-000": {
-      "archetype_set": {},
       "fields": {
         "above_ground_pool_ladder": null,
         "acreage": 1.16,
@@ -124,7 +123,6 @@
       }
     },
     "LEAD-00000011-001": {
-      "archetype_set": {},
       "fields": {
         "above_ground_pool_ladder": null,
         "acreage": 0.0,
@@ -245,7 +243,6 @@
       }
     },
     "LEAD-00000011-002": {
-      "archetype_set": {},
       "fields": {
         "above_ground_pool_ladder": null,
         "acreage": null,
@@ -366,7 +363,6 @@
       }
     },
     "LEAD-00000011-003": {
-      "archetype_set": {},
       "fields": {
         "above_ground_pool_ladder": null,
         "acreage": 1.23,
@@ -487,7 +483,6 @@
       }
     },
     "LEAD-00000011-004": {
-      "archetype_set": {},
       "fields": {
         "above_ground_pool_ladder": null,
         "acreage": 1.07,
@@ -608,7 +603,6 @@
       }
     },
     "LEAD-00000011-005": {
-      "archetype_set": {},
       "fields": {
         "above_ground_pool_ladder": null,
         "acreage": 0.72,
@@ -729,12 +723,6 @@
       }
     },
     "LEAD-00000011-006": {
-      "archetype_set": {
-        "min_distance_to_neighbor_ft": 8,
-        "p_f": 0.82,
-        "slope_angle_deg": 31.4,
-        "vegetation_clearance": "Too Close"
-      },
       "fields": {
         "above_ground_pool_ladder": null,
         "acreage": 1.26,
@@ -855,7 +843,6 @@
       }
     },
     "LEAD-00000011-007": {
-      "archetype_set": {},
       "fields": {
         "above_ground_pool_ladder": null,
         "acreage": null,
@@ -976,7 +963,6 @@
       }
     },
     "LEAD-00000011-008": {
-      "archetype_set": {},
       "fields": {
         "above_ground_pool_ladder": null,
         "acreage": null,
@@ -1097,13 +1083,6 @@
       }
     },
     "LEAD-00000011-009": {
-      "archetype_set": {
-        "kyc_score": 7,
-        "min_distance_to_neighbor_ft": 13,
-        "p_f": 0.68,
-        "slope_angle_deg": 38.2,
-        "vegetation_clearance": "Too Close"
-      },
       "fields": {
         "above_ground_pool_ladder": null,
         "acreage": null,
