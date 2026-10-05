@@ -27,12 +27,11 @@ from uwh.runtime.event_types import (
     ProposalKind,
     ProposalState,
     RequestKind,
-    ReviewCause,
     SkillStatus,
     Status,
 )
 from uwh.settings import RunMode
-from uwh.skills.vertical import PERSISTING_REVIEW_CAUSES
+from uwh.skills.vertical import HELD_DRAFT_CAUSES, refuse_unservable_blocker
 
 
 # Autonomy applies to a class that has a default level (7.4); the human-only classes have none.
@@ -193,18 +192,6 @@ class LeadNote(StrictModel):
     text: str
 
 
-# A.11: the approvals item kinds of an `underwriter_review` blocker.
-_REVIEW_ITEM_KINDS: tuple[ApprovalItemKind, ...] = (
-    "draft",
-    "observation",
-    "no_contact_route",
-    "review",
-)
-
-# 7.4: a dispatch the stop or a class set to `off` refused leaves its draft in review.
-_HELD_DRAFT_CAUSES: tuple[ReviewCause, ...] = ("draft_held_by_stop", "draft_held_class_off")
-
-
 class BlockerView(StrictModel):
     """An open blocker. `item_id` is `blockers.id`, the id an `approve` or `reject` names.
 
@@ -223,25 +210,9 @@ class BlockerView(StrictModel):
 
     @model_validator(mode="after")
     def item_kind_fits_the_blocker(self) -> Self:
-        item_kind = self.detail.item_kind
-        if self.kind == "underwriter_review":
-            if item_kind not in _REVIEW_ITEM_KINDS:
-                raise ValueError(
-                    f"an underwriter_review detail.item_kind is one of {_REVIEW_ITEM_KINDS}"
-                )
-        elif self.kind == "delivery_unknown":
-            if item_kind != "delivery_unknown":
-                raise ValueError(
-                    "a delivery_unknown blocker has the detail.item_kind delivery_unknown"
-                )
-        elif item_kind is not None:
-            raise ValueError(f"a {self.kind} blocker has no detail.item_kind")
-        if item_kind == "draft" and self.detail.intent_id is None:
-            raise ValueError("a draft review names its draft: detail.intent_id")
-        if self.detail.cause_persists and item_kind != "review":
-            raise ValueError("only a review holds a persistent cause")
+        refuse_unservable_blocker(self.kind, self.detail)
         self._observation_is_the_pending_one()
-        self._review_cause_and_held_draft_fit()
+        self._held_draft_carries_its_hash()
         return self
 
     def _observation_is_the_pending_one(self) -> None:
@@ -256,19 +227,8 @@ class BlockerView(StrictModel):
         if self.detail.observation_id != self.observation.observation_id:
             raise ValueError("detail.observation_id is the observation's observation_id")
 
-    def _review_cause_and_held_draft_fit(self) -> None:
-        cause = self.detail.cause
-        if self.detail.item_kind == "review":
-            if cause is None:
-                raise ValueError("a review has a cause: detail.cause")
-            persists = cause in PERSISTING_REVIEW_CAUSES
-            if self.detail.cause_persists != persists:
-                raise ValueError(f"detail.cause_persists is {persists} for {cause}")
-        elif cause is not None:
-            raise ValueError("only a review has a cause: detail.cause")
-        held = cause in _HELD_DRAFT_CAUSES
-        if held and self.detail.intent_id is None:
-            raise ValueError("a held draft's review names its draft: detail.intent_id")
+    def _held_draft_carries_its_hash(self) -> None:
+        held = self.detail.cause in HELD_DRAFT_CAUSES
         if held != (self.held_draft_payload_hash is not None):
             raise ValueError("held_draft_payload_hash is set exactly for a held draft's review")
 

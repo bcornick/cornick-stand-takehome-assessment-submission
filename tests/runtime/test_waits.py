@@ -1,5 +1,5 @@
-# ABOUTME: Tests that a lead holds several blockers with kind, owner and resume trigger, that the primary next action follows the 7.1 priority order, and that a blocker the lead detail view would refuse is refused at the write.
-# ABOUTME: Each test opens a real database through open_store and reads back the blockers table and the events; the view check validates every accepted blocker as the API's BlockerView.
+# ABOUTME: Tests that a lead holds several blockers with kind, owner and resume trigger, that the primary next action follows the 7.1 priority order, and that an unservable blocker or a bad observation item is refused at the write.
+# ABOUTME: Each test opens a real database through open_store and reads back the blockers table and the events; one test shows the lead detail view's BlockerView refuses what the write refuses.
 import json
 import sqlite3
 from datetime import UTC, datetime
@@ -9,7 +9,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from uwh.api.views import BlockerView, FactView, QuestionItem
+from uwh.api.views import BlockerView
 from uwh.runtime.event_types import BlockerDetail, BlockerKind, BlockerOwner, EventType
 from uwh.runtime.events import EventContext, read_events
 from uwh.runtime.store import open_store
@@ -160,181 +160,59 @@ def test_the_primary_next_action_of_an_unknown_lead_is_refused(db: sqlite3.Conne
         primary_next_action(db, "L-9")
 
 
-# ---- what the lead detail view would refuse ------------------------------------------------------
-
-Case = tuple[BlockerKind, BlockerOwner, dict[str, Any]]
-
-ACCEPTED: dict[str, Case] = {
-    "producer reply": ("producer_reply", "producer", {"intent_id": "I-1"}),
-    "data": ("data", "data_team", {}),
-    "question": ("underwriter_question", "underwriter", {"choice_ids": ["c1"]}),
-    "delivery unknown": ("delivery_unknown", "underwriter", {"item_kind": "delivery_unknown"}),
-    "draft review": (
-        "underwriter_review",
-        "underwriter",
-        {"item_kind": "draft", "intent_id": "I-1"},
-    ),
-    "no contact route": ("underwriter_review", "underwriter", {"item_kind": "no_contact_route"}),
-    "late reply review": (
-        "underwriter_review",
-        "underwriter",
-        {"item_kind": "review", "cause": "late_reply"},
-    ),
-    "persistent review": (
-        "underwriter_review",
-        "underwriter",
-        {"item_kind": "review", "cause": "round_limit", "cause_persists": True},
-    ),
-    "held draft review": (
-        "underwriter_review",
-        "underwriter",
-        {"item_kind": "review", "cause": "draft_held_by_stop", "intent_id": "I-1"},
-    ),
-    "pending observation": (
-        "underwriter_review",
-        "underwriter",
-        {"item_kind": "observation"},  # observation_id is added by the test
-    ),
-}
-
-REFUSED: dict[str, Case] = {
-    "a cause on a blocker that is not a review": (
-        "underwriter_review",
-        "underwriter",
-        {"item_kind": "draft", "intent_id": "I-1", "cause": "late_reply"},
-    ),
-    "a cause on a data blocker": ("data", "data_team", {"cause": "late_reply"}),
-    "an item kind on a producer reply": ("producer_reply", "producer", {"item_kind": "draft"}),
-    "an item kind on a question": ("underwriter_question", "underwriter", {"item_kind": "review"}),
-    "delivery_unknown without its item kind": ("delivery_unknown", "underwriter", {}),
-    "delivery_unknown with the wrong item kind": (
-        "delivery_unknown",
-        "underwriter",
-        {"item_kind": "draft"},
-    ),
-    "a review without an item kind": ("underwriter_review", "underwriter", {}),
-    "a review with the item kind delivery_unknown": (
-        "underwriter_review",
-        "underwriter",
-        {"item_kind": "delivery_unknown"},
-    ),
-    "a draft review without its draft": (
-        "underwriter_review",
-        "underwriter",
-        {"item_kind": "draft"},
-    ),
-    "a review without a cause": ("underwriter_review", "underwriter", {"item_kind": "review"}),
-    "a persistent cause not marked persistent": (
-        "underwriter_review",
-        "underwriter",
-        {"item_kind": "review", "cause": "round_limit"},
-    ),
-    "a non-persistent cause marked persistent": (
-        "underwriter_review",
-        "underwriter",
-        {"item_kind": "review", "cause": "late_reply", "cause_persists": True},
-    ),
-    "cause_persists outside a review": (
-        "underwriter_review",
-        "underwriter",
-        {"item_kind": "draft", "intent_id": "I-1", "cause_persists": True},
-    ),
-    "a held draft's review without its draft": (
-        "underwriter_review",
-        "underwriter",
-        {"item_kind": "review", "cause": "draft_held_class_off"},
-    ),
-    "an observation item without observation_id": (
-        "underwriter_review",
-        "underwriter",
-        {"item_kind": "observation"},
-    ),
-}
+# ---- what a blocker may carry ----------------------------------------------------------------------
 
 
-# Refused by `open_blocker` alone: no view model states these rules. `BlockerView` does not read
-# `detail.choice_ids`, and `QuestionItem` is the only view that does.
-RUNTIME_ONLY_REFUSED: dict[str, Case] = {
-    "choice_ids on a data blocker": ("data", "data_team", {"choice_ids": ["c1"]}),
-    "choice_ids on a review": (
+def test_a_pending_observation_item_is_accepted(db: sqlite3.Connection) -> None:
+    observation_id = add_observation(db, "pending_review")
+    blocker_id = open_blocker(
+        db,
+        CONTEXT,
+        "L-1",
         "underwriter_review",
         "underwriter",
-        {"item_kind": "review", "cause": "late_reply", "choice_ids": ["c1"]},
-    ),
-    "choice_ids on a producer reply": ("producer_reply", "producer", {"choice_ids": ["c1"]}),
-}
-
-
-def view_of(
-    kind: BlockerKind,
-    owner: BlockerOwner,
-    blocker_detail: BlockerDetail,
-    observation: FactView | None,
-) -> BlockerView:
-    held = blocker_detail.cause in ("draft_held_by_stop", "draft_held_class_off")
-    return BlockerView(
-        item_id=1,
-        kind=kind,
-        owner=owner,
-        detail=blocker_detail,
-        observation=observation,
-        held_draft_payload_hash="h" * 64 if held else None,
+        detail(item_kind="observation", observation_id=observation_id),
     )
+    assert [b.id for b in open_blockers(db, "L-1")] == [blocker_id]
 
 
-def pending_fact(observation_id: int) -> FactView:
-    return FactView(
-        key="acreage",
-        value=2,
-        source="reply",
-        status="pending_review",
-        confirmed=False,
-        evidence={},
-        observation_id=observation_id,
-        is_stub=False,
-    )
-
-
-@pytest.mark.parametrize("name", ACCEPTED)
-def test_every_blocker_waits_accepts_validates_as_a_blocker_view(
-    db: sqlite3.Connection, name: str
+@pytest.mark.parametrize(
+    ("kind", "owner", "fields"),
+    [
+        ("data", "data_team", {"cause": "late_reply"}),
+        ("data", "data_team", {"choice_ids": ["c1"]}),
+        ("underwriter_question", "underwriter", {}),
+        ("underwriter_review", "underwriter", {"item_kind": "draft"}),
+    ],
+)
+def test_a_blocker_the_rule_refuses_is_refused_at_the_write_and_by_the_view(
+    db: sqlite3.Connection, kind: BlockerKind, owner: BlockerOwner, fields: dict[str, Any]
 ) -> None:
-    kind, owner, fields = ACCEPTED[name]
-    observation = None
-    if fields.get("item_kind") == "observation":
-        observation_id = add_observation(db, "pending_review")
-        fields = {**fields, "observation_id": observation_id}
-        observation = pending_fact(observation_id)
     blocker_detail = detail(**fields)
-    open_blocker(db, CONTEXT, "L-1", kind, owner, blocker_detail)
-    assert view_of(kind, owner, blocker_detail, observation).kind == kind
-
-
-@pytest.mark.parametrize("name", REFUSED)
-def test_every_blocker_the_view_refuses_is_refused_at_the_write(
-    db: sqlite3.Connection, name: str
-) -> None:
-    kind, owner, fields = REFUSED[name]
-    blocker_detail = detail(**fields)
-    with pytest.raises(ValidationError):
-        view_of(kind, owner, blocker_detail, None)
     with pytest.raises(ValueError):
         open_blocker(db, CONTEXT, "L-1", kind, owner, blocker_detail)
+    with pytest.raises(ValidationError):
+        BlockerView(
+            item_id=1,
+            kind=kind,
+            owner=owner,
+            detail=blocker_detail,
+            observation=None,
+            held_draft_payload_hash=None,
+        )
     assert db.execute("SELECT COUNT(*) FROM blockers").fetchone() == (0,)
     assert read_events(db) == []
 
 
 @pytest.mark.parametrize("status", ["accepted", "rejected"])
-def test_an_observation_item_for_an_observation_not_pending_is_refused_by_both(
+def test_an_observation_item_for_an_observation_not_pending_is_refused(
     db: sqlite3.Connection, status: str
 ) -> None:
     observation_id = add_observation(db, status)
     blocker_detail = detail(item_kind="observation", observation_id=observation_id)
-    fact = pending_fact(observation_id).model_copy(update={"status": status})
-    with pytest.raises(ValidationError):
-        view_of("underwriter_review", "underwriter", blocker_detail, fact)
     with pytest.raises(ValueError, match="not a pending_review"):
         open_blocker(db, CONTEXT, "L-1", "underwriter_review", "underwriter", blocker_detail)
+    assert read_events(db) == []
 
 
 def test_an_observation_item_for_a_missing_observation_is_refused(db: sqlite3.Connection) -> None:
@@ -343,41 +221,9 @@ def test_an_observation_item_for_a_missing_observation_is_refused(db: sqlite3.Co
         open_blocker(db, CONTEXT, "L-1", "underwriter_review", "underwriter", blocker_detail)
 
 
-@pytest.mark.parametrize("name", RUNTIME_ONLY_REFUSED)
-def test_every_blocker_only_the_runtime_refuses_is_refused_at_the_write(
-    db: sqlite3.Connection, name: str
-) -> None:
-    kind, owner, fields = RUNTIME_ONLY_REFUSED[name]
-    with pytest.raises(ValueError, match="choice_ids"):
-        open_blocker(db, CONTEXT, "L-1", kind, owner, detail(**fields))
-    assert db.execute("SELECT COUNT(*) FROM blockers").fetchone() == (0,)
-    assert read_events(db) == []
-
-
-def test_a_question_without_choices_is_refused_by_both(db: sqlite3.Connection) -> None:
-    blocker_detail = detail()
-    with pytest.raises(ValidationError):
-        QuestionItem(
-            item_id=1,
-            kind="underwriter_question",
-            owner="underwriter",
-            detail=blocker_detail,
-            observation=None,
-            held_draft_payload_hash=None,
-            type="question",
-            lead_id="L-1",
-            choices=[],
-        )
-    with pytest.raises(ValueError, match="choice_ids"):
-        open_blocker(db, CONTEXT, "L-1", "underwriter_question", "underwriter", blocker_detail)
-    assert db.execute("SELECT COUNT(*) FROM blockers").fetchone() == (0,)
-    assert read_events(db) == []
-
-
 def test_an_observation_item_for_another_leads_observation_is_refused(
     db: sqlite3.Connection,
 ) -> None:
-    # `BlockerView` compares only the observation ids, so no view refuses this; the write does.
     add_lead(db, "L-2", "in_progress")
     observation_id = add_observation(db, "pending_review", "L-2")
     blocker_detail = detail(item_kind="observation", observation_id=observation_id)

@@ -1,35 +1,22 @@
 # ABOUTME: The waiting primitive of 7.1: a blocker row with a kind, an owner and a resume trigger; opens and closes blockers, lists a lead's open ones and names its primary next action.
-# ABOUTME: Opening refuses the blockers `BlockerView` and `QuestionItem` refuse, and the ones whose observation is another lead's or whose choice ids sit on the wrong kind, so a bad write fails at the write; every change writes its event and the caller commits.
+# ABOUTME: Opening refuses what `refuse_unservable_blocker` refuses and an observation item whose observation is not this lead's pending one, so a bad write fails at the write; every change writes its event and the caller commits.
 import sqlite3
 from dataclasses import dataclass
 
 from uwh.runtime.event_types import (
-    ApprovalItemKind,
     BlockerClosed,
     BlockerDetail,
     BlockerKind,
     BlockerOpened,
     BlockerOwner,
     EventType,
-    ReviewCause,
 )
 from uwh.runtime.events import EventContext, append_event
 from uwh.skills.vertical import (
     BLOCKER_KINDS_BY_PRIORITY,
-    PERSISTING_REVIEW_CAUSES,
     TERMINAL_STATUSES,
+    refuse_unservable_blocker,
 )
-
-# The item kinds an underwriter_review blocker takes (A.11).
-_REVIEW_ITEM_KINDS: tuple[ApprovalItemKind, ...] = (
-    "draft",
-    "observation",
-    "no_contact_route",
-    "review",
-)
-
-# 7.4: a dispatch the stop or a class set to `off` refused leaves its draft in review.
-_HELD_DRAFT_CAUSES: tuple[ReviewCause, ...] = ("draft_held_by_stop", "draft_held_class_off")
 
 
 @dataclass(frozen=True)
@@ -39,42 +26,6 @@ class Blocker:
     kind: BlockerKind
     owner: BlockerOwner
     detail: BlockerDetail
-
-
-def _refuse_unservable(
-    db: sqlite3.Connection, lead_id: str, kind: BlockerKind, detail: BlockerDetail
-) -> None:
-    """Raise ValueError for a blocker `BlockerView` or `QuestionItem` would refuse, for an observation
-    item naming another lead's observation, and for choice ids on a blocker that is not a question."""
-    item_kind = detail.item_kind
-    if kind == "underwriter_review":
-        if item_kind not in _REVIEW_ITEM_KINDS:
-            raise ValueError(f"an underwriter_review item_kind is one of {_REVIEW_ITEM_KINDS}")
-    elif kind == "delivery_unknown":
-        if item_kind != "delivery_unknown":
-            raise ValueError("a delivery_unknown blocker has the item_kind delivery_unknown")
-    elif item_kind is not None:
-        raise ValueError(f"a {kind} blocker has no item_kind")
-    if item_kind == "draft" and detail.intent_id is None:
-        raise ValueError("a draft review names its draft: intent_id")
-    if detail.cause_persists and item_kind != "review":
-        raise ValueError("only a review holds a persistent cause")
-    if item_kind == "review":
-        if detail.cause is None:
-            raise ValueError("a review has a cause")
-        persists = detail.cause in PERSISTING_REVIEW_CAUSES
-        if detail.cause_persists != persists:
-            raise ValueError(f"cause_persists is {persists} for {detail.cause}")
-    elif detail.cause is not None:
-        raise ValueError("only a review has a cause")
-    if detail.cause in _HELD_DRAFT_CAUSES and detail.intent_id is None:
-        raise ValueError("a held draft's review names its draft: intent_id")
-    if kind == "underwriter_question" and not detail.choice_ids:
-        raise ValueError("a question blocker names its choices: choice_ids")
-    if kind != "underwriter_question" and detail.choice_ids:
-        raise ValueError(f"a {kind} blocker has no choice_ids")
-    if item_kind == "observation":
-        _require_pending_observation(db, lead_id, detail.observation_id)
 
 
 def _require_pending_observation(
@@ -101,10 +52,13 @@ def open_blocker(
 ) -> int:
     """Insert an open blocker, write `blocker_opened` and return the blocker id. The caller commits.
 
-    Raises ValueError, writing nothing, for a blocker the lead detail view would refuse, for an
-    observation item naming another lead's observation and for choice ids on a non-question blocker.
+    Raises ValueError, writing nothing, for a blocker `refuse_unservable_blocker` refuses and for an
+    observation item whose observation is not this lead's `pending_review` one.
     """
-    _refuse_unservable(db, lead_id, kind, detail)
+    refuse_unservable_blocker(kind, detail)
+    if detail.item_kind == "observation":
+        assert detail.observation_id is not None  # refuse_unservable_blocker requires it
+        _require_pending_observation(db, lead_id, detail.observation_id)
     cursor = db.execute(
         "INSERT INTO blockers (lead_id, kind, owner, detail_json) VALUES (?, ?, ?, ?)",
         (lead_id, kind, owner, detail.model_dump_json()),
