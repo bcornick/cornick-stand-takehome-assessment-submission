@@ -4,77 +4,77 @@
     "stage": 1,
     "description": "Tier 0. All three services start and report healthy. Needs `.env`, copied from `.env.example`. Expect: exactly three lines, `app healthy`, `leadgen healthy`, `mailbox healthy`.",
     "command": "docker compose up -d --build --wait && docker compose ps --format '{{.Service}} {{.Health}}'",
-    "passes": false
+    "passes": true
   },
   {
     "id": "S01-A2",
     "stage": 1,
     "description": "Tier 0. The bootstrap posts seed 42, reads ten leads and round-trips the probe. Expect: exit 0.",
     "command": "docker compose exec -T app python -m uwh.runtime.bootstrap | jq -e '(.lead_ids | length) == 10 and .lead_ids[0] == \"LEAD-00000042-000\" and .lead_ids[9] == \"LEAD-00000042-009\" and .probe.metadata_round_trip == true'",
-    "passes": false
+    "passes": true
   },
   {
     "id": "S01-A3",
     "stage": 1,
     "description": "Tier 0. Run directly after S01-A2: the probe is the newest message in the real mailbox, with its metadata, read independently of the bootstrap. Expect: exit 0.",
     "command": "id=$(curl -s \"http://localhost:8025/emails?limit=1\" | jq -r '.[0].id'); curl -s \"http://localhost:8025/emails/$id\" | jq -e '(.lead_id | startswith(\"BOOTSTRAP-\")) and .metadata.probe == true and (.metadata.run_id | type) == \"string\"'",
-    "passes": false
+    "passes": true
   },
   {
     "id": "S01-A4",
     "stage": 1,
     "description": "Tier 0. The answer key is off by default and no application source names the debug path. Expect: `false`, then exit 0.",
     "command": "docker compose config --format json | jq -r '.services.leadgen.environment.DEBUG' && test -d src/uwh && ! grep -rn '/debug' src/",
-    "passes": false
+    "passes": true
   },
   {
     "id": "S01-A5",
     "stage": 1,
     "description": "Tier 0. Stand's code matches the handed-off tree and is clean in the working tree. Expect: exit 0.",
     "command": "test \"$(git rev-parse HEAD:sim-harness)\" = dbad38b7648f981978938e05705d1abb16314e2c && test -z \"$(git status --porcelain -- sim-harness)\"",
-    "passes": false
+    "passes": true
   },
   {
     "id": "S01-A6",
     "stage": 1,
     "description": "Tier 0. Every tracked text file has LF line endings; the tracked `.claude/skills` symlink reports an empty index field and is not counted. Expect: `0`.",
     "command": "git ls-files --eol | awk '$1 != \"i/lf\" && $1 != \"i/-text\" && $1 != \"i/none\" && $1 != \"i/\"' | wc -l",
-    "passes": false
+    "passes": true
   },
   {
     "id": "S01-A7",
     "stage": 1,
     "description": "Tier 0. The check command is clean. Expect: exit 0, no warnings or errors in the output.",
     "command": "make check",
-    "passes": false
+    "passes": true
   },
   {
     "id": "S01-A8",
     "stage": 1,
     "description": "Tier 0. The client and bootstrap integration tests pass against the containers. Expect: all pass.",
     "command": "uv run pytest -m integration tests/integration/test_harness_clients.py tests/integration/test_bootstrap.py",
-    "passes": false
+    "passes": true
   },
   {
     "id": "S01-A9",
     "stage": 1,
     "description": "Tier 0. `.env.example` documents the six variables and the default model. Expect: `6`, then exit 0.",
     "command": "grep -cE '^(ANTHROPIC_API_KEY|ANTHROPIC_MODEL|TYPESAFE_API_KEY|RUN_MODE|SEED|DEBUG)=' .env.example && grep -q '^ANTHROPIC_MODEL=claude-sonnet-5-5$' .env.example",
-    "passes": false
+    "passes": true
   },
   {
     "id": "S01-A10",
     "stage": 1,
     "description": "Tier 0. The Anthropic SDK and `httpx2` versions are pinned, and the SDK check, the sampling-parameter check for `ANTHROPIC_MODEL` and the `TestClient` check are recorded. Expect: `2`, then three numbers, each at least 1.",
     "command": "grep -A1 -E '^name = \"(anthropic|httpx2)\"$' uv.lock | grep -c '^version = ' && grep -c 'messages.parse' docs/progress.md && grep -cE 'Sampling parameters accepted by claude-sonnet-5-5: .+' docs/progress.md && grep -c 'httpx2.Client' docs/progress.md",
-    "passes": false
+    "passes": true
   },
   {
     "id": "S01-A11",
     "stage": 1,
     "description": "Tier 0. The app reports its mode and seed. Expect: exit 0.",
     "command": "curl -s http://localhost:8000/api/run | jq -e '.mode == \"live\" and .seed == 42'",
-    "passes": false
+    "passes": true
   },
   {
     "id": "S02-A1",
