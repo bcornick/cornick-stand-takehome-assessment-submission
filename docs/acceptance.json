@@ -19,5 +19,26 @@
     "description": "The running app serves the queue and lead 008's detail from live data. Expect: `true`, then `true`.",
     "command": "curl -s http://localhost:8000/api/leads | jq -e 'map(.lead_id) | index(\"LEAD-00000042-008\") != null' && curl -s http://localhost:8000/api/leads/LEAD-00000042-008 | jq -e '.lead_id == \"LEAD-00000042-008\" and (.facts | length) > 0'",
     "passes": true
+  },
+  {
+    "id": "M2-A1",
+    "milestone": 2,
+    "description": "After a run every lead is at a sent quote packet, one sent request, or an underwriter wait with a stated reason, and lead 000 is a proposed decline waiting for approval while 003 and 006 each show one underwriter card. Expect: all pass.",
+    "command": "uv run pytest -m integration tests/integration/test_all_leads.py",
+    "passes": false
+  },
+  {
+    "id": "M2-A2",
+    "milestone": 2,
+    "description": "No lead has two open requests: the mailbox holds at most one request per lead and round. Expect: `0`.",
+    "command": "curl -s 'http://localhost:8025/emails?limit=1000' | jq '[.[] | select(.metadata.kind == \"routine_request\" or .metadata.kind == \"sensitive_request\")] | group_by(.lead_id, .metadata.round) | map(select(length > 1)) | length'",
+    "passes": false
+  },
+  {
+    "id": "M2-A3",
+    "milestone": 2,
+    "description": "Stand's answer key agrees on every seed-42 record it decides. Expect: all pass.",
+    "command": "uv run pytest tests/evals/test_answer_key.py",
+    "passes": false
   }
 ]
