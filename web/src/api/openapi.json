@@ -372,7 +372,7 @@
       },
       "BlockerView": {
         "additionalProperties": false,
-        "description": "An open blocker. `item_id` is `blockers.id`, the id an `approve` or `reject` names.\n\nThe detail pane offers the actions for every open item (section 11), so the blocker carries\nwhat its action needs: a pending observation's value (`observation`, required exactly for the\nitem kind `observation`), a review's cause as a registered name (`review_cause`, required\nexactly for the item kind `review`, equal to `detail.cause`) and, for a held draft, the payload\nhash an `approve` carries (`held_draft_payload_hash`, 7.4).",
+        "description": "An open blocker. `item_id` is `blockers.id`, the id an `approve` or `reject` names.\n\nThe detail pane offers the actions for every open item (section 11), so the blocker carries\nwhat its action needs: a pending observation's value (`observation`, required exactly for the\nitem kind `observation`) and, for a held draft, the payload hash an `approve` carries\n(`held_draft_payload_hash`, 7.4). The item kind and, for a review, the cause are in `detail`.",
         "properties": {
           "detail": {
             "$ref": "#/components/schemas/BlockerDetail"
@@ -391,24 +391,6 @@
           "item_id": {
             "title": "Item Id",
             "type": "integer"
-          },
-          "item_kind": {
-            "anyOf": [
-              {
-                "enum": [
-                  "draft",
-                  "observation",
-                  "delivery_unknown",
-                  "no_contact_route",
-                  "review"
-                ],
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Item Kind"
           },
           "kind": {
             "enum": [
@@ -439,39 +421,14 @@
             ],
             "title": "Owner",
             "type": "string"
-          },
-          "review_cause": {
-            "anyOf": [
-              {
-                "enum": [
-                  "late_reply",
-                  "unread_reply",
-                  "off_topic_reply",
-                  "declining_reply",
-                  "reply_after_terminal_status",
-                  "draft_held_by_stop",
-                  "draft_held_class_off",
-                  "round_limit",
-                  "identity_score_missing",
-                  "identity_score_unsupported"
-                ],
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Review Cause"
           }
         },
         "required": [
           "item_id",
           "kind",
-          "item_kind",
           "owner",
           "detail",
           "observation",
-          "review_cause",
           "held_draft_payload_hash"
         ],
         "title": "BlockerView",
@@ -1936,24 +1893,6 @@
             "title": "Item Id",
             "type": "integer"
           },
-          "item_kind": {
-            "anyOf": [
-              {
-                "enum": [
-                  "draft",
-                  "observation",
-                  "delivery_unknown",
-                  "no_contact_route",
-                  "review"
-                ],
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Item Kind"
-          },
           "kind": {
             "enum": [
               "delivery_unknown",
@@ -1988,29 +1927,6 @@
             "title": "Owner",
             "type": "string"
           },
-          "review_cause": {
-            "anyOf": [
-              {
-                "enum": [
-                  "late_reply",
-                  "unread_reply",
-                  "off_topic_reply",
-                  "declining_reply",
-                  "reply_after_terminal_status",
-                  "draft_held_by_stop",
-                  "draft_held_class_off",
-                  "round_limit",
-                  "identity_score_missing",
-                  "identity_score_unsupported"
-                ],
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Review Cause"
-          },
           "type": {
             "const": "question",
             "title": "Type",
@@ -2020,11 +1936,9 @@
         "required": [
           "item_id",
           "kind",
-          "item_kind",
           "owner",
           "detail",
           "observation",
-          "review_cause",
           "held_draft_payload_hash",
           "type",
           "lead_id",
@@ -2434,24 +2348,6 @@
             "title": "Item Id",
             "type": "integer"
           },
-          "item_kind": {
-            "anyOf": [
-              {
-                "enum": [
-                  "draft",
-                  "observation",
-                  "delivery_unknown",
-                  "no_contact_route",
-                  "review"
-                ],
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Item Kind"
-          },
           "kind": {
             "enum": [
               "delivery_unknown",
@@ -2486,29 +2382,6 @@
             "title": "Owner",
             "type": "string"
           },
-          "review_cause": {
-            "anyOf": [
-              {
-                "enum": [
-                  "late_reply",
-                  "unread_reply",
-                  "off_topic_reply",
-                  "declining_reply",
-                  "reply_after_terminal_status",
-                  "draft_held_by_stop",
-                  "draft_held_class_off",
-                  "round_limit",
-                  "identity_score_missing",
-                  "identity_score_unsupported"
-                ],
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Review Cause"
-          },
           "type": {
             "const": "review",
             "title": "Type",
@@ -2518,11 +2391,9 @@
         "required": [
           "item_id",
           "kind",
-          "item_kind",
           "owner",
           "detail",
           "observation",
-          "review_cause",
           "held_draft_payload_hash",
           "type",
           "lead_id",

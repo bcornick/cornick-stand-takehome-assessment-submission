@@ -2,7 +2,6 @@
   {
     "item_id": 1,
     "kind": "underwriter_review",
-    "item_kind": "draft",
     "owner": "underwriter",
     "detail": {
       "item_kind": "draft",
@@ -15,7 +14,6 @@
       "text": "Review the decline notice before it is sent."
     },
     "observation": null,
-    "review_cause": null,
     "held_draft_payload_hash": null,
     "type": "review",
     "lead_id": "LEAD-00000042-000",
@@ -34,7 +32,6 @@
   {
     "item_id": 4,
     "kind": "underwriter_question",
-    "item_kind": null,
     "owner": "underwriter",
     "detail": {
       "item_kind": null,
@@ -49,7 +46,6 @@
       "text": "The fire simulation failed; the underwriter decides how to proceed."
     },
     "observation": null,
-    "review_cause": null,
     "held_draft_payload_hash": null,
     "type": "question",
     "lead_id": "LEAD-00000042-003",
@@ -83,7 +79,6 @@
   {
     "item_id": 8,
     "kind": "underwriter_question",
-    "item_kind": null,
     "owner": "underwriter",
     "detail": {
       "item_kind": null,
@@ -98,7 +93,6 @@
       "text": "The fire simulation failed; the underwriter decides how to proceed."
     },
     "observation": null,
-    "review_cause": null,
     "held_draft_payload_hash": null,
     "type": "question",
     "lead_id": "LEAD-00000042-006",

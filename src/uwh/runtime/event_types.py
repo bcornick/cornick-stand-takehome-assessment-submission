@@ -5,6 +5,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
 
+from uwh.providers.models import ProviderResult
+
 
 class EventType(StrEnum):
     run_started = "run_started"
@@ -39,8 +41,8 @@ class EventType(StrEnum):
 
 # The value sets of the A.1 columns and the event payloads: section 7.1 statuses and blocker kinds,
 # section 7.3 observation sources, section 7.4 actors, A.1 owners, intent kinds and approval item
-# kinds, A.11 review causes, section 9.4 provider results and section 8 skill statuses. The store
-# builds its CHECK lists from these.
+# kinds, A.11 review causes and section 8 skill statuses. The store builds its CHECK lists from
+# these.
 Status = Literal["received", "triaged", "in_progress", "quote_sent", "declined"]
 # Ordered by priority, highest first (`uwh.skills.vertical.BLOCKER_KINDS_BY_PRIORITY` holds the order).
 BlockerKind = Literal[
@@ -66,7 +68,6 @@ ReviewCause = Literal[
     "identity_score_unsupported",
 ]
 ObservationStatus = Literal["accepted", "pending_review", "rejected"]
-ProviderStatus = Literal["found", "not_found", "blocked", "unavailable"]
 ApprovalDecision = Literal["approved", "rejected"]
 ProposalKind = Literal["rule_change", "command"]
 ProposalState = Literal["open", "applied", "dismissed"]
@@ -164,12 +165,7 @@ class TriageCompleted(Payload):
 
 class ProviderCalled(Payload):
     key: str  # the field looked up
-    status: ProviderStatus
-    value: JsonValue
-    source: str
-    fetched_at: str
-    is_stub: bool
-    missing_inputs: list[str]  # the inputs a blocked result names; empty otherwise
+    result: ProviderResult  # the section 9.4 result, as the provider returned it
 
 
 class PlanBuilt(Payload):

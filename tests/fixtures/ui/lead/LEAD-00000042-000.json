@@ -663,7 +663,6 @@
     {
       "item_id": 1,
       "kind": "underwriter_review",
-      "item_kind": "draft",
       "owner": "underwriter",
       "detail": {
         "item_kind": "draft",
@@ -676,7 +675,6 @@
         "text": "Review the decline notice before it is sent."
       },
       "observation": null,
-      "review_cause": null,
       "held_draft_payload_hash": null
     }
   ],

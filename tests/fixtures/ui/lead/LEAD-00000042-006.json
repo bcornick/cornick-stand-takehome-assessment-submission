@@ -734,7 +734,6 @@
     {
       "item_id": 8,
       "kind": "underwriter_question",
-      "item_kind": null,
       "owner": "underwriter",
       "detail": {
         "item_kind": null,
@@ -749,13 +748,11 @@
         "text": "The fire simulation failed; the underwriter decides how to proceed."
       },
       "observation": null,
-      "review_cause": null,
       "held_draft_payload_hash": null
     },
     {
       "item_id": 9,
       "kind": "producer_reply",
-      "item_kind": null,
       "owner": "producer",
       "detail": {
         "item_kind": null,
@@ -768,7 +765,6 @@
         "text": "Waiting on the reply to request round 1 (19 asks)."
       },
       "observation": null,
-      "review_cause": null,
       "held_draft_payload_hash": null
     }
   ],

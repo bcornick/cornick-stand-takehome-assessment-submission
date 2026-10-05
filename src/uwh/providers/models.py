@@ -1,11 +1,12 @@
 # ABOUTME: The section 9.4 provider result: status, value, source, fetched_at, is_stub, and the inputs a blocked result names.
 # ABOUTME: A blocked result names at least one missing input field; every other status names none. Only a found result has a value.
-from typing import Self
+from typing import Literal, Self
 
 from pydantic import JsonValue, model_validator
 
 from uwh.rules.models import StrictModel
-from uwh.runtime.event_types import ProviderStatus
+
+ProviderStatus = Literal["found", "not_found", "blocked", "unavailable"]
 
 
 class ProviderResult(StrictModel):

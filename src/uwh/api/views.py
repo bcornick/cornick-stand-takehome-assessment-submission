@@ -14,7 +14,6 @@ from uwh.rules.models import (
 from uwh.runtime.event_types import (
     PAYLOAD_MODELS,
     Actor,
-    ApprovalItemKind,
     BlockerDetail,
     BlockerKind,
     BlockerOwner,
@@ -25,7 +24,6 @@ from uwh.runtime.event_types import (
     ObservationStatus,
     ProposalKind,
     ProposalState,
-    ReviewCause,
     SkillStatus,
     Status,
 )
@@ -208,42 +206,42 @@ class BlockerView(StrictModel):
 
     The detail pane offers the actions for every open item (section 11), so the blocker carries
     what its action needs: a pending observation's value (`observation`, required exactly for the
-    item kind `observation`), a review's cause as a registered name (`review_cause`, required
-    exactly for the item kind `review`, equal to `detail.cause`) and, for a held draft, the payload
-    hash an `approve` carries (`held_draft_payload_hash`, 7.4).
+    item kind `observation`) and, for a held draft, the payload hash an `approve` carries
+    (`held_draft_payload_hash`, 7.4). The item kind and, for a review, the cause are in `detail`.
     """
 
     item_id: int
     kind: BlockerKind
-    item_kind: ApprovalItemKind | None  # None for a blocker that is not an approvals item
     owner: BlockerOwner
     detail: BlockerDetail
     observation: FactView | None  # the pending observation of an `observation` item
-    review_cause: ReviewCause | None  # `detail.cause` of a `review` item
     held_draft_payload_hash: str | None  # a held draft's hash, for a draft-held review
 
     @model_validator(mode="after")
     def item_kind_fits_the_blocker(self) -> Self:
-        if self.item_kind != self.detail.item_kind:
-            raise ValueError("item_kind is the detail's item_kind")
+        item_kind = self.detail.item_kind
         if self.kind == "underwriter_review":
-            if self.item_kind not in _REVIEW_ITEM_KINDS:
-                raise ValueError(f"an underwriter_review item_kind is one of {_REVIEW_ITEM_KINDS}")
+            if item_kind not in _REVIEW_ITEM_KINDS:
+                raise ValueError(
+                    f"an underwriter_review detail.item_kind is one of {_REVIEW_ITEM_KINDS}"
+                )
         elif self.kind == "delivery_unknown":
-            if self.item_kind != "delivery_unknown":
-                raise ValueError("a delivery_unknown blocker has the item_kind delivery_unknown")
-        elif self.item_kind is not None:
-            raise ValueError(f"a {self.kind} blocker has no item_kind")
-        if self.item_kind == "draft" and self.detail.intent_id is None:
+            if item_kind != "delivery_unknown":
+                raise ValueError(
+                    "a delivery_unknown blocker has the detail.item_kind delivery_unknown"
+                )
+        elif item_kind is not None:
+            raise ValueError(f"a {self.kind} blocker has no detail.item_kind")
+        if item_kind == "draft" and self.detail.intent_id is None:
             raise ValueError("a draft review names its draft: detail.intent_id")
-        if self.detail.cause_persists and self.item_kind != "review":
+        if self.detail.cause_persists and item_kind != "review":
             raise ValueError("only a review holds a persistent cause")
         self._observation_is_the_pending_one()
-        self._review_cause_is_registered()
+        self._review_cause_fits_its_flag()
         return self
 
     def _observation_is_the_pending_one(self) -> None:
-        if self.item_kind != "observation":
+        if self.detail.item_kind != "observation":
             if self.observation is not None:
                 raise ValueError("only an observation item carries an observation")
             return
@@ -254,21 +252,17 @@ class BlockerView(StrictModel):
         if self.detail.observation_id != self.observation.observation_id:
             raise ValueError("detail.observation_id is the observation's observation_id")
 
-    def _review_cause_is_registered(self) -> None:
+    def _review_cause_fits_its_flag(self) -> None:
         causes = dict(REVIEW_CAUSES)
-        if self.item_kind != "review":
-            if self.review_cause is not None:
-                raise ValueError("only a review has a review_cause")
+        cause = self.detail.cause
+        if self.detail.item_kind == "review":
+            if cause is None:
+                raise ValueError("a review has a cause: detail.cause")
+            if self.detail.cause_persists != causes[cause]:
+                raise ValueError(f"detail.cause_persists is {causes[cause]} for {cause}")
         else:
-            if self.detail.cause not in causes:
-                raise ValueError(f"a review's cause is one of {', '.join(causes)}")
-            if self.detail.cause_persists != causes[self.detail.cause]:
-                raise ValueError(
-                    f"detail.cause_persists is {causes[self.detail.cause]} for {self.detail.cause}"
-                )
-            if self.review_cause != self.detail.cause:
-                raise ValueError("review_cause is detail.cause")
-        held = self.review_cause in _HELD_DRAFT_CAUSES
+            cause = None
+        held = cause in _HELD_DRAFT_CAUSES
         if held and self.detail.intent_id is None:
             raise ValueError("a held draft's review names its draft: detail.intent_id")
         if held != (self.held_draft_payload_hash is not None):
@@ -406,7 +400,7 @@ class ReviewItem(BlockerView):
     @model_validator(mode="after")
     def row_fits_the_blocker(self) -> Self:
         blocker_kind, item_kind = _REVIEW_ROWS[self.item]
-        if (self.kind, self.item_kind) != (blocker_kind, item_kind):
+        if (self.kind, self.detail.item_kind) != (blocker_kind, item_kind):
             raise ValueError(f"{self.item} is a {blocker_kind} blocker with item_kind {item_kind}")
         if item_kind == "draft":
             if self.draft is None or self.draft.intent_id != self.detail.intent_id:
@@ -415,7 +409,7 @@ class ReviewItem(BlockerView):
                 raise ValueError(f"{self.item} holds a draft of kind {_DRAFT_ROW_KINDS[self.item]}")
         if self.item == "pending_observation" and self.observation is None:
             raise ValueError("a pending_observation item carries its pending observation")
-        # The cause's registered flag (`BlockerView` checks it) picks the row.
+        # The cause's flag (`BlockerView` checks it) picks the row.
         if item_kind == "review" and self.detail.cause_persists != (
             self.item == "review_cause_persists"
         ):

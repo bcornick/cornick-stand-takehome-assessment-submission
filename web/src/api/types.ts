@@ -408,9 +408,8 @@ export interface components {
          *
          *     The detail pane offers the actions for every open item (section 11), so the blocker carries
          *     what its action needs: a pending observation's value (`observation`, required exactly for the
-         *     item kind `observation`), a review's cause as a registered name (`review_cause`, required
-         *     exactly for the item kind `review`, equal to `detail.cause`) and, for a held draft, the payload
-         *     hash an `approve` carries (`held_draft_payload_hash`, 7.4).
+         *     item kind `observation`) and, for a held draft, the payload hash an `approve` carries
+         *     (`held_draft_payload_hash`, 7.4). The item kind and, for a review, the cause are in `detail`.
          */
         BlockerView: {
             detail: components["schemas"]["BlockerDetail"];
@@ -418,8 +417,6 @@ export interface components {
             held_draft_payload_hash: string | null;
             /** Item Id */
             item_id: number;
-            /** Item Kind */
-            item_kind: ("draft" | "observation" | "delivery_unknown" | "no_contact_route" | "review") | null;
             /**
              * Kind
              * @enum {string}
@@ -431,8 +428,6 @@ export interface components {
              * @enum {string}
              */
             owner: "underwriter" | "producer" | "data_team";
-            /** Review Cause */
-            review_cause: ("late_reply" | "unread_reply" | "off_topic_reply" | "declining_reply" | "reply_after_terminal_status" | "draft_held_by_stop" | "draft_held_class_off" | "round_limit" | "identity_score_missing" | "identity_score_unsupported") | null;
         };
         /** ChangeSettingCommand */
         ChangeSettingCommand: {
@@ -966,8 +961,6 @@ export interface components {
             held_draft_payload_hash: string | null;
             /** Item Id */
             item_id: number;
-            /** Item Kind */
-            item_kind: ("draft" | "observation" | "delivery_unknown" | "no_contact_route" | "review") | null;
             /**
              * Kind
              * @enum {string}
@@ -981,8 +974,6 @@ export interface components {
              * @enum {string}
              */
             owner: "underwriter" | "producer" | "data_team";
-            /** Review Cause */
-            review_cause: ("late_reply" | "unread_reply" | "off_topic_reply" | "declining_reply" | "reply_after_terminal_status" | "draft_held_by_stop" | "draft_held_class_off" | "round_limit" | "identity_score_missing" | "identity_score_unsupported") | null;
             /**
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
@@ -1132,8 +1123,6 @@ export interface components {
             item: "draft_request" | "draft_quote_packet" | "draft_decline_notice" | "pending_observation" | "delivery_unknown" | "no_contact_route" | "review_raised_by_event" | "review_cause_persists";
             /** Item Id */
             item_id: number;
-            /** Item Kind */
-            item_kind: ("draft" | "observation" | "delivery_unknown" | "no_contact_route" | "review") | null;
             /**
              * Kind
              * @enum {string}
@@ -1147,8 +1136,6 @@ export interface components {
              * @enum {string}
              */
             owner: "underwriter" | "producer" | "data_team";
-            /** Review Cause */
-            review_cause: ("late_reply" | "unread_reply" | "off_topic_reply" | "declining_reply" | "reply_after_terminal_status" | "draft_held_by_stop" | "draft_held_class_off" | "round_limit" | "identity_score_missing" | "identity_score_unsupported") | null;
             /**
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}

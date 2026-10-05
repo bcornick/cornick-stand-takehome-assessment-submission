@@ -27,12 +27,14 @@
       "type": "provider_called",
       "payload": {
         "key": "p_f",
-        "status": "found",
-        "value": 0.12,
-        "source": "fire_simulation",
-        "fetched_at": "2026-06-29T08:00:00Z",
-        "is_stub": true,
-        "missing_inputs": []
+        "result": {
+          "status": "found",
+          "value": 0.12,
+          "source": "fire_simulation",
+          "fetched_at": "2026-06-29T08:00:00Z",
+          "is_stub": true,
+          "missing_inputs": []
+        }
       },
       "actor": "workflow",
       "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
@@ -50,12 +52,14 @@
       "type": "provider_called",
       "payload": {
         "key": "road_access",
-        "status": "found",
-        "value": "Multiple Access Points",
-        "source": "road_network",
-        "fetched_at": "2026-06-29T08:00:00Z",
-        "is_stub": false,
-        "missing_inputs": []
+        "result": {
+          "status": "found",
+          "value": "Multiple Access Points",
+          "source": "road_network",
+          "fetched_at": "2026-06-29T08:00:00Z",
+          "is_stub": false,
+          "missing_inputs": []
+        }
       },
       "actor": "workflow",
       "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",

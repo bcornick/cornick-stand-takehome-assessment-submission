@@ -27,12 +27,14 @@
       "type": "provider_called",
       "payload": {
         "key": "broker_tier",
-        "status": "found",
-        "value": "Tier 2",
-        "source": "account_directory",
-        "fetched_at": "2026-06-29T08:00:00Z",
-        "is_stub": false,
-        "missing_inputs": []
+        "result": {
+          "status": "found",
+          "value": "Tier 2",
+          "source": "account_directory",
+          "fetched_at": "2026-06-29T08:00:00Z",
+          "is_stub": false,
+          "missing_inputs": []
+        }
       },
       "actor": "workflow",
       "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
@@ -50,12 +52,14 @@
       "type": "provider_called",
       "payload": {
         "key": "has_primary_policy_with_stand",
-        "status": "found",
-        "value": false,
-        "source": "account_directory",
-        "fetched_at": "2026-06-29T08:00:00Z",
-        "is_stub": false,
-        "missing_inputs": []
+        "result": {
+          "status": "found",
+          "value": false,
+          "source": "account_directory",
+          "fetched_at": "2026-06-29T08:00:00Z",
+          "is_stub": false,
+          "missing_inputs": []
+        }
       },
       "actor": "workflow",
       "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
@@ -73,14 +77,16 @@
       "type": "provider_called",
       "payload": {
         "key": "replacement_cost",
-        "status": "blocked",
-        "value": null,
-        "source": "rebuild_cost_estimator",
-        "fetched_at": "2026-06-29T08:00:00Z",
-        "is_stub": false,
-        "missing_inputs": [
-          "zip"
-        ]
+        "result": {
+          "status": "blocked",
+          "value": null,
+          "source": "rebuild_cost_estimator",
+          "fetched_at": "2026-06-29T08:00:00Z",
+          "is_stub": false,
+          "missing_inputs": [
+            "zip"
+          ]
+        }
       },
       "actor": "workflow",
       "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
@@ -98,14 +104,16 @@
       "type": "provider_called",
       "payload": {
         "key": "protection_class",
-        "status": "blocked",
-        "value": null,
-        "source": "iso_protection_class",
-        "fetched_at": "2026-06-29T08:00:00Z",
-        "is_stub": false,
-        "missing_inputs": [
-          "zip"
-        ]
+        "result": {
+          "status": "blocked",
+          "value": null,
+          "source": "iso_protection_class",
+          "fetched_at": "2026-06-29T08:00:00Z",
+          "is_stub": false,
+          "missing_inputs": [
+            "zip"
+          ]
+        }
       },
       "actor": "workflow",
       "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
@@ -123,14 +131,16 @@
       "type": "provider_called",
       "payload": {
         "key": "slope_angle_deg",
-        "status": "blocked",
-        "value": null,
-        "source": "terrain",
-        "fetched_at": "2026-06-29T08:00:00Z",
-        "is_stub": false,
-        "missing_inputs": [
-          "zip"
-        ]
+        "result": {
+          "status": "blocked",
+          "value": null,
+          "source": "terrain",
+          "fetched_at": "2026-06-29T08:00:00Z",
+          "is_stub": false,
+          "missing_inputs": [
+            "zip"
+          ]
+        }
       },
       "actor": "workflow",
       "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
@@ -148,14 +158,16 @@
       "type": "provider_called",
       "payload": {
         "key": "min_distance_to_neighbor_ft",
-        "status": "blocked",
-        "value": null,
-        "source": "parcel_geometry",
-        "fetched_at": "2026-06-29T08:00:00Z",
-        "is_stub": false,
-        "missing_inputs": [
-          "zip"
-        ]
+        "result": {
+          "status": "blocked",
+          "value": null,
+          "source": "parcel_geometry",
+          "fetched_at": "2026-06-29T08:00:00Z",
+          "is_stub": false,
+          "missing_inputs": [
+            "zip"
+          ]
+        }
       },
       "actor": "workflow",
       "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
@@ -173,14 +185,16 @@
       "type": "provider_called",
       "payload": {
         "key": "vegetation_clearance",
-        "status": "blocked",
-        "value": null,
-        "source": "vegetation_imagery",
-        "fetched_at": "2026-06-29T08:00:00Z",
-        "is_stub": false,
-        "missing_inputs": [
-          "zip"
-        ]
+        "result": {
+          "status": "blocked",
+          "value": null,
+          "source": "vegetation_imagery",
+          "fetched_at": "2026-06-29T08:00:00Z",
+          "is_stub": false,
+          "missing_inputs": [
+            "zip"
+          ]
+        }
       },
       "actor": "workflow",
       "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
@@ -198,14 +212,16 @@
       "type": "provider_called",
       "payload": {
         "key": "road_access",
-        "status": "blocked",
-        "value": null,
-        "source": "road_network",
-        "fetched_at": "2026-06-29T08:00:00Z",
-        "is_stub": false,
-        "missing_inputs": [
-          "zip"
-        ]
+        "result": {
+          "status": "blocked",
+          "value": null,
+          "source": "road_network",
+          "fetched_at": "2026-06-29T08:00:00Z",
+          "is_stub": false,
+          "missing_inputs": [
+            "zip"
+          ]
+        }
       },
       "actor": "workflow",
       "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",

@@ -6,6 +6,7 @@ from typing import Any, get_args
 import pytest
 from pydantic import BaseModel, ValidationError
 
+from uwh.providers.models import ProviderResult
 from uwh.rules.models import ActionPlan, FieldTriage
 from uwh.runtime import event_types
 from uwh.runtime.event_types import (
@@ -91,15 +92,7 @@ EXPECTED_FIELDS: dict[str, set[str]] = {
     "conflict_opened": {"validator", "fields", "values", "question"},
     "conflict_closed": {"validator", "fields", "values", "observation_id"},
     "triage_completed": {"fields"},
-    "provider_called": {
-        "key",
-        "status",
-        "value",
-        "source",
-        "fetched_at",
-        "is_stub",
-        "missing_inputs",
-    },
+    "provider_called": {"key", "result"},
     "plan_built": {"plan", "plan_hash"},
     "blocker_opened": {"blocker_id", "kind", "owner", "detail"},
     "blocker_closed": {"blocker_id", "kind"},
@@ -218,12 +211,14 @@ SAMPLES: dict[str, dict[str, object]] = {
     },
     "provider_called": {
         "key": "protection_class",
-        "status": "blocked",
-        "value": None,
-        "source": "stand-in",
-        "fetched_at": "2026-06-29T08:01:00+00:00",
-        "is_stub": True,
-        "missing_inputs": ["zip"],
+        "result": {
+            "status": "blocked",
+            "value": None,
+            "source": "stand-in",
+            "fetched_at": "2026-06-29T08:01:00+00:00",
+            "is_stub": True,
+            "missing_inputs": ["zip"],
+        },
     },
     "plan_built": {
         "plan": ActionPlan.model_validate(
@@ -458,10 +453,37 @@ def test_a_located_candidate_span_starts_inside_the_body() -> None:
         LocatedCandidate.model_validate({**LOCATED_CANDIDATE, "span_start": -2, "span_end": 2})
 
 
-def test_provider_status_and_observation_status_are_closed_sets() -> None:
-    provider = PAYLOAD_MODELS[EventType.provider_called]
+def provider_called(**result_changes: object) -> dict[str, object]:
+    result = SAMPLES["provider_called"]["result"]
+    assert isinstance(result, dict)
+    return {**SAMPLES["provider_called"], "result": {**result, **result_changes}}
+
+
+def test_provider_called_holds_the_provider_result_whole() -> None:
+    called = PAYLOAD_MODELS[EventType.provider_called].model_validate(SAMPLES["provider_called"])
+    assert isinstance(called.result, ProviderResult)  # type: ignore[attr-defined]
+    assert called.result.missing_inputs == ["zip"]  # type: ignore[attr-defined]
+
+
+@pytest.mark.parametrize(
+    "result_changes",
+    [
+        {"status": "maybe"},
+        # the provider result's own rules: a blocked result names its missing inputs, and only a
+        # found result has a value
+        {"missing_inputs": []},
+        {"status": "found", "missing_inputs": []},
+        {"value": 3},
+    ],
+)
+def test_provider_called_refuses_a_result_the_provider_models_refuse(
+    result_changes: dict[str, object],
+) -> None:
     with pytest.raises(ValidationError):
-        provider.model_validate({**SAMPLES["provider_called"], "status": "maybe"})
+        PAYLOAD_MODELS[EventType.provider_called].model_validate(provider_called(**result_changes))
+
+
+def test_observation_status_is_a_closed_set() -> None:
     observed = PAYLOAD_MODELS[EventType.fact_observed]
     with pytest.raises(ValidationError):
         observed.model_validate({**SAMPLES["fact_observed"], "status": "maybe"})

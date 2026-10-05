@@ -27,12 +27,14 @@
       "type": "provider_called",
       "payload": {
         "key": "broker_tier",
-        "status": "found",
-        "value": "Tier 1",
-        "source": "account_directory",
-        "fetched_at": "2026-06-29T08:00:00Z",
-        "is_stub": false,
-        "missing_inputs": []
+        "result": {
+          "status": "found",
+          "value": "Tier 1",
+          "source": "account_directory",
+          "fetched_at": "2026-06-29T08:00:00Z",
+          "is_stub": false,
+          "missing_inputs": []
+        }
       },
       "actor": "workflow",
       "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
@@ -50,12 +52,14 @@
       "type": "provider_called",
       "payload": {
         "key": "has_primary_policy_with_stand",
-        "status": "found",
-        "value": false,
-        "source": "account_directory",
-        "fetched_at": "2026-06-29T08:00:00Z",
-        "is_stub": false,
-        "missing_inputs": []
+        "result": {
+          "status": "found",
+          "value": false,
+          "source": "account_directory",
+          "fetched_at": "2026-06-29T08:00:00Z",
+          "is_stub": false,
+          "missing_inputs": []
+        }
       },
       "actor": "workflow",
       "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
@@ -73,15 +77,17 @@
       "type": "provider_called",
       "payload": {
         "key": "replacement_cost",
-        "status": "blocked",
-        "value": null,
-        "source": "rebuild_cost_estimator",
-        "fetched_at": "2026-06-29T08:00:00Z",
-        "is_stub": false,
-        "missing_inputs": [
-          "state",
-          "zip"
-        ]
+        "result": {
+          "status": "blocked",
+          "value": null,
+          "source": "rebuild_cost_estimator",
+          "fetched_at": "2026-06-29T08:00:00Z",
+          "is_stub": false,
+          "missing_inputs": [
+            "state",
+            "zip"
+          ]
+        }
       },
       "actor": "workflow",
       "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
@@ -99,15 +105,17 @@
       "type": "provider_called",
       "payload": {
         "key": "protection_class",
-        "status": "blocked",
-        "value": null,
-        "source": "iso_protection_class",
-        "fetched_at": "2026-06-29T08:00:00Z",
-        "is_stub": false,
-        "missing_inputs": [
-          "state",
-          "zip"
-        ]
+        "result": {
+          "status": "blocked",
+          "value": null,
+          "source": "iso_protection_class",
+          "fetched_at": "2026-06-29T08:00:00Z",
+          "is_stub": false,
+          "missing_inputs": [
+            "state",
+            "zip"
+          ]
+        }
       },
       "actor": "workflow",
       "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
@@ -125,14 +133,16 @@
       "type": "provider_called",
       "payload": {
         "key": "kyc_score",
-        "status": "blocked",
-        "value": null,
-        "source": "identity_screening",
-        "fetched_at": "2026-06-29T08:00:00Z",
-        "is_stub": false,
-        "missing_inputs": [
-          "last_name"
-        ]
+        "result": {
+          "status": "blocked",
+          "value": null,
+          "source": "identity_screening",
+          "fetched_at": "2026-06-29T08:00:00Z",
+          "is_stub": false,
+          "missing_inputs": [
+            "last_name"
+          ]
+        }
       },
       "actor": "workflow",
       "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
@@ -150,15 +160,17 @@
       "type": "provider_called",
       "payload": {
         "key": "road_access",
-        "status": "blocked",
-        "value": null,
-        "source": "road_network",
-        "fetched_at": "2026-06-29T08:00:00Z",
-        "is_stub": false,
-        "missing_inputs": [
-          "state",
-          "zip"
-        ]
+        "result": {
+          "status": "blocked",
+          "value": null,
+          "source": "road_network",
+          "fetched_at": "2026-06-29T08:00:00Z",
+          "is_stub": false,
+          "missing_inputs": [
+            "state",
+            "zip"
+          ]
+        }
       },
       "actor": "workflow",
       "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",

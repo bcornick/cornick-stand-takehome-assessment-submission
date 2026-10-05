@@ -164,11 +164,9 @@ FACT_FIELDS = {
 BLOCKER_FIELDS = {
     "item_id",
     "kind",
-    "item_kind",
     "owner",
     "detail",
     "observation",
-    "review_cause",
     "held_draft_payload_hash",
 }
 DRAFT_FIELDS = {
@@ -207,7 +205,7 @@ def fact(**changes: Any) -> dict[str, Any]:
 
 
 def blocker(**changes: Any) -> dict[str, Any]:
-    """A review raised by a late reply; `review_cause` follows `detail.cause` unless given."""
+    """A review raised by a late reply."""
     detail = {
         "item_kind": "review",
         "cause": "late_reply",
@@ -218,17 +216,13 @@ def blocker(**changes: Any) -> dict[str, Any]:
     base: dict[str, Any] = {
         "item_id": 7,
         "kind": "underwriter_review",
-        "item_kind": "review",
         "owner": "underwriter",
         "observation": None,
         "held_draft_payload_hash": None,
     }
     detail_changes = changes.pop("detail", {})
     merged_detail = detail | detail_changes
-    view = base | changes | {"detail": merged_detail}
-    if "review_cause" not in view:
-        view["review_cause"] = merged_detail["cause"] if view["item_kind"] == "review" else None
-    return view
+    return base | changes | {"detail": merged_detail}
 
 
 def draft(**changes: Any) -> dict[str, Any]:
@@ -304,19 +298,18 @@ def test_a_fact_carries_its_observation_id_and_whether_its_value_is_a_stub() -> 
             views.FactView.model_validate({k: v for k, v in fact().items() if k != missing})
 
 
-def test_a_blocker_carries_item_id_kind_item_kind_and_its_cause() -> None:
+def test_a_blocker_carries_item_id_kind_and_in_its_detail_item_kind_and_cause() -> None:
     view = views.BlockerView.model_validate(blocker())
-    assert (view.item_id, view.kind, view.item_kind) == (7, "underwriter_review", "review")
-    assert view.detail.cause == "late_reply"
+    assert (view.item_id, view.kind) == (7, "underwriter_review")
+    assert (view.detail.item_kind, view.detail.cause) == ("review", "late_reply")
     assert view.detail.cause_persists is False
-    assert view.review_cause == "late_reply"
 
 
 def test_a_review_whose_cause_persists_differs_from_one_an_event_raised() -> None:
     event = views.ReviewItem.model_validate(review_item("review_raised_by_event"))
     persists = views.ReviewItem.model_validate(review_item("review_cause_persists"))
-    assert (event.review_cause, event.detail.cause_persists) == ("late_reply", False)
-    assert (persists.review_cause, persists.detail.cause_persists) == ("round_limit", True)
+    assert (event.detail.cause, event.detail.cause_persists) == ("late_reply", False)
+    assert (persists.detail.cause, persists.detail.cause_persists) == ("round_limit", True)
     assert (event.item, persists.item) == ("review_raised_by_event", "review_cause_persists")
     # The flag follows the registered cause, not the item row alone.
     with pytest.raises(ValidationError, match="cause_persists"):
@@ -336,40 +329,25 @@ def test_a_review_whose_cause_persists_differs_from_one_an_event_raised() -> Non
 
 def test_a_draft_review_names_its_draft() -> None:
     view = views.BlockerView.model_validate(
-        blocker(item_kind="draft", detail={"item_kind": "draft", "intent_id": "intent-1"})
+        blocker(detail={"item_kind": "draft", "intent_id": "intent-1"})
     )
     assert view.detail.intent_id == "intent-1"
     with pytest.raises(ValidationError, match="intent_id"):
-        views.BlockerView.model_validate(
-            blocker(item_kind="draft", detail={"item_kind": "draft", "intent_id": None})
-        )
+        views.BlockerView.model_validate(blocker(detail={"item_kind": "draft", "intent_id": None}))
 
 
 @pytest.mark.parametrize(
     "bad",
     [
-        # item kind and detail disagree
-        blocker(item_kind="draft", detail={"item_kind": "review"}),
         # a review raised by an event has its cause
-        blocker(detail={"cause": None}, review_cause=None),
+        blocker(detail={"cause": None}),
         # the cause is one of the registered review causes
         blocker(detail={"cause": "a late reply"}),
         # the cause's flag is the registered one
         blocker(detail={"cause": "late_reply", "cause_persists": True}),
         blocker(detail={"cause": "round_limit", "cause_persists": False}),
-        # the review cause field is the detail's cause
-        blocker(review_cause="round_limit"),
-        blocker(review_cause=None),
-        # only a review has a review cause
-        blocker(
-            kind="delivery_unknown",
-            item_kind="delivery_unknown",
-            detail={"item_kind": "delivery_unknown", "cause": None},
-            review_cause="late_reply",
-        ),
         # only a review can hold a persistent cause
         blocker(
-            item_kind="observation",
             detail={
                 "item_kind": "observation",
                 "cause": None,
@@ -379,11 +357,7 @@ def test_a_draft_review_names_its_draft() -> None:
             observation=fact(),
         ),
         # delivery_unknown is its own blocker kind
-        blocker(
-            kind="underwriter_review",
-            item_kind="delivery_unknown",
-            detail={"item_kind": "delivery_unknown"},
-        ),
+        blocker(kind="underwriter_review", detail={"item_kind": "delivery_unknown"}),
         # a question card is not an approvals item
         blocker(kind="underwriter_question"),
         # an unknown blocker kind
@@ -399,7 +373,6 @@ def test_a_delivery_unknown_blocker_is_its_own_kind_and_item_kind() -> None:
     view = views.BlockerView.model_validate(
         blocker(
             kind="delivery_unknown",
-            item_kind="delivery_unknown",
             detail={"item_kind": "delivery_unknown", "cause": None, "intent_id": "intent-1"},
         )
     )
@@ -408,7 +381,7 @@ def test_a_delivery_unknown_blocker_is_its_own_kind_and_item_kind() -> None:
 
 def observation_blocker(**changes: Any) -> dict[str, Any]:
     detail = {"item_kind": "observation", "cause": None, "observation_id": 4}
-    return blocker(item_kind="observation", observation=fact(), detail=detail) | changes
+    return blocker(observation=fact(), detail=detail) | changes
 
 
 def test_a_pending_observation_blocker_carries_the_value_to_approve() -> None:
@@ -416,7 +389,6 @@ def test_a_pending_observation_blocker_carries_the_value_to_approve() -> None:
     assert view.observation is not None
     assert (view.observation.key, view.observation.value) == ("roof_year", 1998)
     assert view.observation.observation_id == view.detail.observation_id == 4
-    assert view.review_cause is None
 
 
 @pytest.mark.parametrize(
@@ -482,12 +454,6 @@ REVIEW_CAUSES = [
 ]
 
 
-def test_review_cause_is_an_enum_of_the_review_causes_in_the_schema() -> None:
-    node = schema("BlockerView")["properties"]["review_cause"]
-    enum = [m["enum"] for m in node["anyOf"] if "enum" in m]
-    assert enum == [REVIEW_CAUSES]
-
-
 @pytest.mark.parametrize(("cause", "persists"), vertical.REVIEW_CAUSES)
 def test_every_registered_review_cause_validates_with_its_flag_only(
     cause: str, persists: bool
@@ -501,7 +467,7 @@ def test_every_registered_review_cause_validates_with_its_flag_only(
         detail = {"cause": cause, "cause_persists": flag} | extra.get("detail", {})
         return blocker(detail=detail) | {k: v for k, v in extra.items() if k != "detail"}
 
-    assert views.BlockerView.model_validate(view(persists)).review_cause == cause
+    assert views.BlockerView.model_validate(view(persists)).detail.cause == cause
     with pytest.raises(ValidationError, match="cause_persists"):
         views.BlockerView.model_validate(view(not persists))
 
@@ -727,10 +693,7 @@ A11_ITEMS = [
 
 def review_item(item: str, **changes: Any) -> dict[str, Any]:
     drafts = ("draft_request", "draft_quote_packet", "draft_decline_notice")
-    base = blocker(
-        item_kind="draft",
-        detail={"item_kind": "draft", "intent_id": "intent-1", "cause": None},
-    )
+    base = blocker(detail={"item_kind": "draft", "intent_id": "intent-1", "cause": None})
     kinds = {
         "draft_request": "routine_request",
         "draft_quote_packet": "quote_packet",
@@ -743,14 +706,11 @@ def review_item(item: str, **changes: Any) -> dict[str, Any]:
     elif item == "delivery_unknown":
         base = blocker(
             kind="delivery_unknown",
-            item_kind="delivery_unknown",
             detail={"item_kind": "delivery_unknown", "intent_id": "intent-1", "cause": None},
         )
         extra = {}
     elif item == "no_contact_route":
-        base = blocker(
-            item_kind="no_contact_route", detail={"item_kind": "no_contact_route", "cause": None}
-        )
+        base = blocker(detail={"item_kind": "no_contact_route", "cause": None})
         extra = {}
     elif item == "review_raised_by_event":
         extra = {}
@@ -773,7 +733,6 @@ def held_review(**changes: Any) -> dict[str, Any]:
 def question_item(**changes: Any) -> dict[str, Any]:
     base = blocker(
         kind="underwriter_question",
-        item_kind=None,
         owner="underwriter",
         detail={"item_kind": None, "cause": None, "choice_ids": ["I12.mitigation"]},
     )
@@ -825,7 +784,7 @@ def test_a_draft_item_carries_the_payload_hash_an_approve_must_echo() -> None:
         held_review(draft=draft(payload_hash="cd" * 32)),
         held_review(draft=draft(intent_id="intent-2")),
         # an item whose approvals kind is wrong for its row
-        review_item("no_contact_route", item_kind="review"),
+        review_item("no_contact_route", detail=blocker()["detail"]),
         # no notify item exists
         review_item("review_raised_by_event") | {"item": "notify"},
     ],
@@ -1359,12 +1318,6 @@ def test_no_schema_property_is_named_confidence_or_carries_one() -> None:
             ["submitted", "fetched", "derived", "assumed", "reply", "underwriter"],
         ),
         (views.BlockerView, blocker(), "owner", ["underwriter", "producer", "data_team"]),
-        (
-            views.BlockerView,
-            blocker(),
-            "item_kind",
-            ["draft", "observation", "delivery_unknown", "no_contact_route", "review"],
-        ),
     ],
 )
 def test_the_api_shows_the_value_set_and_refuses_others(

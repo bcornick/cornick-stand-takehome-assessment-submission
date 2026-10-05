@@ -798,7 +798,6 @@
     {
       "item_id": 7,
       "kind": "producer_reply",
-      "item_kind": null,
       "owner": "producer",
       "detail": {
         "item_kind": null,
@@ -811,7 +810,6 @@
         "text": "Waiting on the reply to request round 1 (17 asks)."
       },
       "observation": null,
-      "review_cause": null,
       "held_draft_payload_hash": null
     }
   ],

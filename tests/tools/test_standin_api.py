@@ -679,7 +679,7 @@ def lookup_problems(
     calls: dict[str, list[Any]] = {}
     for event in events.events:
         if event.type.value == "provider_called":
-            calls.setdefault(str(event.payload["key"]), []).append(event.payload)
+            calls.setdefault(str(event.payload["key"]), []).append(event.payload["result"])
     for field, inputs in LOOKUP_INPUTS.items():
         fact, field_calls = facts.get(field), calls.get(field, [])
         if field in payload:
@@ -863,7 +863,10 @@ def test_a_lookup_check_reports_a_wrong_source_and_a_wrong_status(
         for e in history.events
         if e.type.value == "provider_called" and e.payload["key"] == "kyc_score"
     )
-    call.payload = {**call.payload, "status": "found", "missing_inputs": []}
+    call.payload = {
+        **call.payload,
+        "result": {**call.payload["result"], "status": "found", "missing_inputs": []},
+    }
     reported = lookup_problems(0, details[lead_id], history, PAYLOAD_PROVIDER_VALUES[0])
     assert any("kyc_score lookup is not blocked" in p for p in reported)
 
