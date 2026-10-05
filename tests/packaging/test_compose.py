@@ -22,7 +22,7 @@ def volumes() -> dict[str, Any]:
 
 
 def named_volume_mounts(service: dict[str, Any], target: str) -> list[str]:
-    """Named volumes (not bind mounts) mounted at target, as 'name:target' sources."""
+    """Named volumes (not bind mounts) mounted at target, by volume name."""
     found = []
     for entry in service.get("volumes", []):
         source, _, rest = entry.partition(":")
@@ -32,9 +32,8 @@ def named_volume_mounts(service: dict[str, Any], target: str) -> list[str]:
 
 
 def test_default_profile_has_exactly_the_three_services(services):
-    assert set(services) == {"leadgen", "mailbox", "app"}
-    for service in services.values():
-        assert "profiles" not in service
+    default_profile = {name for name, service in services.items() if "profiles" not in service}
+    assert default_profile == {"leadgen", "mailbox", "app"}
 
 
 @pytest.mark.parametrize(
@@ -107,11 +106,21 @@ def test_every_service_has_a_healthcheck(services):
 
 def test_stand_healthchecks_call_healthz(services):
     for name in ("leadgen", "mailbox"):
-        assert "http://localhost:8080/healthz" in services[name]["healthcheck"]["test"]
+        assert services[name]["healthcheck"]["test"] == [
+            "CMD",
+            "curl",
+            "-f",
+            "http://localhost:8080/healthz",
+        ]
 
 
 def test_app_healthcheck_calls_api_run(services):
-    assert "http://localhost:8000/api/run" in " ".join(services["app"]["healthcheck"]["test"])
+    assert services["app"]["healthcheck"]["test"] == [
+        "CMD",
+        "python",
+        "-c",
+        "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/run', timeout=3)",
+    ]
 
 
 def test_dockerignore_lists_the_excluded_paths():
