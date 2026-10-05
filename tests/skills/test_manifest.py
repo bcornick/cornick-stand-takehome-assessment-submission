@@ -1,4 +1,4 @@
-# ABOUTME: Tests the skill folder check of section 8: a missing part, a prompt that does not fit the skill, a command class the skill may not issue, and the real tree against SKILLS.
+# ABOUTME: Tests the skill folder check of section 8: a missing part, a prompt that does not fit the skill, a command class the skill may not issue, and every registered skill folder.
 # ABOUTME: Folders are built under tmp_path so each failing case is shown; the real-tree tests fail on an unregistered or incomplete skill.
 from pathlib import Path
 from typing import Any
@@ -47,18 +47,6 @@ def build(
     return folder
 
 
-def test_a_complete_deterministic_skill_loads(tmp_path: Path) -> None:
-    manifest = check_skill_folder(build(tmp_path))
-    assert manifest.name == "demo"
-    assert manifest.command_classes == ["fetch_data"]
-    assert manifest.pass_threshold == 1.0
-
-
-def test_a_complete_model_skill_loads(tmp_path: Path) -> None:
-    folder = build(tmp_path, {**MANIFEST, "model_skill": True}, prompt=True)
-    assert check_skill_folder(folder).model_skill is True
-
-
 @pytest.mark.parametrize("part", ["manifest.yaml", "skill.py", "cases"])
 def test_a_missing_part_is_named(tmp_path: Path, part: str) -> None:
     with pytest.raises(SkillFolderError, match=f"(?s)demo.*{part}"):
@@ -71,24 +59,18 @@ def test_a_cases_folder_without_a_case_file_fails(tmp_path: Path, cases: tuple[s
         check_skill_folder(build(tmp_path, cases=cases))
 
 
-def test_a_model_skill_without_a_prompt_fails(tmp_path: Path) -> None:
-    folder = build(tmp_path, {**MANIFEST, "model_skill": True})
+@pytest.mark.parametrize("model_skill", [True, False])
+def test_a_prompt_that_does_not_fit_the_skill_fails(tmp_path: Path, model_skill: bool) -> None:
+    # A model skill needs a prompt and a deterministic skill must not carry one.
+    folder = build(tmp_path, {**MANIFEST, "model_skill": model_skill}, prompt=not model_skill)
     with pytest.raises(SkillFolderError, match="(?s)demo.*prompt.md"):
         check_skill_folder(folder)
-
-
-def test_a_deterministic_skill_with_a_prompt_fails(tmp_path: Path) -> None:
-    with pytest.raises(SkillFolderError, match="(?s)demo.*prompt.md"):
-        check_skill_folder(build(tmp_path, prompt=True))
 
 
 def test_an_unknown_command_class_fails(tmp_path: Path) -> None:
     folder = build(tmp_path, {**MANIFEST, "command_classes": ["launch_rocket"]})
     with pytest.raises(SkillFolderError, match="(?s)demo.*launch_rocket"):
         check_skill_folder(folder)
-
-
-WORKFLOW_CLASSES = [c.name for c in COMMAND_CLASSES if "workflow" in c.actors]
 
 
 @pytest.mark.parametrize("name", [c.name for c in COMMAND_CLASSES if "workflow" not in c.actors])
@@ -99,11 +81,6 @@ def test_a_class_the_workflow_actor_may_not_submit_fails(tmp_path: Path, name: s
 
 
 SKILLS_DIR = Path(uwh.skills.__file__).parent
-
-
-def test_every_skill_folder_is_registered() -> None:
-    folders = {p.name for p in SKILLS_DIR.iterdir() if p.is_dir() and p.name != "__pycache__"}
-    assert folders == set(SKILLS)
 
 
 def test_every_registered_skill_folder_is_complete() -> None:

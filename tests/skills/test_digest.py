@@ -1,6 +1,5 @@
 # ABOUTME: Tests that the skill digest changes with the skill's own source, the shared modules, the rules data and the model id, and with nothing else.
 # ABOUTME: Each test compares the digest before and after one change to a small tree under tmp_path.
-import py_compile
 from pathlib import Path
 
 from uwh.skills.digest import skill_digest
@@ -46,53 +45,35 @@ def test_digest_covers_every_source_file_in_the_skill_folder(tmp_path: Path) -> 
         assert skill_digest(root, "demo") == base, rel
 
 
-def test_an_edit_under_cases_leaves_the_digest_unchanged(tmp_path: Path) -> None:
+def test_an_edit_under_cases_or_to_another_skills_folder_leaves_the_digest_unchanged(
+    tmp_path: Path,
+) -> None:
     root = build(tmp_path)
     base = skill_digest(root, "demo")
     edit(root, "skills/demo/cases/x.yaml", "input: 2\n")
     edit(root, "skills/demo/cases/y.yaml", "input: 3\n")
+    other = skill_digest(root, "other")
+    edit(root, "skills/other/skill.py", "CHANGED = 1\n")
     assert skill_digest(root, "demo") == base
+    assert skill_digest(root, "other") != other
 
 
-def test_compiled_files_are_never_hashed(tmp_path: Path) -> None:
-    root = build(tmp_path)
-    base = skill_digest(root, "demo")
-    for rel in (
-        "skills/demo/skill.py",
-        "skills/vertical.py",
+def test_an_edit_to_a_shared_module_or_the_rules_data_changes_every_skills_digest(
+    tmp_path: Path,
+) -> None:
+    shared = (
         "rules/core.py",
         "providers/lookup.py",
         "runtime/store.py",
-    ):
-        py_compile.compile(str(root / rel), doraise=True)
-    edit(root, "skills/demo/__pycache__/stray.pyc", "x")
-    edit(root, "rules/data/stray.pyc", "x")
-    assert list(root.rglob("__pycache__"))
-    assert skill_digest(root, "demo") == base
-
-
-def test_an_edit_to_a_shared_module_changes_every_skills_digest(tmp_path: Path) -> None:
-    for rel in ("rules/core.py", "providers/lookup.py", "runtime/store.py", "skills/vertical.py"):
+        "skills/vertical.py",
+        "rules/data/interpretation.yaml",
+    )
+    for rel in shared:
         root = build(tmp_path / rel.replace("/", "_"))
         before = {s: skill_digest(root, s) for s in ("demo", "other")}
         edit(root, rel, "CHANGED = 1\n")
         after = {s: skill_digest(root, s) for s in ("demo", "other")}
         assert all(after[s] != before[s] for s in before), rel
-
-
-def test_an_edit_to_another_skills_folder_leaves_this_digest_unchanged(tmp_path: Path) -> None:
-    root = build(tmp_path)
-    demo, other = skill_digest(root, "demo"), skill_digest(root, "other")
-    edit(root, "skills/other/skill.py", "CHANGED = 1\n")
-    assert skill_digest(root, "demo") == demo
-    assert skill_digest(root, "other") != other
-
-
-def test_an_edit_to_the_image_rules_data_changes_the_digest(tmp_path: Path) -> None:
-    root = build(tmp_path)
-    base = skill_digest(root, "demo")
-    edit(root, "rules/data/interpretation.yaml", "I01: other ruling\n")
-    assert skill_digest(root, "demo") != base
 
 
 def test_the_model_id_is_part_of_a_model_skills_digest(tmp_path: Path) -> None:

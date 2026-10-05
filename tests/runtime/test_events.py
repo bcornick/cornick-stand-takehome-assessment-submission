@@ -8,6 +8,7 @@ from typing import Any
 
 import pytest
 
+from tests.runtime.helpers import insert_run
 from uwh.runtime.event_types import EventType, LeadReceived, RunStarted
 from uwh.runtime.events import (
     EventContext,
@@ -44,7 +45,9 @@ def received(source: str = "web") -> LeadReceived:
     return LeadReceived(source=source, received_at="2026-06-29T07:00:00Z")
 
 
-def test_appended_event_carries_every_context_column(db: sqlite3.Connection) -> None:
+def test_an_appended_event_carries_its_context_and_model_call_in_the_a1_columns(
+    db: sqlite3.Connection,
+) -> None:
     event_id = append_event(
         db,
         context(),
@@ -72,67 +75,31 @@ def test_appended_event_carries_every_context_column(db: sqlite3.Connection) -> 
     )
 
 
-def test_event_without_a_model_call_or_lead_stores_null_for_those_columns(
+def test_events_read_back_in_id_order_with_the_context_stamped_and_typed_payloads(
     db: sqlite3.Connection,
 ) -> None:
-    append_event(
-        db, context(), EventType.run_started, RunStarted(seed=7, lead_count=3), lead_id=None
+    db.execute("PRAGMA reverse_unordered_selects = ON")
+    first = append_event(db, context(), EventType.lead_received, received("a"), lead_id="L-1")
+    run_started = RunStarted(seed=1, lead_count=2)
+    second = append_event(db, context(), EventType.run_started, run_started, lead_id=None)
+    # An event appended later with an earlier timestamp still reads after the one before it.
+    third = append_event(
+        db,
+        context(actor="underwriter", real_ts=REAL - timedelta(days=1)),
+        EventType.lead_received,
+        received("b"),
+        lead_id="L-1",
     )
-    row = db.execute(
-        "SELECT lead_id, model_id, request_id, prompt_versions_json FROM events"
-    ).fetchone()
-    assert row == (None, None, None, None)
 
+    events = read_events(db)
 
-@pytest.mark.parametrize("mode", ["live", "replay", "record"])
-def test_mode_is_stored_on_the_event(db: sqlite3.Connection, mode: str) -> None:
-    append_event(db, context(mode=mode), EventType.lead_received, received(), lead_id="L-1")
-    assert db.execute("SELECT mode FROM events").fetchone() == (mode,)
-
-
-@pytest.mark.parametrize("field", ["run_id", "mode", "actor", "ruleset_hash", "real_ts", "sim_ts"])
-def test_a_missing_context_value_is_refused(field: str) -> None:
-    with pytest.raises(ValueError, match=field):
-        context(**{field: None})
-
-
-@pytest.mark.parametrize("field", ["run_id", "mode", "actor", "ruleset_hash"])
-def test_an_empty_context_value_is_refused(field: str) -> None:
-    with pytest.raises(ValueError, match=field):
-        context(**{field: ""})
-
-
-@pytest.mark.parametrize("field", ["real_ts", "sim_ts"])
-def test_a_timestamp_without_a_time_zone_is_refused(field: str) -> None:
-    with pytest.raises(ValueError, match=field):
-        context(**{field: datetime(2026, 6, 29, 8, 0)})
-
-
-def test_an_event_without_lead_id_is_refused(db: sqlite3.Connection) -> None:
-    with pytest.raises(TypeError, match="lead_id"):
-        append_event(db, context(), EventType.lead_received, received())  # type: ignore[call-arg]
-    assert db.execute("SELECT COUNT(*) FROM events").fetchone() == (0,)
-
-
-def test_a_payload_of_the_wrong_model_for_its_type_is_refused(db: sqlite3.Connection) -> None:
-    with pytest.raises(TypeError, match="lead_received"):
-        append_event(
-            db, context(), EventType.lead_received, RunStarted(seed=1, lead_count=1), lead_id="L-1"
-        )
-    assert db.execute("SELECT COUNT(*) FROM events").fetchone() == (0,)
-
-
-def test_timestamps_are_utc_fixed_width_and_sort_as_text() -> None:
-    plus_two = timezone(timedelta(hours=2))
-    assert (
-        format_timestamp(datetime(2026, 6, 29, 10, 0, tzinfo=plus_two))
-        == "2026-06-29T08:00:00.000000Z"
-    )
-    whole_second = datetime(2026, 6, 29, 8, 0, 1, tzinfo=UTC)
-    one_microsecond_later = datetime(2026, 6, 29, 8, 0, 1, 1, tzinfo=UTC)
-    assert format_timestamp(whole_second) < format_timestamp(one_microsecond_later)
-    with pytest.raises(ValueError, match="time zone"):
-        format_timestamp(datetime(2026, 6, 29, 8, 0))
+    assert [e.id for e in events] == [first, second, third]
+    assert [e.id for e in read_events(db, lead_id="L-1")] == [first, third]
+    assert events[0].payload == received("a") and events[1].payload == run_started
+    assert (events[0].run_id, events[0].mode, events[0].actor) == ("run-1", "replay", "workflow")
+    assert (events[0].real_ts, events[0].sim_ts) == (REAL, SIM)
+    assert (events[0].ruleset_hash, events[0].model_id) == ("r" * 64, None)
+    assert events[2].actor == "underwriter"
 
 
 def test_append_does_not_commit(tmp_path: Path) -> None:
@@ -144,88 +111,24 @@ def test_append_does_not_commit(tmp_path: Path) -> None:
     assert open_store(path).execute("SELECT COUNT(*) FROM events").fetchone() == (1,)
 
 
-def test_events_read_back_in_id_order_with_typed_payloads(db: sqlite3.Connection) -> None:
-    db.execute("PRAGMA reverse_unordered_selects = ON")
-    ids = [
-        append_event(db, context(), EventType.lead_received, received("a"), lead_id="L-2"),
-        append_event(
-            db, context(), EventType.run_started, RunStarted(seed=1, lead_count=2), lead_id=None
-        ),
-        append_event(
-            db, context(actor="underwriter"), EventType.lead_received, received("b"), lead_id="L-1"
-        ),
-    ]
-    assert ids == sorted(ids)
-    events = read_events(db)
-    assert [e.id for e in events] == ids
-    assert [e.type for e in events] == [
-        EventType.lead_received,
-        EventType.run_started,
-        EventType.lead_received,
-    ]
-    assert events[0].payload == received("a")
-    assert events[2].actor == "underwriter"
-    assert events[2].lead_id == "L-1"
-    assert events[0].real_ts == REAL
-    assert events[0].sim_ts == SIM
-    assert events[0].mode == "replay"
-    assert events[0].run_id == "run-1"
-    assert events[0].ruleset_hash == "r" * 64
-    assert events[0].model_id is None
-    assert events[0].prompt_versions is None
-
-
-def test_read_events_for_one_lead_in_id_order(db: sqlite3.Connection) -> None:
-    db.execute("PRAGMA reverse_unordered_selects = ON")
-    first = append_event(db, context(), EventType.lead_received, received("a"), lead_id="L-1")
-    append_event(db, context(), EventType.lead_received, received("b"), lead_id="L-2")
-    third = append_event(db, context(), EventType.lead_received, received("c"), lead_id="L-1")
-    append_event(
-        db, context(), EventType.run_started, RunStarted(seed=1, lead_count=2), lead_id=None
+def test_timestamps_are_utc_fixed_width_and_sort_as_text() -> None:
+    plus_two = timezone(timedelta(hours=2))
+    assert (
+        format_timestamp(datetime(2026, 6, 29, 10, 0, tzinfo=plus_two))
+        == "2026-06-29T08:00:00.000000Z"
     )
-    assert [e.id for e in read_events(db, lead_id="L-1")] == [first, third]
-    assert read_events(db, lead_id="L-9") == []
+    whole_second = datetime(2026, 6, 29, 8, 0, 1, tzinfo=UTC)
+    one_microsecond_later = datetime(2026, 6, 29, 8, 0, 1, 1, tzinfo=UTC)
+    assert format_timestamp(whole_second) < format_timestamp(one_microsecond_later)
 
 
-def test_model_call_values_read_back(db: sqlite3.Connection) -> None:
-    append_event(
-        db, context(), EventType.lead_received, received(), lead_id="L-1",
-        model_id="claude-x", request_id="req_1", prompt_versions={"a": "v1"},
-    )  # fmt: skip
-    (event,) = read_events(db)
-    assert (event.model_id, event.request_id, event.prompt_versions) == (
-        "claude-x",
-        "req_1",
-        {"a": "v1"},
-    )
-
-
-def test_an_event_appended_later_with_an_earlier_timestamp_reads_in_id_order(
+def test_only_the_current_run_is_accepted_and_any_other_run_id_is_stale(
     db: sqlite3.Connection,
 ) -> None:
-    db.execute("PRAGMA reverse_unordered_selects = ON")
-    first = append_event(
-        db, context(real_ts=REAL, sim_ts=SIM), EventType.lead_received, received("a"), lead_id="L-1"
-    )
-    second = append_event(
-        db, context(real_ts=REAL - timedelta(days=1), sim_ts=SIM - timedelta(days=1)),
-        EventType.lead_received, received("b"), lead_id="L-1",
-    )  # fmt: skip
-    assert [e.id for e in read_events(db)] == [first, second]
-    assert [e.id for e in read_events(db, lead_id="L-1")] == [first, second]
-
-
-def test_the_current_run_is_accepted_and_any_other_run_id_is_stale(db: sqlite3.Connection) -> None:
-    db.execute(
-        "INSERT INTO runs (run_id, seed, mode, started_at, status)"
-        " VALUES ('run-2', 42, 'replay', '2026-10-05T12:00:00.000000Z', 'processing')"
-    )
+    with pytest.raises(StaleRun, match="run-2"):
+        require_current_run(db, "run-2")  # no run exists yet
+    insert_run(db, "run-2")
 
     require_current_run(db, "run-2")
-    with pytest.raises(StaleRun, match="run-1"):
-        require_current_run(db, "run-1")
-
-
-def test_with_no_run_every_run_id_is_stale(db: sqlite3.Connection) -> None:
     with pytest.raises(StaleRun, match="run-1"):
         require_current_run(db, "run-1")

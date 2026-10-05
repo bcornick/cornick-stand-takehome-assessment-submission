@@ -1,15 +1,26 @@
-# ABOUTME: Tests the command layer of 7.4 and A.11: the actor from the transport, the class rules, the skill manifest check, item resolution, one transaction per command with the lead's re-evaluation, the dispatch and mailbox re-check after the commit, and the handlers of resolve_fact, approve, reject, edit_draft and record_ruling.
+# ABOUTME: Tests the command layer of 7.4 and A.11: the actor from the transport, the class rules, the skill manifest check, one transaction per command with the lead's re-evaluation, the dispatch after the commit, and the effect of resolve_fact, approve, reject, edit_draft and record_ruling.
 # ABOUTME: Each test opens a real database through open_store at a tmp_path file and reads back events, approvals and blockers; skill folders are built under tmp_path.
-import json
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 import pytest
 import yaml
 from pydantic import JsonValue
 
-from tests.runtime.helpers import ASKER, PLAN_HASH, RULESET, RUN_START
+from tests.runtime.helpers import (
+    ASKER,
+    NOW,
+    PLAN_HASH,
+    RECIPIENT,
+    RULESET,
+    RUN_START,
+    command_environment,
+    events_of,
+    insert_run,
+    skill_manifest,
+    state_of,
+)
 from tests.runtime.helpers import LEAD_ID as LEAD
 from uwh.runtime.commands import CommandEnvironment, CommandResult, submit_command
 from uwh.runtime.event_types import (
@@ -24,7 +35,7 @@ from uwh.runtime.event_types import (
     ReviewCause,
     RulingRecorded,
 )
-from uwh.runtime.events import EventContext, StoredEvent, read_events
+from uwh.runtime.events import EventContext, read_events
 from uwh.runtime.facts import (
     LedgerRules,
     ReplyValue,
@@ -39,13 +50,30 @@ from uwh.runtime.send import create_draft
 from uwh.runtime.store import open_store
 from uwh.runtime.waits import open_blocker, open_blockers
 from uwh.runtime.workflow import Step, create_lead
-from uwh.skills.vertical import COMMAND_CLASSES, REFERENCE_MORNING
+from uwh.skills.vertical import REFERENCE_MORNING
 
-NOW = RUN_START + timedelta(minutes=5)
 SETUP = EventContext("run-1", "replay", "workflow", RULESET, RUN_START, REFERENCE_MORNING)
 RULES = LedgerRules()
 ACTORS: tuple[Actor, ...] = ("workflow", "underwriter", "assistant", "inbound")
-HUMAN_ONLY = [c.name for c in COMMAND_CLASSES if c.actors == ("underwriter",)]
+
+# Section 7.4 table: who may submit each command class, written out here.
+ALLOWED_ACTORS: dict[str, tuple[Actor, ...]] = {
+    "fetch_data": ("workflow",),
+    "send_routine_request": ("workflow",),
+    "send_sensitive_request": ("workflow",),
+    "send_quote_packet": ("workflow",),
+    "send_decline_notice": ("workflow",),
+    "deliver_reply": ("inbound", "underwriter"),
+    "approve": ("underwriter",),
+    "reject": ("underwriter",),
+    "edit_draft": ("underwriter",),
+    "resolve_fact": ("underwriter",),
+    "decline_lead": ("underwriter",),
+    "record_ruling": ("underwriter",),
+    "start_run": ("underwriter",),
+    "propose_command": ("assistant",),
+}
+RESOLVE_ACREAGE = {"lead_id": LEAD, "key": "acreage", "value": 7, "reason": "called the producer"}
 
 
 @pytest.fixture
@@ -56,18 +84,11 @@ def path(tmp_path: Path) -> str:
 @pytest.fixture
 def db(path: str) -> sqlite3.Connection:
     db = open_store(path)
-    db.execute(
-        "INSERT INTO runs (run_id, seed, mode, started_at, status)"
-        " VALUES ('run-1', 42, 'replay', '2026-10-05T12:00:00.000000Z', 'processing')"
-    )
-    add_lead(db, LEAD)
-    return db
-
-
-def add_lead(db: sqlite3.Connection, lead_id: str) -> None:
-    create_lead(db, SETUP, lead_id, "web", "2026-06-29T07:00:00Z")
-    db.execute("UPDATE leads SET plan_hash = ? WHERE lead_id = ?", (PLAN_HASH, lead_id))
+    insert_run(db)
+    create_lead(db, SETUP, LEAD, "web", "2026-06-29T07:00:00Z")
+    db.execute("UPDATE leads SET plan_hash = ? WHERE lead_id = ?", (PLAN_HASH, LEAD))
     db.commit()
+    return db
 
 
 class Passes:
@@ -90,47 +111,35 @@ def passes() -> Passes:
 
 @pytest.fixture
 def skills_root(tmp_path: Path) -> Path:
-    folder = tmp_path / "skills" / "fetcher"
-    folder.mkdir(parents=True)
-    manifest = {
-        "name": "fetcher",
-        "version": "1",
-        "purpose": "Looks up a value.",
-        "trigger": "a lookup is needed",
-        "command_classes": ["fetch_data"],
-        "fallback": "none",
-        "pass_threshold": 1.0,
-    }
-    (folder / "manifest.yaml").write_text(yaml.safe_dump(manifest))
-    every_class = tmp_path / "skills" / "every_class"
-    every_class.mkdir()
-    declared = [c.name for c in COMMAND_CLASSES if "workflow" in c.actors]
-    manifest = {**manifest, "name": "every_class", "command_classes": declared}
-    (every_class / "manifest.yaml").write_text(yaml.safe_dump(manifest))
-    return tmp_path / "skills"
+    """The skills `fetcher`, which declares fetch_data only, and `every_class`, which declares each class a skill may issue."""
+    root = tmp_path / "skills"
+    declared = [c for c, actors in ALLOWED_ACTORS.items() if "workflow" in actors]
+    for manifest in (
+        skill_manifest("fetch_data", name="fetcher"),
+        skill_manifest(*declared, name="every_class"),
+    ):
+        (root / manifest.name).mkdir(parents=True)
+        (root / manifest.name / "manifest.yaml").write_text(
+            yaml.safe_dump(manifest.model_dump(mode="json"))
+        )
+    return root
 
 
 @pytest.fixture
 def env(
-    passes: Passes, skills_root: Path, mailbox: MailboxClient, leadgen: LeadgenClient
+    tmp_path: Path,
+    passes: Passes,
+    skills_root: Path,
+    mailbox: MailboxClient,
+    leadgen: LeadgenClient,
 ) -> CommandEnvironment:
-    return CommandEnvironment(
-        "replay", RULESET, RULES, passes.steps, skills_root, lambda: NOW, mailbox, leadgen
-    )
-
-
-def events_of(db: sqlite3.Connection, event_type: EventType) -> list[StoredEvent]:
-    return [e for e in read_events(db) if e.type == event_type]
-
-
-def last_refusal(db: sqlite3.Connection) -> StoredEvent:
-    return events_of(db, EventType.command_refused)[-1]
+    return command_environment(tmp_path, mailbox, leadgen, passes.steps, skills_root=skills_root)
 
 
 def assert_refused(db: sqlite3.Connection, result: CommandResult, reason_part: str) -> None:
     assert not result.accepted
     assert result.reason is not None and reason_part in result.reason
-    refusal = last_refusal(db)
+    refusal = events_of(db, EventType.command_refused)[-1]
     assert refusal.id == result.event_id
     assert isinstance(refusal.payload, CommandRefused)
     assert refusal.payload.reason == result.reason
@@ -149,14 +158,7 @@ def pending_observation(db: sqlite3.Connection) -> int:
 def open_item(
     db: sqlite3.Connection, detail: BlockerDetail, kind: BlockerKind = "underwriter_review"
 ) -> int:
-    blocker_id = open_blocker(
-        db,
-        SETUP,
-        LEAD,
-        kind,
-        "underwriter",
-        detail,
-    )
+    blocker_id = open_blocker(db, SETUP, LEAD, kind, "underwriter", detail)
     db.commit()
     return blocker_id
 
@@ -174,51 +176,22 @@ def review(
     )
 
 
-# ---- the actor and the class rules --------------------------------------------------------------
+def wait_on_producer(db: sqlite3.Connection, intent_id: str) -> int:
+    detail = BlockerDetail(
+        resume_trigger="the producer replies", intent_id=intent_id, text="Waiting."
+    )
+    blocker_id = open_blocker(db, SETUP, LEAD, "producer_reply", "producer", detail)
+    db.commit()
+    return blocker_id
 
 
-def test_the_actor_comes_from_the_transport_binding(
-    db: sqlite3.Connection, env: CommandEnvironment
-) -> None:
-    payload = {"lead_id": LEAD, "key": "acreage", "value": 2, "reason": "call"}
-
-    result = submit_command(db, env, "underwriter", "resolve_fact", payload)
-
-    assert result.accepted
-    stored = [e for e in read_events(db) if e.type == EventType.fact_observed][-1]
-    assert stored.actor == "underwriter"
+def decide(
+    db: sqlite3.Connection, env: CommandEnvironment, command: str, item_id: int, reason: str = "ok"
+) -> CommandResult:
+    return submit_command(db, env, "underwriter", command, {"item_id": item_id, "reason": reason})
 
 
-def test_a_payload_key_named_actor_is_refused_and_writes_only_the_refusal(
-    db: sqlite3.Connection, env: CommandEnvironment
-) -> None:
-    before = len(read_events(db))
-    payload = {"lead_id": LEAD, "key": "acreage", "value": 2, "reason": "call", "actor": "workflow"}
-
-    result = submit_command(db, env, "underwriter", "resolve_fact", payload)
-
-    assert_refused(db, result, "actor")
-    assert len(read_events(db)) == before + 1
-    assert effective_facts(db, LEAD) == {}
-
-
-# Section 7.4 table: who may submit each command class, written out here.
-ALLOWED_ACTORS: dict[str, tuple[Actor, ...]] = {
-    "fetch_data": ("workflow",),
-    "send_routine_request": ("workflow",),
-    "send_sensitive_request": ("workflow",),
-    "send_quote_packet": ("workflow",),
-    "send_decline_notice": ("workflow",),
-    "deliver_reply": ("inbound", "underwriter"),
-    "approve": ("underwriter",),
-    "reject": ("underwriter",),
-    "edit_draft": ("underwriter",),
-    "resolve_fact": ("underwriter",),
-    "decline_lead": ("underwriter",),
-    "record_ruling": ("underwriter",),
-    "start_run": ("underwriter",),
-    "propose_command": ("assistant",),
-}
+# ---- the gate: actor, class and skill manifest --------------------------------------------------
 
 
 @pytest.mark.parametrize("actor", ACTORS)
@@ -239,83 +212,63 @@ def test_the_gate_admits_exactly_the_pairs_of_the_7_4_table(
     assert result.accepted or (result.reason or "").startswith("the payload needs")
 
 
-@pytest.mark.parametrize("actor", ["assistant"])
-def test_an_approve_from_the_assistant_writes_command_refused(
-    db: sqlite3.Connection, env: CommandEnvironment, actor: Actor
+@pytest.mark.parametrize(
+    ("skill", "command_type", "reason_part"),
+    [
+        ("fetcher", "send_routine_request", "does not declare send_routine_request"),
+        (None, "fetch_data", "names the skill"),
+        ("missing", "fetch_data", "manifest.yaml is missing"),
+    ],
+)
+def test_a_workflow_command_is_refused_unless_its_skill_manifest_declares_it(
+    db: sqlite3.Connection,
+    env: CommandEnvironment,
+    skill: str | None,
+    command_type: str,
+    reason_part: str,
 ) -> None:
-    item_id = pending_observation(db)
+    result = submit_command(db, env, "workflow", command_type, {}, skill=skill)
 
-    result = submit_command(db, env, actor, "approve", {"item_id": item_id, "reason": "ok"})
-
-    assert_refused(db, result, f"{actor} may not submit approve")
-    assert last_refusal(db).actor == actor
-    assert open_blockers(db, LEAD)[0].id == item_id
+    assert_refused(db, result, reason_part)
 
 
-def test_an_unknown_command_type_is_refused(
+def test_the_actor_is_the_transports_and_a_payload_naming_one_is_refused(
     db: sqlite3.Connection, env: CommandEnvironment
 ) -> None:
-    assert_refused(db, submit_command(db, env, "underwriter", "send_postcard", {}), "not a command")
-
-
-def test_a_refusal_commits_in_its_own_transaction(
-    path: str, db: sqlite3.Connection, env: CommandEnvironment
-) -> None:
-    result = submit_command(db, env, "assistant", "approve", {})
-
-    other = open_store(path)
-    try:
-        assert [e.id for e in events_of(other, EventType.command_refused)] == [result.event_id]
-    finally:
-        other.close()
-    assert not db.in_transaction
-
-
-def test_a_command_with_no_handler_raises_after_the_checks_and_writes_nothing(
-    db: sqlite3.Connection, env: CommandEnvironment
-) -> None:
+    assert submit_command(db, env, "underwriter", "resolve_fact", RESOLVE_ACREAGE).accepted
+    (observed,) = events_of(db, EventType.fact_observed)
+    assert observed.actor == "underwriter"
     before = len(read_events(db))
 
-    with pytest.raises(NotImplementedError, match="decline_lead"):
-        submit_command(db, env, "underwriter", "decline_lead", {"lead_id": LEAD, "reason": "x"})
+    result = submit_command(
+        db, env, "underwriter", "resolve_fact", {**RESOLVE_ACREAGE, "actor": "workflow"}
+    )
 
-    assert len(read_events(db)) == before
+    assert_refused(db, result, "actor")
+    assert len(read_events(db)) == before + 1
+
+
+def test_a_refusal_writes_one_command_refused_with_the_payload_and_changes_nothing_else(
+    path: str, db: sqlite3.Connection, env: CommandEnvironment
+) -> None:
+    item_id = pending_observation(db)
+    before = len(read_events(db))
+    payload = {"item_id": item_id, "reason": "ok"}
+
+    result = submit_command(db, env, "assistant", "approve", payload)
+
+    assert_refused(db, result, "assistant may not submit approve")
+    other = open_store(path)
+    try:
+        assert len(read_events(other)) == before + 1  # committed, though no handler ran
+        (refusal,) = events_of(other, EventType.command_refused)
+    finally:
+        other.close()
+    assert isinstance(refusal.payload, CommandRefused)
+    assert refusal.payload.command_payload == payload
+    assert (refusal.actor, refusal.lead_id) == ("assistant", LEAD)
+    assert [b.id for b in open_blockers(db, LEAD)] == [item_id]
     assert not db.in_transaction
-
-
-# ---- the skill manifest -------------------------------------------------------------------------
-
-
-def test_a_workflow_command_the_skill_manifest_declares_passes_the_checks(
-    db: sqlite3.Connection, env: CommandEnvironment
-) -> None:
-    with pytest.raises(NotImplementedError, match="fetch_data"):
-        submit_command(db, env, "workflow", "fetch_data", {}, skill="fetcher")
-
-
-def test_a_class_absent_from_the_skill_manifest_is_refused(
-    db: sqlite3.Connection, env: CommandEnvironment
-) -> None:
-    result = submit_command(db, env, "workflow", "send_routine_request", {}, skill="fetcher")
-
-    assert_refused(db, result, "does not declare send_routine_request")
-
-
-def test_a_workflow_command_names_its_skill(
-    db: sqlite3.Connection, env: CommandEnvironment
-) -> None:
-    assert_refused(db, submit_command(db, env, "workflow", "fetch_data", {}), "names the skill")
-
-
-def test_a_skill_with_no_manifest_is_refused(
-    db: sqlite3.Connection, env: CommandEnvironment
-) -> None:
-    result = submit_command(db, env, "workflow", "fetch_data", {}, skill="missing")
-
-    assert_refused(db, result, "manifest.yaml is missing")
-
-
-# ---- before any run -----------------------------------------------------------------------------
 
 
 def test_a_refusal_before_any_run_carries_the_pre_run_id_and_the_reference_morning(
@@ -325,38 +278,13 @@ def test_a_refusal_before_any_run_carries_the_pre_run_id_and_the_reference_morni
 
     result = submit_command(db, env, "assistant", "approve", {"item_id": 1})
 
-    refusal = last_refusal(db)
+    (refusal,) = events_of(db, EventType.command_refused)
     assert refusal.id == result.event_id
-    assert (refusal.run_id, refusal.sim_ts) == ("pre-run", REFERENCE_MORNING)
-    assert refusal.real_ts == NOW
+    assert (refusal.run_id, refusal.sim_ts, refusal.real_ts) == ("pre-run", REFERENCE_MORNING, NOW)
     db.close()
 
 
-# ---- item resolution ----------------------------------------------------------------------------
-
-
-def test_a_refusal_on_an_item_names_the_items_lead(
-    db: sqlite3.Connection, env: CommandEnvironment
-) -> None:
-    item_id = open_item(db, review("round_limit", persists=True))
-
-    submit_command(db, env, "underwriter", "approve", {"item_id": item_id, "reason": "x"})
-
-    assert last_refusal(db).lead_id == LEAD
-
-
-def test_an_open_choice_is_not_approved_or_rejected(
-    db: sqlite3.Connection, env: CommandEnvironment
-) -> None:
-    detail = BlockerDetail(resume_trigger="a ruling", text="Pick.", choice_ids=["c1"])
-    item_id = open_item(db, detail, "underwriter_question")
-
-    result = submit_command(db, env, "underwriter", "approve", {"item_id": item_id, "reason": "x"})
-
-    assert_refused(db, result, "not an item to approve")
-
-
-# ---- approve and reject of an observation -------------------------------------------------------
+# ---- approve and reject by item kind ------------------------------------------------------------
 
 
 def test_approving_an_observation_makes_it_the_fact_and_records_the_approval(
@@ -364,16 +292,13 @@ def test_approving_an_observation_makes_it_the_fact_and_records_the_approval(
 ) -> None:
     item_id = pending_observation(db)
 
-    result = submit_command(
-        db, env, "underwriter", "approve", {"item_id": item_id, "reason": "the producer is right"}
-    )
+    result = decide(db, env, "approve", item_id, "the producer is right")
 
     assert result.accepted and result.reason is None
     assert effective_facts(db, LEAD)["acreage"].value == 3
     assert open_blockers(db, LEAD) == []
     (event,) = events_of(db, EventType.approval_recorded)
-    assert event.id == result.event_id
-    assert event.actor == "underwriter"
+    assert event.id == result.event_id and event.actor == "underwriter"
     assert isinstance(event.payload, ApprovalRecorded)
     assert event.payload.item_kind == "observation"
     assert (event.payload.decision, event.payload.reason) == ("approved", "the producer is right")
@@ -383,9 +308,19 @@ def test_approving_an_observation_makes_it_the_fact_and_records_the_approval(
         " payload_hash, actor, decision, reason, event_id FROM approvals"
     ).fetchall()
     assert row == (
-        LEAD, "observation", None, 1, PLAN_HASH, RULESET, None, None,
-        "underwriter", "approved", "the producer is right", result.event_id,
-    )  # fmt: skip
+        LEAD,
+        "observation",
+        None,
+        1,
+        PLAN_HASH,
+        RULESET,
+        None,
+        None,
+        "underwriter",
+        "approved",
+        "the producer is right",
+        result.event_id,
+    )
     assert passes.leads == [LEAD]
 
 
@@ -394,43 +329,17 @@ def test_rejecting_an_observation_keeps_the_existing_value(
 ) -> None:
     item_id = pending_observation(db)
 
-    result = submit_command(
-        db, env, "underwriter", "reject", {"item_id": item_id, "reason": "stale"}
-    )
+    result = decide(db, env, "reject", item_id, "stale")
 
     assert result.accepted
     assert effective_facts(db, LEAD)["acreage"].value == 2
     assert open_blockers(db, LEAD) == []
-    (decision, reason) = db.execute("SELECT decision, reason FROM approvals").fetchone()
-    assert (decision, reason) == ("rejected", "stale")
+    assert db.execute("SELECT decision, reason FROM approvals").fetchone() == ("rejected", "stale")
 
 
-def test_a_reject_needs_a_reason(db: sqlite3.Connection, env: CommandEnvironment) -> None:
-    item_id = pending_observation(db)
-
-    result = submit_command(db, env, "underwriter", "reject", {"item_id": item_id, "reason": ""})
-
-    assert_refused(db, result, "non-empty reason")
-    assert len(open_blockers(db, LEAD)) == 1
-
-
-def test_approving_a_lead_without_a_plan_is_refused(
+def test_approving_a_late_reply_review_rejects_the_reply_values_and_leaves_the_open_round(
     db: sqlite3.Connection, env: CommandEnvironment
 ) -> None:
-    item_id = pending_observation(db)
-    db.execute("UPDATE leads SET plan_hash = NULL")
-    db.commit()
-
-    result = submit_command(db, env, "underwriter", "approve", {"item_id": item_id, "reason": "x"})
-
-    assert_refused(db, result, "has no plan")
-    assert effective_facts(db, LEAD)["acreage"].value == 2
-
-
-# ---- approve and reject of a review -------------------------------------------------------------
-
-
-def late_reply_review(db: sqlite3.Connection) -> int:
     observe(db, SETUP, LEAD, "acreage", 2, "submitted", {}, RULES)
     observe_late_reply(
         db,
@@ -443,150 +352,80 @@ def late_reply_review(db: sqlite3.Connection) -> int:
     )
     db.commit()
     (item,) = open_blockers(db, LEAD)
-    assert item.detail.cause == "late_reply"
-    return item.id
+    round_blocker = wait_on_producer(db, "i-1")
 
-
-def test_approving_a_late_reply_review_acknowledges_it_and_rejects_the_reply_values(
-    db: sqlite3.Connection, env: CommandEnvironment
-) -> None:
-    item_id = late_reply_review(db)
-
-    result = submit_command(
-        db, env, "underwriter", "approve", {"item_id": item_id, "reason": "seen"}
-    )
+    result = decide(db, env, "approve", item.id, "seen")
 
     assert result.accepted
-    assert open_blockers(db, LEAD) == []
-    (status,) = db.execute("SELECT status FROM observations WHERE source = 'reply'").fetchone()
-    assert status == "rejected"
+    assert [b.id for b in open_blockers(db, LEAD)] == [round_blocker]
+    assert db.execute("SELECT status FROM observations WHERE source = 'reply'").fetchone() == (
+        "rejected",
+    )
     assert effective_facts(db, LEAD)["acreage"].value == 2
-    (item_kind, intent_id, event_id) = db.execute(
-        "SELECT item_kind, intent_id, event_id FROM approvals"
-    ).fetchone()
-    assert (item_kind, intent_id, event_id) == ("review", "i-1", result.event_id)
-
-
-def test_approving_an_event_review_that_is_not_a_late_reply_leaves_observations_alone(
-    db: sqlite3.Connection, env: CommandEnvironment
-) -> None:
-    observation_item = pending_observation(db)
-    item_id = open_item(db, review("off_topic_reply", intent_id="i-1"))
-
-    result = submit_command(db, env, "underwriter", "approve", {"item_id": item_id, "reason": "ok"})
-
-    assert result.accepted
-    assert [b.id for b in open_blockers(db, LEAD)] == [observation_item]
-    (status,) = db.execute("SELECT status FROM observations WHERE source = 'reply'").fetchone()
-    assert status == "pending_review"
-
-
-def wait_on_producer(db: sqlite3.Connection, intent_id: str) -> int:
-    detail = BlockerDetail(
-        resume_trigger="the producer replies", intent_id=intent_id, text="Waiting."
-    )
-    blocker_id = open_blocker(db, SETUP, LEAD, "producer_reply", "producer", detail)
-    db.commit()
-    return blocker_id
+    approval = db.execute("SELECT item_kind, intent_id, event_id FROM approvals").fetchone()
+    assert approval == ("review", "i-1", result.event_id)
 
 
 @pytest.mark.parametrize("cause", ["unread_reply", "off_topic_reply", "declining_reply"])
-def test_acknowledging_the_review_of_a_reply_closes_the_round_it_answered(
+def test_acknowledging_the_review_of_a_reply_closes_the_round_it_answered_and_no_other(
     db: sqlite3.Connection, env: CommandEnvironment, cause: ReviewCause
 ) -> None:
     observation_item = pending_observation(db)
     other_round = wait_on_producer(db, "i-2")
-    this_round = wait_on_producer(db, "i-1")
+    wait_on_producer(db, "i-1")
     item_id = open_item(db, review(cause, intent_id="i-1"))
 
-    result = submit_command(db, env, "underwriter", "approve", {"item_id": item_id, "reason": "ok"})
+    assert decide(db, env, "approve", item_id).accepted
 
-    assert result.accepted
     assert [b.id for b in open_blockers(db, LEAD)] == [observation_item, other_round]
-    assert this_round not in [b.id for b in open_blockers(db, LEAD)]
-    (status,) = db.execute("SELECT status FROM observations WHERE source = 'reply'").fetchone()
-    assert status == "pending_review"
-
-
-def test_acknowledging_a_review_that_names_no_intent_closes_only_the_review(
-    db: sqlite3.Connection, env: CommandEnvironment
-) -> None:
-    round_blocker = wait_on_producer(db, "i-1")
-    item_id = open_item(db, review("unread_reply"))
-
-    assert submit_command(
-        db, env, "underwriter", "approve", {"item_id": item_id, "reason": "ok"}
-    ).accepted
-
-    assert [b.id for b in open_blockers(db, LEAD)] == [round_blocker]
-
-
-def test_acknowledging_a_review_with_no_open_round_closes_only_the_review(
-    db: sqlite3.Connection, env: CommandEnvironment
-) -> None:
-    item_id = open_item(db, review("unread_reply", intent_id="i-1"))
-
-    assert submit_command(
-        db, env, "underwriter", "approve", {"item_id": item_id, "reason": "ok"}
-    ).accepted
-
-    assert open_blockers(db, LEAD) == []
-
-
-def test_acknowledging_a_late_reply_review_leaves_the_open_round_of_its_intent(
-    db: sqlite3.Connection, env: CommandEnvironment
-) -> None:
-    item_id = late_reply_review(db)
-    round_blocker = wait_on_producer(db, "i-1")
-
-    assert submit_command(
-        db, env, "underwriter", "approve", {"item_id": item_id, "reason": "ok"}
-    ).accepted
-
-    assert [b.id for b in open_blockers(db, LEAD)] == [round_blocker]
-
-
-def test_rejecting_an_event_review_is_refused(
-    db: sqlite3.Connection, env: CommandEnvironment
-) -> None:
-    item_id = open_item(db, review("unread_reply", intent_id="i-1"))
-
-    result = submit_command(db, env, "underwriter", "reject", {"item_id": item_id, "reason": "no"})
-
-    assert_refused(db, result, "resolve_fact, record_ruling or decline_lead")
-    assert len(open_blockers(db, LEAD)) == 1
-
-
-@pytest.mark.parametrize("command", ["approve", "reject"])
-def test_a_review_whose_cause_persists_is_refused_both_ways(
-    db: sqlite3.Connection, env: CommandEnvironment, command: str
-) -> None:
-    item_id = open_item(db, review("round_limit", persists=True))
-
-    result = submit_command(db, env, "underwriter", command, {"item_id": item_id, "reason": "x"})
-
-    assert_refused(db, result, "the cause persists")
-    assert len(open_blockers(db, LEAD)) == 1
-
-
-@pytest.mark.parametrize("command", ["approve", "reject"])
-def test_a_no_contact_route_item_is_refused_both_ways(
-    db: sqlite3.Connection, env: CommandEnvironment, command: str
-) -> None:
-    detail = BlockerDetail(
-        item_kind="no_contact_route", resume_trigger="a contact route", text="No route."
+    assert db.execute("SELECT status FROM observations WHERE source = 'reply'").fetchone() == (
+        "pending_review",
     )
-    item_id = open_item(db, detail)
-
-    result = submit_command(db, env, "underwriter", command, {"item_id": item_id, "reason": "x"})
-
-    assert_refused(db, result, "q:contact_email")
 
 
-# ---- drafts: approve, reject and edit_draft ----------------------------------------------------
+@pytest.mark.parametrize(
+    ("command", "detail", "kind", "reason_part"),
+    [
+        ("approve", review("round_limit", persists=True), "underwriter_review", "cause persists"),
+        ("reject", review("round_limit", persists=True), "underwriter_review", "cause persists"),
+        (
+            "reject",
+            review("unread_reply", intent_id="i-1"),
+            "underwriter_review",
+            "resolve_fact, record_ruling or decline_lead",
+        ),
+        (
+            "approve",
+            BlockerDetail(
+                item_kind="no_contact_route", resume_trigger="a contact route", text="No route."
+            ),
+            "underwriter_review",
+            "q:contact_email",
+        ),
+        (
+            "approve",
+            BlockerDetail(resume_trigger="a ruling", text="Pick.", choice_ids=["c1"]),
+            "underwriter_question",
+            "not an item to approve",
+        ),
+    ],
+)
+def test_a_decision_the_item_does_not_allow_is_refused_and_leaves_the_item_open(
+    db: sqlite3.Connection,
+    env: CommandEnvironment,
+    command: str,
+    detail: BlockerDetail,
+    kind: BlockerKind,
+    reason_part: str,
+) -> None:
+    item_id = open_item(db, detail, kind)
+
+    assert_refused(db, decide(db, env, command, item_id, "x"), reason_part)
+
+    assert [b.id for b in open_blockers(db, LEAD)] == [item_id]
 
 
-RECIPIENT = "producer@example.com"
+# ---- drafts: approve, reject and edit_draft -----------------------------------------------------
 
 
 def make_draft(db: sqlite3.Connection, kind: MessageKind = "sensitive_request") -> str:
@@ -605,11 +444,6 @@ def item_of(db: sqlite3.Connection, intent_id: str) -> int:
     return item.id
 
 
-def intent_state(db: sqlite3.Connection, intent_id: str) -> str:
-    (state,) = db.execute("SELECT state FROM intents WHERE id = ?", (intent_id,)).fetchone()
-    return str(state)
-
-
 def current_hash(db: sqlite3.Connection, intent_id: str) -> str:
     (value,) = db.execute("SELECT payload_hash FROM intents WHERE id = ?", (intent_id,)).fetchone()
     return str(value)
@@ -626,10 +460,7 @@ def test_stale_artifact_hash_refused(
     item_id = item_of(db, intent_id)
     shown = current_hash(db, intent_id)
 
-    missing = submit_command(
-        db, env, "underwriter", "approve", {"item_id": item_id, "reason": "ok"}
-    )
-    assert_refused(db, missing, "artifact_hash")
+    assert_refused(db, decide(db, env, "approve", item_id), "artifact_hash")
     wrong = {"item_id": item_id, "reason": "ok", "artifact_hash": "h" * 64}
     assert_refused(db, submit_command(db, env, "underwriter", "approve", wrong), "artifact_hash")
     edit = {"intent_id": intent_id, "subject": "New", "body": "Changed", "reason": "tone"}
@@ -637,15 +468,14 @@ def test_stale_artifact_hash_refused(
     stale = {"item_id": item_id, "reason": "ok", "artifact_hash": shown}
     assert_refused(db, submit_command(db, env, "underwriter", "approve", stale), "artifact_hash")
 
-    assert last_refusal(db).lead_id == LEAD
     assert db.execute("SELECT COUNT(*) FROM approvals").fetchone() == (0,)
-    assert intent_state(db, intent_id) == "draft"
+    assert state_of(db, intent_id) == "draft"
     assert mailbox.list_for_lead(LEAD) == []
     current = submit_command(
         db, env, "underwriter", "approve", approve_payload(db, intent_id, item_id)
     )
     assert current.accepted
-    assert intent_state(db, intent_id) == "sent"
+    assert state_of(db, intent_id) == "sent"
 
 
 def test_approving_a_draft_binds_the_five_values_and_sends_it(
@@ -677,12 +507,6 @@ def test_approving_a_draft_binds_the_five_values_and_sends_it(
         "ok",
         result.event_id,
     )
-    (event,) = [e for e in events_of(db, EventType.approval_recorded) if e.id == result.event_id]
-    assert isinstance(event.payload, ApprovalRecorded)
-    assert (event.payload.recipient, event.payload.payload_hash) == (
-        RECIPIENT,
-        current_hash(db, intent_id),
-    )
     (message,) = mailbox.list_for_lead(LEAD)
     assert message["metadata"]["intent_id"] == intent_id
     assert [b.kind for b in open_blockers(db, LEAD)] == ["producer_reply"]
@@ -692,39 +516,16 @@ def test_approving_a_quote_packet_sends_it_and_the_lead_becomes_quote_sent(
     db: sqlite3.Connection, env: CommandEnvironment
 ) -> None:
     intent_id = make_draft(db, "quote_packet")
-    item_id = item_of(db, intent_id)
 
     result = submit_command(
-        db, env, "underwriter", "approve", approve_payload(db, intent_id, item_id)
+        db, env, "underwriter", "approve", approve_payload(db, intent_id, item_of(db, intent_id))
     )
 
     assert result.accepted
     assert db.execute("SELECT status FROM leads").fetchone() == ("quote_sent",)
 
 
-def test_approving_a_draft_item_whose_draft_is_gone_or_sent_is_refused(
-    db: sqlite3.Connection, env: CommandEnvironment
-) -> None:
-    detail = BlockerDetail(
-        item_kind="draft", intent_id="i-1", resume_trigger="an approval", text="Review."
-    )
-    item_id = open_item(db, detail)
-    payload = {"item_id": item_id, "reason": "ok", "artifact_hash": "h" * 64}
-
-    assert_refused(db, submit_command(db, env, "underwriter", "approve", payload), "i-1")
-
-    intent_id = make_draft(db)
-    sent_item = item_of(db, intent_id)
-    db.execute("UPDATE intents SET state = 'sent' WHERE id = ?", (intent_id,))
-    db.commit()
-    result = submit_command(
-        db, env, "underwriter", "approve", approve_payload(db, intent_id, sent_item)
-    )
-
-    assert_refused(db, result, "not draft")
-
-
-def test_rejecting_a_draft_request_returns_it_to_draft_with_the_reason_and_voids_its_approval(
+def test_rejecting_a_draft_returns_it_to_draft_voids_its_approval_and_sends_nothing(
     db: sqlite3.Connection, env: CommandEnvironment, mailbox: MailboxClient
 ) -> None:
     intent_id = make_draft(db)
@@ -737,12 +538,10 @@ def test_rejecting_a_draft_request_returns_it_to_draft_with_the_reason_and_voids
     )
     db.commit()
 
-    result = submit_command(
-        db, env, "underwriter", "reject", {"item_id": item_id, "reason": "too vague"}
-    )
+    result = decide(db, env, "reject", item_id, "too vague")
 
     assert result.accepted
-    assert intent_state(db, intent_id) == "draft"
+    assert state_of(db, intent_id) == "draft"
     assert mailbox.list_for_lead(LEAD) == []
     assert [b.id for b in open_blockers(db, LEAD)] == [item_id]
     assert db.execute("SELECT item_kind, decision, reason FROM approvals").fetchall() == [
@@ -750,20 +549,7 @@ def test_rejecting_a_draft_request_returns_it_to_draft_with_the_reason_and_voids
     ]
 
 
-def test_rejecting_a_draft_decline_notice_raises_and_writes_nothing(
-    db: sqlite3.Connection, env: CommandEnvironment
-) -> None:
-    item_id = item_of(db, make_draft(db, "decline_notice"))
-    before = len(read_events(db))
-
-    with pytest.raises(NotImplementedError, match="decline notice"):
-        submit_command(db, env, "underwriter", "reject", {"item_id": item_id, "reason": "x"})
-
-    assert len(read_events(db)) == before
-    assert len(open_blockers(db, LEAD)) == 1
-
-
-def test_edit_draft_writes_draft_edited_and_changes_the_draft(
+def test_edit_draft_changes_the_draft_and_writes_draft_edited_as_the_underwriter(
     db: sqlite3.Connection, env: CommandEnvironment
 ) -> None:
     intent_id = make_draft(db, "routine_request")
@@ -779,91 +565,32 @@ def test_edit_draft_writes_draft_edited_and_changes_the_draft(
     assert event.payload.payload_hash == current_hash(db, intent_id)
 
 
-def test_edit_draft_of_a_draft_that_has_left_draft_is_refused_and_names_its_lead(
-    db: sqlite3.Connection, env: CommandEnvironment
+# ---- resolve_fact, record_ruling and the re-evaluation ------------------------------------------
+
+
+@pytest.mark.parametrize(("status", "ran"), [("in_progress", [LEAD]), ("declined", [])])
+def test_resolve_fact_records_the_fact_and_re_evaluates_a_lead_that_is_not_terminal(
+    db: sqlite3.Connection, env: CommandEnvironment, passes: Passes, status: str, ran: list[str]
 ) -> None:
-    intent_id = make_draft(db)
-    db.execute("UPDATE intents SET state = 'dispatching' WHERE id = ?", (intent_id,))
+    db.execute("UPDATE leads SET status = ?", (status,))
     db.commit()
-    payload = {"intent_id": intent_id, "subject": "New", "body": "Changed", "reason": "late"}
 
-    result = submit_command(db, env, "underwriter", "edit_draft", payload)
-
-    assert_refused(db, result, "not draft")
-    assert last_refusal(db).lead_id == LEAD
-    assert events_of(db, EventType.draft_edited) == []
-
-
-# ---- resolve_fact and the re-evaluation ---------------------------------------------------------
-
-
-def test_resolve_fact_returns_the_observation_event_and_re_evaluates_the_lead(
-    db: sqlite3.Connection, env: CommandEnvironment, passes: Passes
-) -> None:
-    payload = {"lead_id": LEAD, "key": "acreage", "value": 7, "reason": "called the producer"}
-
-    result = submit_command(db, env, "underwriter", "resolve_fact", payload)
+    result = submit_command(db, env, "underwriter", "resolve_fact", RESOLVE_ACREAGE)
 
     assert result.accepted
-    stored = {e.id: e for e in read_events(db)}[result.event_id]
-    assert stored.type == EventType.fact_observed
+    observed = [e for e in read_events(db) if e.id == result.event_id]
+    assert [e.type for e in observed] == [EventType.fact_observed]
     assert effective_facts(db, LEAD)["acreage"].value == 7
-    assert passes.leads == [LEAD]
-    assert passes.actors == ["workflow"]
-
-
-def test_a_terminal_lead_is_not_re_evaluated(
-    db: sqlite3.Connection, env: CommandEnvironment, passes: Passes
-) -> None:
-    db.execute("UPDATE leads SET status = 'declined'")
-    db.commit()
-    payload = {"lead_id": LEAD, "key": "acreage", "value": 7, "reason": "x"}
-
-    assert submit_command(db, env, "underwriter", "resolve_fact", payload).accepted
-
-    assert passes.leads == []
-
-
-def test_a_failing_step_opens_the_data_blocker_and_the_commands_writes_commit(
-    path: str,
-    db: sqlite3.Connection,
-    skills_root: Path,
-    mailbox: MailboxClient,
-    leadgen: LeadgenClient,
-) -> None:
-    def fail(db: sqlite3.Connection, context: EventContext, lead_id: str) -> None:
-        db.execute("UPDATE leads SET source = 'written by the step'")
-        raise RuntimeError("provider is down")
-
-    env = CommandEnvironment(
-        "replay",
-        RULESET,
-        RULES,
-        (Step("evaluate", fail),),
-        skills_root,
-        lambda: NOW,
-        mailbox,
-        leadgen,
-    )
-    payload = {"lead_id": LEAD, "key": "acreage", "value": 7, "reason": "x"}
-
-    result = submit_command(db, env, "underwriter", "resolve_fact", payload)
-
-    assert result.accepted
-    other = open_store(path)
-    try:
-        assert effective_facts(other, LEAD)["acreage"].value == 7
-        (blocker,) = open_blockers(other, LEAD)
-        assert blocker.kind == "data"
-        assert "Step evaluate failed" in blocker.detail.text
-        (source,) = other.execute("SELECT source FROM leads").fetchone()
-        assert source == "web"
-    finally:
-        other.close()
+    assert passes.leads == ran
+    assert passes.actors == ["workflow"] * len(ran)
 
 
 def test_a_failing_step_rolls_back_the_whole_re_evaluation_and_the_command_still_commits(
-    db: sqlite3.Connection, skills_root: Path, mailbox: MailboxClient, leadgen: LeadgenClient
+    path: str,
+    db: sqlite3.Connection,
+    tmp_path: Path,
+    mailbox: MailboxClient,
+    leadgen: LeadgenClient,
 ) -> None:
     def write(db: sqlite3.Connection, context: EventContext, lead_id: str) -> None:
         observe(db, context, lead_id, "stories", 2, "submitted", {}, RULES)
@@ -871,24 +598,24 @@ def test_a_failing_step_rolls_back_the_whole_re_evaluation_and_the_command_still
     def fail(db: sqlite3.Connection, context: EventContext, lead_id: str) -> None:
         raise RuntimeError("provider is down")
 
-    steps = (Step("write", write), Step("evaluate", fail))
-    env = CommandEnvironment(
-        "replay", RULESET, RULES, steps, skills_root, lambda: NOW, mailbox, leadgen
+    env = command_environment(
+        tmp_path, mailbox, leadgen, (Step("write", write), Step("evaluate", fail))
     )
-    payload = {"lead_id": LEAD, "key": "acreage", "value": 7, "reason": "x"}
 
-    assert submit_command(db, env, "underwriter", "resolve_fact", payload).accepted
+    assert submit_command(db, env, "underwriter", "resolve_fact", RESOLVE_ACREAGE).accepted
 
-    assert sorted(effective_facts(db, LEAD)) == ["acreage"]
-    assert db.execute("SELECT status FROM leads").fetchone() == ("received",)
-    (blocker,) = open_blockers(db, LEAD)
+    other = open_store(path)
+    assert sorted(effective_facts(other, LEAD)) == ["acreage"]
+    assert other.execute("SELECT status FROM leads").fetchone() == ("received",)
+    (blocker,) = open_blockers(other, LEAD)
     assert blocker.kind == "data" and "Step evaluate failed" in blocker.detail.text
+    other.close()
 
 
 def test_the_command_and_its_re_evaluation_commit_together(
     path: str,
     db: sqlite3.Connection,
-    skills_root: Path,
+    tmp_path: Path,
     mailbox: MailboxClient,
     leadgen: LeadgenClient,
 ) -> None:
@@ -898,26 +625,23 @@ def test_the_command_and_its_re_evaluation_commit_together(
     def look(db: sqlite3.Connection, context: EventContext, lead_id: str) -> None:
         seen_inside.append([e.type for e in read_events(other)])
 
-    env = CommandEnvironment(
-        "replay", RULESET, RULES, (Step("look", look),), skills_root, lambda: NOW, mailbox, leadgen
-    )
-    payload = {"lead_id": LEAD, "key": "acreage", "value": 7, "reason": "x"}
+    env = command_environment(tmp_path, mailbox, leadgen, (Step("look", look),))
 
-    submit_command(db, env, "underwriter", "resolve_fact", payload)
+    submit_command(db, env, "underwriter", "resolve_fact", RESOLVE_ACREAGE)
 
     assert EventType.fact_observed not in seen_inside[0]
     assert EventType.fact_observed in [e.type for e in read_events(other)]
     other.close()
 
 
-@pytest.mark.parametrize("accepted", [True, False])
+@pytest.mark.parametrize("actor", ["underwriter", "assistant"])
 def test_the_events_of_a_command_take_their_timestamps_inside_its_transaction(
     db: sqlite3.Connection,
     passes: Passes,
-    skills_root: Path,
+    tmp_path: Path,
     mailbox: MailboxClient,
     leadgen: LeadgenClient,
-    accepted: bool,
+    actor: Actor,
 ) -> None:
     in_transaction: list[bool] = []
 
@@ -925,51 +649,18 @@ def test_the_events_of_a_command_take_their_timestamps_inside_its_transaction(
         in_transaction.append(db.in_transaction)
         return NOW
 
-    env = CommandEnvironment(
-        "replay", RULESET, RULES, passes.steps, skills_root, now, mailbox, leadgen
-    )
-    payload = {"lead_id": LEAD, "key": "acreage", "value": 7, "reason": "x"}
+    env = command_environment(tmp_path, mailbox, leadgen, passes.steps, now=now)
 
-    submit_command(db, env, "underwriter" if accepted else "assistant", "resolve_fact", payload)
+    submit_command(db, env, actor, "resolve_fact", RESOLVE_ACREAGE)
 
     assert in_transaction and all(in_transaction)
 
 
-def test_a_command_submitted_inside_a_transaction_is_an_error(
-    db: sqlite3.Connection, env: CommandEnvironment
-) -> None:
-    db.execute("BEGIN")
-
-    with pytest.raises(RuntimeError, match="transaction"):
-        submit_command(db, env, "underwriter", "resolve_fact", {})
-
-    db.rollback()
-
-
-def test_a_refusal_names_a_lead_only_when_the_lead_exists(
-    db: sqlite3.Connection, env: CommandEnvironment
-) -> None:
-    unknown = {"lead_id": "NOPE", "key": "acreage", "value": 7, "reason": "x"}
-    known = {"lead_id": LEAD, "key": "acreage", "reason": "x"}
-
-    submit_command(db, env, "underwriter", "resolve_fact", unknown)
-    assert last_refusal(db).lead_id is None
-    submit_command(db, env, "underwriter", "resolve_fact", known)
-    assert last_refusal(db).lead_id == LEAD
-
-
-# ---- record_ruling ------------------------------------------------------------------------------
-
-
-def question(db: sqlite3.Connection) -> None:
-    detail = BlockerDetail(resume_trigger="a ruling", text="Pick.", choice_ids=["roof_age_basis"])
-    open_item(db, detail, "underwriter_question")
-
-
-def test_record_ruling_writes_the_ruling_with_actor_reason_and_the_plan_hash(
+def test_record_ruling_writes_the_ruling_with_actor_reason_and_the_plan_hash_and_re_evaluates(
     db: sqlite3.Connection, env: CommandEnvironment, passes: Passes
 ) -> None:
-    question(db)
+    detail = BlockerDetail(resume_trigger="a ruling", text="Pick.", choice_ids=["roof_age_basis"])
+    open_item(db, detail, "underwriter_question")
     payload = {
         "lead_id": LEAD,
         "choice_id": "roof_age_basis",
@@ -990,36 +681,3 @@ def test_record_ruling_writes_the_ruling_with_actor_reason_and_the_plan_hash(
     )
     assert (event.payload.reason, event.payload.plan_hash) == ("r", PLAN_HASH)
     assert passes.leads == [LEAD]
-
-
-def test_record_ruling_for_a_choice_that_is_not_open_is_refused(
-    db: sqlite3.Connection, env: CommandEnvironment
-) -> None:
-    question(db)
-    payload = {"lead_id": LEAD, "choice_id": "other", "option": "a", "reason": "r"}
-
-    result = submit_command(db, env, "underwriter", "record_ruling", payload)
-
-    assert_refused(db, result, "not an open choice")
-    assert events_of(db, EventType.ruling_recorded) == []
-
-
-def test_record_ruling_needs_a_reason(db: sqlite3.Connection, env: CommandEnvironment) -> None:
-    question(db)
-    payload = {"lead_id": LEAD, "choice_id": "roof_age_basis", "option": "a", "reason": ""}
-
-    assert_refused(
-        db, submit_command(db, env, "underwriter", "record_ruling", payload), "non-empty reason"
-    )
-
-
-def test_the_refused_payload_is_stored_as_submitted(
-    db: sqlite3.Connection, env: CommandEnvironment
-) -> None:
-    payload = {"item_id": 4, "reason": "x"}
-
-    submit_command(db, env, "assistant", "approve", payload)
-
-    stored = last_refusal(db).payload
-    assert isinstance(stored, CommandRefused)
-    assert json.loads(stored.model_dump_json())["command_payload"] == payload

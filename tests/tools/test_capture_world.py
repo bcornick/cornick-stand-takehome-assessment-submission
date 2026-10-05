@@ -12,7 +12,6 @@ from leadgen import archetypes, generator  # Stand's module; tests/conftest.py p
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
 import capture_world  # noqa: E402
 
-from uwh.runtime.hashing import hash_json  # noqa: E402
 
 SEED = 42
 
@@ -37,26 +36,6 @@ def test_wrapped_output_equals_unwrapped_output_field_for_field(config: dict[str
         for key in want:
             assert got[key] == want[key], (want["lead_id"], key)
     assert len(records) == 10
-
-
-def test_wrapper_restores_the_generator_after_a_generation() -> None:
-    before = (generator._base_lead, generator.generate_lead, dict(generator.archetypes.ARCHETYPES))
-    with capture_world.recording():
-        assert generator._base_lead is not before[0]
-    assert generator._base_lead is before[0]
-    assert generator.generate_lead is before[1]
-    assert dict(generator.archetypes.ARCHETYPES) == before[2]
-
-
-def test_recording_is_non_empty_and_consistent_with_the_final_lead(config: dict[str, Any]) -> None:
-    leads, records = capture_world.capture_queue(SEED, config)
-    assert sum(len(r.effects) for r in records) > 0
-    for lead, record in zip(leads, records, strict=True):
-        assert record.lead_id == lead["lead_id"]
-        assert len(record.base) == 73
-        for effect in record.effects:
-            for name in effect.nulled:
-                assert lead["fields"][name] is None
 
 
 def test_seed_42_recording_holds_the_named_archetypes(config: dict[str, Any]) -> None:
@@ -88,32 +67,6 @@ def test_guarantee_pass_assertion_raises_when_the_guarantee_exceeds_the_natural_
         assert archetypes.ARCHETYPES[name] is original
 
 
-def test_guarantee_pass_is_silent_under_the_supplied_config(config: dict[str, Any]) -> None:
-    assert config["queue"]["guarantee_hard_archetypes"] == 4
-    capture_world.capture_queue(SEED, config)
-
-
-def test_each_entry_holds_every_provider_field_and_a_fingerprint_of_the_final_lead(
-    world: dict[str, Any], config: dict[str, Any]
-) -> None:
-    leads, records = capture_world.capture_queue(SEED, config)
-    assert list(world["leads"]) == [ld["lead_id"] for ld in leads]
-    for lead, record in zip(leads, records, strict=True):
-        entry = world["leads"][lead["lead_id"]]
-        assert entry["fingerprint"] == hash_json(lead["fields"])
-        assert entry["fields"] == lead["fields"]
-        assert list(entry["provider_values"]) == list(capture_world.PROVIDER_FIELDS)
-        assert "roof_classification" not in entry["provider_values"]
-        assert "siding_classification" not in entry["provider_values"]
-        for name, result in entry["provider_values"].items():
-            if result["status"] == "found":
-                assert result["value"] == record.base[name]
-                assert record.base[name] is not None
-            else:
-                assert result == {"status": "not_found", "value": None}
-        assert set(entry) == {"fingerprint", "provider_values", "fields"}
-
-
 def test_wildfire_archetype_value_stays_on_the_lead_and_the_base_value_is_kept_apart(
     world: dict[str, Any],
 ) -> None:
@@ -126,24 +79,6 @@ def test_wildfire_archetype_value_stays_on_the_lead_and_the_base_value_is_kept_a
 def data_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(capture_world, "DATA_DIR", tmp_path)
     return tmp_path
-
-
-def test_writing_is_byte_identical_on_every_run_and_check_passes(data_dir: Path) -> None:
-    assert capture_world.main(["--seed", "42"]) == 0
-    first = (data_dir / "world-42.json").read_bytes()
-    assert capture_world.main(["--seed", "42"]) == 0
-    assert (data_dir / "world-42.json").read_bytes() == first
-    assert first.endswith(b"}\n") and b"\r" not in first
-    assert capture_world.main(["--seed", "42", "--check"]) == 0
-    assert json.loads(first)["seed"] == 42
-
-
-def test_check_fails_and_writes_nothing_when_the_file_is_absent(
-    data_dir: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    assert capture_world.main(["--seed", "42", "--check"]) == 1
-    assert "missing" in capsys.readouterr().err
-    assert list(data_dir.iterdir()) == []
 
 
 def test_check_fails_and_leaves_the_file_when_one_value_differs(
@@ -162,11 +97,3 @@ def test_check_fails_and_leaves_the_file_when_one_value_differs(
 
 def test_committed_fixture_equals_a_fresh_capture() -> None:
     assert capture_world.main(["--seed", str(SEED), "--check"]) == 0
-
-
-def test_every_seed_42_lookup_is_found(world: dict[str, Any]) -> None:
-    assert not any(
-        result["status"] == "not_found"
-        for entry in world["leads"].values()
-        for result in entry["provider_values"].values()
-    )

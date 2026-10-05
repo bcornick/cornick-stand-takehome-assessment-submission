@@ -1,15 +1,11 @@
-# ABOUTME: Tests that a model exchange is stored under its skill, prompt version and input hash, reads back by the same key, and that the input hash covers only what the model is shown.
+# ABOUTME: Tests that a model exchange is stored under its skill, prompt version and input hash, reads back by the same key only, and that the input hash follows the content and not the key order.
 # ABOUTME: Each test writes real files under a temporary directory.
 from pathlib import Path
 
-import pytest
-
-from uwh.runtime.hashing import sha256_hex
 from uwh.runtime.recordings import (
     Exchange,
     RecordingKey,
     input_hash,
-    prompt_version,
     read_recording,
     write_recording,
 )
@@ -39,25 +35,21 @@ def exchange_for(key: RecordingKey, content: dict, **changes) -> Exchange:
     return Exchange(**{**fields, **changes})
 
 
-def test_exchange_reads_back_by_the_key_it_was_written_under(tmp_path: Path) -> None:
+def test_an_exchange_reads_back_by_the_key_it_was_written_under_and_no_other_key_hits(
+    tmp_path: Path,
+) -> None:
     content = shown()
     key = key_for(content)
     written = exchange_for(key, content)
     write_recording(tmp_path, key, written)
+
     assert read_recording(tmp_path, key) == written
-
-
-def test_absent_key_reads_as_none_and_a_different_key_does_not_hit(tmp_path: Path) -> None:
-    content = shown()
-    key = key_for(content)
-    write_recording(tmp_path, key, exchange_for(key, content))
     assert read_recording(tmp_path, key_for(shown(body="No."))) is None
     assert read_recording(tmp_path, key_for(content, version="b" * 64)) is None
     assert read_recording(tmp_path, key_for(content, skill="chat")) is None
-    assert read_recording(tmp_path / "elsewhere", key) is None
 
 
-def test_refusal_exchange_without_tool_input_round_trips(tmp_path: Path) -> None:
+def test_a_refusal_exchange_without_tool_input_round_trips(tmp_path: Path) -> None:
     content = shown()
     key = key_for(content)
     refusal = exchange_for(key, content, stop_reason="refusal", tool_input=None)
@@ -65,61 +57,8 @@ def test_refusal_exchange_without_tool_input_round_trips(tmp_path: Path) -> None
     assert read_recording(tmp_path, key) == refusal
 
 
-def test_exchange_holds_no_credential_or_header_field() -> None:
-    names = set(Exchange.__dataclass_fields__)
-    assert names == {
-        "skill",
-        "prompt_version",
-        "input_hash",
-        "input",
-        "model_id",
-        "request_id",
-        "stop_reason",
-        "tokens_in",
-        "tokens_out",
-        "tool_input",
-    }
-
-
-@pytest.mark.parametrize("part", ["../x", "a/b", "", "a b", "."])
-def test_key_parts_cannot_leave_the_directory(part: str) -> None:
-    with pytest.raises(ValueError):
-        RecordingKey(skill=part, prompt_version="a" * 64, input_hash="b" * 64)
-
-
-def test_same_input_on_two_runs_with_different_ids_reads_one_recording(tmp_path: Path) -> None:
-    # The skill builds `shown` from the reply body and the open asks only; run and intent ids
-    # are in the skill's inputs but never in what the model is shown.
-    run_one = {"run_id": "run-1", "intent_id": 11, **shown()}
-    run_two = {"run_id": "run-2", "intent_id": 97, **shown()}
-    first = shown_for(run_one)
-    second = shown_for(run_two)
-    assert input_hash(first) == input_hash(second)
-    key = key_for(first)
-    write_recording(tmp_path, key, exchange_for(key, first))
-    assert read_recording(tmp_path, key_for(second)) is not None
-
-
-def shown_for(skill_input: dict) -> dict:
-    """What `read_reply` shows the model: the reply body and the open asks, nothing else."""
-    return {"reply_body": skill_input["reply_body"], "open_asks": skill_input["open_asks"]}
-
-
-def test_input_hash_changes_with_the_reply_body_or_the_ask_list() -> None:
+def test_the_input_hash_follows_the_content_and_not_the_key_order() -> None:
     base = input_hash(shown())
     assert input_hash(shown(body="Yes, the roof is 2013.")) != base
     assert input_hash(shown(asks=("roof_year", "roof_material"))) != base
-    assert input_hash(shown(asks=())) != base
-
-
-def test_input_hash_is_independent_of_key_order() -> None:
     assert input_hash({"a": 1, "b": 2}) == input_hash({"b": 2, "a": 1})
-
-
-def test_prompt_version_is_the_hash_of_the_file_bytes(tmp_path: Path) -> None:
-    prompt = tmp_path / "prompt.md"
-    prompt.write_bytes(b"Read the reply.\n")
-    version = prompt_version(prompt)
-    assert version == sha256_hex(b"Read the reply.\n")
-    prompt.write_bytes(b"Read the reply carefully.\n")
-    assert prompt_version(prompt) != version

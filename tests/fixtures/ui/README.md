@@ -9,9 +9,6 @@ Every file is JSON that follows a response model of `src/uwh/api/views.py`.
 | `run.json` | `RunView` | `GET /api/run` |
 | `leads.json` | `list[QueueRow]`, in queue order | `GET /api/leads` |
 | `lead/<lead_id>.json` | `LeadDetail` | `GET /api/leads/{id}` |
-| `events/<lead_id>.json` | `LeadEvents` | `GET /api/leads/{id}/events` |
-| `items.json` | `list[Item]` | `GET /api/items` |
-| `proposals.json` | `list[ProposalView]` | `GET /api/proposals` |
 
 ## What the content is
 
@@ -20,5 +17,3 @@ Every file is JSON that follows a response model of `src/uwh/api/views.py`.
 - **Rule ids and board paths are display data.** The rule ids and board paths in these files (`07:LIVING`, `02:HIGH1`, `04:D_FAIL`) are illustrative values written by hand. They follow the playbook transcriptions under `docs/playbook/` where a box exists and are schematic otherwise. They are not the output of the decision graphs, and nothing checks them against the graphs. The ask lists and recipients follow section 10. Subjects, openings and the grouping and numbering of asks follow appendix A.8 and section 10.2; the wording of each ask is illustrative and is not the rendered text of any implementation.
 - **Playbook pages.** Every lead lists twelve pages. Plumbing and Electrical are `not_evaluated` on every lead, each with its note (section 4.1). The other pages are `no`, `unknown` or `yes` from the lead's facts, so the fixtures hold each `applies` value and the results `decided`, `undecided` and `not_evaluated`. An open conflict makes a page undecided, so no page here declines on every branch.
 - **Where the leads depart from section 5.** Section 5 names what a lead is notable for. The fixtures add what the facts imply: a blocked `kyc_score` lookup leaves Profile undecided, a missing `pool_type` leaves Pools undecided, a blocked `protection_class` lookup leaves PC 9 & 10 undecided and keeps the four fields conditional on protection class 9 or 10 out of the request. Lead 000 holds the occupancy conflict (section 2.2), so its Occupancy page is undecided; its one decline is Post & Pier, and its decline notice is round 0 because the lead has had no request. Its Profile, Pools, PC 9 & 10 and Replacement Cost pages are undecided beside it, and no request or confirmation goes out (section 9.6, precedence 1). Lead 008 carries an `unevaluated_skill` note for `read_reply`; no lead carries a `skill_fallback` note, because the one model skill with a fallback is untested, not failing.
-- **Items.** `items.json` holds the decline-notice draft review of lead 000 and the question cards of leads 003 and 006. There is no pending-observation, persistent-cause or `delivery_unknown` item, because section 5 describes none.
-- **Proposals.** One open command proposal is a `resolve_fact` giving lead 001's street address, the missing input of its blocked lookups (a proposal never holds `approve` or `reject`).

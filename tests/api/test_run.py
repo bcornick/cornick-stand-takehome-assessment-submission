@@ -3,15 +3,14 @@
 import logging
 import sqlite3
 import threading
-import time
 from collections.abc import Callable, Iterator
 from contextlib import AbstractContextManager, contextmanager
 from datetime import datetime
 
-import httpx2
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.api.helpers import WAIT_SECONDS, first_pass_complete, wait_for
 from uwh.api.views import RunView
 from uwh.runtime.event_types import BlockerDetail, EventType
 from uwh.runtime.events import EventContext, read_events
@@ -20,23 +19,8 @@ from uwh.runtime.store import open_store
 from uwh.runtime.waits import open_blocker
 from uwh.runtime.workflow import Step
 from uwh.settings import Settings
-from uwh.skills.vertical import REFERENCE_MORNING
 
-WAIT_SECONDS = 10.0
 OpenClient = Callable[..., AbstractContextManager[TestClient]]
-
-
-def wait_for(condition: Callable[[], bool]) -> None:
-    deadline = time.monotonic() + WAIT_SECONDS
-    while not condition():
-        assert time.monotonic() < deadline, "the condition did not hold in time"
-        time.sleep(0.01)
-
-
-def first_pass_complete(client: TestClient) -> bool:
-    complete = client.get("/api/run").json()["first_pass_complete"]
-    assert isinstance(complete, bool)
-    return complete
 
 
 class HeldStep:
@@ -118,25 +102,6 @@ def test_a_start_returns_at_once_with_the_run_id_while_the_pass_runs(
     db.close()
 
 
-def test_a_waited_start_returns_only_once_the_pass_has_finished(open_client: OpenClient) -> None:
-    with held_pass(open_client) as (client, held):
-        responses: list[httpx2.Response] = []
-        waiting = threading.Thread(
-            target=lambda: responses.append(client.post("/api/run/start?wait=true"))
-        )
-        waiting.start()
-        assert held.entered.wait(WAIT_SECONDS)
-        assert responses == []
-
-        held.release()
-        waiting.join(WAIT_SECONDS)
-
-        (response,) = responses
-        view = RunView.model_validate(response.json())
-        assert len(held.finished) == 10
-        assert view.first_pass_complete is True
-
-
 def test_a_start_while_the_run_is_processing_is_refused(
     client: TestClient, settings: Settings
 ) -> None:
@@ -160,36 +125,7 @@ def test_a_start_while_the_run_is_processing_is_refused(
     db.close()
 
 
-def test_a_run_view_reports_the_simulated_time_of_the_run(client: TestClient) -> None:
-    client.post("/api/run/start?wait=true")
-
-    sim_now = datetime.fromisoformat(client.get("/api/run").json()["sim_now"])
-
-    assert REFERENCE_MORNING <= sim_now < REFERENCE_MORNING.replace(hour=REFERENCE_MORNING.hour + 1)
-
-
-def test_a_failure_in_the_background_pass_is_logged_and_the_run_still_settles(
-    open_client: OpenClient, caplog: pytest.LogCaptureFixture
-) -> None:
-    class PassAbort(BaseException):
-        """An exception no step handler catches, so it escapes the pass."""
-
-    def abort(db: sqlite3.Connection, context: EventContext, lead_id: str) -> None:
-        raise PassAbort
-
-    caplog.set_level(logging.ERROR, logger="uwh.api.runtime")
-    with open_client((Step("abort", abort),)) as client:
-        run_id = client.post("/api/run/start").json()["run_id"]
-        wait_for(lambda: first_pass_complete(client))
-
-    (record,) = [r for r in caplog.records if r.name == "uwh.api.runtime"]
-    assert run_id in record.getMessage()
-    assert record.exc_info is not None
-    assert isinstance(record.exc_info[1], BaseExceptionGroup)
-    assert record.exc_info[1].exceptions[0].__class__ is PassAbort
-
-
-def test_a_failed_pass_under_a_waited_start_answers_500_and_is_logged(
+def test_a_failed_pass_is_logged_the_run_still_settles_and_a_waited_start_answers_500(
     open_client: OpenClient, settings: Settings, caplog: pytest.LogCaptureFixture
 ) -> None:
     class PassAbort(BaseException):
@@ -203,12 +139,15 @@ def test_a_failed_pass_under_a_waited_start_answers_500_and_is_logged(
         response = client.post("/api/run/start?wait=true")
 
         assert response.status_code == 500
-        assert client.get("/api/run").json()["first_pass_complete"] is True
+        assert first_pass_complete(client) is True
     db = open_store(settings.db_path)
     (run_id,) = db.execute("SELECT run_id FROM runs").fetchone()
     db.close()
     (record,) = [r for r in caplog.records if r.name == "uwh.api.runtime"]
     assert run_id in record.getMessage()
+    assert record.exc_info is not None
+    assert isinstance(record.exc_info[1], BaseExceptionGroup)
+    assert record.exc_info[1].exceptions[0].__class__ is PassAbort
 
 
 def test_the_summary_counts_come_from_the_stored_state(

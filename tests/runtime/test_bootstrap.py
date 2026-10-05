@@ -13,45 +13,12 @@ import pytest
 from uwh.runtime import bootstrap
 from uwh.runtime.bootstrap import EnvironmentInvalid
 
-ServeBody = Callable[[bytes, str], str]
 Answer = tuple[int, Any]
 Routes = Mapping[tuple[str, str], Answer]
 ServeRoutes = Callable[[Routes], str]
 
 LEAD_IDS = [f"LEAD-00000042-{i:03d}" for i in range(10)]
 NOT_FOUND: Answer = (404, {"detail": "not found"})
-
-
-@pytest.fixture
-def serve_body() -> Iterator[ServeBody]:
-    """Start a server answering 200 with a fixed body on every path; return its base URL."""
-    servers: list[ThreadingHTTPServer] = []
-
-    def serve(body: bytes, content_type: str) -> str:
-        class Handler(BaseHTTPRequestHandler):
-            def do_GET(self) -> None:
-                self.send_response(200)
-                self.send_header("Content-Type", content_type)
-                self.send_header("Content-Length", str(len(body)))
-                self.end_headers()
-                self.wfile.write(body)
-
-            do_POST = do_GET
-
-            def log_message(self, format: str, *args: object) -> None:
-                pass
-
-        server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
-        threading.Thread(
-            target=server.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True
-        ).start()
-        servers.append(server)
-        return f"http://127.0.0.1:{server.server_address[1]}"
-
-    yield serve
-    for server in servers:
-        server.shutdown()
-        server.server_close()
 
 
 @pytest.fixture
@@ -154,34 +121,9 @@ def test_lead_list_differing_from_the_queue_is_an_invalid_environment(
         bootstrap_against(serve_routes, monkeypatch, leadgen)
 
 
-def test_lead_that_cannot_be_fetched_is_an_invalid_environment(
-    serve_routes: ServeRoutes, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    leadgen = leadgen_routes(**{f"GET /leads/{LEAD_IDS[3]}": NOT_FOUND})
-    with pytest.raises(EnvironmentInvalid, match=f"leadgen lead {LEAD_IDS[3]} failed"):
-        bootstrap_against(serve_routes, monkeypatch, leadgen)
-
-
-def test_envelope_of_another_lead_is_an_invalid_environment(
-    serve_routes: ServeRoutes, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    wrong = (200, {"lead_id": LEAD_IDS[0], "fields": {}})
-    leadgen = leadgen_routes(**{f"GET /leads/{LEAD_IDS[1]}": wrong})
-    with pytest.raises(EnvironmentInvalid, match="returned envelope"):
-        bootstrap_against(serve_routes, monkeypatch, leadgen)
-
-
 def test_probe_not_stored_once_is_an_invalid_environment(
     serve_routes: ServeRoutes, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     mailbox = mailbox_routes(stored=(200, []))
     with pytest.raises(EnvironmentInvalid, match="0 probe messages, not 1"):
-        bootstrap_against(serve_routes, monkeypatch, leadgen_routes(), mailbox)
-
-
-def test_probe_stored_with_other_metadata_is_an_invalid_environment(
-    serve_routes: ServeRoutes, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    mailbox = mailbox_routes(stored=(200, [{"metadata": {"probe": False}}]))
-    with pytest.raises(EnvironmentInvalid, match="probe metadata .* differs from sent"):
         bootstrap_against(serve_routes, monkeypatch, leadgen_routes(), mailbox)

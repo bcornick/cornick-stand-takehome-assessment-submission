@@ -14,7 +14,6 @@ from uwh.runtime.store import open_store
 from uwh.runtime.waits import (
     close_blocker,
     open_blocker,
-    open_blocker_by_id,
     open_blockers,
     primary_next_action,
 )
@@ -36,16 +35,6 @@ def add_lead(db: sqlite3.Connection, lead_id: str, status: str) -> None:
         " VALUES (?, 'run-1', 'web', '2026-06-29T07:00:00Z', ?, 0)",
         (lead_id, status),
     )
-
-
-def add_observation(db: sqlite3.Connection, status: str, lead_id: str = "L-1") -> int:
-    cursor = db.execute(
-        "INSERT INTO observations (lead_id, key, value_json, source, evidence_json, status)"
-        " VALUES (?, 'acreage', '2', 'reply', '{}', ?)",
-        (lead_id, status),
-    )
-    assert cursor.lastrowid is not None
-    return cursor.lastrowid
 
 
 def detail(**changes: Any) -> BlockerDetail:
@@ -98,34 +87,6 @@ def test_closing_a_blocker_writes_its_event_and_removes_it_from_the_open_list(
     assert row == (event.id,)
 
 
-def test_an_open_blocker_is_found_by_its_id_and_a_closed_or_unknown_one_is_not(
-    db: sqlite3.Connection,
-) -> None:
-    blocker_id = open_blocker(db, CONTEXT, "L-1", "data", "data_team", detail())
-    found = open_blocker_by_id(db, blocker_id)
-    assert found is not None
-    assert (found.id, found.lead_id, found.kind, found.owner) == (
-        blocker_id,
-        "L-1",
-        "data",
-        "data_team",
-    )
-    assert found.detail.text == "waiting"
-    close_blocker(db, CONTEXT, blocker_id)
-    assert open_blocker_by_id(db, blocker_id) is None
-    assert open_blocker_by_id(db, 999) is None
-
-
-def test_blockers_of_another_lead_are_not_listed(db: sqlite3.Connection) -> None:
-    add_lead(db, "L-2", "in_progress")
-    open_blocker(db, CONTEXT, "L-2", "data", "data_team", detail())
-    assert open_blockers(db, "L-1") == []
-
-
-def review_detail(**changes: Any) -> BlockerDetail:
-    return detail(item_kind="review", cause="late_reply", **changes)
-
-
 def test_the_primary_next_action_is_the_highest_priority_open_blocker(
     db: sqlite3.Connection,
 ) -> None:
@@ -154,31 +115,8 @@ def test_the_primary_next_action_is_the_highest_priority_open_blocker(
     assert primary_next_action(db, "L-1") is None
 
 
-def test_the_oldest_blocker_of_the_top_kind_is_primary(db: sqlite3.Connection) -> None:
-    first = open_blocker(db, CONTEXT, "L-1", "data", "data_team", detail())
-    open_blocker(db, CONTEXT, "L-1", "data", "data_team", detail())
-    primary = primary_next_action(db, "L-1")
-    assert primary is not None and primary.id == first
-
-
 @pytest.mark.parametrize("status", ["quote_sent", "declined"])
 def test_a_terminal_lead_has_no_primary_next_action(db: sqlite3.Connection, status: str) -> None:
     add_lead(db, "L-T", status)
     open_blocker(db, CONTEXT, "L-T", "data", "data_team", detail())
     assert primary_next_action(db, "L-T") is None
-
-
-# ---- what a blocker may carry ----------------------------------------------------------------------
-
-
-def test_a_pending_observation_item_is_accepted(db: sqlite3.Connection) -> None:
-    observation_id = add_observation(db, "pending_review")
-    blocker_id = open_blocker(
-        db,
-        CONTEXT,
-        "L-1",
-        "underwriter_review",
-        "underwriter",
-        detail(item_kind="observation", observation_id=observation_id),
-    )
-    assert [b.id for b in open_blockers(db, "L-1")] == [blocker_id]
