@@ -32,7 +32,7 @@ Each fact was checked against the code.
 - **Queue.** `POST /queue?count=10&seed=42` builds a deterministic queue. `POST /queue` deletes any stored queue. Startup alone creates no queue.
 - **Lead construction.** Each lead is built clean, then archetypes mutate it, then a perturbation pass nulls fields by tier rate and may inject one conflict. A guarantee pass can add an archetype after perturbation; it does not fire for ten mixed leads under the supplied config.
 - **Seed 42 archetypes.** `occupancy_conflict` (two leads), `post_and_pier`, `profile_kyc` (three leads), `wildfire_severe` (two leads). No rural protection class, replacement cost gap, electrical, trust, plumbing or pool archetype appears, so those graphs are exercised only by hand-written cases.
-- **Answer key.** `GET /leads/{id}/debug` returns the generator's mutation history: difficulty, archetypes, and one record per touched field. It is not an oracle. It marks inactive conditional fields as missing, omits fields that become required after an archetype, and files derivable classes as system-owned nulls.
+- **Answer key.** `GET /leads/{id}/debug` returns the generator's mutation history: difficulty, archetypes, and one record per touch (a field can carry two). It is not an oracle. It marks inactive conditional fields as missing, omits fields that become required after an archetype, and files derivable classes as system-owned nulls.
 - **Mailbox.** `POST /emails` is an unconditional insert. Metadata round-trips only through `GET /leads/{id}/emails` and `GET /emails/{id}`. Row ids keep increasing after `POST /reset`. No reply endpoint exists.
 - **Ports.** Both services listen on 8080 inside the compose network. Stand's compose file maps them to host ports 8081 and 8025 and binds one shared `./data` folder.
 - **Clock.** The generator's reference morning is Monday 2026-06-29 08:00 UTC. Leads arrive up to 180 minutes before it. The mailbox stamps wall-clock time.
@@ -96,9 +96,9 @@ Seed-42 leads, read from the stored queue. Expected first-pass results are fixed
 | 002 | KYC 8 | Request for missing fields; liability exclusion carried to the quote |
 | 003 | Fire probability 0.79; wood shake siding; primary home unoccupied 3 months | One underwriter card (failed fire simulation). A routine request with the registry asks and the occupancy confirmation sends automatically. Mitigation questions are held until the choice is made. The Occupancy page is undecided while the conflict is open. The Siding requirement (wood shake, fire probability above 0.50) is committed. The four protection-class questions are blocked, not asked. |
 | 004 | Zero residents on an owner-occupied home; animals | Routine request with a confirmation question |
-| 005 | KYC 6; zero residents; pool type missing | Routine request with a confirmation and follow-on questions for the missing pool fields only; the diving-board answer already on the lead is not asked again. |
+| 005 | KYC 6; zero residents; pool type missing | Routine request with a confirmation; liability exclusion carried to the quote; and follow-on questions for the missing pool fields only; the diving-board answer already on the lead is not asked again. |
 | 006 | Fire probability 0.89; wood shake siding; roof material missing | One underwriter card (failed fire simulation). A routine request with the registry asks, including roof material, sends automatically. Pool values already on the lead are not asked again. The Siding requirement is committed. The four protection-class questions are blocked, not asked. |
-| 007 | KYC 9 | Request for missing fields; liability exclusion carried to the quote The four protection-class questions are blocked, not asked. |
+| 007 | KYC 9 | Request for missing fields; liability exclusion carried to the quote. The four protection-class questions are blocked, not asked. |
 | 008 | Two missing fields | Routine request. With the full-reply fixture, this lead reaches an approved quote packet: the demo case. |
 | 009 | One missing field; animals | Routine request |
 
@@ -186,6 +186,8 @@ A lead has a **status** and a **set of open blockers**. Statuses supplied by the
 - One waiting primitive: a blocker row with a kind, an owner and a resume trigger. A lead may hold several blockers at once.
 - The **primary next action** shown for a lead is its highest-priority open blocker, in the order `delivery_unknown`, `underwriter_question`, `underwriter_review`, `data`, `producer_reply`. Terminal leads have none.
 - Any accepted new fact re-evaluates the lead.
+- At startup, after intents are reconciled (section 7.5), a run left in `processing` is marked `settled`, so a new run can start. Leads keep the state they had reached.
+- With no API key in live mode, a delivered reply is recorded unread and raises an underwriter review.
 
 ### 7.2 Event log
 
@@ -205,7 +207,7 @@ Two layers.
   6. A reply that restates a value under an open conflict closes the conflict, records the reply as evidence and marks the fact confirmed. A reply that changes either field of a conflicting pair follows rule 3.
   7. A reply value that differs from an accepted value from an earlier reply is `pending_review`.
   8. A reply value that trips a validator is accepted and opens the conflict; its confirmation goes in the next request.
-  9. A reply to a round that has closed is recorded and raises an underwriter review.
+  9. A reply to a round that has closed is recorded, raises an underwriter review and increments the lead revision, so a pending approval on that lead returns to review.
   10. The underwriter settles a `pending_review` observation with `approve` (it becomes the effective fact) or `reject` (the existing value stays), and can supply or correct any fact with `resolve_fact`.
 
 Derived facts and decisions record the fact ids and rule versions they used. A changed effective fact marks its dependants stale. Stale drafts and approvals return to review. A sent message is history and is never undone.
@@ -233,7 +235,7 @@ Every state-changing action is a typed command. The workflow, UI, chat and MCP t
 | `propose_command` | auto | no | assistant, mcp_client |
 
 - `assistant` and `mcp_client` can read and can propose. A proposal becomes a command card that the underwriter applies. They cannot approve.
-- **Emergency stop** blocks every new dispatch. It is checked immediately before each side effect. It cannot retract a message the mailbox already accepted.
+- **Emergency stop** blocks every new dispatch. It is checked immediately before each side effect. It cannot retract a message the mailbox already accepted. A dispatch refused by the stop, or by a class set to `off`, leaves the intent in `draft`, voids any approval of it and opens an `underwriter_review` blocker on the draft with the reason. Releasing the stop sends nothing; each held draft is sent when the underwriter approves it.
 - **Approval binds to a frozen artifact:** lead revision, action-plan hash, ruleset hash, recipient, and the exact message or packet hash. The dispatcher rechecks all five and the current policy immediately before sending. A mismatch returns the item to review. An `approve` carries the payload hash of the artifact the underwriter was shown; a hash that is not current is refused, so a stale browser cannot approve replaced content.
 - **Demotion.** When reconciliation finds two mailbox messages for one intent, or a pre-send content check fails on an approved item, the command class drops to `review` and an event records why.
 
@@ -244,14 +246,14 @@ Sending is a runtime primitive, not a skill.
 An intent moves through `draft → dispatching → sent`, or `dispatching → unknown`.
 
 1. A message is created as an intent in state `draft`: run id, lead id, round, message kind, recipient, subject, body, ask ids, payload hash. `edit_draft` replaces the subject, body and payload hash of a draft and voids any approval of it.
-2. Dispatch sets the state to `dispatching` in the same transaction that begins the post. From that point the intent is immutable.
+2. Dispatch commits the state `dispatching` in its own transaction. The post starts only after that commit and runs outside any transaction. From the commit on, the intent is immutable.
 3. Post to the mailbox with the intent id, run id, kind, round and payload hash in `metadata`. Record the returned mailbox id and set the state to `sent`.
 4. On any ambiguous result, list `GET /leads/{id}/emails` and match the intent id. A match is recorded as `sent`. No match sets the state to `unknown` and opens a `delivery_unknown` blocker for the underwriter.
 5. At startup, every intent in state `dispatching` is reconciled by step 4 before any dispatch. Drafts are left alone.
 
 Resolving `delivery_unknown`: `approve` on the item re-runs step 4. `reject` closes the intent as not sent; the workflow then creates a fresh draft for the same round, which waits for approval whatever its class.
 
-The promise is **no automatic resend after an ambiguous delivery**. The mailbox has no idempotency key, so exactly-once delivery is not claimed. One sender per lead at a time. Rounds number requests only: the first request is round 1. A quote packet or decline notice carries the round of the last request and does not count toward the two-round limit. A duplicate is more than one request in the mailbox for one (run id, lead id, round), or more than one quote packet or decline notice for one (run id, lead id). Fixtures and tests key on lead id and intent id, never the mailbox row id.
+The promise is **no automatic resend after an ambiguous delivery**. The mailbox has no idempotency key, so exactly-once delivery is not claimed. One sender per lead at a time. Rounds number requests only: the first request is round 1. A quote packet or decline notice carries the round of the last request, or round 0 when the lead has had no request, and does not count toward the two-round limit. A duplicate is more than one request in the mailbox for one (run id, lead id, round), or more than one quote packet or decline notice for one (run id, lead id). Fixtures and tests key on lead id and intent id, never the mailbox row id.
 
 ### 7.6 Clock
 
@@ -260,7 +262,7 @@ The promise is **no automatic resend after an ambiguous delivery**. The mailbox 
 ### 7.7 Run modes
 
 - **live:** model calls use the key from `.env`.
-- **replay:** model calls are served from `recordings/` keyed by skill, prompt version and input hash. A miss fails closed with a visible error. Replay uses its own app database.
+- **replay:** model calls are served from `recordings/` keyed by skill, prompt version and input hash. A miss fails closed with a visible error. The input hash covers only the content the model is shown (for `read_reply`, the reply body and the open asks), never run ids or intent ids. After any change to a `prompt.md`, the affected recordings are recorded again and committed. Replay uses its own app database.
 - **record:** a live run that also writes each model exchange to `recordings/` at the repository root, bind-mounted read-write in this mode and read-only in replay. Recordings are committed.
 
 The mode is shown on screen at all times and stored on every event. The system never falls back from live to replay.
@@ -351,7 +353,7 @@ Conditional fields with no `requiredWhen`:
 Order of precedence:
 
 1. An accepted observation.
-2. A derivation whose inputs are present. Roof class and siding class are derived only, never fetched.
+2. A derivation whose inputs are present. Roof class and siding class are derived only, never fetched. For these two fields the derivation from the effective material outranks a submitted class; the submitted class is kept as an observation and used only while the material is missing.
 3. A provider lookup, for system-owned fields.
 4. A stated default, tagged `assumed`:
    - `protection_class`: "9" when the provider returns not found.
@@ -360,7 +362,7 @@ Order of precedence:
 
 ### 9.4 Stand-in providers and world values
 
-`tools/capture_world.py` runs Stand's unmodified generator with a recording wrapper on `_base_lead` and on each archetype call, asserts the wrapped output equals the unwrapped output, asserts no guarantee-pass archetype fired, and writes a provider fixture per seed. Fixtures are captured for seed 42 and for seeds 1 and 2, which hold the two `not_found` cases seed 42 lacks (a profile lead with a nulled score, a rural lead with a nulled protection class). The fixture is synthetic provider data, not ground truth. It replays the generator's state before perturbation, which keeps values such as replacement cost consistent with Coverage A; the README states this plainly. Each fixture entry stores a fingerprint of the lead's submitted fields. On a missing entry or a fingerprint mismatch the provider returns a deterministic synthetic value seeded by lead id, marked `is_stub` and shown as such. The seed is read from the environment (`SEED`, default 42). The application reads only this fixture. It never calls the debug endpoint; the leadgen service passes `DEBUG` through, off by default (section 14), and the leadgen client has no debug method.
+`tools/capture_world.py` runs Stand's unmodified generator with a recording wrapper on `_base_lead` and on each archetype call, asserts the wrapped output equals the unwrapped output, asserts no guarantee-pass archetype fired, and writes a provider fixture per seed. Fixtures are captured for seed 42 and for seeds 11 and 15, which hold the two `not_found` cases seed 42 lacks with their lookup inputs present: `LEAD-00000011-008` (score nulled by the profile archetype) and `LEAD-00000015-003` (protection class nulled by the rural archetype). The fixture is synthetic provider data, not ground truth. It replays the generator's state before perturbation, which keeps values such as replacement cost consistent with Coverage A; the README states this plainly. Each fixture entry stores a fingerprint of the lead's submitted fields. On a missing entry or a fingerprint mismatch the provider returns a deterministic synthetic value seeded by lead id, marked `is_stub` and shown as such. The seed is read from the environment (`SEED`, default 42). The application reads only this fixture. It never calls the debug endpoint; the leadgen service passes `DEBUG` through, off by default (section 14), and the leadgen client has no debug method.
 
 Provider result: `{status, value, source, fetched_at, is_stub}` with status `found`, `not_found`, `blocked`, `unavailable`. A blocked result names the missing input fields.
 
@@ -376,14 +378,15 @@ Provider result: `{status, value, source, fetched_at, is_stub}` with status `fou
 "Full address" is `street_address`, `city`, `state` and `zip`. The prioritised hit list of next skills is in the README (plan stage 13).
 
 - A value an archetype set stays on the lead and is never replaced.
+- The input check runs before the fixture lookup, so `blocked` outranks `not_found`.
 - `blocked` adds the missing input to the ask plan and the lookup reruns after the reply. It does not raise a `data` blocker.
-- `not_found` on `kyc_score` raises an underwriter question with name-search links. No model profiles a person.
+- `not_found` on `kyc_score` raises an `underwriter_review` item with name-search links; the underwriter closes it by entering a score with `resolve_fact` or declining with `decline_lead`. No model profiles a person.
 - `unavailable` is injected by eval fault cases only and raises a `data` blocker.
 - Fixture values are fixed per seed and do not depend on the system's plan.
 
 ### 9.5 Conflict validators
 
-Code only. Each returns the fields involved and a neutral confirmation question.
+Code only. Each returns the fields involved and a neutral confirmation question. A validator fires only on present values, except where its row names missing fields.
 
 | Validator | Threshold source |
 |---|---|
@@ -393,7 +396,7 @@ Code only. Each returns the fields involved and a neutral confirmation question.
 | `electrical_panel_size_amps` below 60 | Assumption: 60 amps is the smallest residential service in common use |
 | `number_of_residents` equal to 0 when `dwelling_use_type` is Primary, or `dwelling_type` is owner-occupied, or both of those fields are missing | A primary home has a resident; with no occupancy information the value still needs confirming |
 | `acreage` equal to 0 | A dwelling sits on land |
-| `dwelling_use_type` Primary with `months_unoccupied` of 1 or more | Agrees with I06 |
+| `months_unoccupied` of 1 or more when `dwelling_use_type` is Primary, or `dwelling_type` is owner-occupied, or both of those fields are missing | Agrees with I06; the generator injects this conflict whatever the occupancy fields hold |
 | `dwelling_use_type` Primary with `is_rental` not "No" | A primary home is not let |
 | `dwelling_type` owner-occupied with `dwelling_use_type` Secondary, Seasonal, Tenant or Mixed | The two fields describe one occupancy |
 | `dwelling_use_type` Tenant or Mixed with `is_rental` "No" | A tenanted home is let (I53) |
@@ -462,7 +465,7 @@ When `applies_when` rests on an unknown fact, the graph is undecided and contrib
 
 **Collecting catalogue questions.** A catalogue question is collected when the branch selections leading to its node are settled by usable facts and answered choices. Unfinished sibling branches do not hold it back. Nothing is collected beneath an unknown `test` or an unanswered choice.
 
-**Action plan.** Effects from all applicable graphs are collected, deduplicated by rule id, and kept with their rule trace. When any applicable graph's root is a decline, the plan is a proposed decline: no request goes out and the underwriter gets the decline notice draft to approve. If the underwriter rejects it, a ruling suppresses that rule id for the lead and the registry asks go out.
+**Action plan.** Effects from all applicable graphs are collected, deduplicated by rule id, and kept with their rule trace. When any applicable graph's root is a decline, the plan is a proposed decline: no request goes out and the underwriter gets the decline notice draft to approve. If the underwriter rejects it, a ruling suppresses every rule id in the decline's trace, or in all its alternatives, for that lead. A suppressed decline outcome evaluates as decided with an advisory naming the overridden rule, and the registry asks go out. Rejecting a notice that came from `decline_lead` withdraws that ruling; rejecting one that followed an underwriter choice reopens the choice.
 
 `build_quote_packet` runs only when the plan holds no decline, no graph is undecided, no blocker is open and no ask remains.
 
@@ -477,8 +480,8 @@ Acceptance cases:
 
 **Order of precedence for the plan**
 
-1. Facts in an open conflict are unknown to the graphs; the confirmation is asked.
-2. A decline at the root of any applicable graph makes the lead a proposed decline and suppresses all requests.
+1. A decline at the root of any applicable graph makes the lead a proposed decline and suppresses all requests, confirmations included.
+2. Otherwise, facts in an open conflict are unknown to the graphs and the confirmation joins the ask plan.
 3. Otherwise the registry decides what is collected.
 4. The playbook adds catalogue questions and document requests where the registry is silent.
 5. Registry asks go out while an underwriter choice is open. Catalogue questions and document requests that sit under an unanswered choice are held until it is answered.
@@ -513,7 +516,7 @@ These rulings are this submission's reading, not Stand's. Brett reviews every ro
 | I17 | Fire Simulation | Client willingness to mitigate | Producer catalogue question | P |
 | I18 | Roof | Non-Class A at `p_f` exactly 0.50 | Middle band, matching the Unknown Class and Siding pages | A |
 | I19 | Roof | "Or decline" beside a requirement | The requirement is the effect; decline remains the underwriter's option at packet approval | A |
-| I20 | Roof | Roof age when the material is known | Class comes from the derivation map; roof age applies only on the Unknown Class branch The Unknown Class branch is encoded for the state where `roof_material` is missing: `p_f` at or below 0.15 is okay to quote, and above it the node is undecided on `roof_material`. | A |
+| I20 | Roof | Roof age when the material is known; the Unknown Class branch | Class comes from the derivation map; roof age is handled by I52. The Unknown Class branch is not encoded. While `roof_material` is missing, a submitted roof class is used (section 9.3); with both missing the Roof graph is undecided on `roof_material`, which the registry asks for anyway. | A |
 | I21 | Siding | Nine materials against two branches | Wood and Wood Shake / Shingle take the wood branch. Vinyl, Aluminum / Steel and Other (class C in the derivation map) take no action with an advisory on the quote. The rest take no action. | A |
 | I22 | Siding | "Class A" on the siding page | Read as non-combustible siding | A |
 | I23 | Post & Pier | When the page applies | `foundation_type` is Piers, Stilts or Pilings | A |
@@ -540,13 +543,13 @@ These rulings are this submission's reading, not Stand's. Brett reviews every ro
 | I44 | PC 9 & 10 | `road_access` Single Access Point | Underwriter choice | U |
 | I45 | All | "UWing period", "first term", "60 days" | Typed deadlines, not converted | A |
 | I46 | Overview | Animals; other attractive nuisances | Not evaluated; non-blocking note on the lead | N |
-| I47 | Pools, Post & Pier, Fire Simulation | Board notes and boxes calling for a map or listing check | Links for the underwriter; the registry's collection rule applies | A |
+| I47 | Pools, Post & Pier, Fire Simulation, Profile | Board notes and boxes calling for a map or listing check | Links for the underwriter; the registry's collection rule applies | A |
 | I57 | Occupancy | Board note: "You can provide the quote without this information but you must follow up after" | The registry's always-required occupancy fields are requested before the quote | A |
 | I48 | Pools | An unfenced pool matches both "Unfenced / Uncovered" and "Fenced = No" | `pool_security` Unfenced or None takes the "Unfenced / Uncovered" branch through the gated check; "Fenced = No" is unreachable from registry values | A |
 | I49 | PC 9 & 10 | `fire_dept_response_time` Unknown; `road_access` Unknown | Underwriter choice | U |
 | I50 | PC 9 & 10 | Branch A at exactly 7,500 square feet; `interior_sprinklers` without central monitoring | 7,500 is not under 7,500, so sprinklers are required; "Interior Sprinklers" does not satisfy "centrally monitored" | A |
 | I51 | Electrical | Knob-and-tube missing on a home built in 1950 or later | Ask the producer; the board's note covers the pre-1950 inference only | A |
-| I52 | Roof | Composition shingles older than 20 years sit in neither Unknown Class list; the branch is unreachable once the material is known (I20) | Advisory on the quote for asphalt or composition roofs with `roof_replacement_year` more than 20 years before the reference year and `p_f` above 0.15. A question for Stand. | A |
+| I52 | Roof | Composition shingles older than 20 years sit in neither Unknown Class list; the branch is unreachable once the material is known (I20) | Advisory on the quote for roofs whose `roof_material` is "Asphalt Fiberglass Composite" or "Architecture Shingles" with `roof_replacement_year` more than 20 years before the reference year and `p_f` above 0.15. A question for Stand. | A |
 | I53 | Occupancy | `dwelling_use_type` Tenant or Mixed with `is_rental` "No" | Conflict validator (section 9.5); confirmed with the producer | A |
 | I54 | Trusts | No registry field identifies an LLC owner | The page applies on `residence_held_in_trust` only; LLC ownership is not evaluated | N |
 | I55 | Fire Simulation | "Determine preliminary mitigation plan to discuss with broker" | Advisory on the quote | A |
@@ -612,7 +615,7 @@ The packet is built in code: coverages as submitted, coverage adjustments shown 
 
 - **Queue.** One row per lead: status chip, primary next action, who it waits on, age against a two-business-day service level (Stand's distributor page promises estimates "inside two business days"; labelled as an assumed service level), effective date, ask count. Order: blocked on the underwriter, then waiting on data or producer, then finished; within a group, earliest effective date first, then lead id. A one-sentence summary heads the page with separate counts for quotes sent, follow-ups sent, declines approved, waiting on the underwriter, waiting on data, delivery unknown.
 - **Detail pane.** Next action (templated from the plan). Facts with source tags. Playbook path as a checklist with an exceptions-only toggle. The draft. Non-blocking notes. A "paste a reply" box. A "deliver fixture replies" control delivers every stored fixture reply for the run, so a default run exercises `read_reply` on several leads. Search and map links where the board calls for a human look.
-- **Items.** Review (approve, edit, reject; batchable). Question (equal buttons, no default, required reason; never batched across leads; all open choices on one lead share one card with the relevant values shown). Notify.
+- **Items.** Review (approve, edit, reject; batchable). Question (equal buttons, no default, required reason; never batched across leads; all open choices on one lead share one card with the relevant values shown). What the system did automatically is read from the lead's event list; there is no separate notify item. The detail pane offers the actions for every open item on its lead.
 - **Rules and settings.** Autonomy level per command class with locked classes marked, emergency stop, pending rule proposals.
 - **Skills.** Per skill: status, last result, threshold, fallback.
 - **Chat.** A second client of the command layer. Read tools answer from the event log and cite event ids. A directive becomes a `propose_command` card that the underwriter previews and applies.
@@ -625,7 +628,7 @@ Live updates use one server-sent event stream carrying event ids; a fresh snapsh
 
 ## 12. Underwriter input
 
-- Every approval, edit, rejection and ruling is captured with the actor, the reason and the artifact hash. Each becomes a **candidate** eval case; it joins the suite when reviewed.
+- Every approval, edit, rejection and ruling is captured with the actor, the reason and the artifact hash. For a ruling the artifact hash is the lead's plan hash at that moment. Each becomes a **candidate** eval case; it joins the suite when reviewed.
 - **One rule change works end to end,** scoped to a parameter of an interpretation row (the demonstration changes `I35.tolerance`): `propose_rule_change` stores a proposal →  structural check → dry run against stored lead snapshots as they were at decision time → diff of changed plans → approval of the exact diff → new ruleset version. In-flight leads are re-evaluated under the new version and their open drafts return to review. Replays never send mail. Dry runs rebuild each lead's facts from its `fact_selected` events. The approved ruleset is written to the app volume under `rulesets/<hash>/` and named by the settings key `ruleset.active`; every evaluation, including the next run start, loads the active ruleset, or the image's `src/uwh/rules/data/` when none is set; the README states that making it permanent is a reviewed commit to `src/uwh/rules/data/`.
 - Proposals are authored by the underwriter through a form. No model drafts them.
 
@@ -646,17 +649,17 @@ Faults are injected through one documented hook on the mailbox client and the pr
   - `conflict`: a confirmation or an underwriter item;
   - `archetype_set`: no expectation.
 
-  Two classes of disagreement are allowed and counted: a conditional field whose condition is inactive, and a field the perturbation pass nulled that a conflict injection set again. The residual outside those classes must be zero on seed 42 and on seeds 1 to 50. This is the eval's strongest independent check, because Stand wrote the key.
+  Two classes of disagreement are allowed and counted: a conditional field whose condition is inactive, and a field the perturbation pass nulled that a conflict injection set again. The residual outside those classes must be zero on seed 42 and on seeds 1 to 50. The run row also reports how many ask-expecting records were exempt because the lead was a proposed decline or the field was blocked; those two exemptions are decided by the system under test, so the counts are shown, and the seed-42 counts are pinned in the labels. The key is the one check whose expectations Stand wrote.
 - **Labelling function.** Expected per-field resolution = f(final lead, registry, provider fixture, interpretation table). It shares the interpretation table with the rules core, so it certifies consistency with our reading, not the reading itself.
 - **Per-outcome cases.** One hand-written case per outcome node of every graph, plus every boundary named in section 9.7. Brett checks a recorded sample of 20.
-- **Seed-42 labels.** Expected first-pass state and message asks for the ten leads.
+- **Seed-42 labels.** Expected first-pass state and message asks for the ten leads. The runner grades these at the settle point, before any scripted underwriter action. It then plays the label's `underwriter_actions` and grades the expectations held under the label's `after_actions` key with the same graders (Coverage, One open request, Asks, Rule trace, Packet fidelity). Each score records the phase, `first_pass` or `after_actions`, in which a failure occurred.
 - **Reply fixtures.** Full, partial, contradicting, and instruction-bearing, each with expected facts and state. Producer answers are hand-written. Reply bodies live in `fixtures/replies/` at the repository root and ship in the app image for the fixture-reply control; their expected results live in `evals/labels/` and do not.
 
 Labels are written from the playbook transcriptions, the registry and the data files under `src/uwh/rules/data/` by an agent that does not read the Python under `src/uwh/rules/`. Brett signs the ten lead labels. `evals/` and every skill's `cases/` folder stay out of the app image.
 
 Labels and graphs share one id scheme: board boxes are named by page number and Mermaid node id from `docs/playbook/` (for example `07:LIVING`, `07:D1`), and traces are built as section 9.6 describes.
 
-**Case coverage.** Per-outcome cases cover every edge into a terminal box on each page, except the edges listed in `evals/labels/excluded_edges.yaml`. Each exclusion cites the interpretation row that removes the edge: 02 `REP→DECLINE` (I04); 02 rungs after the first (I05); 04 `DNW→D_DNW` (I12); 04 the `TURN` branch (I14); 05 the material outcomes under Unknown Class (I20); 10 `FENCED-No→COVER` (I48). Brett reviews the list with the interpretation table.
+**Case coverage.** Per-outcome cases cover every edge into a terminal box on each page, except the edges listed in `evals/labels/excluded_edges.yaml`. Each exclusion cites the interpretation row that removes the edge: 02 `REP→DECLINE` (I04); 02 rungs after the first (I05); 04 `DNW→D_DNW` (I12); 04 the `TURN` branch (I14); 05 every edge under Unknown Class (I20); 10 `FENCED-No→COVER` (I48). Brett reviews the list with the interpretation table.
 
 **Packet cases.** Lead 008, the one seed-42 lead with a fixture path to a packet, carries no requirement. Packet fidelity is therefore graded on three constructed leads whose plans hold a surcharge, a requirement with a deadline, an exclusion and a coverage adjustment between them. The "drop a requirement" control runs on those.
 
@@ -677,7 +680,7 @@ Plain functions over the mailbox, event log and fact ledger.
 | Field resolution | Precision and recall against the labelling function, each required to be 1.0 on seed 42 |
 | Escalation | Precision and recall, each required to be 1.0 on seed 42; positive class is "expected to need the underwriter". The escalation rate (leads needing the underwriter on the first pass, with the reason per lead) is a headline number with a stated target of at most 4 of 10 on seed 42. |
 | Send safety | Crash after mailbox acceptance, and query-empty-while-in-flight, each yield no second message |
-| Approval binding | A changed fact after approval returns the item to review |
+| Approval binding | On a dedicated run: the stop is engaged, lead 008's packet is approved, one fact is changed with `resolve_fact`, the stop is released. Nothing is sent and the item is back in review. A late reply after approval has the same effect. |
 | Policy | Emergency stop refuses dispatch on every entry path; a locked class cannot be set to auto; an `approve` submitted by `mcp_client` or `assistant` is refused |
 | Stand's key | The residual described in section 13.2 is zero |
 | Key isolation | A static test finds no `/debug` path in `src/`; a transport recorder in the eval run sees no request to it |
@@ -722,9 +725,9 @@ One experiment answers "where is the agent?" with a measurement: the ten seed-42
 | `mailbox` | default | `sim-harness/mailbox/Dockerfile`, context `./sim-harness` | 8025 | named volume |
 | `app` | default | `Dockerfile` (multi-stage: frontend build, then Python) | 8000 | named volume |
 | `leadgen-eval`, `mailbox-eval` | `eval` | same Dockerfiles | none | separate named volumes |
-| `eval` | `eval` | the app image plus `evals/`, every `src/uwh/skills/*/cases/` folder, and `sim-harness/leadgen` with `sim-harness/shared` (for regenerating Stand's key in process) | none | writes `evals/results.jsonl` through a bind mount; `recordings/` mounted read-only |
+| `eval` | `eval` | the app image plus `evals/`, every `src/uwh/skills/*/cases/` folder, and `sim-harness/leadgen` with `sim-harness/shared` (for regenerating Stand's key in process) | none | writes `evals/results.jsonl` through a bind mount; `recordings/` mounted read-only, and read-write only under `make record` |
 
-- The app stage copies `src/` selectively and leaves out every `cases/` folder. A root `.dockerignore` keeps `.env`, `.git`, `.venv`, `web/node_modules` and `web/dist` out of the build context.
+- The app stage copies `src/` selectively and leaves out every `cases/` folder. It copies `docs/brief/field_registry.json` to `/app/registry/field_registry.json`; the setting `UWH_REGISTRY` names that path. The commit hash reaches the images as the build argument `GIT_COMMIT`, since `.git` is outside the build context. The make targets set it from `git rev-parse HEAD`. With plain `docker compose up` it is unset and the images carry `unknown`, which is fine for running the app; eval runs go through `make eval`, and a run row with commit `unknown` fails its check. A root `.dockerignore` keeps `.env`, `.git`, `.venv`, `web/node_modules` and `web/dist` out of the build context.
 - Stand's code and Dockerfiles are unmodified. Stand's own `docker-compose.yml` stays in place, unused; ours keeps Stand's documented host ports.
 - Database paths are set through `LEADGEN_DB` and `MAILBOX_DB`. `DEBUG` passes through as `${DEBUG:-false}`, so a reviewer can switch the answer key on for their own use; the application client has no debug method either way.
 - Inside the network the app calls `http://leadgen:8080` and `http://mailbox:8080`.
@@ -819,7 +822,8 @@ intents(id TEXT PRIMARY KEY, run_id TEXT, lead_id TEXT, round INTEGER, kind TEXT
 approvals(id INTEGER PRIMARY KEY, lead_id TEXT, item_kind TEXT, intent_id TEXT,
           lead_revision INTEGER, plan_hash TEXT, ruleset_hash TEXT, recipient TEXT,
           payload_hash TEXT, actor TEXT, decision TEXT, reason TEXT, event_id INTEGER)
-          -- item_kind: draft | observation | delivery_unknown; decision: approved | rejected
+          -- item_kind: draft | observation | delivery_unknown | review; decision: approved | rejected
+          -- edits and rulings are recorded on their events, not here
 runs(run_id TEXT PRIMARY KEY, seed INTEGER, mode TEXT, started_at TEXT, status TEXT)
           -- status: processing | settled
 proposals(id INTEGER PRIMARY KEY, kind TEXT, payload_json TEXT, diff_hash TEXT, state TEXT,
@@ -832,7 +836,7 @@ settings(key TEXT PRIMARY KEY, value_json TEXT)   -- autonomy levels, emergency_
 
 ### A.2 Event types
 
-`run_started`, `replay_miss`, `lead_received`, `fact_observed`, `fact_selected`, `conflict_opened`, `conflict_closed`, `triage_completed`, `provider_called`, `plan_built`, `blocker_opened`, `blocker_closed`, `intent_created`, `message_sent`, `delivery_unknown`, `reply_received`, `reply_read`, `approval_recorded`, `ruling_recorded`, `command_refused`, `setting_changed`, `class_demoted`, `rule_change_applied`, `skill_fallback_used`, `model_called`, `fault_injected`.
+`run_started`, `replay_miss`, `draft_edited`, `proposal_created`, `lead_received`, `fact_observed`, `fact_selected`, `conflict_opened`, `conflict_closed`, `triage_completed`, `provider_called`, `plan_built`, `blocker_opened`, `blocker_closed`, `intent_created`, `message_sent`, `delivery_unknown`, `reply_received`, `reply_read`, `approval_recorded`, `ruling_recorded`, `command_refused`, `setting_changed`, `class_demoted`, `rule_change_applied`, `skill_fallback_used`, `model_called`, `fault_injected`.
 
 Each payload is a Pydantic model named after the type. Graders import those models.
 
@@ -846,9 +850,9 @@ All hashes are SHA-256 over canonical JSON (sorted keys, UTF-8, no insignificant
 
 - **Lead revision:** an integer, incremented whenever an effective fact changes.
 - **Plan hash:** the action plan.
-- **Ruleset hash:** every file under `src/uwh/rules/data/`, in path order.
+- **Ruleset hash:** every file of the active ruleset, in path order: the directory `ruleset.active` names, or `src/uwh/rules/data/` when none is set.
 - **Payload hash:** `{recipient, subject, body}`.
-- **Skill digest:** every file in the skill's folder except `cases/`, plus every Python file under `src/uwh/` outside `skills/` (one shared hash, so a change to the rules core, providers or runtime marks every skill `untested`), plus the ruleset hash, plus the model id for model skills. The results row records the case-set id beside the digest.
+- **Skill digest:** every source file in the skill's folder except `cases/`, plus every Python source file under `src/uwh/` outside the skill folders, including the modules directly under `skills/` (one shared hash, so a change to the rules core, providers or runtime marks every skill `untested`), plus the hash of the image's `src/uwh/rules/data/`, plus the model id for model skills. Compiled files (`__pycache__`, `*.pyc`) are never hashed. After a rule change in a session the skills view shows "rules changed since the last eval" beside each status. The results row records the case-set id beside the digest.
 
 ### A.5 Routes (app on port 8000)
 
@@ -857,9 +861,9 @@ All hashes are SHA-256 over canonical JSON (sorted keys, UTF-8, no insignificant
 | `GET /api/run` | Run id, mode, seed, simulated time, summary counts |
 | `POST /api/run/start` | Reset and ingest the queue. Returns at once with the run id; with `?wait=true` it returns when the run has settled, meaning no lead has a runnable workflow step. `GET /api/run` reports the same condition as `first_pass_complete`. Once messages are built (stage 8), a settled run has every lead terminal or blocked. The tier-0 UI uses the waited form. |
 | `GET /api/leads` | Queue rows in display order |
-| `GET /api/leads/{id}` | Lead detail: facts, plan, rule trace, notes; blockers with their `item_id`; drafts with `intent_id` and `payload_hash`; open choices with their `choice_id` |
+| `GET /api/leads/{id}` | Lead detail: facts, plan, rule trace, notes; blockers with their `item_id`, and `intent_id` when the blocker is a draft review; drafts with `intent_id` and `payload_hash`; open choices with their `choice_id` |
 | `GET /api/leads/{id}/events` | Event log for a lead |
-| `GET /api/items` | Open review, question and notify items |
+| `GET /api/items` | Open review and question items across leads |
 | `POST /api/commands` | Submit a typed command `{type, payload}`; the response is accepted or refused with a reason |
 | `POST /api/replies` | Deliver a reply `{lead_id, intent_id, body}`. Returns after the reply has been read and the lead re-evaluated. Accepted only for an intent in state `sent`. |
 | `POST /api/replies/fixtures` | Deliver every stored fixture reply for the run. Returns after all are processed. |
@@ -958,6 +962,8 @@ Reply bodies are capped at 8,000 characters. The model id comes from `ANTHROPIC_
 ### A.10 Fixed values
 
 - Lead concurrency: 4.
+- Skill pass threshold: 1.0 unless a manifest states another value with its reason.
+- `read_reply` calls the model with temperature 0.
 - Rounds before the lead goes to the underwriter: 2.
 - Jev confidence threshold: 0.7 per question, in the skill manifest.
 - Reply-reading repeats in evals: 3.
@@ -993,6 +999,9 @@ Reply bodies are capped at 8,000 characters. The model id comes from `ANTHROPIC_
 | Pending observation | makes it the effective fact | marks it rejected; the existing value stays |
 | `delivery_unknown` | re-runs the mailbox check | closes the intent unsent; a fresh draft waits for approval |
 | No contact route | n/a; resolved with `resolve_fact` on `q:contact_email` | n/a |
+| Any other underwriter review (a late or unread reply, an off-topic or declining reply, the round limit, a missing or unsupported identity score, a draft held by the stop) | acknowledges it with a reason and closes it; when a reply raised it, the round closes too. A held draft is dispatched. | refused; the underwriter acts through `resolve_fact`, `record_ruling` or `decline_lead` |
+
+Every item above is an `underwriter_review` blocker except an open choice, which is an `underwriter_question`.
 
 Workflow-only classes (`fetch_data` and the send classes) are submitted in process and are not accepted over HTTP.
 

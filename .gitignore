@@ -6,6 +6,9 @@
 # Working memory for agents; never committed
 scratchpads/
 
+# Separate checkouts for parallel tracks
+.worktrees/
+
 # Python
 __pycache__/
 *.py[cod]

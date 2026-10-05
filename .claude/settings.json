@@ -2,7 +2,7 @@
   "hooks": {
     "PostToolUse": [
       {
-        "matcher": "Edit|Write|MultiEdit",
+        "matcher": "Edit|Write",
         "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/scripts/hooks/format-on-edit.sh" }]
       }
     ],
@@ -13,6 +13,6 @@
     ]
   },
   "permissions": {
-    "deny": ["Edit(sim-harness/**)", "Write(sim-harness/**)", "Edit(docs/brief/**)", "Write(docs/brief/**)", "Edit(docs/playbook/**)", "Write(docs/playbook/**)", "Read(.env)"]
+    "deny": ["Edit(/sim-harness/**)", "Edit(/docs/brief/**)", "Edit(/docs/playbook/**)", "Read(/.env)"]
   }
 }

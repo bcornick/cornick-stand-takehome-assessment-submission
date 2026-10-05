@@ -73,7 +73,7 @@ Testing rules:
 
 - Tests assert real behaviour. Never write a test whose assertion is satisfied by a mock; if you find one, stop and tell Brett.
 - No mocks in end-to-end or integration tests. They run against the real leadgen and mailbox containers.
-- Model calls in tests are served from `recordings/`, never from a hand-written response. The plan names the few tasks that make a live call, to record an exchange or to rehearse.
+- Model calls in tests are served from `recordings/`, never from a hand-written response. The plan names the few tasks and acceptance checks that make a live call, to record an exchange or to rehearse; those need `ANTHROPIC_API_KEY`.
 - Output is pristine. An expected error is captured and asserted.
 - A fixture must be able to separate the right answer from the wrong one. Check that a deliberately wrong implementation fails the test.
 - Tiers: fast (under 5 seconds, in `make check`), `@pytest.mark.slow`, `@pytest.mark.integration` (containers), eval (the eval runner).
@@ -113,7 +113,7 @@ After three failed fixes for one problem, stop and write up what was tried. Do n
 - Check `git status` before starting. If the tree is dirty, stop and ask Brett.
 - Work on a branch per stage and tier pass: `stage-NN-short-name-tN` (for example `stage-04-runtime-t0`). Brett merges.
 - Branch from `main` when the previous stage is merged, otherwise from the previous stage's branch. Do not wait for a merge unless the stage has a human gate.
-- Stages that run in parallel each branch from the same base and touch only the files the plan assigns them.
+- Stages run one at a time in this checkout by default. Where the plan marks work as safe in parallel and Brett asks for it, each track runs in its own git worktree under `.worktrees/`, branches from the same base, touches only the files the plan assigns it, and runs `make check` in its own worktree.
 - Commit often. Claude-authored commit subjects start with `CLAUDE-<model-name>: `; other agents use their own model name the same way. If the model name is unknown, ask before committing.
 - Never `git add -A` without a fresh `git status`. Never `git add -f` an ignored file. Never skip, evade or disable a hook.
 

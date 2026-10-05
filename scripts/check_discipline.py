@@ -29,6 +29,7 @@ EXEMPT_FILES = {
     "web/pnpm-lock.yaml",
     "web/src/api/types.ts",
     "evals/results.jsonl",
+    "docs/progress.md",
 }
 # Text written in an applicant's or producer's voice, where everyday words are legitimate.
 QUOTED_VOICE = re.compile(r"^(evals/labels/replies[^/]*/|src/uwh/skills/[^/]+/cases/)")
@@ -64,7 +65,8 @@ def ignored_under_src() -> list[str]:
         ["git", "ls-files", "--others", "--ignored", "--exclude-standard", "--", "src"],
         cwd=ROOT, capture_output=True, text=True, check=True,
     ).stdout
-    return [line for line in out.splitlines() if line and "__pycache__" not in line]
+    skip = ("__pycache__", ".DS_Store", ".egg-info/")
+    return [line for line in out.splitlines() if line and not any(s in line for s in skip)]
 
 
 def main() -> int:
@@ -87,6 +89,13 @@ def main() -> int:
 
     for rel in ignored_under_src():
         problems.append(f"{rel}: under src/ but ignored by git; it would be missing from a clone")
+
+    stand_import = re.compile(r"^\s*(from|import)\s+(leadgen|shared|mailbox)\b")
+    for rel in paths:
+        if rel.startswith("src/") and rel.endswith(".py"):
+            for number, line in enumerate((ROOT / rel).read_text(encoding="utf-8").splitlines(), start=1):
+                if stand_import.match(line) or "/debug" in line:
+                    problems.append(f"{rel}:{number}: src/ must not import Stand's code or name the debug path")
 
     test_names = {Path(p).name for p in paths if p.startswith("tests/")}
     for rel in paths:
