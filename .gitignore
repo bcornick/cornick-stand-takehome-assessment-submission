@@ -30,6 +30,7 @@ coverage.xml
 node_modules/
 web/dist/
 web/.vite/
+web/.vitest/
 *.tsbuildinfo
 npm-debug.log*
 pnpm-debug.log*

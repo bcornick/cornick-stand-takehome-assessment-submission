@@ -165,3 +165,34 @@ Known gaps, recorded and not fixed: the fixtures show no `assumed` fact and no p
 - `codex exec` needs `< /dev/null`; with it the stage 2 review ran to completion.
 
 **Next:** Brett's review of the data shapes (task 11). After his approval is recorded, stage 3 task 1 on `stage-03-labels-t0` and stage 4 on `stage-04-runtime-t0`.
+
+## Stage 02: gate rulings and the simplification round (stage-02-contracts-t0)
+
+**Done:** Brett ruled on the gate questions in three rounds; the architecture, plan and code follow.
+- Held-draft approvals carry the draft's payload hash (A.11). Surcharges and coverage adjustments may carry a deadline (§9.6, I56). One name, `routine_request`, for the confirmation-only class (§10.1). An edited `routine_request` becomes a `sensitive_request` and `draft_edited` carries the resulting kind (§7.5, A.2). The abstention reason is a closed set of two codes, recorded on `reply_read` (§10.4, A.10). Seven summary counts: every request sent is a follow-up, and each lead counts once among the four waiting counts by its primary next action (§11). A proposal never carries `approve`, `reject` or `propose_command` (§7.4, A.11). Effects deduplicate by type and rule id, the interpreter keeps the committed copy, and the loader refuses an outcome that repeats a type under one rule id (§9.6). The workflow checks `build_quote_packet`'s precondition and the skill refuses an input that breaks it. Round state lives in the reply-wait blocker (A.2). The A.4 hash exclusions name hidden files, `*~` and `*.swp`.
+- The generic-engine promise is dropped: the runtime uses underwriting names directly (§7). A role registration built for an earlier ruling was removed with its tests, as was the `Vocabulary` marker in the API views. Each value set is one `Literal` in `src/uwh/runtime/event_types.py`. Plan stage 4 lost task 13 (the second vertical) and that half of S04-A10. No other stage 4 task exists only to prove the runtime is generic.
+- Shapes: a blocker's item kind and cause live in its `detail` only (`BlockerView.item_kind` and `review_cause` removed; the web code read neither). `provider_called` nests the provider result, defined once in `src/uwh/providers/models.py`.
+- Simplification round: one strict base model, request kinds defined once, the blocker priority order and the persisting review causes derived from their literals, `CommandClass.human_only` removed, one check that a decline on every branch carries alternatives, duplicate tests removed, and unused web code removed (`button.tsx`, `lib/utils.ts`, `lucide-react`, unused theme variables and exports; built CSS 32,888 to 27,116 bytes with every class the two views render kept).
+- `AGENTS.md` carries the clean-code rule and the reviewer's end-of-stage simplification pass. `make check` also runs two drift checks on `web/src/api/openapi.json` and `types.ts` (about one second together).
+- Stage 1 points approved by Brett: `UWH_DB` required with no default, ruff skipping Markdown in `format`, local HTTP servers in the bootstrap tests. The app factory is treated as approved (named in one copy of his message and not the other; he has been told). `pyproject.toml`, `.dockerignore` and `.env.example` carry `ABOUTME` lines.
+
+**Unread until a later task.** Each stays because the plan names its reader; any still unread when that task is done is removed then.
+
+| Item | Read from |
+|---|---|
+| `vertical.TRANSITIONS`, `TERMINAL_STATUSES`, `BLOCKER_KINDS_BY_PRIORITY` | stage 4 task 4 (workflow and waits) |
+| `vertical.COMMAND_CLASSES` (beyond the API's use of its names) | stage 4 task 6 (command layer) |
+| `vertical.REFERENCE_MORNING` | stage 4 task 2 (clock) |
+| `vertical.CONFIRMATION_ONLY_CLASS` | stage 8 task 1 (`plan_asks`) |
+| `Settings.db_path` | stage 4 task 1 (event log) |
+| `Settings.git_commit` | stage 5 task 3 (results log) |
+| `Settings.registry_path` | stage 6 task 2 (triage) |
+| `Settings.model_id`, `Settings.model_base_url` | stage 9 task 2 (`read_reply`) |
+| `store.open_store`, `store.create_tables` | stage 4 tasks 1 and 9 |
+| `hashing.active_ruleset_dir` | stage 12 (rule change) |
+| the `*Output` aliases in `skills/contracts.py` | stages 6 to 9, one per skill |
+| `anthropic` (stage 9), `pyyaml` in `src/` (stage 3), the mypy override for Stand's modules (stage 3 task 1) | as named |
+
+Known and left: `web/components.json` still names an icon library and a utils alias the scaffold no longer has (it is read only by the shadcn CLI); the `.dark` theme block in `web/src/index.css` has no switch that sets it; stage 4 makes `src/uwh/runtime/` read `skills/vertical.py`, which itself imports `runtime/event_types.py`, a package-level loop with no module cycle; §1 and `AGENTS.md` still call underwriting triage the "first vertical".
+
+**Friction:** three review rounds in a row were blocked on the docs being out of step with the code after a shape change, not on the code. A grep of the architecture, plan and acceptance file for every name, field and file a round changed now runs before the reviewer does; it found one more stale passage (which message kinds are requests) that would have blocked a fourth round.
