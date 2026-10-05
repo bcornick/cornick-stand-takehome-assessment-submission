@@ -842,6 +842,7 @@ Expect: `6 passed`.
 8. **Tier-0 controls** (tier 0). Fill "Email every lead with every missing field" and "Send twice". With a passing reference run, the three tier-0 controls (§4.1) are proven: run the seed-42 suite with its send-safety fault runs, and each control -> S08-A6 to S08-A8, S08-A15, S08-A17.
 9. **Remaining controls** (tier 1). Fill "Ignore conflicts", "Drop a requirement from the packet" (on the stage 3 packet cases), "Accept an approval without checking its hash" (on the Approval binding run of the `replies` suite) and "Ask for a bind-only field" -> S08-A9 to S08-A12.
 10. **Emergency stop on real requests** (tier 1). Test: `tests/integration/test_stop.py` (through the REST API) asserts that with the stop engaged a run start leaves every seed-42 lead without a mailbox message, each draft the stop refused held under an underwriter review with the reason (§7.4); approving a held draft while the stop is engaged sends nothing; releasing the stop sends nothing; and approving a held draft after the release sends one message -> green once stage 4 task 11 and this stage are done.
+11. **polish_message** (tier 1). Before building, settle two contract points with Brett, since stage 2 froze the shapes: the skill's input and output models in `src/uwh/skills/contracts.py` (output: `opening`, `closing`, or the typed abstention), and how a rejected rewrite is recorded, since no A.2 event carries which check rejected it; propose the smallest change. Test: `tests/skills/polish_message/test_skill.py`, served from recordings, asserts the body is the opening, the `render_message` question block unchanged and the closing; the code check rejecting a question mark, a numbered line and a piece over its cap (A.10), each taken as a value so the test builds no model response; the model check's fail verdict rejecting the rewrite; a rejected rewrite, an abstention and a `failing` or `unavailable` skill each leaving the rendered request as the body, with the rejection recorded; the payload hash taken over the final body; a routine request keeping its class; a quote packet and a decline notice never passed to the skill; both calls carrying a forced tool choice, `thinking` disabled and `temperature` 0; and no key in live mode leaving the rendered request (§8) -> red. Build: skill `src/uwh/skills/polish_message/` with `manifest.yaml`, `prompt.md`, `skill.py` and `cases/`, the cases including an opening that states a consequence and one that asks a question, both expected to be rejected; the workflow step after `render_message`; `make record` gains these tests and the recordings are committed -> green. `tests/integration/test_polished_request.py` (through the REST API, record mode) asserts lead 008's delivered request holds the rendered question block unchanged between an opening and a closing, and that the seed-42 message graders pass on the run -> S08-A19, S08-A20.
 
 **Acceptance checks.**
 
@@ -953,7 +954,19 @@ want=$(uv run python -c 'import json, uwh.skills; print(json.dumps(sorted(uwh.sk
 ```
 Expect: exit 0.
 
-**Implemented after this stage.** Tier 0: `plan_asks`, `render_message`, recipients by source, `build_quote_packet` with its precondition and notes, decline notice with round 0 on a lead with no request, each skill's `cases/`, `GET /api/leads/{id}`, the A.11 item actions with both review rows, decline rejections and `decline_lead`, dispatch, `confirmation_only_class`, the three tier-0 controls proven, Send safety on its fault runs. Tier 1: four controls, stop on real requests with held drafts, escalation headline.
+**S08-A19.** Tier 1. The `polish_message` skill tests pass.
+```sh
+uv run pytest tests/skills/polish_message
+```
+Expect: all pass.
+
+**S08-A20.** Tier 1. Lead 008's delivered request carries the rendered question block unchanged inside a rewritten opening and closing, and the seed-42 message graders pass on that run. Needs `MODEL_API_KEY` in `.env`.
+```sh
+uv run pytest -m integration tests/integration/test_polished_request.py
+```
+Expect: all pass.
+
+**Implemented after this stage.** Tier 0: `plan_asks`, `render_message`, recipients by source, `build_quote_packet` with its precondition and notes, decline notice with round 0 on a lead with no request, each skill's `cases/`, `GET /api/leads/{id}`, the A.11 item actions with both review rows, decline rejections and `decline_lead`, dispatch, `confirmation_only_class`, the three tier-0 controls proven, Send safety on its fault runs. Tier 1: four controls, stop on real requests with held drafts, escalation headline, `polish_message` with its two checks.
 
 **Not implemented after this stage.** Replies; packets reaching the mailbox on seed 42.
 
