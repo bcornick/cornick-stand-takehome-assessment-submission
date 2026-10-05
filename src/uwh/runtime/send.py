@@ -108,6 +108,20 @@ def _next_round(db: sqlite3.Connection, lead_id: str, kind: MessageKind) -> int:
     return int(last) + 1 if kind in REQUEST_KINDS else int(last)
 
 
+def _round_had_unknown_delivery(db: sqlite3.Connection, lead_id: str, round_: int) -> bool:
+    """True when an intent of that round of the lead was closed as not sent after its delivery was
+    in doubt: a message for that round may already be in the producer's mailbox."""
+    return (
+        db.execute(
+            "SELECT 1 FROM intents JOIN events ON events.type = ?"
+            " AND json_extract(events.payload_json, '$.intent_id') = intents.id"
+            " WHERE intents.lead_id = ? AND intents.round = ? AND intents.state = 'closed_unsent'",
+            (EventType.delivery_unknown.value, lead_id, round_),
+        ).fetchone()
+        is not None
+    )
+
+
 def _draft_item(db: sqlite3.Connection, intent: Intent) -> Blocker | None:
     """The open `underwriter_review` item that reviews this draft, if there is one."""
     for blocker in open_blockers(db, intent.lead_id):
@@ -215,18 +229,20 @@ def create_draft(
     """Insert an intent in state `draft`, write `intent_created` and return the intent id.
 
     `manifest` is the issuing skill's; it must declare the send class of the kind (8). A draft whose
-    class does not run at `auto` waits as an `underwriter_review` item that names it. The draft records
+    class does not run at `auto`, and a draft for a round whose earlier intent was closed after an
+    unknown delivery, waits as an `underwriter_review` item that names it. The draft records
     the lead's revision now, and is never sent once the lead has moved on. Sends nothing;
     the caller commits. Raises ValueError, writing nothing, for a class the manifest does not declare.
     """
     refusal = manifest_refusal(manifest, _class_of(kind))
     if refusal is not None:
         raise ValueError(refusal)
+    round_ = _next_round(db, lead_id, kind)
     intent = Intent(
         uuid.uuid4().hex,
         context.run_id,
         lead_id,
-        _next_round(db, lead_id, kind),
+        round_,
         kind,
         recipient,
         subject,
@@ -237,9 +253,10 @@ def create_draft(
         None,
         lead_revision_and_plan_hash(db, lead_id)[0],
     )
-    return _insert_draft(
-        db, context, intent, waits_for_approval=autonomy_level(_class_of(kind)) != "auto"
+    waits_for_approval = autonomy_level(_class_of(kind)) != "auto" or _round_had_unknown_delivery(
+        db, lead_id, round_
     )
+    return _insert_draft(db, context, intent, waits_for_approval=waits_for_approval)
 
 
 def void_approvals(db: sqlite3.Connection, intent_id: str) -> None:

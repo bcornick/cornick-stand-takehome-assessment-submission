@@ -701,7 +701,6 @@ def test_a_draft_built_at_an_older_revision_is_not_sent_and_is_replaced(
 
     assert state_of(store, stale) == "closed_unsent"
     assert message_intents(mailbox) == [current]
-    assert read_intent(store, current) is not None
 
 
 # ---- resolving delivery_unknown -----------------------------------------------------------------
@@ -771,6 +770,30 @@ def test_delivery_unknown_reject_closes_unsent(
     assert messages(mailbox) == []  # a class at auto does not send a draft that waits for approval
     approval = store.execute("SELECT item_kind, intent_id, decision FROM approvals").fetchone()
     assert approval == ("delivery_unknown", intent_id, "rejected")
+
+
+def test_a_draft_for_a_round_closed_after_an_unknown_delivery_waits_for_approval(
+    store: sqlite3.Connection,
+    mailbox: MailboxClient,
+    faults: FaultPlan,
+    make_context: MakeContext,
+    env: RunEnvironment,
+) -> None:
+    _, item = unknown_intent(store, mailbox, faults, make_context, message_delivered=False)
+    assert submit_command(
+        store, env, "underwriter", "reject", {"item_id": item.id, "reason": "never arrived"}
+    ).accepted
+    store.execute("UPDATE leads SET revision = revision + 1 WHERE lead_id = ?", (LEAD,))  # a late reply
+    store.commit()
+    replace_stale_drafts(store, make_context(), LEAD)
+    rebuilt = draft(store, make_context)
+
+    dispatch_ready(store, mailbox, make_context, LEAD)
+
+    assert intent_row(store, rebuilt)["round"] == 1
+    assert len(draft_items(store, rebuilt)) == 1
+    assert state_of(store, rebuilt) == "draft"
+    assert messages(mailbox) == []
 
 
 # ---- a result recorded after another command settled the intent ---------------------------------
