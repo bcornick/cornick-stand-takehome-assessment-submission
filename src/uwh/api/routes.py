@@ -1,4 +1,4 @@
-# ABOUTME: The A.5 routes other than GET /api/run, declared with their request and response models; each answers 501.
+# ABOUTME: The A.5 routes not yet served, declared with their request and response models; each answers 501.
 # ABOUTME: `/mcp` is mounted outside OpenAPI and is not declared here.
 from typing import Annotated, NoReturn
 
@@ -7,8 +7,6 @@ from fastapi import APIRouter, Header, HTTPException
 from uwh.api.views import (
     ChatRequest,
     ChatResponse,
-    Command,
-    CommandResponse,
     FixtureRepliesResponse,
     Item,
     LeadDetail,
@@ -17,7 +15,6 @@ from uwh.api.views import (
     QueueRow,
     ReplyRequest,
     ReplyResponse,
-    RunView,
     SettingsView,
     SkillView,
 )
@@ -27,11 +24,6 @@ router = APIRouter()
 
 def not_implemented(route: str) -> NoReturn:
     raise HTTPException(status_code=501, detail=f"{route} is not implemented")
-
-
-@router.post("/api/run/start")
-def start_run(wait: bool = False) -> RunView:
-    not_implemented("POST /api/run/start")
 
 
 @router.get("/api/leads")
@@ -52,11 +44,6 @@ def get_lead_events(id: str) -> LeadEvents:
 @router.get("/api/items")
 def list_items() -> list[Item]:
     not_implemented("GET /api/items")
-
-
-@router.post("/api/commands")
-def submit_command(command: Command) -> CommandResponse:
-    not_implemented("POST /api/commands")
 
 
 @router.post("/api/replies")

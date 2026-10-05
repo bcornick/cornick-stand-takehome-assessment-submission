@@ -1,38 +1,40 @@
-# ABOUTME: The app's HTTP surface. The factory reads settings when called, never at import.
-# ABOUTME: GET /api/run reports the run's mode, seed, id (null before a run starts) and summary; the other routes are declared in routes.py.
+# ABOUTME: The app factory: its lifespan opens the runtime, recovers an interrupted run before serving, and serves the routes of run.py, commands.py and routes.py and the built frontend.
+# ABOUTME: The factory reads settings when called, never at import, and opens no database and no service client until the app starts.
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
+from uwh.api import commands, run
 from uwh.api.routes import router
-from uwh.api.views import RunSummary, RunView
+from uwh.api.runtime import open_runtime
+from uwh.runtime.leadgen_client import LeadgenClient
+from uwh.runtime.mailbox_client import MailboxClient
 from uwh.settings import Settings
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(
+    settings: Settings | None = None,
+    *,
+    leadgen: LeadgenClient | None = None,
+    mailbox: MailboxClient | None = None,
+) -> FastAPI:
+    """Build the app. At startup a service client that is not passed is built from the settings' URL for
+    that service; a test passes clients that reach Stand's apps in process."""
     settings = Settings.load() if settings is None else settings
-    app = FastAPI(title="Underwriting triage", version="1")
 
-    @app.get("/api/run")
-    def get_run() -> RunView:
-        return RunView(
-            run_id=None,
-            mode=settings.run_mode,
-            seed=settings.seed,
-            sim_now=None,
-            first_pass_complete=False,
-            summary=RunSummary(
-                quotes_sent=0,
-                follow_ups_sent=0,
-                declines_approved=0,
-                waiting_on_underwriter=0,
-                waiting_on_producer=0,
-                waiting_on_data=0,
-                delivery_unknown=0,
-            ),
-        )
+    @asynccontextmanager
+    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        with open_runtime(settings, leadgen, mailbox) as runtime:
+            runtime.resume()
+            app.state.runtime = runtime
+            yield
 
+    app = FastAPI(title="Underwriting triage", version="1", lifespan=lifespan)
+    app.include_router(run.router)
+    app.include_router(commands.router)
     app.include_router(router)
     # Mounted last so the API routes match first; absent in a checkout without a build.
     if Path(settings.static_dir).is_dir():
