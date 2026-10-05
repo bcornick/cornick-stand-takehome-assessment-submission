@@ -261,8 +261,8 @@
   {
     "id": "S04-A10",
     "stage": 4,
-    "description": "Tier 1. Replay fails closed on a missing recording, and a second vertical runs with no runtime change. Expect: all pass.",
-    "command": "uv run pytest tests/runtime/test_modes.py tests/runtime/test_second_vertical.py",
+    "description": "Tier 1. Replay fails closed on a missing recording. Expect: all pass.",
+    "command": "uv run pytest tests/runtime/test_modes.py",
     "passes": false
   },
   {

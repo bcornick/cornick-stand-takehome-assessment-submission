@@ -176,11 +176,11 @@ docs/                     this file, critique, plan, progress, brief, playbook
 
 ## 7. Runtime
 
-The runtime contains no insurance vocabulary. The vertical supplies status names, blocker kinds, transition rules, command classes and message kinds through one registration module (`src/uwh/skills/vertical.py`). The runtime knows roles only, and the vertical registers the name for each role: the three blocker kinds the runtime opens itself (delivery unknown, human review, data), the blocker owners it assigns (the human and the data owner), the item kinds it creates (draft, observation, delivery unknown, review) and the observation source of a human ruling. The vertical adds its own blocker kinds, owners and item kinds beside them. The names in this section are the underwriting vertical's. A second vertical plugs in by registering its own names and skills; the runtime does not change.
+This is an underwriting tool, and the runtime uses underwriting names directly: its statuses, blocker kinds, blocker owners, item kinds, observation sources and ruling kinds are the ones this section and Appendix A give. `src/uwh/skills/vertical.py` holds the tables built on those names: the status transitions, the blocker priority order, the command classes, the review causes, `confirmation_only_class`, the reference morning and the order of the workflow's steps.
 
 ### 7.1 Lead workflow
 
-A lead has a **status** and a **set of open blockers**. Statuses supplied by the underwriting vertical: `received`, `triaged`, `in_progress`, `quote_sent`, `declined`. Blocker kinds: `producer_reply`, `underwriter_review`, `underwriter_question`, `data`, `delivery_unknown`. Three of them fill the runtime's roles: `delivery_unknown` is the delivery-unknown kind, `underwriter_review` the human-review kind and `data` the data kind; `producer_reply` and `underwriter_question` are the vertical's own.
+A lead has a **status** and a **set of open blockers**. Statuses: `received`, `triaged`, `in_progress`, `quote_sent`, `declined`. Blocker kinds: `producer_reply`, `underwriter_review`, `underwriter_question`, `data`, `delivery_unknown`.
 
 - A lead's steps run in order. Leads run concurrently with a bounded pool.
 - One waiting primitive: a blocker row with a kind, an owner and a resume trigger. A lead may hold several blockers at once.
@@ -779,7 +779,7 @@ Dispositions of `docs/critique.md` findings.
 | C02 missing contracts | Accepted. | Appendix A |
 | C03 underwriter question versus producer request | Accepted. | 9.6 rules 5 and 6; section 5 rows 003, 006 |
 | C04 eval grades its own reading | Accepted. Stand's key is a hard grader with enumerated allowed disagreements; Brett samples 20 outcome cases. | 13.2, 13.3 |
-| C05 zero model calls on the first pass | Accepted. Fixture-reply control, harness statement, vertical-supplied names, and the comparison experiment. | 7, 8, 11, 13.6 |
+| C05 zero model calls on the first pass | Accepted. Fixture-reply control, harness statement, and the comparison experiment. | 8, 11, 13.6 |
 | C06 provider fixture limits | Accepted. Fingerprint, synthetic fallback, seed from the environment, plain statement. | 9.4 |
 | C07 eligibility decisions under the A tag | Accepted for I07, I21, I28, I43. I12 keeps 0.50, is marked as invented and as a question for Stand, with hand cases. Lenient rows are listed for review. | 9.7 |
 | C08 I33 misreads the registry | Accepted. | 9.7 I33 |
@@ -855,13 +855,13 @@ proposals(id INTEGER PRIMARY KEY, kind TEXT, payload_json TEXT, diff_hash TEXT, 
 settings(key TEXT PRIMARY KEY, value_json TEXT)   -- autonomy levels, emergency_stop
 ```
 
-`key` is a registry field name or a catalogue id prefixed `q:`. Blocker `owner` is `underwriter`, `producer` or `data_team`. The value sets of `leads.status`, `blockers.kind`, `blockers.owner`, `intents.kind`, `approvals.item_kind` and `observations.source` are the registered vertical's: the store takes them from the registration, and the names written in this section are the underwriting vertical's (section 7). The runtime fixes only the sets that are its own mechanism: `intents.state`, `approvals.decision`, `runs.status`, `proposals.kind`, `proposals.state`, `observations.status` and the run mode. `runs` holds one row, the current run. `settings` persists across runs.
+`key` is a registry field name or a catalogue id prefixed `q:`. Blocker `owner` is `underwriter`, `producer` or `data_team`. The store enforces every value set this section and section 7 name: `leads.status`, `blockers.kind`, `blockers.owner`, `intents.kind`, `intents.state`, `approvals.item_kind`, `approvals.decision`, `observations.source`, `observations.status`, `runs.status`, `proposals.kind`, `proposals.state` and the run mode. `runs` holds one row, the current run. `settings` persists across runs.
 
 ### A.2 Event types
 
 `run_started`, `replay_miss`, `draft_edited`, `proposal_created`, `lead_received`, `fact_observed`, `fact_selected`, `conflict_opened`, `conflict_closed`, `triage_completed`, `provider_called`, `plan_built`, `blocker_opened`, `blocker_closed`, `intent_created`, `message_sent`, `delivery_unknown`, `reply_received`, `reply_read`, `approval_recorded`, `ruling_recorded`, `command_refused`, `setting_changed`, `class_demoted`, `rule_change_applied`, `skill_fallback_used`, `model_called`, `fault_injected`.
 
-Each payload is a Pydantic model named after the type. Graders import those models. `draft_edited` carries the intent's kind after the edit (section 7.5). No event records the move to `dispatching` or the closing of a round; the `intents` table holds the state.
+Each payload is a Pydantic model named after the type. Graders import those models. `draft_edited` carries the intent's kind after the edit (section 7.5). No event records the move to `dispatching` or the closing of a round. The move to `dispatching` is held in `intents.state`. Round state is held in the reply-wait blocker: a round is open while that `producer_reply` blocker is open, and it closes with `blocker_closed`.
 
 ### A.3 Status transitions
 

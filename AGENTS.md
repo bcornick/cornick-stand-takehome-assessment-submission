@@ -99,6 +99,8 @@ After three failed fixes for one problem, stop and write up what was tried. Do n
 - No backward-compatibility code without Brett's approval.
 - Match the surrounding style. Use the formatter; do not hand-edit whitespace.
 - Fix broken things you find. Record unrelated problems in the progress entry; do not fix them in passing.
+- Clean code is a grading dimension for this submission. No unused parameters, fields, settings or indirection, and no abstraction with a single user. When a design change makes code unnecessary, remove it in the same change.
+- At the end of each stage, the reviewer also reports anything that can be removed or simplified without changing behaviour. Fix those before handing back to Brett.
 
 **Names** say what a thing does in the domain: `Blocker`, `AskPlan`, `send()`. No implementation details (`JSONParser`), no pattern names unless they add clarity, and no words like "new", "legacy", "wrapper", "unified", "improved", "enhanced".
 
