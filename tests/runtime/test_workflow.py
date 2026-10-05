@@ -9,7 +9,7 @@ from typing import get_args
 
 import pytest
 
-from uwh.runtime.event_types import EventType, LeadReceived, Status
+from uwh.runtime.event_types import BlockerDetail, EventType, LeadReceived, Status
 from uwh.runtime.events import EventContext, read_events
 from uwh.runtime.facts import (
     LedgerRules,
@@ -20,7 +20,7 @@ from uwh.runtime.facts import (
     resolve_fact,
 )
 from uwh.runtime.store import open_store
-from uwh.runtime.waits import close_blocker, open_blockers, primary_next_action
+from uwh.runtime.waits import close_blocker, open_blocker, open_blockers, primary_next_action
 from uwh.runtime.workflow import (
     Step,
     create_lead,
@@ -123,6 +123,13 @@ def test_a_transition_succeeds_exactly_along_the_a3_table_and_a_refusal_writes_n
             transition(db, LEAD, target)
         assert status_of(db) == start
     assert len(read_events(db)) == events_before
+
+
+@pytest.mark.parametrize("start", ["received", "triaged", "in_progress"])
+def test_a_lead_that_is_not_terminal_can_be_declined(db: sqlite3.Connection, start: Status) -> None:
+    set_status(db, start)
+    transition(db, LEAD, "declined")
+    assert status_of(db) == "declined"
 
 
 def test_the_a3_table_lets_in_progress_reenter_itself_and_ends_at_the_terminal_statuses() -> None:
@@ -281,6 +288,62 @@ def test_a_failing_lead_does_not_touch_the_other_leads(path: str, db: sqlite3.Co
     assert (status_of(db, LEAD), status_of(db, "L-2")) == ("received", "in_progress")
 
 
+def step_failure_blockers(db: sqlite3.Connection) -> list[str]:
+    return [b.detail.text for b in open_blockers(db, LEAD) if b.detail.text.startswith("Step ")]
+
+
+def test_a_repeat_failure_opens_no_second_step_failure_blocker(db: sqlite3.Connection) -> None:
+    run_steps(db, make_context, LEAD, [failing_step("triage")])
+    run_steps(db, make_context, LEAD, [failing_step("triage")])
+    run_steps(db, make_context, LEAD, [logging_step([], "triage"), failing_step("evaluate")])
+    assert len(step_failure_blockers(db)) == 1
+    assert len(workflow_events(db, EventType.blocker_opened)) == 1
+
+
+def test_a_step_failure_blocker_is_opened_beside_another_data_blocker(
+    db: sqlite3.Connection,
+) -> None:
+    open_blocker(
+        db,
+        CONTEXT,
+        LEAD,
+        "data",
+        "data_team",
+        BlockerDetail(resume_trigger="the provider returns", text="Provider is unavailable."),
+    )
+    db.commit()
+    run_steps(db, make_context, LEAD, [failing_step("triage")])
+    assert len(open_blockers(db, LEAD)) == 2
+    assert len(step_failure_blockers(db)) == 1
+
+
+def test_a_completed_pass_closes_the_step_failure_blocker_and_leaves_other_blockers(
+    db: sqlite3.Connection,
+) -> None:
+    other = open_blocker(
+        db,
+        CONTEXT,
+        LEAD,
+        "data",
+        "data_team",
+        BlockerDetail(resume_trigger="the provider returns", text="Provider is unavailable."),
+    )
+    db.commit()
+    run_steps(db, make_context, LEAD, [failing_step("triage")])
+    run_steps(db, make_context, LEAD, [logging_step([], "triage")])
+    assert [b.id for b in open_blockers(db, LEAD)] == [other]
+    assert [e.type for e in read_events(db, lead_id=LEAD)][-1] is EventType.blocker_closed
+    run_steps(db, make_context, LEAD, [failing_step("triage")])
+    assert len(step_failure_blockers(db)) == 1
+
+
+def test_a_pass_that_fails_again_keeps_the_step_failure_blocker(db: sqlite3.Connection) -> None:
+    run_steps(db, make_context, LEAD, [failing_step("triage")])
+    run_steps(db, make_context, LEAD, [logging_step([], "triage"), failing_step("evaluate")])
+    assert len(step_failure_blockers(db)) == 1
+    assert workflow_events(db, EventType.blocker_closed) == []
+
+
 # ---- re-evaluation ------------------------------------------------------------------------------
 
 
@@ -314,7 +377,7 @@ def test_a_change_of_nothing_does_not_re_evaluate_the_lead(db: sqlite3.Connectio
     assert len(log) == 2
 
 
-def test_re_evaluation_runs_in_the_callers_transaction_and_commits_nothing(
+def test_a_failing_step_in_the_callers_transaction_rolls_back_to_its_savepoint_and_the_callers_writes_commit(
     db: sqlite3.Connection, path: str
 ) -> None:
     run_steps(db, make_context, LEAD, [logging_step([], "triage")])
@@ -326,17 +389,27 @@ def test_re_evaluation_runs_in_the_callers_transaction_and_commits_nothing(
         raise RuntimeError("the step fails")
 
     other = open_store(path)
-    events_before = len(read_events(db))
-    with pytest.raises(RuntimeError, match="the step fails"):
-        with unit_of_work(db):
-            change = resolve_fact(db, CONTEXT, LEAD, "acreage", 7, "reason", RULES)
-            reevaluate(db, make_context, LEAD, [Step("evaluate", write_then_fail)], change)
+    with unit_of_work(db):
+        change = resolve_fact(db, CONTEXT, LEAD, "acreage", 7, "reason", RULES)
+        reevaluate(db, make_context, LEAD, [Step("evaluate", write_then_fail)], change)
+        assert sorted(effective_facts(other, LEAD)) == []  # nothing is committed yet
     assert seen_inside == [["acreage", "stories"]]
-    assert effective_facts(db, LEAD) == {} and effective_facts(other, LEAD) == {}
-    assert db.execute("SELECT count(*) FROM observations").fetchone()[0] == 0
-    assert open_blockers(db, LEAD) == []
-    assert len(read_events(db)) == events_before
+    assert sorted(effective_facts(other, LEAD)) == ["acreage"]
+    assert db.execute("SELECT count(*) FROM observations").fetchone()[0] == 1
+    (blocker,) = open_blockers(other, LEAD)
+    assert (blocker.kind, blocker.owner) == ("data", "data_team")
+    assert "evaluate" in blocker.detail.text and "the step fails" in blocker.detail.text
     other.close()
+
+
+def test_a_failure_outside_a_step_in_the_callers_transaction_still_rolls_the_caller_back(
+    db: sqlite3.Connection,
+) -> None:
+    with pytest.raises(RuntimeError, match="the caller fails"):
+        with unit_of_work(db):
+            resolve_fact(db, CONTEXT, LEAD, "acreage", 7, "reason", RULES)
+            raise RuntimeError("the caller fails")
+    assert effective_facts(db, LEAD) == {}
 
 
 @pytest.mark.parametrize("status", TERMINAL_STATUSES)
@@ -356,7 +429,7 @@ def test_a_reply_after_a_terminal_status_is_recorded_with_a_review_and_no_status
 ) -> None:
     set_status(db, status)
     values = [ReplyValue("year_built", 1990, {})]
-    change = record_reply(db, CONTEXT, LEAD, values, RULES, round_closed=False)
+    change = record_reply(db, CONTEXT, LEAD, values, RULES, round_closed=False, intent_id="I-1")
     assert change.changed
     assert status_of(db) == status
     assert db.execute("SELECT value_json, status FROM observations").fetchall() == [
@@ -373,10 +446,10 @@ def test_a_reply_after_a_terminal_status_is_recorded_with_a_review_and_no_status
 def test_a_reply_to_a_live_lead_follows_its_round(db: sqlite3.Connection) -> None:
     set_status(db, "in_progress")
     values = [ReplyValue("year_built", 1990, {})]
-    record_reply(db, CONTEXT, LEAD, values, RULES, round_closed=False)
+    record_reply(db, CONTEXT, LEAD, values, RULES, round_closed=False, intent_id="I-1")
     assert effective_facts(db, LEAD)["year_built"].value == 1990
     assert open_blockers(db, LEAD) == []
-    record_reply(db, CONTEXT, LEAD, values, RULES, round_closed=True)
+    record_reply(db, CONTEXT, LEAD, values, RULES, round_closed=True, intent_id="I-1")
     assert [b.detail.cause for b in open_blockers(db, LEAD)] == ["late_reply"]
 
 

@@ -2,7 +2,6 @@
 # ABOUTME: Pure functions of the values passed in; nothing here reads the system clock, so a test passes the real clock in.
 from datetime import UTC, datetime, timedelta
 
-SATURDAY = 5
 WEEKDAYS_PER_WEEK = 5
 ONE_DAY = timedelta(days=1)
 
@@ -16,24 +15,6 @@ def _utc(moment: datetime) -> datetime:
 def sim_now(reference_morning: datetime, run_start: datetime, real_now: datetime) -> datetime:
     """`reference_morning + (real_now - run_start)`, in UTC."""
     return _utc(reference_morning) + (_utc(real_now) - _utc(run_start))
-
-
-def add_business_days(start: datetime, days: int) -> datetime:
-    """The UTC timestamp `days` weekdays after `start`, at the same time of day. `days` is at least 1.
-
-    Exactly `days` Monday-to-Friday dates lie after `start`'s UTC date, up to and including the result's, so a
-    result never falls on a Saturday or Sunday. A start on a weekend counts from that day: Saturday plus one
-    business day is Monday.
-    """
-    if days < 1:
-        raise ValueError(f"business days to add must be at least 1, got {days}")
-    result = _utc(start)
-    remaining = days
-    while remaining:
-        result += ONE_DAY
-        if result.weekday() < SATURDAY:
-            remaining -= 1
-    return result
 
 
 def _business_days_elapsed(moment: datetime) -> float:

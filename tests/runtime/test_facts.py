@@ -25,6 +25,7 @@ from uwh.runtime.facts import (
     observe,
     observe_reply,
     open_conflicts,
+    reject_late_reply_values,
     reject_observation,
     resolve_fact,
     usable_facts,
@@ -36,6 +37,7 @@ NOW = datetime(2026, 6, 29, 8, 0, 0, tzinfo=UTC)
 CONTEXT = EventContext("run-1", "replay", "workflow", "r" * 64, NOW, NOW)
 UNDERWRITER = EventContext("run-1", "replay", "underwriter", "r" * 64, NOW, NOW)
 LEAD = "L-1"
+INTENT = "I-7"
 
 
 def future_roof(facts: Mapping[str, JsonValue]) -> list[Conflict]:
@@ -121,12 +123,13 @@ def reply(
         [ReplyValue(key, value, {"quote": str(value)})],
         RULES,
         round_closed=round_closed,
+        intent_id=INTENT,
     )
 
 
 def reply_values(db: sqlite3.Connection, *pairs: tuple[str, JsonValue]) -> RevisionChange:
     values = [ReplyValue(key, value, {"quote": str(value)}) for key, value in pairs]
-    return observe_reply(db, CONTEXT, LEAD, values, RULES, round_closed=False)
+    return observe_reply(db, CONTEXT, LEAD, values, RULES, round_closed=False, intent_id=INTENT)
 
 
 def selected_observation_ids(db: sqlite3.Connection, key: str) -> list[int]:
@@ -208,8 +211,82 @@ def test_rule_1_an_underwriter_ruling_outranks_every_other_source(db: sqlite3.Co
     submit(db, "acreage", 7, "assumed")
     assert reply(db, "acreage", 6).changed is False
     assert effective(db, "acreage") == (4, "underwriter", False)
-    assert observations(db, "acreage")[-1] == (6, "reply", "rejected")
-    assert open_kinds(db) == []
+
+
+def test_rule_1_resolve_fact_closes_the_open_conflicts_on_its_key_and_they_do_not_reopen(
+    db: sqlite3.Connection,
+) -> None:
+    conflict_on_roof(db)
+    resolve_fact(
+        db, UNDERWRITER, LEAD, "roof_replacement_year", 2030, "the invoice says 2030", RULES
+    )
+    assert open_conflicts(db, LEAD) == []
+    assert effective(db, "roof_replacement_year") == (2030, "underwriter", False)
+    submit(db, "acreage", 2)  # another change re-runs the validators
+    assert open_conflicts(db, LEAD) == []
+    opened = [e for e in read_events(db, lead_id=LEAD) if e.type is EventType.conflict_opened]
+    assert len(opened) == 1
+
+
+def test_rule_1_resolve_fact_closes_a_conflict_of_a_pair_it_rules_one_field_of(
+    db: sqlite3.Connection,
+) -> None:
+    submit(db, "year_built", 2000)
+    submit(db, "roof_replacement_year", 1990)
+    assert [c.validator for c in open_conflicts(db, LEAD)] == ["roof_before_home"]
+    resolve_fact(db, UNDERWRITER, LEAD, "year_built", 2000, "the deed", RULES)
+    assert open_conflicts(db, LEAD) == []
+
+
+def test_rule_1_resolve_fact_leaves_the_conflicts_of_other_keys_open(
+    db: sqlite3.Connection,
+) -> None:
+    conflict_on_roof(db)
+    resolve_fact(db, UNDERWRITER, LEAD, "acreage", 5, "measured", RULES)
+    assert [c.validator for c in open_conflicts(db, LEAD)] == ["roof_year_future"]
+
+
+def test_rule_1_resolve_fact_rejects_the_open_pending_observations_on_its_key(
+    db: sqlite3.Connection,
+) -> None:
+    observation_id = pending_acreage(db)
+    submit(db, "bedrooms", 3)
+    reply(db, "bedrooms", 4)  # pending on another key
+    resolve_fact(db, UNDERWRITER, LEAD, "acreage", 5, "measured", RULES)
+    assert observations(db, "acreage")[1] == (3, "reply", "rejected")
+    assert [(b.detail.item_kind, b.detail.observation_id) for b in open_blockers(db, LEAD)] == [
+        ("observation", 4)
+    ]
+    with pytest.raises(ValueError, match="awaiting"):
+        approve_observation(db, UNDERWRITER, observation_id, RULES)
+    assert effective(db, "acreage") == (5, "underwriter", False)
+
+
+def test_rule_1_a_reply_that_differs_from_a_ruling_is_pending_review_and_the_ruling_stays(
+    db: sqlite3.Connection,
+) -> None:
+    resolve_fact(db, UNDERWRITER, LEAD, "acreage", 4, "surveyed", RULES)
+    before = revision(db)
+    change = reply(db, "acreage", 6)
+    assert observations(db, "acreage")[-1] == (6, "reply", "pending_review")
+    assert effective(db, "acreage") == (4, "underwriter", False)
+    (blocker,) = open_blockers(db, LEAD)
+    assert (blocker.kind, blocker.owner) == ("underwriter_review", "underwriter")
+    assert (blocker.detail.item_kind, blocker.detail.observation_id) == ("observation", 2)
+    assert not change.changed and revision(db) == before
+
+
+def test_rule_1_the_underwriter_settles_a_reply_that_differs_from_a_ruling(
+    db: sqlite3.Connection,
+) -> None:
+    resolve_fact(db, UNDERWRITER, LEAD, "acreage", 4, "surveyed", RULES)
+    reply(db, "acreage", 6)
+    reply(db, "acreage", 8)
+    first, second = [b.detail.observation_id or 0 for b in open_blockers(db, LEAD)]
+    reject_observation(db, UNDERWRITER, first)
+    assert effective(db, "acreage") == (4, "underwriter", False)
+    approve_observation(db, UNDERWRITER, second, RULES)
+    assert effective(db, "acreage") == (8, "reply", False)
 
 
 # ---- rule 2 ----------------------------------------------------------------------------------
@@ -280,6 +357,17 @@ def test_rule_3_a_reply_that_differs_from_a_submitted_or_fetched_value_is_pendin
     assert blocker.detail.item_kind == "observation"
     assert blocker.detail.observation_id == 2
     assert not change.changed and revision(db) == before
+
+
+def test_rule_3_a_reply_that_differs_and_trips_a_validator_opens_no_conflict(
+    db: sqlite3.Connection,
+) -> None:
+    submit(db, "roof_replacement_year", 2020)
+    reply(db, "roof_replacement_year", 2030)
+    assert observations(db, "roof_replacement_year")[-1] == (2030, "reply", "pending_review")
+    assert effective(db, "roof_replacement_year") == (2020, "submitted", False)
+    assert open_conflicts(db, LEAD) == []
+    assert open_kinds(db) == [("observation", None)]
 
 
 # ---- rule 4 ----------------------------------------------------------------------------------
@@ -562,8 +650,9 @@ def test_rule_8_a_reply_value_that_trips_a_validator_is_accepted_and_opens_the_c
 def test_a_conflict_closes_when_a_new_value_no_longer_trips_the_validator(
     db: sqlite3.Connection,
 ) -> None:
-    conflict_on_roof(db)
-    resolve_fact(db, UNDERWRITER, LEAD, "roof_replacement_year", 2015, "roof invoice", RULES)
+    submit(db, "roof_replacement_year", 2030, "assumed")
+    assert [c.validator for c in open_conflicts(db, LEAD)] == ["roof_year_future"]
+    submit(db, "roof_replacement_year", 2015, "fetched")
     assert open_conflicts(db, LEAD) == []
     closed = [
         e.payload for e in read_events(db, lead_id=LEAD) if e.type is EventType.conflict_closed
@@ -596,7 +685,7 @@ def test_rule_9_a_late_reply_that_holds_no_value_still_raises_the_review(
     db: sqlite3.Connection,
 ) -> None:
     before = revision(db)
-    change = observe_reply(db, CONTEXT, LEAD, [], RULES, round_closed=True)
+    change = observe_reply(db, CONTEXT, LEAD, [], RULES, round_closed=True, intent_id=INTENT)
     assert open_kinds(db) == [("review", "late_reply")]
     assert change.after == before + 1
 
@@ -610,6 +699,7 @@ def test_rule_9_a_late_reply_review_takes_the_cause_it_is_given(db: sqlite3.Conn
         values,
         RULES,
         round_closed=True,
+        intent_id=INTENT,
         review_cause="reply_after_terminal_status",
     )
     assert observations(db, "year_built") == [(1990, "reply", "pending_review")]
@@ -625,9 +715,65 @@ def test_rule_9_one_late_reply_raises_one_review_whatever_the_number_of_values(
     db: sqlite3.Connection,
 ) -> None:
     values = [ReplyValue("year_built", 1990, {}), ReplyValue("acreage", 2, {})]
-    observe_reply(db, CONTEXT, LEAD, values, RULES, round_closed=True)
+    observe_reply(db, CONTEXT, LEAD, values, RULES, round_closed=True, intent_id=INTENT)
     assert open_kinds(db) == [("review", "late_reply")]
     assert revision(db) == 1
+
+
+def test_rule_9_the_review_of_a_late_reply_names_the_intent_the_reply_answered(
+    db: sqlite3.Connection,
+) -> None:
+    reply(db, "year_built", 1990, round_closed=True)
+    (blocker,) = open_blockers(db, LEAD)
+    assert blocker.detail.intent_id == INTENT
+
+
+def late_reply(db: sqlite3.Connection, intent_id: str, *pairs: tuple[str, JsonValue]) -> int:
+    """Record one late reply of the given values and return the id of its review."""
+    values = [ReplyValue(key, value, {}) for key, value in pairs]
+    observe_reply(db, CONTEXT, LEAD, values, RULES, round_closed=True, intent_id=intent_id)
+    return open_blockers(db, LEAD)[-1].id
+
+
+def test_rule_9_acknowledging_a_late_reply_rejects_its_values_and_no_others(
+    db: sqlite3.Connection,
+) -> None:
+    pending_acreage(db)  # a rule 3 value awaits its own review
+    first = late_reply(db, "I-1", ("year_built", 1990), ("stories", 2))
+    second = late_reply(db, "I-2", ("bedrooms", 3))
+    reject_late_reply_values(db, first)
+    assert observations(db, "year_built") == [(1990, "reply", "rejected")]
+    assert observations(db, "stories") == [(2, "reply", "rejected")]
+    assert observations(db, "bedrooms") == [(3, "reply", "pending_review")]
+    assert observations(db, "acreage")[-1] == (3, "reply", "pending_review")
+    assert effective(db, "year_built") is None
+    reject_late_reply_values(db, second)
+    assert observations(db, "bedrooms") == [(3, "reply", "rejected")]
+    assert observations(db, "acreage")[-1] == (3, "reply", "pending_review")
+
+
+def test_rule_9_a_late_reply_value_a_ruling_already_rejected_stays_rejected(
+    db: sqlite3.Connection,
+) -> None:
+    review = late_reply(db, "I-1", ("year_built", 1990), ("stories", 2))
+    resolve_fact(db, UNDERWRITER, LEAD, "year_built", 1985, "the deed", RULES)
+    reject_late_reply_values(db, review)
+    assert observations(db, "year_built") == [
+        (1990, "reply", "rejected"),
+        (1985, "underwriter", "accepted"),
+    ]
+    assert observations(db, "stories") == [(2, "reply", "rejected")]
+    assert effective(db, "year_built") == (1985, "underwriter", False)
+
+
+def test_rule_9_only_the_review_of_a_late_reply_rejects_values(db: sqlite3.Connection) -> None:
+    pending_acreage(db)
+    (observation_review,) = open_blockers(db, LEAD)
+    with pytest.raises(ValueError, match="late reply"):
+        reject_late_reply_values(db, observation_review.id)
+    with pytest.raises(ValueError, match="late reply"):
+        reject_late_reply_values(db, 99)
+    assert observations(db, "acreage")[-1] == (3, "reply", "pending_review")
 
 
 # ---- rule 10 ---------------------------------------------------------------------------------

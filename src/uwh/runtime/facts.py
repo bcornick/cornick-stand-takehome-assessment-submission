@@ -376,13 +376,15 @@ def observe_reply(
     rules: LedgerRules,
     *,
     round_closed: bool,
+    intent_id: str,
     review_cause: Literal["late_reply", "reply_after_terminal_status"] = "late_reply",
 ) -> RevisionChange:
     """Apply the values read from one reply by the source-authority rules of 7.3. The caller commits.
 
-    `round_closed` is true when the request the reply answers has closed its round (rule 9), or when
-    the lead is terminal (A.3): the values are recorded `pending_review` and applied to nothing, one
-    review of `review_cause` is raised and the revision moves, whatever the values.
+    `intent_id` is the request the reply answers. `round_closed` is true when that request has closed
+    its round (rule 9), or when the lead is terminal (A.3): the values are recorded `pending_review`
+    and applied to nothing, one review of `review_cause` naming the intent is raised and the revision
+    moves, whatever the values.
     """
     ledger = _Pass(db, context, lead_id, rules)
     changed = set() if round_closed else _changed_keys(ledger, values)
@@ -394,6 +396,7 @@ def observe_reply(
                 item_kind="review",
                 cause=review_cause,
                 resume_trigger="an underwriter acknowledges the late reply",
+                intent_id=intent_id,
                 text=_LATE_REPLY_TEXT[review_cause],
             )
         )
@@ -443,9 +446,7 @@ def _apply_reply_value(
         observation_id = ledger.record(key, value, "reply", evidence, "accepted")
         if _close_confirmed_conflicts(ledger, key, observation_id, changed):
             ledger.select(current.observation_id, confirmed=True)
-    elif current.source == "underwriter":  # rule 1
-        ledger.record(key, value, "reply", evidence, "rejected")
-    else:  # rules 3, 6 and 7
+    else:  # rules 1, 3, 6 and 7: the existing value stays until the underwriter decides
         observation_id = ledger.record(key, value, "reply", evidence, "pending_review")
         ledger.raise_review(
             BlockerDetail(
@@ -473,14 +474,23 @@ def _close_confirmed_conflicts(
     return bool(closing)
 
 
-def _awaiting_blocker_id(db: sqlite3.Connection, lead_id: str, observation_id: int) -> int:
+def _observation_blocker_id(
+    db: sqlite3.Connection, lead_id: str, observation_id: int
+) -> int | None:
     for blocker in open_blockers(db, lead_id):
         if (
             blocker.detail.item_kind == "observation"
             and blocker.detail.observation_id == observation_id
         ):
             return blocker.id
-    raise ValueError(f"observation {observation_id} is not awaiting an underwriter decision")
+    return None
+
+
+def _awaiting_blocker_id(db: sqlite3.Connection, lead_id: str, observation_id: int) -> int:
+    blocker_id = _observation_blocker_id(db, lead_id, observation_id)
+    if blocker_id is None:
+        raise ValueError(f"observation {observation_id} is not awaiting an underwriter decision")
+    return blocker_id
 
 
 def _pending_observation_lead(db: sqlite3.Connection, observation_id: int) -> str:
@@ -528,7 +538,50 @@ def resolve_fact(
     reason: str,
     rules: LedgerRules,
 ) -> RevisionChange:
-    """Rule 10 and rule 1: record an underwriter observation, which becomes the effective fact. The caller commits."""
+    """Rule 10 and rule 1: record an underwriter observation, which becomes the effective fact.
+
+    It closes the open conflicts on its key, which a validator does not open again on the same
+    values, and rejects the pending observations on its key. The caller commits.
+    """
     ledger = _Pass(db, context, lead_id, rules)
-    ledger.select(ledger.record(key, value, "underwriter", {"reason": reason}, "accepted"))
+    observation_id = ledger.record(key, value, "underwriter", {"reason": reason}, "accepted")
+    for conflict in open_conflicts(db, lead_id):
+        if key in conflict.fields:
+            ledger.close_conflict(conflict, observation_id)
+    pending = db.execute(
+        "SELECT id FROM observations WHERE lead_id = ? AND key = ? AND status = 'pending_review'",
+        (lead_id, key),
+    ).fetchall()
+    for (pending_id,) in pending:
+        db.execute("UPDATE observations SET status = 'rejected' WHERE id = ?", (pending_id,))
+        blocker_id = _observation_blocker_id(db, lead_id, pending_id)
+        if blocker_id is not None:
+            close_blocker(db, context, blocker_id)
+    ledger.select(observation_id)
     return ledger.finish()
+
+
+def reject_late_reply_values(db: sqlite3.Connection, blocker_id: int) -> None:
+    """Rule 9: acknowledging a late reply's review marks that reply's `pending_review` values rejected.
+
+    A reply records its values and then opens its review, so its values are the observations
+    recorded after the lead's previous event of any other type and before the review opened. A value
+    already settled, and the values of another reply, stay as they are. Raises ValueError for a
+    blocker that is not a late reply's review. The caller commits.
+    """
+    row = db.execute(
+        "SELECT lead_id, kind, detail_json, opened_event_id FROM blockers WHERE id = ?",
+        (blocker_id,),
+    ).fetchone()
+    if row is None:
+        raise ValueError(f"blocker {blocker_id} is not the review of a late reply")
+    lead_id, kind, detail_json, opened_event_id = row
+    detail = BlockerDetail.model_validate_json(detail_json)
+    if kind != "underwriter_review" or detail.cause not in _LATE_REPLY_TEXT:
+        raise ValueError(f"blocker {blocker_id} is not the review of a late reply")
+    db.execute(
+        "UPDATE observations SET status = 'rejected'"
+        " WHERE lead_id = ? AND status = 'pending_review' AND event_id < ? AND event_id >"
+        " COALESCE((SELECT MAX(id) FROM events WHERE lead_id = ? AND id < ? AND type != ?), 0)",
+        (lead_id, opened_event_id, lead_id, opened_event_id, EventType.fact_observed.value),
+    )

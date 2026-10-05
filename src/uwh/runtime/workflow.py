@@ -1,4 +1,4 @@
-# ABOUTME: The lead workflow of 7.1 and A.3: lead rows, status transitions, a lead's ordered steps with a data blocker on failure, re-evaluation on a changed revision, the settled run of A.5 and the bounded lead pool of A.10.
+# ABOUTME: The lead workflow of 7.1 and A.3: lead rows, status transitions, a lead's ordered steps with at most one data blocker on failure, re-evaluation on a changed revision, the settled run of A.5 and the bounded lead pool of A.10.
 # ABOUTME: The steps arrive as an ordered sequence; each step runs in one unit of work, an explicit transaction on the lead's own connection that nests as a savepoint inside a caller's transaction.
 import sqlite3
 from collections.abc import Callable, Iterator, Sequence
@@ -10,7 +10,7 @@ from uwh.runtime.event_types import BlockerDetail, EventType, LeadReceived, Stat
 from uwh.runtime.events import EventContext, append_event
 from uwh.runtime.facts import LedgerRules, ReplyValue, RevisionChange, observe_reply
 from uwh.runtime.store import open_store
-from uwh.runtime.waits import open_blocker
+from uwh.runtime.waits import Blocker, close_blocker, open_blocker, open_blockers
 from uwh.skills.vertical import TERMINAL_STATUSES, TRANSITIONS
 
 # A.10: lead concurrency.
@@ -102,6 +102,38 @@ def transition(db: sqlite3.Connection, lead_id: str, target: Status) -> None:
     db.execute("UPDATE leads SET status = ? WHERE lead_id = ?", (target, lead_id))
 
 
+# What a step-failure `data` blocker says resumes the lead; it is how the blocker is told apart from
+# the other `data` blockers (7.1).
+_STEP_FAILURE_RESUME_TRIGGER = "the cause is fixed and the lead is evaluated again"
+
+
+def _step_failure_blockers(db: sqlite3.Connection, lead_id: str) -> list[Blocker]:
+    return [
+        blocker
+        for blocker in open_blockers(db, lead_id)
+        if blocker.kind == "data" and blocker.detail.resume_trigger == _STEP_FAILURE_RESUME_TRIGGER
+    ]
+
+
+def _open_step_failure_blocker(
+    db: sqlite3.Connection, context: EventContext, lead_id: str, step: Step, error: Exception
+) -> None:
+    """A lead holds at most one open step-failure blocker, so a repeat failure opens no second one."""
+    if _step_failure_blockers(db, lead_id):
+        return
+    open_blocker(
+        db,
+        context,
+        lead_id,
+        "data",
+        "data_team",
+        BlockerDetail(
+            resume_trigger=_STEP_FAILURE_RESUME_TRIGGER,
+            text=f"Step {step.name} failed: {type(error).__name__}: {error}",
+        ),
+    )
+
+
 def run_steps(
     db: sqlite3.Connection,
     make_context: Callable[[], EventContext],
@@ -114,12 +146,11 @@ def run_steps(
     step completes, and `in_progress` (A.3) when the last does, so a lead whose pass was cut short is
     still `received` or `triaged`. `make_context` builds the context of each unit's events.
 
-    A step that raises rolls its unit back. On a connection with no open transaction, the lead's
-    remaining steps do not run and a `data` blocker naming the step is opened in a unit of its own (8).
-    Inside a caller's transaction the exception propagates, so the caller rolls back everything the
-    pass wrote and no blocker is left.
+    A step that raises rolls its unit back, the lead's remaining steps do not run and a `data`
+    blocker naming the step is opened in a unit of its own (7.1, 8). A pass that runs every step
+    closes the lead's step-failure blocker. Inside a caller's transaction a unit is a savepoint, so
+    the rollback and the blocker leave the caller's own writes to commit (A.11).
     """
-    nested = db.in_transaction
     for position, step in enumerate(steps):
         try:
             with unit_of_work(db):
@@ -129,21 +160,12 @@ def run_steps(
                 if position == len(steps) - 1:
                     transition(db, lead_id, "in_progress")
         except Exception as error:
-            if nested:
-                raise
             with unit_of_work(db):
-                open_blocker(
-                    db,
-                    make_context(),
-                    lead_id,
-                    "data",
-                    "data_team",
-                    BlockerDetail(
-                        resume_trigger="the cause is fixed and the lead is evaluated again",
-                        text=f"Step {step.name} failed: {type(error).__name__}: {error}",
-                    ),
-                )
+                _open_step_failure_blocker(db, make_context(), lead_id, step, error)
             return
+    with unit_of_work(db):
+        for blocker in _step_failure_blockers(db, lead_id):
+            close_blocker(db, make_context(), blocker.id)
 
 
 def reevaluate(
@@ -157,7 +179,8 @@ def reevaluate(
 
     Every skill reads facts (8), so the whole sequence runs, on a lead that is `received` or `triaged`
     as on an `in_progress` one. The command layer calls this in the transaction of the command, where
-    a raising step propagates and the command commits nothing.
+    a failing step rolls back to its savepoint and opens the step-failure blocker, and the command's
+    own writes commit.
     """
     if not change.changed or _status(db, lead_id) in TERMINAL_STATUSES:
         return
@@ -172,6 +195,7 @@ def record_reply(
     rules: LedgerRules,
     *,
     round_closed: bool,
+    intent_id: str,
 ) -> RevisionChange:
     """Record a reply in the ledger. A reply to a terminal lead is recorded `pending_review` and
     raises a `reply_after_terminal_status` review, and the status stays (A.3). The caller commits."""
@@ -183,9 +207,12 @@ def record_reply(
             values,
             rules,
             round_closed=True,
+            intent_id=intent_id,
             review_cause="reply_after_terminal_status",
         )
-    return observe_reply(db, context, lead_id, values, rules, round_closed=round_closed)
+    return observe_reply(
+        db, context, lead_id, values, rules, round_closed=round_closed, intent_id=intent_id
+    )
 
 
 def run_is_settled(db: sqlite3.Connection, run_id: str) -> bool:
