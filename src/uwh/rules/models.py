@@ -3,12 +3,14 @@
 from enum import StrEnum
 from typing import Annotated, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, JsonValue, model_validator
 
 
 class StrictModel(BaseModel):
-    """Base of every contract model: unknown fields are an error."""
+    """Base of every contract model and event payload: unknown fields are an error."""
 
+    # A defaulted field is always present in what the model serializes, so the generated client
+    # types it as present rather than optional.
     model_config = ConfigDict(extra="forbid", json_schema_serialization_defaults_required=True)
 
 
@@ -163,6 +165,16 @@ class RuleTrace(StrictModel):
         return self
 
 
+def _carries_alternatives(trace: RuleTrace) -> RuleTrace:
+    if not trace.alternatives:
+        raise ValueError("a decline on every branch carries one trace per branch")
+    return trace
+
+
+# The trace of a decline on every branch: it holds alternatives, one per branch.
+EveryBranchTrace = Annotated[RuleTrace, AfterValidator(_carries_alternatives)]
+
+
 # Section 9.6 node results.
 class Decided(StrictModel):
     result: Literal["decided"]
@@ -180,13 +192,7 @@ class Undecided(StrictModel):
 
 class DeclinesOnEveryBranch(StrictModel):
     result: Literal["declines_on_every_branch"]
-    trace: RuleTrace
-
-    @model_validator(mode="after")
-    def carries_alternatives(self) -> Self:
-        if not self.trace.alternatives:
-            raise ValueError("a decline on every branch carries one trace per branch")
-        return self
+    trace: EveryBranchTrace
 
 
 NodeResult = Annotated[Decided | Undecided | DeclinesOnEveryBranch, Field(discriminator="result")]
@@ -247,7 +253,7 @@ class ActionPlan(StrictModel):
     effects: list[
         PlannedEffect
     ] = []  # one per effect type and rule id; advisories, ladder rungs and suppression notes included
-    declines_on_every_branch: list[RuleTrace] = []  # each trace carries its alternatives
+    declines_on_every_branch: list[EveryBranchTrace] = []  # each trace carries its alternatives
     # True exactly when the plan holds a committed decline effect, a decline on every branch, or
     # the underwriter's own decline.
     proposed_decline: bool = False
@@ -259,8 +265,6 @@ class ActionPlan(StrictModel):
 
     @model_validator(mode="after")
     def declines_state_the_proposed_decline(self) -> Self:
-        if any(not trace.alternatives for trace in self.declines_on_every_branch):
-            raise ValueError("a decline on every branch carries its alternatives")
         declines = (
             any(p.committed and isinstance(p.effect, DeclineEffect) for p in self.effects)
             or bool(self.declines_on_every_branch)

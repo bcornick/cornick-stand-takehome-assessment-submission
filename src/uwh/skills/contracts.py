@@ -28,6 +28,7 @@ from uwh.runtime.event_types import (
     ConflictOpened,
     LocatedCandidate,
     ReplyClassification,
+    RequestKind,
 )
 
 
@@ -133,7 +134,7 @@ class PlanAsksResult(StrictModel):
     The limit itself is the skill's behaviour, not part of this contract."""
 
     asks: list[Ask]
-    message_class: Literal["routine_request", "sensitive_request"] | None  # 10.1; set for `send`
+    message_class: RequestKind | None  # 10.1; set for `send`
     round: int | None  # `requests_sent + 1`; set for `send`
     request: Literal["send", "none", "request_open", "round_limit"]
 
@@ -186,7 +187,7 @@ class BuildQuotePacketInput(StrictModel):
     facts: dict[str, JsonValue]  # submitted values, for the coverages
     assumed: dict[str, JsonValue]  # facts tagged assumed
     outstanding_asks: list[Ask]  # the asks still to be answered
-    open_blocker_kinds: list[str]  # the kind of each open blocker of the lead
+    open_blocker_kinds: list[BlockerKind]  # the kind of each open blocker of the lead
 
     @model_validator(mode="after")
     def nothing_is_left_to_settle(self) -> Self:

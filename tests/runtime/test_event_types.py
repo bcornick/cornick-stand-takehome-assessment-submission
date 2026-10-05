@@ -4,10 +4,10 @@ from datetime import date
 from typing import Any, get_args
 
 import pytest
-from pydantic import BaseModel, ValidationError
+from pydantic import ValidationError
 
 from uwh.providers.models import ProviderResult
-from uwh.rules.models import ActionPlan, FieldTriage
+from uwh.rules.models import ActionPlan, FieldTriage, StrictModel
 from uwh.runtime import event_types
 from uwh.runtime.event_types import (
     PAYLOAD_MODELS,
@@ -22,6 +22,7 @@ from uwh.runtime.event_types import (
     MessageKind,
     ObservationSource,
     ReplyClassification,
+    RequestKind,
     ReviewCause,
     RulingRecorded,
     Status,
@@ -358,7 +359,7 @@ def test_each_type_has_a_payload_model_named_after_it() -> None:
         model = PAYLOAD_MODELS[EventType(name)]
         assert model.__name__ == pascal(name)
         assert getattr(event_types, pascal(name)) is model
-        assert issubclass(model, BaseModel)
+        assert issubclass(model, StrictModel)
 
 
 def test_the_test_tables_cover_every_type() -> None:
@@ -504,6 +505,7 @@ EXPECTED_VALUE_SETS = [
         ],
     ),
     (BlockerOwner, ["underwriter", "producer", "data_team"]),
+    (RequestKind, ["routine_request", "sensitive_request"]),
     (MessageKind, ["routine_request", "sensitive_request", "quote_packet", "decline_notice"]),
     (
         ApprovalItemKind,

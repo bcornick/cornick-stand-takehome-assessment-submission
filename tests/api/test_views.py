@@ -258,7 +258,7 @@ def test_lead_detail_carries_the_a5_and_section_11_parts() -> None:
 
 
 def test_lead_detail_reuses_the_rules_and_runtime_models() -> None:
-    from uwh.rules.models import ActionPlan, OpenChoice, PlannedEffect, RuleTrace
+    from uwh.rules.models import ActionPlan, EveryBranchTrace, OpenChoice, PlannedEffect
     from uwh.runtime.event_types import BlockerDetail
 
     assert views.LeadDetail.model_fields["plan"].annotation == ActionPlan | None
@@ -266,7 +266,7 @@ def test_lead_detail_reuses_the_rules_and_runtime_models() -> None:
     assert issubclass(views.OpenChoiceView, OpenChoice)
     assert views.PlaybookPage.model_fields["effects"].annotation == list[PlannedEffect]
     assert views.PlaybookPage.model_fields["declines_on_every_branch"].annotation == (
-        RuleTrace | None
+        EveryBranchTrace | None
     )
 
 
@@ -454,10 +454,13 @@ REVIEW_CAUSES = [
 ]
 
 
-@pytest.mark.parametrize(("cause", "persists"), vertical.REVIEW_CAUSES)
-def test_every_registered_review_cause_validates_with_its_flag_only(
-    cause: str, persists: bool
-) -> None:
+# A.11's two review rows: an event raised the other causes; these three persist until removed.
+PERSISTING_CAUSES = {"round_limit", "identity_score_missing", "identity_score_unsupported"}
+
+
+@pytest.mark.parametrize("cause", REVIEW_CAUSES)
+def test_every_review_cause_validates_with_its_own_persistence_flag_only(cause: str) -> None:
+    persists = cause in PERSISTING_CAUSES
     held = cause.startswith("draft_held")
     extra: dict[str, Any] = (
         {"held_draft_payload_hash": "ab" * 32, "detail": {"intent_id": "intent-1"}} if held else {}
@@ -614,6 +617,15 @@ def test_a_playbook_page_flags_an_exception_exactly_by_the_section_11_rule(
         ({"waits_on": ["pool_type"]}, "waits_on"),
         ({"result": "undecided", "waits_on": [], "exception": True}, "waits_on"),
         ({"declines_on_every_branch": DECLINE_ON_EVERY_BRANCH}, "declines_on_every_branch"),
+        # a decline on every branch carries its alternatives
+        (
+            {
+                "result": "declines_on_every_branch",
+                "declines_on_every_branch": {"board_path": ["04:START", "04:D1"]},
+                "exception": True,
+            },
+            "declines_on_every_branch",
+        ),
         (
             {
                 "result": "declines_on_every_branch",

@@ -643,6 +643,7 @@ def test_a_quote_packet_input_with_nothing_left_to_settle_is_accepted() -> None:
         ({"plan": UNDECIDED_PLAN}, "undecided page"),
         ({"plan": OPEN_CHOICE_PLAN}, "open choice"),
         ({"open_blocker_kinds": ["producer_reply"]}, "open blocker.*producer_reply"),
+        ({"open_blocker_kinds": ["waiting"]}, "open_blocker_kinds"),
         ({"outstanding_asks": [ASK]}, "outstanding ask.*pool_security"),
     ],
 )

@@ -1,14 +1,14 @@
 # ABOUTME: Request and response models of the app's HTTP routes (A.5, A.11, section 11); the OpenAPI file and the web client's types come from them.
 # ABOUTME: Value sets are the Literal types of uwh.runtime.event_types and uwh.skills.vertical, and no shape holds a model confidence (section 11).
-from typing import Annotated, Any, Literal, Self
+from typing import Annotated, Any, Literal, Self, get_args
 
 from pydantic import Field, JsonValue, ValidationError, model_validator
 
 from uwh.rules.models import (
     ActionPlan,
+    EveryBranchTrace,
     OpenChoice,
     PlannedEffect,
-    RuleTrace,
     StrictModel,
 )
 from uwh.runtime.event_types import (
@@ -24,11 +24,12 @@ from uwh.runtime.event_types import (
     ObservationStatus,
     ProposalKind,
     ProposalState,
+    RequestKind,
     SkillStatus,
     Status,
 )
 from uwh.settings import RunMode
-from uwh.skills.vertical import REVIEW_CAUSES, AutonomyLevel
+from uwh.skills.vertical import PERSISTING_REVIEW_CAUSES, AutonomyLevel
 
 
 # Autonomy applies to a class that has a default level (7.4); the human-only classes have none.
@@ -147,7 +148,7 @@ class PlaybookPage(StrictModel):
     waits_on: list[str]  # the fields, catalogue ids or choice ids an undecided page waits on
     effects: list[PlannedEffect]  # an `all_of` page holds several, on separate paths
     declines_on_every_branch: (
-        RuleTrace | None
+        EveryBranchTrace | None
     )  # the trace of that result, one branch per alternative
     exception: bool
 
@@ -169,11 +170,6 @@ class PlaybookPage(StrictModel):
             raise ValueError(
                 "declines_on_every_branch is present exactly when that is the page's result"
             )
-        if (
-            self.declines_on_every_branch is not None
-            and not self.declines_on_every_branch.alternatives
-        ):
-            raise ValueError("declines_on_every_branch carries one alternative per branch")
         expected = self.result in ("undecided", "declines_on_every_branch", "not_evaluated") or any(
             planned.effect.type != "no_action" for planned in self.effects
         )
@@ -253,13 +249,13 @@ class BlockerView(StrictModel):
             raise ValueError("detail.observation_id is the observation's observation_id")
 
     def _review_cause_fits_its_flag(self) -> None:
-        causes = dict(REVIEW_CAUSES)
         cause = self.detail.cause
         if self.detail.item_kind == "review":
             if cause is None:
                 raise ValueError("a review has a cause: detail.cause")
-            if self.detail.cause_persists != causes[cause]:
-                raise ValueError(f"detail.cause_persists is {causes[cause]} for {cause}")
+            persists = cause in PERSISTING_REVIEW_CAUSES
+            if self.detail.cause_persists != persists:
+                raise ValueError(f"detail.cause_persists is {persists} for {cause}")
         else:
             cause = None
         held = cause in _HELD_DRAFT_CAUSES
@@ -381,8 +377,8 @@ _REVIEW_ROWS: dict[str, tuple[str, str]] = {
 
 
 # The message kinds of the draft each A.11 draft row holds.
-_DRAFT_ROW_KINDS = {
-    "draft_request": ("routine_request", "sensitive_request"),
+_DRAFT_ROW_KINDS: dict[str, tuple[MessageKind, ...]] = {
+    "draft_request": get_args(RequestKind),
     "draft_quote_packet": ("quote_packet",),
     "draft_decline_notice": ("decline_notice",),
 }

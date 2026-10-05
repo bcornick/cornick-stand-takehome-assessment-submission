@@ -3,9 +3,10 @@
 from enum import StrEnum
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
+from pydantic import Field, JsonValue, model_validator
 
 from uwh.providers.models import ProviderResult
+from uwh.rules.models import StrictModel
 
 
 class EventType(StrEnum):
@@ -44,13 +45,16 @@ class EventType(StrEnum):
 # kinds, A.11 review causes and section 8 skill statuses. The store builds its CHECK lists from
 # these.
 Status = Literal["received", "triaged", "in_progress", "quote_sent", "declined"]
-# Ordered by priority, highest first (`uwh.skills.vertical.BLOCKER_KINDS_BY_PRIORITY` holds the order).
+# The order is the section 7.1 priority order, highest first: the first open kind is a lead's
+# primary next action (`uwh.skills.vertical.BLOCKER_KINDS_BY_PRIORITY`).
 BlockerKind = Literal[
     "delivery_unknown", "underwriter_question", "underwriter_review", "data", "producer_reply"
 ]
 BlockerOwner = Literal["underwriter", "producer", "data_team"]
+# The two request kinds of section 10.1, sent to a producer.
+RequestKind = Literal["routine_request", "sensitive_request"]
 # The intent kinds; each is one section 10.1 message class.
-MessageKind = Literal["routine_request", "sensitive_request", "quote_packet", "decline_notice"]
+MessageKind = Literal[RequestKind, "quote_packet", "decline_notice"]
 ApprovalItemKind = Literal["draft", "observation", "delivery_unknown", "no_contact_route", "review"]
 ObservationSource = Literal["submitted", "fetched", "derived", "assumed", "reply", "underwriter"]
 Actor = Literal["workflow", "underwriter", "assistant", "mcp_client", "inbound"]
@@ -80,26 +84,18 @@ ReplyClassification = Literal["answers_all", "answers_some", "declines_to_answer
 RulingKind = Literal["choice", "suppression", "decline", "withdrawal", "reopened_choice"]
 
 
-class Payload(BaseModel):
-    """Base of every event payload: unknown fields are an error."""
-
-    # A defaulted field is always present in what the model serializes, so the generated client
-    # types it as present rather than optional.
-    model_config = ConfigDict(extra="forbid", json_schema_serialization_defaults_required=True)
-
-
-class RunStarted(Payload):
+class RunStarted(StrictModel):
     seed: int
     lead_count: int
 
 
-class ReplayMiss(Payload):
+class ReplayMiss(StrictModel):
     skill: str
     prompt_version: str
     input_hash: str
 
 
-class DraftEdited(Payload):
+class DraftEdited(StrictModel):
     intent_id: str
     kind: MessageKind  # the intent's kind after the edit (section 7.5)
     subject: str
@@ -109,7 +105,7 @@ class DraftEdited(Payload):
     lead_revision: int  # the lead's revision when the edit was made
 
 
-class ProposalCreated(Payload):
+class ProposalCreated(StrictModel):
     """`diff_hash` is the dry-run diff hash: a rule change always has one, a command proposal has none."""
 
     proposal_id: int
@@ -117,12 +113,12 @@ class ProposalCreated(Payload):
     diff_hash: str | None
 
 
-class LeadReceived(Payload):
+class LeadReceived(StrictModel):
     source: str
     received_at: str
 
 
-class FactObserved(Payload):
+class FactObserved(StrictModel):
     observation_id: int
     key: str  # a registry field name, or a catalogue id prefixed `q:`
     value: JsonValue
@@ -133,7 +129,7 @@ class FactObserved(Payload):
     status: ObservationStatus
 
 
-class FactSelected(Payload):
+class FactSelected(StrictModel):
     """The effective fact for a key: enough to rebuild a lead's effective facts from these events."""
 
     key: str
@@ -143,39 +139,39 @@ class FactSelected(Payload):
     confirmed: bool
 
 
-class ConflictOpened(Payload):
+class ConflictOpened(StrictModel):
     validator: str
     fields: list[str]
     values: dict[str, JsonValue]  # the reported values, as shown in the confirmation question
     question: str
 
 
-class ConflictClosed(Payload):
+class ConflictClosed(StrictModel):
     validator: str
     fields: list[str]
     values: dict[str, JsonValue]  # the values the validator will not open again
     observation_id: int | None  # the reply observation that restated the value, if one did
 
 
-class TriageCompleted(Payload):
+class TriageCompleted(StrictModel):
     """Field id -> its triage result, section 9.2; each value follows `uwh.rules.models.FieldTriage`."""
 
     fields: dict[str, JsonValue]
 
 
-class ProviderCalled(Payload):
+class ProviderCalled(StrictModel):
     key: str  # the field looked up
     result: ProviderResult  # the section 9.4 result, as the provider returned it
 
 
-class PlanBuilt(Payload):
+class PlanBuilt(StrictModel):
     """The action plan of section 9.6, an object that follows `uwh.rules.models.ActionPlan`, and its hash."""
 
     plan: dict[str, JsonValue]
     plan_hash: str
 
 
-class BlockerDetail(Payload):
+class BlockerDetail(StrictModel):
     """What a blocker carries beyond its kind and owner; also the shape of `blockers.detail_json`."""
 
     item_kind: ApprovalItemKind | None = None  # None for a blocker that is not a human item
@@ -190,19 +186,19 @@ class BlockerDetail(Payload):
     text: str  # the reason shown to the human reviewer (section 7.4)
 
 
-class BlockerOpened(Payload):
+class BlockerOpened(StrictModel):
     blocker_id: int
     kind: BlockerKind
     owner: BlockerOwner
     detail: BlockerDetail
 
 
-class BlockerClosed(Payload):
+class BlockerClosed(StrictModel):
     blocker_id: int
     kind: BlockerKind
 
 
-class IntentCreated(Payload):
+class IntentCreated(StrictModel):
     intent_id: str
     round: int
     kind: MessageKind
@@ -213,25 +209,23 @@ class IntentCreated(Payload):
     payload_hash: str
 
 
-class MessageSent(Payload):
+class MessageSent(StrictModel):
     intent_id: str
     mailbox_id: int
 
 
-class DeliveryUnknown(Payload):
+class DeliveryUnknown(StrictModel):
     intent_id: str
 
 
-class ReplyReceived(Payload):
+class ReplyReceived(StrictModel):
     intent_id: str
     body: str
     body_hash: str
 
 
-class Candidate(BaseModel):
+class Candidate(StrictModel):
     """A candidate observation as the model returned it (A.9)."""
-
-    model_config = ConfigDict(extra="forbid")
 
     ask_id: str  # an ask id from the open intent: field name, catalogue id or validator id
     field: str  # the registry field or q: id the value is for; for a confirmation, one of its validator's fields
@@ -253,7 +247,7 @@ class LocatedCandidate(Candidate):
         return self
 
 
-class ReplyRead(Payload):
+class ReplyRead(StrictModel):
     """A reading, or the abstention that took its place (section 10.4): exactly one of
     `classification` and `abstention` is set, and an abstention has no candidates."""
 
@@ -273,7 +267,7 @@ class ReplyRead(Payload):
         return self
 
 
-class ApprovalRecorded(Payload):
+class ApprovalRecorded(StrictModel):
     item_id: int  # the blocker the decision settles
     item_kind: ApprovalItemKind
     intent_id: str | None
@@ -288,7 +282,7 @@ class ApprovalRecorded(Payload):
     reason: str
 
 
-class RulingRecorded(Payload):
+class RulingRecorded(StrictModel):
     """A human ruling. `refers_to_event_id` is the `ruling_recorded` event a withdrawal
     withdraws, or the choice ruling a reopening reopens; None otherwise."""
 
@@ -327,23 +321,23 @@ class RulingRecorded(Payload):
         return self
 
 
-class CommandRefused(Payload):
+class CommandRefused(StrictModel):
     command_type: str
     command_payload: dict[str, JsonValue]  # the payload as submitted
     reason: str
 
 
-class SettingChanged(Payload):
+class SettingChanged(StrictModel):
     key: str
     value: JsonValue
 
 
-class ClassDemoted(Payload):
+class ClassDemoted(StrictModel):
     command_class: str
     reason: str
 
 
-class RuleChangeApplied(Payload):
+class RuleChangeApplied(StrictModel):
     """The event row's `ruleset_hash` holds the ruleset in force before the change;
     `applied_ruleset_hash` is the one the change produced."""
 
@@ -352,13 +346,13 @@ class RuleChangeApplied(Payload):
     applied_ruleset_hash: str
 
 
-class SkillFallbackUsed(Payload):
+class SkillFallbackUsed(StrictModel):
     skill: str
     status: SkillStatus
     fallback: str
 
 
-class ModelCalled(Payload):
+class ModelCalled(StrictModel):
     skill: str
     prompt_version: str
     input_hash: str
@@ -367,11 +361,11 @@ class ModelCalled(Payload):
     stop_reason: str
 
 
-class FaultInjected(Payload):
+class FaultInjected(StrictModel):
     fault: str
 
 
-PAYLOAD_MODELS: dict[EventType, type[Payload]] = {
+PAYLOAD_MODELS: dict[EventType, type[StrictModel]] = {
     EventType.run_started: RunStarted,
     EventType.replay_miss: ReplayMiss,
     EventType.draft_edited: DraftEdited,
