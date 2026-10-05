@@ -23,7 +23,6 @@ def test_mailbox_round_trips_metadata(host_urls: dict[str, str]) -> None:
         listed = client.list_for_lead(lead_id)
         assert [m["id"] for m in listed] == [sent["id"]]
         assert listed[0]["metadata"] == metadata
-        assert client.get(sent["id"])["metadata"] == metadata
 
 
 def test_post_queue_sends_count(host_urls: dict[str, str]) -> None:

@@ -1,6 +1,6 @@
-# ABOUTME: The autonomy level of a command class (7.4), fixed in code, the check of an approval's five bound values and the check of a skill's manifest.
-# ABOUTME: Pure checks over a command class, two bindings and a manifest; the send and the decision to dispatch belong to other modules.
-from dataclasses import dataclass, fields
+# ABOUTME: The autonomy level of a command class (7.4), fixed in code, the five values an approval binds and the check of a skill's manifest.
+# ABOUTME: Pure checks over a command class and a manifest; the send and the decision to dispatch belong to other modules.
+from dataclasses import dataclass
 
 from uwh.runtime.event_types import AutonomyLevel
 from uwh.skills import vertical
@@ -30,15 +30,6 @@ class ApprovalBinding:
     ruleset_hash: str
     recipient: str
     payload_hash: str
-
-
-def binding_changes(approved: ApprovalBinding, current: ApprovalBinding) -> tuple[str, ...]:
-    """The names of the bound values that differ from those approved; empty when the approval still holds."""
-    return tuple(
-        field.name
-        for field in fields(ApprovalBinding)
-        if getattr(approved, field.name) != getattr(current, field.name)
-    )
 
 
 def manifest_refusal(manifest: SkillManifest, command_class: str) -> str | None:

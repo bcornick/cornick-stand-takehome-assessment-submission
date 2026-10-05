@@ -1,7 +1,7 @@
 # ABOUTME: The event types of A.2 and one Pydantic payload model per type, named after it in PascalCase.
 # ABOUTME: Payloads hold only what the event row's own columns do not; PAYLOAD_MODELS maps each type to its model.
 from enum import StrEnum
-from typing import Literal
+from typing import Literal, get_args
 
 from pydantic import Field, JsonValue, model_validator
 
@@ -50,6 +50,7 @@ BlockerKind = Literal[
 BlockerOwner = Literal["underwriter", "producer", "data_team"]
 # The two request kinds of section 10.1, sent to a producer.
 RequestKind = Literal["routine_request", "sensitive_request"]
+REQUEST_KINDS: tuple[RequestKind, ...] = get_args(RequestKind)
 # The intent kinds; each is one section 10.1 message class.
 MessageKind = Literal[RequestKind, "quote_packet", "decline_notice"]
 ApprovalItemKind = Literal["draft", "observation", "delivery_unknown", "no_contact_route", "review"]

@@ -30,10 +30,7 @@ def create_app(
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         with open_runtime(settings, leadgen, mailbox) as runtime:
-            env = runtime.env
-            resume_after_restart(
-                settings.db_path, env.mailbox, env.mode, env.ruleset_hash, env.now, env.steps
-            )
+            resume_after_restart(settings.db_path, runtime.env)
             app.state.runtime = runtime
             yield
 

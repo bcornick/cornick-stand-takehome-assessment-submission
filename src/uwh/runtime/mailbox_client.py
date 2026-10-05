@@ -1,4 +1,4 @@
-# ABOUTME: Synchronous client for Stand's mailbox service: send, read, list by lead, reset and health.
+# ABOUTME: Synchronous client for Stand's mailbox service: send, list by lead, reset and health.
 # ABOUTME: It returns parsed JSON and raises on any non-success response; a FaultPlan, when one is given, injects the mailbox faults of 13.1.
 from typing import Any
 
@@ -42,12 +42,6 @@ class MailboxClient:
         response = self._http.get(f"/leads/{lead_id}/emails")
         response.raise_for_status()
         result: list[dict[str, Any]] = response.json()
-        return result
-
-    def get(self, email_id: int) -> dict[str, Any]:
-        response = self._http.get(f"/emails/{email_id}")
-        response.raise_for_status()
-        result: dict[str, Any] = response.json()
         return result
 
     def reset(self) -> None:

@@ -2,6 +2,7 @@
 # ABOUTME: The caller passes the context and owns the transaction; nothing here reads settings, the clock or the environment.
 import json
 import sqlite3
+from collections.abc import Callable
 from dataclasses import dataclass, fields
 from datetime import UTC, datetime
 
@@ -39,6 +40,10 @@ class EventContext:
         for name in ("real_ts", "sim_ts"):
             if getattr(self, name).tzinfo is None:
                 raise ValueError(f"{name} needs a time zone")
+
+
+# Builds the context of an event when the event is written, so a long operation dates each event when it writes it.
+MakeContext = Callable[[], EventContext]
 
 
 class StaleRun(Exception):

@@ -1,11 +1,9 @@
 # ABOUTME: The command layer of 7.4 and A.11: one entry point that takes the actor from the transport, applies the actor and class rules and the skill manifest, runs the handler and the lead's re-evaluation in one transaction, and writes `command_refused` for a refusal.
-# ABOUTME: Handlers exist for start_run, resolve_fact, edit_draft, record_ruling, and approve and reject of an observation, a draft, a delivery_unknown item or an event-raised review; every other command class raises NotImplementedError after the checks.
+# ABOUTME: The handlers are start_run, resolve_fact, edit_draft, record_ruling, and approve and reject of an observation, a draft, a delivery_unknown item or an event-raised review; a command class with no handler raises NotImplementedError after the checks.
 import sqlite3
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from datetime import datetime
 from functools import partial
-from pathlib import Path
 
 from pydantic import JsonValue
 
@@ -16,22 +14,18 @@ from uwh.runtime.event_types import (
     CommandRefused,
     EventType,
     IntentState,
-    ReviewCause,
     RulingRecorded,
 )
-from uwh.runtime.events import EventContext, StaleRun, append_event
+from uwh.runtime.events import EventContext, MakeContext, StaleRun, append_event
 from uwh.runtime.facts import (
     LATE_REPLY_CAUSES,
-    LedgerRules,
     approve_observation,
     reject_late_reply_values,
     reject_observation,
     resolve_fact,
 )
-from uwh.runtime.leadgen_client import LeadgenClient
-from uwh.runtime.mailbox_client import MailboxClient
 from uwh.runtime.policy import manifest_refusal
-from uwh.runtime.runs import begin_run, command_context, current_run, pass_context
+from uwh.runtime.runs import RunEnvironment, begin_run, command_context, current_run, pass_context
 from uwh.runtime.send import (
     Intent,
     close_unsent,
@@ -43,34 +37,9 @@ from uwh.runtime.send import (
     void_approvals,
 )
 from uwh.runtime.waits import Blocker, close_blocker, open_blocker_by_id, open_blockers
-from uwh.runtime.workflow import Step, reevaluate, unit_of_work
-from uwh.settings import RunMode
+from uwh.runtime.workflow import lead_revision_and_plan_hash, reevaluate, unit_of_work
 from uwh.skills.manifest import SkillFolderError, load_manifest
-from uwh.skills.vertical import command_class
-
-
-# The reviews a reply raises about an open round (7.3 rule 9, A.11): acknowledging one closes that round.
-_ROUND_REVIEW_CAUSES: tuple[ReviewCause, ...] = (
-    "unread_reply",
-    "off_topic_reply",
-    "declining_reply",
-)
-
-
-@dataclass(frozen=True)
-class CommandEnvironment:
-    """What the command layer needs from its caller: the run mode, the active ruleset hash, the ledger
-    rules and workflow steps a re-evaluation uses, the folder that holds the skills, the real clock,
-    the mailbox that dispatched drafts are posted to and the leadgen service a run start reads."""
-
-    mode: RunMode
-    ruleset_hash: str
-    ledger_rules: LedgerRules
-    steps: Sequence[Step]
-    skills_root: Path
-    now: Callable[[], datetime]
-    mailbox: MailboxClient
-    leadgen: LeadgenClient
+from uwh.skills.vertical import ROUND_REVIEW_CAUSES, command_class
 
 
 @dataclass(frozen=True)
@@ -84,13 +53,13 @@ class CommandResult:
 
 @dataclass(frozen=True)
 class _Outcome:
+    """What a handler did: `event_id` is the event the command produced. `lead_id` is the lead the
+    command is about, or None for a command about no lead, which is neither re-evaluated nor
+    dispatched. `recheck_intent_id` names an `unknown` intent whose mailbox check the command asks for."""
+
     event_id: int
-    lead_id: (
-        str | None
-    )  # None for a command about no lead, which is neither re-evaluated nor dispatched
-    recheck_intent_id: str | None = (
-        None  # an `unknown` intent whose mailbox check the command asks for
-    )
+    lead_id: str | None
+    recheck_intent_id: str | None = None
 
 
 class _Refusal(Exception):
@@ -98,13 +67,13 @@ class _Refusal(Exception):
 
 
 Handler = Callable[
-    [sqlite3.Connection, EventContext, CommandEnvironment, Mapping[str, JsonValue]], _Outcome
+    [sqlite3.Connection, EventContext, RunEnvironment, Mapping[str, JsonValue]], _Outcome
 ]
 
 
 def submit_command(
     db: sqlite3.Connection,
-    env: CommandEnvironment,
+    env: RunEnvironment,
     actor: Actor,
     command_type: str,
     payload: Mapping[str, JsonValue],
@@ -117,7 +86,7 @@ def submit_command(
     An accepted command and the re-evaluation of its lead commit together; after that commit the
     lead's drafts that can go are dispatched, as the run the command ran in; when a start has replaced
     that run, nothing is sent and the command is still accepted (A.11, 14). A refusal rolls back whatever the handler wrote
-    and commits one `command_refused` event. A command type whose handler is not built raises
+    and commits one `command_refused` event. A command type with no handler raises
     NotImplementedError after the checks, writing nothing.
     """
     if db.in_transaction:
@@ -128,17 +97,21 @@ def submit_command(
     if reason is None:
         handler = _HANDLERS.get(command_type)
         if handler is None:
-            raise NotImplementedError(f"the {command_type} command is not built")
+            raise NotImplementedError(f"the {command_type} command has no handler")
         try:
             with unit_of_work(db):
                 context = _context(db, env, actor)
                 outcome = handler(db, context, env, payload)
                 if outcome.lead_id is not None:
-                    _reevaluate(db, env, outcome.lead_id)
+                    # Every accepted command re-evaluates its lead in the command's transaction
+                    # (A.11); a re-evaluation builds drafts and dispatches nothing.
+                    reevaluate(
+                        db, lambda: _context(db, env, "workflow"), outcome.lead_id, env.steps
+                    )
                 run = current_run(db)
             if outcome.lead_id is not None:
                 assert run is not None  # a command about a lead runs inside a run
-                make_context = pass_context(run, env.mode, env.ruleset_hash, env.now)
+                make_context = pass_context(run, env)
                 try:
                     _send_after_commit(
                         db, env, make_context, outcome.lead_id, outcome.recheck_intent_id
@@ -159,7 +132,7 @@ def submit_command(
     return CommandResult(False, event_id, reason)
 
 
-def _context(db: sqlite3.Connection, env: CommandEnvironment, actor: Actor) -> EventContext:
+def _context(db: sqlite3.Connection, env: RunEnvironment, actor: Actor) -> EventContext:
     """The context of an event written now. Built inside the command's transaction, so a wait for
     the write lock cannot leave stale timestamps or a stale run on the event."""
     return command_context(db, actor, env.mode, env.ruleset_hash, env.now())
@@ -167,8 +140,8 @@ def _context(db: sqlite3.Connection, env: CommandEnvironment, actor: Actor) -> E
 
 def _send_after_commit(
     db: sqlite3.Connection,
-    env: CommandEnvironment,
-    make_context: Callable[[], EventContext],
+    env: RunEnvironment,
+    make_context: MakeContext,
     lead_id: str,
     recheck_intent_id: str | None,
 ) -> None:
@@ -185,7 +158,7 @@ def _send_after_commit(
 
 
 def _gate(
-    env: CommandEnvironment,
+    env: RunEnvironment,
     actor: Actor,
     skill: str | None,
     command_type: str,
@@ -231,23 +204,15 @@ def _lead_named(db: sqlite3.Connection, payload: Mapping[str, JsonValue]) -> str
     return None
 
 
-def _reevaluate(db: sqlite3.Connection, env: CommandEnvironment, lead_id: str) -> None:
-    """Every accepted command re-evaluates its lead in the command's transaction (A.11). A
-    re-evaluation builds drafts and dispatches nothing."""
-    reevaluate(db, lambda: _context(db, env, "workflow"), lead_id, env.steps)
-
-
 def _lead_binding(db: sqlite3.Connection, lead_id: str) -> tuple[int, str]:
     """The lead's revision and plan hash now."""
-    row = db.execute(
-        "SELECT revision, plan_hash FROM leads WHERE lead_id = ?", (lead_id,)
-    ).fetchone()
-    if row is None:
-        raise _Refusal(f"there is no lead {lead_id}")
-    revision, plan_hash = row
+    try:
+        revision, plan_hash = lead_revision_and_plan_hash(db, lead_id)
+    except ValueError as error:
+        raise _Refusal(str(error)) from error
     if plan_hash is None:
         raise _Refusal(f"lead {lead_id} has no plan to decide against")
-    return int(revision), str(plan_hash)
+    return revision, plan_hash
 
 
 # ---- payload fields -----------------------------------------------------------------------------
@@ -299,7 +264,7 @@ def _intent_in_state(db: sqlite3.Connection, intent_id: str, state: IntentState)
 def _start_run(
     db: sqlite3.Connection,
     context: EventContext,
-    env: CommandEnvironment,
+    env: RunEnvironment,
     payload: Mapping[str, JsonValue],
 ) -> _Outcome:
     """Start a run (14). The first pass runs after this command commits, started by the caller."""
@@ -313,7 +278,7 @@ def _start_run(
 def _resolve_fact(
     db: sqlite3.Connection,
     context: EventContext,
-    env: CommandEnvironment,
+    env: RunEnvironment,
     payload: Mapping[str, JsonValue],
 ) -> _Outcome:
     lead_id, key = _text(payload, "lead_id"), _text(payload, "key")
@@ -322,19 +287,14 @@ def _resolve_fact(
         raise _Refusal("the payload needs value")
     if not _lead_exists(db, lead_id):
         raise _Refusal(f"there is no lead {lead_id}")
-    resolve_fact(db, context, lead_id, key, payload["value"], reason, env.ledger_rules)
-    (event_id,) = db.execute(
-        "SELECT event_id FROM observations"
-        " WHERE lead_id = ? AND key = ? AND source = 'underwriter' ORDER BY id DESC LIMIT 1",
-        (lead_id, key),
-    ).fetchone()
+    event_id = resolve_fact(db, context, lead_id, key, payload["value"], reason, env.ledger_rules)
     return _Outcome(event_id, lead_id)
 
 
 def _record_ruling(
     db: sqlite3.Connection,
     context: EventContext,
-    env: CommandEnvironment,
+    env: RunEnvironment,
     payload: Mapping[str, JsonValue],
 ) -> _Outcome:
     lead_id, choice_id = _text(payload, "lead_id"), _text(payload, "choice_id")
@@ -367,7 +327,7 @@ def _record_ruling(
 def _settle(
     db: sqlite3.Connection,
     context: EventContext,
-    env: CommandEnvironment,
+    env: RunEnvironment,
     payload: Mapping[str, JsonValue],
     *,
     approve: bool,
@@ -426,7 +386,7 @@ def _settle_draft(
 def _edit_draft(
     db: sqlite3.Connection,
     context: EventContext,
-    env: CommandEnvironment,
+    env: RunEnvironment,
     payload: Mapping[str, JsonValue],
 ) -> _Outcome:
     intent = _intent_in_state(db, _text(payload, "intent_id"), "draft")
@@ -442,7 +402,7 @@ def _edit_draft(
 def _settle_observation(
     db: sqlite3.Connection,
     context: EventContext,
-    env: CommandEnvironment,
+    env: RunEnvironment,
     item: Blocker,
     *,
     approve: bool,
@@ -470,7 +430,7 @@ def _acknowledge_review(
     if cause in LATE_REPLY_CAUSES:
         reject_late_reply_values(db, item.id)
     close_blocker(db, context, item.id)
-    if cause in _ROUND_REVIEW_CAUSES and item.detail.intent_id is not None:
+    if cause in ROUND_REVIEW_CAUSES and item.detail.intent_id is not None:
         for blocker in open_blockers(db, item.lead_id):
             if (
                 blocker.kind == "producer_reply"

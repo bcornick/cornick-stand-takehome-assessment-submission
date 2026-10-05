@@ -22,7 +22,7 @@ from tests.runtime.helpers import (
     events_of,
     insert_run,
 )
-from uwh.runtime.commands import CommandEnvironment, CommandResult, submit_command
+from uwh.runtime.commands import CommandResult, submit_command
 from uwh.runtime.event_types import BlockerDetail, EventType, RunStarted
 from uwh.runtime.events import EventContext, StaleRun, format_timestamp, read_events
 from uwh.runtime.faults import FaultPlan
@@ -30,6 +30,7 @@ from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
 from uwh.runtime.runs import (
     PRE_RUN_ID,
+    RunEnvironment,
     command_context,
     current_run,
     pass_context,
@@ -51,11 +52,11 @@ def db(store_path: str) -> sqlite3.Connection:
 
 
 @pytest.fixture
-def env(tmp_path: Path, mailbox: MailboxClient, leadgen: LeadgenClient) -> CommandEnvironment:
+def env(tmp_path: Path, mailbox: MailboxClient, leadgen: LeadgenClient) -> RunEnvironment:
     return command_environment(tmp_path, mailbox, leadgen)
 
 
-def start(db: sqlite3.Connection, env: CommandEnvironment, seed: int = SEED) -> CommandResult:
+def start(db: sqlite3.Connection, env: RunEnvironment, seed: int = SEED) -> CommandResult:
     return submit_command(db, env, "underwriter", "start_run", {"seed": seed})
 
 
@@ -66,14 +67,14 @@ def current_id(db: sqlite3.Connection) -> str:
 
 
 def context_of_current_run(
-    db: sqlite3.Connection, env: CommandEnvironment
+    db: sqlite3.Connection, env: RunEnvironment
 ) -> Callable[[], EventContext]:
     run = current_run(db)
     assert run is not None
-    return pass_context(run, env.mode, env.ruleset_hash, env.now)
+    return pass_context(run, env)
 
 
-def first_pass(db: sqlite3.Connection, store_path: str, env: CommandEnvironment) -> None:
+def first_pass(db: sqlite3.Connection, store_path: str, env: RunEnvironment) -> None:
     run_first_pass(store_path, current_id(db), context_of_current_run(db, env), env.steps)
 
 
@@ -121,7 +122,7 @@ def test_a_commands_context_is_pre_run_before_any_run_and_then_takes_the_runs_id
 # ---- a start ------------------------------------------------------------------------------------
 
 
-def test_a_start_recreates_every_table(db: sqlite3.Connection, env: CommandEnvironment) -> None:
+def test_a_start_recreates_every_table(db: sqlite3.Connection, env: RunEnvironment) -> None:
     ddl_before = schema(db)
     insert_run(db, "old-run", "settled")
     old = EventContext("old-run", "replay", "workflow", RULESET, NOW, NOW)
@@ -144,7 +145,7 @@ def test_a_start_recreates_every_table(db: sqlite3.Connection, env: CommandEnvir
 
 
 def test_a_start_writes_the_processing_run_its_event_and_the_ten_leads_of_the_seed(
-    db: sqlite3.Connection, env: CommandEnvironment, leadgen: LeadgenClient
+    db: sqlite3.Connection, env: RunEnvironment, leadgen: LeadgenClient
 ) -> None:
     result = start(db, env, seed=7)
 
@@ -171,7 +172,7 @@ def test_a_start_writes_the_processing_run_its_event_and_the_ten_leads_of_the_se
     assert db.execute("SELECT count(*) FROM events").fetchone() == (11,)
 
 
-def test_a_start_resets_the_mailbox(db: sqlite3.Connection, env: CommandEnvironment) -> None:
+def test_a_start_resets_the_mailbox(db: sqlite3.Connection, env: RunEnvironment) -> None:
     env.mailbox.send("BOOTSTRAP-probe", "uw@stand.com", "uw@stand.com", "Probe", "Nothing asked.")
     assert len(env.mailbox.list_for_lead("BOOTSTRAP-probe")) == 1
 
@@ -181,7 +182,7 @@ def test_a_start_resets_the_mailbox(db: sqlite3.Connection, env: CommandEnvironm
 
 
 def test_a_start_that_fails_leaves_the_database_as_it_was(
-    db: sqlite3.Connection, store_path: str, env: CommandEnvironment
+    db: sqlite3.Connection, store_path: str, env: RunEnvironment
 ) -> None:
     start(db, env)
     first_pass(db, store_path, env)
@@ -199,7 +200,7 @@ def test_a_start_that_fails_leaves_the_database_as_it_was(
     assert len(env.mailbox.list_for_lead(leads[0])) == 1
 
 
-def test_start_while_processing_refused(db: sqlite3.Connection, env: CommandEnvironment) -> None:
+def test_start_while_processing_refused(db: sqlite3.Connection, env: RunEnvironment) -> None:
     start(db, env)
     run_id, leads = current_id(db), lead_ids(db)
     events_before = len(read_events(db))
@@ -217,7 +218,7 @@ def test_start_while_processing_refused(db: sqlite3.Connection, env: CommandEnvi
 
 
 def test_a_start_after_the_run_settled_replaces_the_run(
-    db: sqlite3.Connection, store_path: str, env: CommandEnvironment
+    db: sqlite3.Connection, store_path: str, env: RunEnvironment
 ) -> None:
     start(db, env)
     first_run = current_id(db)
@@ -235,7 +236,7 @@ def test_a_start_after_the_run_settled_replaces_the_run(
 
 
 def test_a_pass_runs_every_lead_of_the_run_through_the_steps_and_then_settles(
-    db: sqlite3.Connection, store_path: str, env: CommandEnvironment
+    db: sqlite3.Connection, store_path: str, env: RunEnvironment
 ) -> None:
     ran: list[tuple[str, str, str]] = []
 
@@ -259,7 +260,7 @@ class PoolAbort(BaseException):
 
 
 def test_a_failure_outside_a_step_still_settles_the_run(
-    db: sqlite3.Connection, store_path: str, env: CommandEnvironment
+    db: sqlite3.Connection, store_path: str, env: RunEnvironment
 ) -> None:
     def abort(db: sqlite3.Connection, context: EventContext, lead_id: str) -> None:
         raise PoolAbort
@@ -278,7 +279,7 @@ def test_a_failure_outside_a_step_still_settles_the_run(
 
 
 def started_and_passed(
-    db: sqlite3.Connection, store_path: str, env: CommandEnvironment
+    db: sqlite3.Connection, store_path: str, env: RunEnvironment
 ) -> tuple[str, list[str], Callable[[], EventContext]]:
     """A settled first run: its id, its leads and the context of a pass of that run."""
     start(db, env)
@@ -289,7 +290,7 @@ def started_and_passed(
 
 
 def test_stale_run_writes_nothing(
-    db: sqlite3.Connection, store_path: str, env: CommandEnvironment, faults: FaultPlan
+    db: sqlite3.Connection, store_path: str, env: RunEnvironment, faults: FaultPlan
 ) -> None:
     first_run, first_leads, stale = started_and_passed(db, store_path, env)
     intent_id = create_draft(
@@ -351,7 +352,7 @@ class ReplaceRunAfterCommit(sqlite3.Connection):
 
 
 def test_a_step_failure_of_a_replaced_run_opens_no_blocker(
-    db: sqlite3.Connection, store_path: str, env: CommandEnvironment
+    db: sqlite3.Connection, store_path: str, env: RunEnvironment
 ) -> None:
     first_run, leads, stale = started_and_passed(db, store_path, env)
     stale_connection = sqlite3.connect(store_path, factory=ReplaceRunAfterRollback)
@@ -373,7 +374,7 @@ def test_a_step_failure_of_a_replaced_run_opens_no_blocker(
 
 
 def test_the_dispatch_after_a_command_leaves_the_drafts_of_a_run_that_replaced_its_run(
-    db: sqlite3.Connection, store_path: str, env: CommandEnvironment
+    db: sqlite3.Connection, store_path: str, env: RunEnvironment
 ) -> None:
     first_run, leads, _ = started_and_passed(db, store_path, env)
     lead_id = leads[0]
@@ -411,7 +412,7 @@ def test_the_dispatch_after_a_command_leaves_the_drafts_of_a_run_that_replaced_i
 
 
 def test_startup_settles_interrupted_run(
-    db: sqlite3.Connection, store_path: str, env: CommandEnvironment
+    db: sqlite3.Connection, store_path: str, env: RunEnvironment
 ) -> None:
     seen: list[tuple[str, str]] = []
     run_statuses: list[str] = []
@@ -455,9 +456,7 @@ def test_startup_settles_interrupted_run(
         in_progress, RECIPIENT, "uw@stand.com", "S", "B", {"intent_id": intent_id, "run_id": "x"}
     )
 
-    resume_after_restart(
-        store_path, env.mailbox, env.mode, env.ruleset_hash, env.now, with_steps.steps
-    )
+    resume_after_restart(store_path, with_steps)
 
     assert sorted(seen) == sorted([(first, "sent"), (failed, "sent")])
     assert run_statuses == ["processing"] * 2

@@ -9,7 +9,7 @@ from uwh.runtime.mailbox_client import MailboxClient
 
 
 @pytest.mark.filterwarnings("error")
-def test_metadata_round_trips_by_lead_and_by_id(stand_mailbox_client: httpx2.Client) -> None:
+def test_metadata_round_trips_by_lead(stand_mailbox_client: httpx2.Client) -> None:
     client = MailboxClient(stand_mailbox_client)
     lead_id = f"TEST-{uuid.uuid4().hex[:8]}"
     metadata = {"fields": ["a", "b"], "nested": {"n": 1}, "flag": True}
@@ -30,13 +30,7 @@ def test_metadata_round_trips_by_lead_and_by_id(stand_mailbox_client: httpx2.Cli
     assert by_lead[0]["metadata"] == metadata
     assert by_lead[0]["id"] == sent["id"]
     assert by_lead[0]["from"] == "underwriting@example.com"
-    assert client.get(sent["id"])["metadata"] == metadata
     assert client.list_for_lead("TEST-nobody") == []
-
-
-def test_non_success_raises(stand_mailbox_client: httpx2.Client) -> None:
-    with pytest.raises(httpx2.HTTPStatusError):
-        MailboxClient(stand_mailbox_client).get(10**9)
 
 
 @pytest.mark.filterwarnings("error")

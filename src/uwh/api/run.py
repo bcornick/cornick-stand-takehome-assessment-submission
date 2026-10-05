@@ -1,22 +1,17 @@
 # ABOUTME: GET /api/run and POST /api/run/start (A.5): the run's id, mode, seed, simulated time, summary counts and whether its first pass is complete, and the start that submits start_run as the underwriter.
-# ABOUTME: A start returns at once while the first pass runs in the background, or after the run has settled with `wait`; `first_pass_complete` reads the run's status, which only a finished pass sets.
+# ABOUTME: A start returns at once while the first pass runs in the background, or after the run has settled with `wait`; `first_pass_complete` is true when the run's status is `settled`.
 import sqlite3
-from typing import get_args
 
 from fastapi import APIRouter, HTTPException
 
 from uwh.api.runtime import Runtime, RuntimeDependency
 from uwh.api.views import RunSummary, RunView
-from uwh.runtime.clock import sim_now
-from uwh.runtime.event_types import RequestKind
+from uwh.runtime.event_types import REQUEST_KINDS
 from uwh.runtime.events import format_timestamp
-from uwh.runtime.runs import current_run
+from uwh.runtime.runs import current_run, run_sim_now
 from uwh.runtime.waits import primary_next_action
-from uwh.skills.vertical import REFERENCE_MORNING
 
 router = APIRouter()
-
-_REQUEST_KINDS = get_args(RequestKind)
 
 
 def _sent(db: sqlite3.Connection, *kinds: str) -> int:
@@ -47,7 +42,7 @@ def _summary(db: sqlite3.Connection) -> RunSummary:
             waiting[_WAITING_COUNT[action.kind]] += 1
     return RunSummary(
         quotes_sent=_sent(db, "quote_packet"),
-        follow_ups_sent=_sent(db, *_REQUEST_KINDS),
+        follow_ups_sent=_sent(db, *REQUEST_KINDS),
         declines_approved=_sent(db, "decline_notice"),
         **waiting,
     )
@@ -55,21 +50,12 @@ def _summary(db: sqlite3.Connection) -> RunSummary:
 
 def _run_view(db: sqlite3.Connection, runtime: Runtime) -> RunView:
     run = current_run(db)
-    if run is None:
-        return RunView(
-            run_id=None,
-            mode=runtime.env.mode,
-            seed=runtime.settings.seed,
-            sim_now=None,
-            first_pass_complete=False,
-            summary=_summary(db),
-        )
     return RunView(
-        run_id=run.run_id,
+        run_id=None if run is None else run.run_id,
         mode=runtime.env.mode,
-        seed=run.seed,
-        sim_now=format_timestamp(sim_now(REFERENCE_MORNING, run.started_at, runtime.env.now())),
-        first_pass_complete=run.status == "settled",
+        seed=runtime.settings.seed if run is None else run.seed,
+        sim_now=None if run is None else format_timestamp(run_sim_now(run, runtime.env.now())),
+        first_pass_complete=run is not None and run.status == "settled",
         summary=_summary(db),
     )
 

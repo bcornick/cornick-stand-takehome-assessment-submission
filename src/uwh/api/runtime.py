@@ -17,12 +17,12 @@ from pydantic import JsonValue
 import uwh.rules
 import uwh.skills
 from uwh.runtime.bootstrap import TIMEOUT_SECONDS
-from uwh.runtime.commands import CommandEnvironment, CommandResult, submit_command
+from uwh.runtime.commands import CommandResult, submit_command
 from uwh.runtime.facts import LedgerRules
 from uwh.runtime.hashing import ruleset_hash
 from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
-from uwh.runtime.runs import current_run, pass_context, run_first_pass
+from uwh.runtime.runs import RunEnvironment, current_run, pass_context, run_first_pass
 from uwh.runtime.store import open_store
 from uwh.runtime.workflow import Step
 from uwh.settings import Settings
@@ -39,7 +39,7 @@ IMAGE_RULES_DATA = Path(uwh.rules.__file__).parent / "data"
 @dataclass(frozen=True)
 class Runtime:
     settings: Settings
-    env: CommandEnvironment
+    env: RunEnvironment
     # One worker: a run is not started while another is processing, so at most one pass runs.
     passes: ThreadPoolExecutor
 
@@ -70,7 +70,7 @@ class Runtime:
             run_first_pass,
             self.settings.db_path,
             run.run_id,
-            pass_context(run, env.mode, env.ruleset_hash, env.now),
+            pass_context(run, env),
             env.steps,
         )
         future.add_done_callback(lambda done: _log_failure(run.run_id, done))
@@ -96,7 +96,7 @@ def open_runtime(
         if mailbox is None:
             http = httpx2.Client(base_url=settings.mailbox_url, timeout=TIMEOUT_SECONDS)
             mailbox = MailboxClient(stack.enter_context(http))
-        env = CommandEnvironment(
+        env = RunEnvironment(
             settings.run_mode,
             ruleset_hash(IMAGE_RULES_DATA),
             LEDGER_RULES,

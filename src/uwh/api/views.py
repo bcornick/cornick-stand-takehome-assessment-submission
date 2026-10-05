@@ -1,6 +1,6 @@
 # ABOUTME: Request and response models of the app's HTTP routes (A.5, A.11, section 11), with the checks that tie a blocker, an item, a page and a proposed command to the architecture's rules.
 # ABOUTME: Value sets are the Literal types of event_types and settings; the literals defined in this module belong to one view's own shape; no shape holds a model confidence (section 11).
-from typing import Annotated, Any, Literal, Self, get_args
+from typing import Annotated, Any, Literal, Self
 
 from pydantic import Field, JsonValue, ValidationError, model_validator
 
@@ -24,7 +24,7 @@ from uwh.runtime.event_types import (
     ObservationSource,
     ObservationStatus,
     ProposalState,
-    RequestKind,
+    REQUEST_KINDS,
     Status,
 )
 from uwh.settings import RunMode
@@ -320,7 +320,7 @@ _REVIEW_ROWS: dict[ReviewItemName, tuple[BlockerKind, ApprovalItemKind]] = {
 
 # The message kinds of the draft each A.11 draft row holds.
 _DRAFT_ROW_KINDS: dict[ReviewItemName, tuple[MessageKind, ...]] = {
-    "draft_request": get_args(RequestKind),
+    "draft_request": REQUEST_KINDS,
     "draft_quote_packet": ("quote_packet",),
     "draft_decline_notice": ("decline_notice",),
 }

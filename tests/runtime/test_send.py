@@ -25,13 +25,14 @@ from tests.runtime.helpers import (
     state_of,
 )
 from tests.runtime.helpers import LEAD_ID as LEAD
-from uwh.runtime.commands import CommandEnvironment, submit_command
+from uwh.runtime.commands import submit_command
 from uwh.runtime.event_types import DraftEdited, EventType, IntentCreated, MessageSent, RequestKind
 from uwh.runtime.events import EventContext, StaleRun, read_events
 from uwh.runtime.faults import FaultPlan
 from uwh.runtime.hashing import payload_hash
 from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
+from uwh.runtime.runs import RunEnvironment
 from uwh.runtime.send import (
     _record_sent,
     create_draft,
@@ -165,7 +166,7 @@ def unknown_intent(
 
 
 @pytest.fixture
-def env(tmp_path: Path, mailbox: MailboxClient, leadgen: LeadgenClient) -> CommandEnvironment:
+def env(tmp_path: Path, mailbox: MailboxClient, leadgen: LeadgenClient) -> RunEnvironment:
     return command_environment(tmp_path, mailbox, leadgen)
 
 
@@ -687,7 +688,7 @@ def test_delivery_unknown_approve_rechecks(
     mailbox: MailboxClient,
     faults: FaultPlan,
     make_context: MakeContext,
-    env: CommandEnvironment,
+    env: RunEnvironment,
 ) -> None:
     intent_id, item = unknown_intent(store, mailbox, faults, make_context, message_delivered=True)
 
@@ -720,7 +721,7 @@ def test_delivery_unknown_reject_closes_unsent(
     mailbox: MailboxClient,
     faults: FaultPlan,
     make_context: MakeContext,
-    env: CommandEnvironment,
+    env: RunEnvironment,
 ) -> None:
     intent_id, item = unknown_intent(store, mailbox, faults, make_context, message_delivered=False)
 
@@ -756,7 +757,7 @@ def test_a_delivery_found_after_a_reject_closed_the_intent_is_not_recorded_as_se
     mailbox: MailboxClient,
     faults: FaultPlan,
     make_context: MakeContext,
-    env: CommandEnvironment,
+    env: RunEnvironment,
 ) -> None:
     intent_id, item = unknown_intent(store, mailbox, faults, make_context, message_delivered=True)
     read_before_the_reject = read_intent(store, intent_id)

@@ -18,7 +18,7 @@ class FaultPlan:
     fail_after_acceptance: bool = False  # the next post is accepted and then raises
     empty_while_in_flight: bool = False  # the next listing during a request in flight is empty
     hold_in_flight: Callable[[], None] | None = None  # runs while each post is in flight
-    injected: list[str] = field(default_factory=list)
+    injected: list[str] = field(default_factory=list, init=False)
     _request_in_flight: bool = field(default=False, init=False, repr=False)
 
     def take_injected(self) -> list[str]:

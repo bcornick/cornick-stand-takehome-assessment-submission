@@ -1,16 +1,18 @@
-# ABOUTME: The run of 7.2, 7.6 and 14: the one `runs` row, the event context of a command and of a pass, the run start that recreates the tables and ingests the queue, and the first pass and the restart recovery that settle the run.
-# ABOUTME: The mode, ruleset hash and real clock are passed in, since nothing here reads settings or the system clock; a pass builds its context from the run it was started for, so a replaced run is detected (14).
+# ABOUTME: The run of 7.2, 7.6 and 14: the one `runs` row, what a run and its commands need from the caller, the event context of a command and of a pass, the run start that recreates the tables and ingests the queue, and the first pass and the restart recovery that settle the run.
+# ABOUTME: The mode, ruleset hash and real clock arrive in the environment, since nothing here reads settings or the system clock; a pass builds its context from the run it was started for, so a replaced run is detected (14).
 import sqlite3
 import uuid
 from collections.abc import Callable, Iterator, Sequence
 from contextlib import closing, contextmanager
 from dataclasses import dataclass, replace
 from datetime import datetime
+from pathlib import Path
 
 from uwh.runtime.bootstrap import LEAD_COUNT
 from uwh.runtime.clock import sim_now
 from uwh.runtime.event_types import Actor, EventType, RunStarted, RunStatus
-from uwh.runtime.events import EventContext, append_event, format_timestamp
+from uwh.runtime.events import EventContext, MakeContext, append_event, format_timestamp
+from uwh.runtime.facts import LedgerRules
 from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
 from uwh.runtime.send import reconcile_dispatching
@@ -24,6 +26,23 @@ PRE_RUN_ID = "pre-run"
 
 # The tables a start recreates: every A.1 table (14).
 _RUN_TABLES = list(table_ddl())
+
+
+@dataclass(frozen=True)
+class RunEnvironment:
+    """What a run and its commands need from their caller: the run mode, the active ruleset hash, the
+    ledger rules and workflow steps a pass and a re-evaluation use, the folder that holds the skills,
+    the real clock, the mailbox that dispatched drafts are posted to and the leadgen service a run
+    start reads."""
+
+    mode: RunMode
+    ruleset_hash: str
+    ledger_rules: LedgerRules
+    steps: Sequence[Step]
+    skills_root: Path
+    now: Callable[[], datetime]
+    mailbox: MailboxClient
+    leadgen: LeadgenClient
 
 
 @dataclass(frozen=True)
@@ -44,17 +63,15 @@ def current_run(db: sqlite3.Connection) -> Run | None:
     return Run(row[0], row[1], datetime.fromisoformat(row[2]), row[3])
 
 
+def run_sim_now(run: Run, real_now: datetime) -> datetime:
+    """The simulated time at `real_now` in the run: the reference morning plus the real time since the run started."""
+    return sim_now(REFERENCE_MORNING, run.started_at, real_now)
+
+
 def _context(
     run: Run, actor: Actor, mode: RunMode, ruleset_hash: str, real_now: datetime
 ) -> EventContext:
-    return EventContext(
-        run.run_id,
-        mode,
-        actor,
-        ruleset_hash,
-        real_now,
-        sim_now(REFERENCE_MORNING, run.started_at, real_now),
-    )
+    return EventContext(run.run_id, mode, actor, ruleset_hash, real_now, run_sim_now(run, real_now))
 
 
 def command_context(
@@ -72,12 +89,10 @@ def command_context(
     return _context(run, actor, mode, ruleset_hash, real_now)
 
 
-def pass_context(
-    run: Run, mode: RunMode, ruleset_hash: str, now: Callable[[], datetime]
-) -> Callable[[], EventContext]:
+def pass_context(run: Run, env: RunEnvironment) -> MakeContext:
     """Builds the `workflow` context of each unit of a pass. It carries the id of `run` however
     long the pass takes, so the pass of a run that a start has replaced is stale (14)."""
-    return lambda: _context(run, "workflow", mode, ruleset_hash, now())
+    return lambda: _context(run, "workflow", env.mode, env.ruleset_hash, env.now())
 
 
 def begin_run(
@@ -135,7 +150,7 @@ def _settling(db_path: str, run_id: str) -> Iterator[None]:
 def run_first_pass(
     db_path: str,
     run_id: str,
-    make_context: Callable[[], EventContext],
+    make_context: MakeContext,
     steps: Sequence[Step],
 ) -> None:
     """Run every lead of the run through the steps, then mark the run `settled`: no lead has a
@@ -151,14 +166,7 @@ def run_first_pass(
         run_leads(db_path, make_context, lead_ids, steps)
 
 
-def resume_after_restart(
-    db_path: str,
-    mailbox: MailboxClient,
-    mode: RunMode,
-    ruleset_hash: str,
-    now: Callable[[], datetime],
-    steps: Sequence[Step],
-) -> None:
+def resume_after_restart(db_path: str, env: RunEnvironment) -> None:
     """Startup (7.1, 7.5): reconcile the intents in `dispatching`, run again the pass of every lead
     that `interrupted_leads` names, then mark the run `settled` so that a new run can start. Every
     other lead keeps its state. Does nothing before the first start. A reconciliation that fails
@@ -167,8 +175,8 @@ def resume_after_restart(
         run = current_run(db)
         if run is None:
             return
-        make_context = pass_context(run, mode, ruleset_hash, now)
-        reconcile_dispatching(db, mailbox, make_context)
+        make_context = pass_context(run, env)
+        reconcile_dispatching(db, env.mailbox, make_context)
         lead_ids = interrupted_leads(db)
     with _settling(db_path, run.run_id):
-        run_leads(db_path, make_context, lead_ids, steps)
+        run_leads(db_path, make_context, lead_ids, env.steps)

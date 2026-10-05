@@ -3,9 +3,7 @@
 import json
 import sqlite3
 import uuid
-from collections.abc import Callable
 from dataclasses import dataclass, replace
-from typing import get_args
 
 import httpx2
 
@@ -19,25 +17,24 @@ from uwh.runtime.event_types import (
     IntentState,
     MessageKind,
     MessageSent,
-    RequestKind,
-    Status,
+    REQUEST_KINDS,
 )
-from uwh.runtime.events import EventContext, append_event, require_current_run
+from uwh.runtime.events import EventContext, MakeContext, append_event, require_current_run
 from uwh.runtime.hashing import payload_hash
 from uwh.runtime.mailbox_client import MailboxClient
-from uwh.runtime.policy import ApprovalBinding, autonomy_level, binding_changes, manifest_refusal
+from uwh.runtime.policy import ApprovalBinding, autonomy_level, manifest_refusal
 from uwh.runtime.waits import Blocker, close_blocker, open_blocker, open_blockers
-from uwh.runtime.workflow import transition, transition_refusal, unit_of_work
+from uwh.runtime.workflow import (
+    lead_revision_and_plan_hash,
+    transition,
+    transition_refusal,
+    unit_of_work,
+)
 from uwh.skills.manifest import SkillManifest
+from uwh.skills.vertical import STATUS_AFTER_SEND
 
 # A.8: the address every message is sent from.
 SENDER = "uw@stand.com"
-
-MakeContext = Callable[[], EventContext]
-
-_REQUEST_KINDS: tuple[str, ...] = get_args(RequestKind)
-# The status a lead takes when a packet or a notice is sent (A.3).
-_STATUS_AFTER_SEND: dict[str, Status] = {"quote_packet": "quote_sent", "decline_notice": "declined"}
 
 
 @dataclass(frozen=True)
@@ -101,13 +98,13 @@ def _class_of(kind: MessageKind) -> str:
 def _next_round(db: sqlite3.Connection, lead_id: str, kind: MessageKind) -> int:
     """Rounds number requests only: a request takes the round after the last one, and a quote packet
     or a decline notice carries the round of the last request, or 0 (7.5)."""
-    placeholders = ", ".join("?" for _ in _REQUEST_KINDS)
+    placeholders = ", ".join("?" for _ in REQUEST_KINDS)
     (last,) = db.execute(
         f"SELECT COALESCE(MAX(round), 0) FROM intents WHERE lead_id = ?"
         f" AND kind IN ({placeholders}) AND state != 'closed_unsent'",
-        (lead_id, *_REQUEST_KINDS),
+        (lead_id, *REQUEST_KINDS),
     ).fetchone()
-    return int(last) + 1 if kind in _REQUEST_KINDS else int(last)
+    return int(last) + 1 if kind in REQUEST_KINDS else int(last)
 
 
 def _draft_item(db: sqlite3.Connection, intent: Intent) -> Blocker | None:
@@ -142,44 +139,22 @@ def _open_draft_item(
 
 
 def _insert_draft(
-    db: sqlite3.Connection,
-    context: EventContext,
-    lead_id: str,
-    round_: int,
-    kind: MessageKind,
-    recipient: str,
-    subject: str,
-    body: str,
-    ask_ids: list[str],
-    *,
-    waits_for_approval: bool,
+    db: sqlite3.Connection, context: EventContext, intent: Intent, *, waits_for_approval: bool
 ) -> str:
-    intent = Intent(
-        uuid.uuid4().hex,
-        context.run_id,
-        lead_id,
-        round_,
-        kind,
-        recipient,
-        subject,
-        body,
-        ask_ids,
-        payload_hash(recipient, subject, body),
-        "draft",
-        None,
-    )
+    """Insert the intent, which is in state `draft`, with its `intent_created` event, and open the
+    item that holds it when it waits for approval. Returns the intent id."""
     db.execute(
         f"INSERT INTO intents ({_INTENT_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             intent.id,
             intent.run_id,
-            lead_id,
-            round_,
-            kind,
-            recipient,
-            subject,
-            body,
-            json.dumps(ask_ids),
+            intent.lead_id,
+            intent.round,
+            intent.kind,
+            intent.recipient,
+            intent.subject,
+            intent.body,
+            json.dumps(intent.ask_ids),
             intent.payload_hash,
             intent.state,
             intent.mailbox_id,
@@ -191,15 +166,15 @@ def _insert_draft(
         EventType.intent_created,
         IntentCreated(
             intent_id=intent.id,
-            round=round_,
-            kind=kind,
-            recipient=recipient,
-            subject=subject,
-            body=body,
-            ask_ids=ask_ids,
+            round=intent.round,
+            kind=intent.kind,
+            recipient=intent.recipient,
+            subject=intent.subject,
+            body=intent.body,
+            ask_ids=intent.ask_ids,
             payload_hash=intent.payload_hash,
         ),
-        lead_id=lead_id,
+        lead_id=intent.lead_id,
     )
     if waits_for_approval:
         _open_draft_item(db, context, intent)
@@ -226,9 +201,9 @@ def create_draft(
     refusal = manifest_refusal(manifest, _class_of(kind))
     if refusal is not None:
         raise ValueError(refusal)
-    return _insert_draft(
-        db,
-        context,
+    intent = Intent(
+        uuid.uuid4().hex,
+        context.run_id,
         lead_id,
         _next_round(db, lead_id, kind),
         kind,
@@ -236,7 +211,12 @@ def create_draft(
         subject,
         body,
         ask_ids,
-        waits_for_approval=autonomy_level(_class_of(kind)) != "auto",
+        payload_hash(recipient, subject, body),
+        "draft",
+        None,
+    )
+    return _insert_draft(
+        db, context, intent, waits_for_approval=autonomy_level(_class_of(kind)) != "auto"
     )
 
 
@@ -267,9 +247,7 @@ def edit_draft(
         (subject, body, hashed, kind, intent_id),
     )
     void_approvals(db, intent_id)
-    (revision,) = db.execute(
-        "SELECT revision FROM leads WHERE lead_id = ?", (intent.lead_id,)
-    ).fetchone()
+    revision, _ = lead_revision_and_plan_hash(db, intent.lead_id)
     event_id = append_event(
         db,
         context,
@@ -294,9 +272,7 @@ def edit_draft(
 
 
 def _current_binding(db: sqlite3.Connection, intent: Intent, ruleset_hash: str) -> ApprovalBinding:
-    revision, plan_hash = db.execute(
-        "SELECT revision, plan_hash FROM leads WHERE lead_id = ?", (intent.lead_id,)
-    ).fetchone()
+    revision, plan_hash = lead_revision_and_plan_hash(db, intent.lead_id)
     # A lead with no plan has no hash an approval can match, so the empty text never equals one.
     return ApprovalBinding(
         revision, plan_hash or "", ruleset_hash, intent.recipient, intent.payload_hash
@@ -354,10 +330,10 @@ def _begin_dispatch(
                 if item is None:
                     _open_draft_item(db, context, intent)
                 return None
-            if binding_changes(approved, _current_binding(db, intent, context.ruleset_hash)):
+            if approved != _current_binding(db, intent, context.ruleset_hash):
                 _return_to_review(db, context, intent, item)
                 return None
-        target = _STATUS_AFTER_SEND.get(intent.kind)
+        target = STATUS_AFTER_SEND.get(intent.kind)
         refusal = None if target is None else transition_refusal(db, intent.lead_id, target)
         if refusal is not None:
             _return_to_review(db, context, intent, item, refusal)
@@ -374,7 +350,7 @@ def _begin_dispatch(
 
 def _post(mailbox: MailboxClient, intent: Intent) -> int | None:
     """Post the intent and return the mailbox id of the message, or None when the result is ambiguous:
-    the request failed or the response carries no usable id (7.5 step 4)."""
+    the request failed in transport or the mailbox answered with an error status (7.5 step 4)."""
     metadata = {
         "intent_id": intent.id,
         "run_id": intent.run_id,
@@ -386,9 +362,9 @@ def _post(mailbox: MailboxClient, intent: Intent) -> int | None:
         posted = mailbox.send(
             intent.lead_id, intent.recipient, SENDER, intent.subject, intent.body, metadata
         )
-        return int(posted["id"])
-    except (httpx2.HTTPError, ValueError, KeyError, TypeError):
+    except httpx2.HTTPError:
         return None
+    return int(posted["id"])
 
 
 def dispatch(
@@ -481,7 +457,7 @@ def _record_sent(
             lead_id=intent.lead_id,
         )
         _close_delivery_unknown(db, context, intent)
-        if intent.kind in _REQUEST_KINDS:
+        if intent.kind in REQUEST_KINDS:
             open_blocker(
                 db,
                 context,
@@ -495,7 +471,7 @@ def _record_sent(
                 ),
             )
         else:
-            target = _STATUS_AFTER_SEND[intent.kind]
+            target = STATUS_AFTER_SEND[intent.kind]
             if transition_refusal(db, intent.lead_id, target) is None:
                 transition(db, intent.lead_id, target)
 
@@ -554,7 +530,7 @@ def reconcile(
     intent = intent_in_state(db, intent_id, "dispatching", "unknown")
     try:
         listed = mailbox.list_for_lead(intent.lead_id)
-    except (httpx2.HTTPError, ValueError):
+    except httpx2.HTTPError:
         listed = []
     matches = [m for m in listed if (m["metadata"] or {}).get("intent_id") == intent.id]
     if matches:
@@ -582,15 +558,7 @@ def close_unsent(db: sqlite3.Connection, context: EventContext, intent_id: str) 
     intent = intent_in_state(db, intent_id, "unknown")
     db.execute("UPDATE intents SET state = 'closed_unsent' WHERE id = ?", (intent_id,))
     _close_delivery_unknown(db, context, intent)
-    return _insert_draft(
-        db,
-        replace(context, actor="workflow"),
-        intent.lead_id,
-        intent.round,
-        intent.kind,
-        intent.recipient,
-        intent.subject,
-        intent.body,
-        intent.ask_ids,
-        waits_for_approval=True,
+    fresh = replace(
+        intent, id=uuid.uuid4().hex, run_id=context.run_id, state="draft", mailbox_id=None
     )
+    return _insert_draft(db, replace(context, actor="workflow"), fresh, waits_for_approval=True)

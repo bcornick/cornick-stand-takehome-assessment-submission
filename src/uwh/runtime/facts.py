@@ -71,18 +71,6 @@ class ReplyValue:
 
 
 @dataclass(frozen=True)
-class RevisionChange:
-    """The lead revision before and after an operation; it differs when the lead's facts changed (A.4)."""
-
-    before: int
-    after: int
-
-    @property
-    def changed(self) -> bool:
-        return self.after != self.before
-
-
-@dataclass(frozen=True)
 class Fact:
     """An effective fact with the observation it points at."""
 
@@ -176,19 +164,15 @@ class _Pass:
             self.db, self.context, self.lead_id, "underwriter_review", "underwriter", detail
         )
 
-    def finish(self) -> RevisionChange:
+    def finish(self) -> None:
         """Recompute derived facts and reconcile conflicts with the validators, then move the revision once."""
-        (before,) = self.db.execute(
-            "SELECT COALESCE(revision, 0) FROM leads WHERE lead_id = ?", (self.lead_id,)
-        ).fetchone()
         self._recompute_derived_facts()
         self._reconcile_conflicts()
-        if not self.moves_revision:
-            return RevisionChange(before, before)
-        self.db.execute(
-            "UPDATE leads SET revision = ? WHERE lead_id = ?", (before + 1, self.lead_id)
-        )
-        return RevisionChange(before, before + 1)
+        if self.moves_revision:
+            self.db.execute(
+                "UPDATE leads SET revision = COALESCE(revision, 0) + 1 WHERE lead_id = ?",
+                (self.lead_id,),
+            )
 
     def _recompute_derived_facts(self) -> None:
         """9.3 step 2: a derivation with its inputs present selects its value over any source but an underwriter's.
@@ -353,7 +337,7 @@ def observe(
     source: Literal["submitted", "fetched", "assumed"],
     evidence: dict[str, JsonValue],
     rules: LedgerRules,
-) -> RevisionChange:
+) -> None:
     """Record an accepted observation from the lead, a provider or an assumption.
 
     It becomes the effective fact when the key has none, or replaces an `assumed` value unless it is
@@ -364,7 +348,7 @@ def observe(
     current = effective_facts(db, lead_id).get(key)
     if current is None or (current.source == "assumed" and source != "assumed"):
         ledger.select(observation_id)
-    return ledger.finish()
+    ledger.finish()
 
 
 LateReplyCause = Literal["late_reply", "reply_after_terminal_status"]
@@ -384,14 +368,14 @@ def observe_reply(
     lead_id: str,
     values: Sequence[ReplyValue],
     rules: LedgerRules,
-) -> RevisionChange:
+) -> None:
     """Apply the values read from one reply to an open round by the source-authority rules of 7.3.
     The caller commits."""
     ledger = _Pass(db, context, lead_id, rules)
     changed = _changed_keys(ledger, values)
     for reply_value in values:
         _apply_reply_value(ledger, reply_value, changed)
-    return ledger.finish()
+    ledger.finish()
 
 
 def observe_late_reply(
@@ -403,7 +387,7 @@ def observe_late_reply(
     *,
     intent_id: str,
     cause: LateReplyCause,
-) -> RevisionChange:
+) -> None:
     """Rule 9: record the values of a reply that arrived after its round closed, or after the lead's
     final status (A.3), applied to nothing. The caller commits.
 
@@ -427,7 +411,7 @@ def observe_late_reply(
         )
     )
     ledger.moves_revision = True
-    return ledger.finish()
+    ledger.finish()
 
 
 def _changed_keys(ledger: _Pass, values: Sequence[ReplyValue]) -> set[str]:
@@ -519,7 +503,7 @@ def _pending_observation_lead(db: sqlite3.Connection, observation_id: int) -> st
 
 def approve_observation(
     db: sqlite3.Connection, context: EventContext, observation_id: int, rules: LedgerRules
-) -> RevisionChange:
+) -> None:
     """Rule 10: a pending observation becomes the effective fact and its review closes.
 
     Raises ValueError for an observation that has no open observation review. The caller commits.
@@ -530,7 +514,7 @@ def approve_observation(
     close_blocker(db, context, blocker_id)
     ledger = _Pass(db, context, lead_id, rules)
     ledger.select(observation_id)
-    return ledger.finish()
+    ledger.finish()
 
 
 def reject_observation(db: sqlite3.Connection, context: EventContext, observation_id: int) -> None:
@@ -552,8 +536,8 @@ def resolve_fact(
     value: JsonValue,
     reason: str,
     rules: LedgerRules,
-) -> RevisionChange:
-    """Rule 10 and rule 1: record an underwriter observation, which becomes the effective fact.
+) -> int:
+    """Rule 10 and rule 1: record an underwriter observation, which becomes the effective fact, and return the id of its `fact_observed` event.
 
     It closes the open conflicts on its key, which a validator does not open again on the same
     values, and rejects the pending observations on its key. The caller commits.
@@ -573,7 +557,11 @@ def resolve_fact(
         if blocker_id is not None:
             close_blocker(db, context, blocker_id)
     ledger.select(observation_id)
-    return ledger.finish()
+    ledger.finish()
+    (event_id,) = db.execute(
+        "SELECT event_id FROM observations WHERE id = ?", (observation_id,)
+    ).fetchone()
+    return int(event_id)
 
 
 def reject_late_reply_values(db: sqlite3.Connection, blocker_id: int) -> None:

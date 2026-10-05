@@ -22,7 +22,7 @@ from tests.runtime.helpers import (
     state_of,
 )
 from tests.runtime.helpers import LEAD_ID as LEAD
-from uwh.runtime.commands import CommandEnvironment, CommandResult, submit_command
+from uwh.runtime.commands import CommandResult, submit_command
 from uwh.runtime.event_types import (
     Actor,
     ApprovalRecorded,
@@ -46,6 +46,7 @@ from uwh.runtime.facts import (
 )
 from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
+from uwh.runtime.runs import RunEnvironment
 from uwh.runtime.send import create_draft
 from uwh.runtime.store import open_store
 from uwh.runtime.waits import open_blocker, open_blockers
@@ -132,7 +133,7 @@ def env(
     skills_root: Path,
     mailbox: MailboxClient,
     leadgen: LeadgenClient,
-) -> CommandEnvironment:
+) -> RunEnvironment:
     return command_environment(tmp_path, mailbox, leadgen, passes.steps, skills_root=skills_root)
 
 
@@ -186,7 +187,7 @@ def wait_on_producer(db: sqlite3.Connection, intent_id: str) -> int:
 
 
 def decide(
-    db: sqlite3.Connection, env: CommandEnvironment, command: str, item_id: int, reason: str = "ok"
+    db: sqlite3.Connection, env: RunEnvironment, command: str, item_id: int, reason: str = "ok"
 ) -> CommandResult:
     return submit_command(db, env, "underwriter", command, {"item_id": item_id, "reason": reason})
 
@@ -197,7 +198,7 @@ def decide(
 @pytest.mark.parametrize("actor", ACTORS)
 @pytest.mark.parametrize("command_type", list(ALLOWED_ACTORS))
 def test_the_gate_admits_exactly_the_pairs_of_the_7_4_table(
-    db: sqlite3.Connection, env: CommandEnvironment, actor: Actor, command_type: str
+    db: sqlite3.Connection, env: RunEnvironment, actor: Actor, command_type: str
 ) -> None:
     skill = "every_class" if actor == "workflow" else None
     if actor not in ALLOWED_ACTORS[command_type]:
@@ -222,7 +223,7 @@ def test_the_gate_admits_exactly_the_pairs_of_the_7_4_table(
 )
 def test_a_workflow_command_is_refused_unless_its_skill_manifest_declares_it(
     db: sqlite3.Connection,
-    env: CommandEnvironment,
+    env: RunEnvironment,
     skill: str | None,
     command_type: str,
     reason_part: str,
@@ -233,7 +234,7 @@ def test_a_workflow_command_is_refused_unless_its_skill_manifest_declares_it(
 
 
 def test_the_actor_is_the_transports_and_a_payload_naming_one_is_refused(
-    db: sqlite3.Connection, env: CommandEnvironment
+    db: sqlite3.Connection, env: RunEnvironment
 ) -> None:
     assert submit_command(db, env, "underwriter", "resolve_fact", RESOLVE_ACREAGE).accepted
     (observed,) = events_of(db, EventType.fact_observed)
@@ -249,7 +250,7 @@ def test_the_actor_is_the_transports_and_a_payload_naming_one_is_refused(
 
 
 def test_a_refusal_writes_one_command_refused_with_the_payload_and_changes_nothing_else(
-    path: str, db: sqlite3.Connection, env: CommandEnvironment
+    path: str, db: sqlite3.Connection, env: RunEnvironment
 ) -> None:
     item_id = pending_observation(db)
     before = len(read_events(db))
@@ -272,7 +273,7 @@ def test_a_refusal_writes_one_command_refused_with_the_payload_and_changes_nothi
 
 
 def test_a_refusal_before_any_run_carries_the_pre_run_id_and_the_reference_morning(
-    path: str, env: CommandEnvironment
+    path: str, env: RunEnvironment
 ) -> None:
     db = open_store(path)
 
@@ -288,7 +289,7 @@ def test_a_refusal_before_any_run_carries_the_pre_run_id_and_the_reference_morni
 
 
 def test_approving_an_observation_makes_it_the_fact_and_records_the_approval(
-    db: sqlite3.Connection, env: CommandEnvironment, passes: Passes
+    db: sqlite3.Connection, env: RunEnvironment, passes: Passes
 ) -> None:
     item_id = pending_observation(db)
 
@@ -325,7 +326,7 @@ def test_approving_an_observation_makes_it_the_fact_and_records_the_approval(
 
 
 def test_rejecting_an_observation_keeps_the_existing_value(
-    db: sqlite3.Connection, env: CommandEnvironment
+    db: sqlite3.Connection, env: RunEnvironment
 ) -> None:
     item_id = pending_observation(db)
 
@@ -338,7 +339,7 @@ def test_rejecting_an_observation_keeps_the_existing_value(
 
 
 def test_approving_a_late_reply_review_rejects_the_reply_values_and_leaves_the_open_round(
-    db: sqlite3.Connection, env: CommandEnvironment
+    db: sqlite3.Connection, env: RunEnvironment
 ) -> None:
     observe(db, SETUP, LEAD, "acreage", 2, "submitted", {}, RULES)
     observe_late_reply(
@@ -368,7 +369,7 @@ def test_approving_a_late_reply_review_rejects_the_reply_values_and_leaves_the_o
 
 @pytest.mark.parametrize("cause", ["unread_reply", "off_topic_reply", "declining_reply"])
 def test_acknowledging_the_review_of_a_reply_closes_the_round_it_answered_and_no_other(
-    db: sqlite3.Connection, env: CommandEnvironment, cause: ReviewCause
+    db: sqlite3.Connection, env: RunEnvironment, cause: ReviewCause
 ) -> None:
     observation_item = pending_observation(db)
     other_round = wait_on_producer(db, "i-2")
@@ -412,7 +413,7 @@ def test_acknowledging_the_review_of_a_reply_closes_the_round_it_answered_and_no
 )
 def test_a_decision_the_item_does_not_allow_is_refused_and_leaves_the_item_open(
     db: sqlite3.Connection,
-    env: CommandEnvironment,
+    env: RunEnvironment,
     command: str,
     detail: BlockerDetail,
     kind: BlockerKind,
@@ -454,7 +455,7 @@ def approve_payload(db: sqlite3.Connection, intent_id: str, item_id: int) -> dic
 
 
 def test_stale_artifact_hash_refused(
-    db: sqlite3.Connection, env: CommandEnvironment, mailbox: MailboxClient
+    db: sqlite3.Connection, env: RunEnvironment, mailbox: MailboxClient
 ) -> None:
     intent_id = make_draft(db)
     item_id = item_of(db, intent_id)
@@ -479,7 +480,7 @@ def test_stale_artifact_hash_refused(
 
 
 def test_approving_a_draft_binds_the_five_values_and_sends_it(
-    db: sqlite3.Connection, env: CommandEnvironment, mailbox: MailboxClient
+    db: sqlite3.Connection, env: RunEnvironment, mailbox: MailboxClient
 ) -> None:
     intent_id = make_draft(db)
     item_id = item_of(db, intent_id)
@@ -513,7 +514,7 @@ def test_approving_a_draft_binds_the_five_values_and_sends_it(
 
 
 def test_approving_a_quote_packet_sends_it_and_the_lead_becomes_quote_sent(
-    db: sqlite3.Connection, env: CommandEnvironment
+    db: sqlite3.Connection, env: RunEnvironment
 ) -> None:
     intent_id = make_draft(db, "quote_packet")
 
@@ -526,7 +527,7 @@ def test_approving_a_quote_packet_sends_it_and_the_lead_becomes_quote_sent(
 
 
 def test_rejecting_a_draft_returns_it_to_draft_voids_its_approval_and_sends_nothing(
-    db: sqlite3.Connection, env: CommandEnvironment, mailbox: MailboxClient
+    db: sqlite3.Connection, env: RunEnvironment, mailbox: MailboxClient
 ) -> None:
     intent_id = make_draft(db)
     item_id = item_of(db, intent_id)
@@ -550,7 +551,7 @@ def test_rejecting_a_draft_returns_it_to_draft_voids_its_approval_and_sends_noth
 
 
 def test_edit_draft_changes_the_draft_and_writes_draft_edited_as_the_underwriter(
-    db: sqlite3.Connection, env: CommandEnvironment
+    db: sqlite3.Connection, env: RunEnvironment
 ) -> None:
     intent_id = make_draft(db, "routine_request")
     payload = {"intent_id": intent_id, "subject": "New", "body": "Changed", "reason": "tone"}
@@ -570,7 +571,7 @@ def test_edit_draft_changes_the_draft_and_writes_draft_edited_as_the_underwriter
 
 @pytest.mark.parametrize(("status", "ran"), [("in_progress", [LEAD]), ("declined", [])])
 def test_resolve_fact_records_the_fact_and_re_evaluates_a_lead_that_is_not_terminal(
-    db: sqlite3.Connection, env: CommandEnvironment, passes: Passes, status: str, ran: list[str]
+    db: sqlite3.Connection, env: RunEnvironment, passes: Passes, status: str, ran: list[str]
 ) -> None:
     db.execute("UPDATE leads SET status = ?", (status,))
     db.commit()
@@ -657,7 +658,7 @@ def test_the_events_of_a_command_take_their_timestamps_inside_its_transaction(
 
 
 def test_record_ruling_writes_the_ruling_with_actor_reason_and_the_plan_hash_and_re_evaluates(
-    db: sqlite3.Connection, env: CommandEnvironment, passes: Passes
+    db: sqlite3.Connection, env: RunEnvironment, passes: Passes
 ) -> None:
     detail = BlockerDetail(resume_trigger="a ruling", text="Pick.", choice_ids=["roof_age_basis"])
     open_item(db, detail, "underwriter_question")

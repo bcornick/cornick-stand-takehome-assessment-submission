@@ -5,13 +5,13 @@ from collections.abc import Callable, Sequence
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from uwh.runtime.commands import CommandEnvironment
 from uwh.runtime.event_types import EventType
 from uwh.runtime.events import EventContext, StoredEvent, read_events
 from uwh.runtime.facts import LedgerRules
 from uwh.runtime.hashing import payload_hash
 from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
+from uwh.runtime.runs import RunEnvironment
 from uwh.runtime.send import create_draft, dispatch
 from uwh.runtime.workflow import Step
 from uwh.skills.manifest import SkillManifest
@@ -83,8 +83,8 @@ def command_environment(
     *,
     skills_root: Path | None = None,
     now: Callable[[], datetime] = lambda: NOW,
-) -> CommandEnvironment:
-    return CommandEnvironment(
+) -> RunEnvironment:
+    return RunEnvironment(
         "replay", RULESET, LedgerRules(), steps, skills_root or tmp_path, now, mailbox, leadgen
     )
 

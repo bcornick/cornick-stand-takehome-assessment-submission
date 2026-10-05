@@ -7,11 +7,16 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 
 from uwh.runtime.event_types import BlockerDetail, EventType, LeadReceived, Status
-from uwh.runtime.events import EventContext, StaleRun, append_event, require_current_run
+from uwh.runtime.events import (
+    EventContext,
+    MakeContext,
+    StaleRun,
+    append_event,
+    require_current_run,
+)
 from uwh.runtime.facts import (
     LedgerRules,
     ReplyValue,
-    RevisionChange,
     observe_late_reply,
     observe_reply,
 )
@@ -95,6 +100,17 @@ def _status(db: sqlite3.Connection, lead_id: str) -> Status:
     return status
 
 
+def lead_revision_and_plan_hash(db: sqlite3.Connection, lead_id: str) -> tuple[int, str | None]:
+    """The lead's revision and action-plan hash now; the hash is None until a plan exists. Raises
+    ValueError for a lead that does not exist."""
+    row = db.execute(
+        "SELECT revision, plan_hash FROM leads WHERE lead_id = ?", (lead_id,)
+    ).fetchone()
+    if row is None:
+        raise ValueError(f"there is no lead {lead_id}")
+    return int(row[0]), row[1]
+
+
 def transition_refusal(db: sqlite3.Connection, lead_id: str, target: Status) -> str | None:
     """Why the lead cannot move to `target` along the A.3 table, or None when it can. Raises ValueError
     for a lead that does not exist."""
@@ -151,7 +167,7 @@ def _open_step_failure_blocker(
 
 def _run_step(
     db: sqlite3.Connection,
-    make_context: Callable[[], EventContext],
+    make_context: MakeContext,
     lead_id: str,
     step: Step,
     *,
@@ -175,7 +191,7 @@ def _run_step(
 
 def run_steps(
     db: sqlite3.Connection,
-    make_context: Callable[[], EventContext],
+    make_context: MakeContext,
     lead_id: str,
     steps: Sequence[Step],
 ) -> None:
@@ -217,7 +233,7 @@ def run_steps(
 
 def reevaluate(
     db: sqlite3.Connection,
-    make_context: Callable[[], EventContext],
+    make_context: MakeContext,
     lead_id: str,
     steps: Sequence[Step],
 ) -> None:
@@ -240,11 +256,11 @@ def record_reply(
     *,
     round_closed: bool,
     intent_id: str,
-) -> RevisionChange:
+) -> None:
     """Record a reply in the ledger. A reply to a terminal lead is recorded `pending_review` and
     raises a `reply_after_terminal_status` review, and the status stays (A.3). The caller commits."""
     if _status(db, lead_id) in TERMINAL_STATUSES:
-        return observe_late_reply(
+        observe_late_reply(
             db,
             context,
             lead_id,
@@ -253,11 +269,12 @@ def record_reply(
             intent_id=intent_id,
             cause="reply_after_terminal_status",
         )
-    if round_closed:
-        return observe_late_reply(
+    elif round_closed:
+        observe_late_reply(
             db, context, lead_id, values, rules, intent_id=intent_id, cause="late_reply"
         )
-    return observe_reply(db, context, lead_id, values, rules)
+    else:
+        observe_reply(db, context, lead_id, values, rules)
 
 
 def interrupted_leads(db: sqlite3.Connection) -> list[str]:
@@ -278,9 +295,7 @@ def interrupted_leads(db: sqlite3.Connection) -> list[str]:
     ]
 
 
-def _run_lead(
-    db_path: str, make_context: Callable[[], EventContext], lead_id: str, steps: Sequence[Step]
-) -> None:
+def _run_lead(db_path: str, make_context: MakeContext, lead_id: str, steps: Sequence[Step]) -> None:
     db = open_store(db_path)
     try:
         run_steps(db, make_context, lead_id, steps)
@@ -290,7 +305,7 @@ def _run_lead(
 
 def run_leads(
     db_path: str,
-    make_context: Callable[[], EventContext],
+    make_context: MakeContext,
     lead_ids: Sequence[str],
     steps: Sequence[Step],
 ) -> None:

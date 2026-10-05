@@ -1,5 +1,5 @@
 # ABOUTME: POST /api/commands (A.5, A.11): submits a typed command as the underwriter, the actor the REST transport binds, and returns the A.11 response.
-# ABOUTME: The Command model admits only the commands an underwriter may submit, so a workflow-only class never reaches the command layer; a command whose handler is not built answers 501.
+# ABOUTME: The Command model admits only the commands an underwriter may submit, so a workflow-only class never reaches the command layer; a command with no handler answers 501.
 from fastapi import APIRouter, HTTPException
 
 from uwh.api.runtime import RuntimeDependency

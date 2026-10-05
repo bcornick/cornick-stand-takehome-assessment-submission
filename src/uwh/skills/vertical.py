@@ -1,4 +1,4 @@
-# ABOUTME: The tables built on the underwriting names: terminal statuses, status transitions, blocker priority, command classes, persisting review causes, the rules for a servable blocker, the confirmation-only class and the reference morning.
+# ABOUTME: The tables built on the underwriting names: terminal statuses, status transitions, blocker priority, command classes, persisting review causes, the reviews that close a round, the status a sent message gives, the rules for a servable blocker, the confirmation-only class and the reference morning.
 # ABOUTME: Each table is typed with a Literal value set, those of uwh.runtime.event_types, so a name outside a set fails type checking.
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -117,6 +117,16 @@ def refuse_unservable_blocker(kind: BlockerKind, detail: BlockerDetail) -> None:
     if kind != "underwriter_question" and detail.choice_ids:
         raise ValueError(f"a {kind} blocker has no choice_ids")
 
+
+# The reviews a reply raises about an open round (7.3 rule 9, A.11): acknowledging one closes that round.
+ROUND_REVIEW_CAUSES: tuple[ReviewCause, ...] = (
+    "unread_reply",
+    "off_topic_reply",
+    "declining_reply",
+)
+
+# The status a lead takes when a packet or a notice is sent (A.3).
+STATUS_AFTER_SEND: dict[str, Status] = {"quote_packet": "quote_sent", "decline_notice": "declined"}
 
 # The class a request made only of confirmations takes. Setting it to "sensitive_request" makes an
 # underwriter see confirmations first.
