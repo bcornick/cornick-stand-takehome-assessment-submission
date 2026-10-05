@@ -18,6 +18,6 @@
     "milestone": 1,
     "description": "The running app serves the queue and lead 008's detail from live data. Expect: `true`, then `true`.",
     "command": "curl -s http://localhost:8000/api/leads | jq -e 'map(.lead_id) | index(\"LEAD-00000042-008\") != null' && curl -s http://localhost:8000/api/leads/LEAD-00000042-008 | jq -e '.lead_id == \"LEAD-00000042-008\" and (.facts | length) > 0'",
-    "passes": false
+    "passes": true
   }
 ]
