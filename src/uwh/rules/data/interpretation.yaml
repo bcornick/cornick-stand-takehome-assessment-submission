@@ -146,10 +146,10 @@ rows:
     rationale: "The board asks to determine the applicant's willingness to mitigate greater distance; no registry field holds it and A.7 lists `willing_to_mitigate` as a catalogue question."
   - id: I18
     source: "Roof"
-    gap: "Non-Class A at `p_f` exactly 0.50"
-    ruling: "Middle band, matching the Unknown Class and Siding pages"
+    gap: "Non-Class A at `p_f` exactly 0.50: the board's bands are \"> .15 < .50\" and \"> .50\""
+    ruling: "The high band, by the boundary test: the board states both sides and leaves 0.50 in neither"
     kind: [A]
-    rationale: "The board is silent for a non-Class A roof at `p_f` exactly 0.50 (section 9.7 gap)."
+    rationale: "The Roof page's Non-Class A bands are \"> .15 < .50\" and \"> .50\", so exactly 0.50 is in neither; the boundary test (section 9.7) gives the exact value the stricter band, the high one."
   - id: I19
     source: "Roof"
     gap: "\"Or decline\" beside a requirement"
@@ -189,11 +189,10 @@ rows:
     applied_in: "graph page: `07-post-and-pier-foundations` (section 9.6: the page applies when `foundation_type` is Piers, Stilts or Pilings)"
   - id: I24
     source: "Plumbing"
-    gap: "Exactly 30 years; heater exactly 10 years"
-    ruling: "Not older"
+    gap: "Exactly 30 years; heater exactly 10 years: the board says \"older than\" and \"newer than\" for each"
+    ruling: "Older, by the boundary test: the board states both sides and leaves the exact age in neither"
     kind: [A]
-    rationale: "The board does not say what happens at exactly 30 years or at a heater of exactly 10 years (section 9.7 gap)."
-    lenient: true
+    rationale: "The Plumbing page says \"Older than\" and \"Newer than\" for 30 years and for the 10-year heater, so the exact age is in neither; the boundary test (section 9.7) gives it the stricter, older side."
   - id: I25
     source: "Plumbing"
     gap: "Tank heater newer than 10 years has no outcome"
@@ -235,10 +234,9 @@ rows:
   - id: I30
     source: "Electrical"
     gap: "Exactly 120 amps"
-    ruling: "Not under 120"
+    ruling: "Not under 120: the board says \"less than 120 amp\" only, so by the boundary test the literal reading holds"
     kind: [A]
-    rationale: "The board's \"Less than 120 Amp\" leaves a panel of exactly 120 amps to be read (section 9.7 gap)."
-    lenient: true
+    rationale: "The Electrical page says \"Less than 120 Amp\" and states no other side, so there is no gap under the boundary test (section 9.7) and the literal reading holds: exactly 120 amps is not less than 120."
   - id: I31
     source: "Electrical"
     gap: "Overview page shows a different subtree"

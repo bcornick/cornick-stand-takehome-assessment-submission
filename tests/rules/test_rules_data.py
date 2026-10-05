@@ -100,7 +100,7 @@ VALIDATOR_ROWS = [cells for cells in table_cells(SECTION_95) if cells[0].startsw
 CATALOGUE_SENTENCE = between(ARCHITECTURE, "`catalogue.yaml` holds id,", "`wording.yaml` holds")
 
 ALL_IDS = [f"I{n:02d}" for n in range(1, 58)]
-LENIENT = {"I03", "I19", "I20", "I21", "I24", "I25", "I29", "I30", "I32", "I42"}
+LENIENT = {"I03", "I19", "I20", "I21", "I25", "I29", "I32", "I42"}
 QUESTION_FOR_STAND = {"I12", "I28", "I52"}
 PRODUCER_EDITABLE = {name for name, entry in REGISTRY.items() if entry["editableByProducer"]}
 REQUIRED_WHEN = {entry["requiredWhen"] for entry in REGISTRY.values() if "requiredWhen" in entry}
@@ -339,7 +339,7 @@ CATALOGUE_IDS = re.findall(r"`([a-z0-9_]+)`", CATALOGUE_SENTENCE.split("for each
 CATALOGUE_ROWS = {
     "kt_extent": "I27",
     "kt_areas": "I27",
-    "kt_present_and_where": "I51",
+    "kt_present_and_where": "I27",
     "tankers_bring_water": "I41",
     "water_source_within_1000ft": "I41",
     "water_source_year_round": "I41",
@@ -396,6 +396,7 @@ def all_wording() -> list[str]:
         list(wording["fields"].values())
         + list(wording["preambles"].values())
         + [entry["question"] for entry in wording["confirmations"].values()]
+        + [wording["combined_confirmation"]["question"]]
         + [entry["wording"] for entry in load("catalogue.yaml")["questions"].values()]
     )
 
@@ -437,6 +438,23 @@ def test_confirmations_state_reported_values_by_field_placeholder() -> None:
         assert placeholders, id_
         assert placeholders <= set(entry["fields"]), id_
         assert entry["question"].strip().endswith("?"), id_
+
+
+def test_the_combined_confirmation_covers_the_two_dwelling_use_validators() -> None:
+    wording = load("wording.yaml")
+    confirmations = wording["confirmations"]
+    combined = wording["combined_confirmation"]
+    assert len(combined["replaces"]) == 2
+    assert set(combined["replaces"]) <= set(confirmations)
+    first, second = (confirmations[id_]["fields"] for id_ in combined["replaces"])
+    assert set(first) & set(second) == {"dwelling_use_type"}
+    assert set(combined["fields"]) == set(first) | set(second)
+    assert len(combined["fields"]) == len(set(combined["fields"]))
+    placeholders = [
+        name for _, name, _, _ in string.Formatter().parse(combined["question"]) if name
+    ]
+    assert sorted(placeholders) == sorted(combined["fields"])
+    assert combined["question"].strip().endswith("?")
 
 
 def test_wording_is_plain_and_states_no_consequence() -> None:

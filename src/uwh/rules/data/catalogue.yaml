@@ -16,7 +16,7 @@ questions:
   kt_present_and_where:
     wording: "Is knob-and-tube wiring present, and if so where?"
     answer_type: text
-    row: I51
+    row: I27
   tankers_bring_water:
     wording: "Would fire tankers bring water to the property?"
     answer_type: yes_no

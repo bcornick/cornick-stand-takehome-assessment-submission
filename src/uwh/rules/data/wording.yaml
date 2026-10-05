@@ -1,5 +1,5 @@
 # ABOUTME: Stored plain wording for asks: a question per producer-editable registry field, a preamble per requiredWhen form a follow-on can take,
-# ABOUTME: and a confirmation per conflict check that goes to a producer. Sections 9.2, 9.5, 10.2 and A.7 define them; fields are in registry order.
+# ABOUTME: a confirmation per conflict check that goes to a producer, and one combined confirmation. Sections 9.2, 9.5, 10.2 and A.7 define them; fields are in registry order.
 
 # One question for every field the producer can edit (`editableByProducer` true in the registry).
 fields:
@@ -112,3 +112,11 @@ confirmations:
   tankless_with_tank_fields:
     fields: [water_heater_type, water_heater_age_years, water_heater_location]
     question: "The water heater is listed as {water_heater_type} and also has an age or a location listed. Can you confirm the water heater type?"
+
+# The two checks `owner_occupied_with_other_use` and `tenant_use_without_rental` both name `dwelling_use_type`.
+# When both fire, this template replaces their two confirmations, so `dwelling_use_type` is asked once. `fields`
+# is the union of the two checks' fields; each `{field}` appears once.
+combined_confirmation:
+  replaces: [owner_occupied_with_other_use, tenant_use_without_rental]
+  fields: [dwelling_type, dwelling_use_type, is_rental]
+  question: "The dwelling use is listed as {dwelling_type}, the occupancy type as {dwelling_use_type} and the rental exposure as {is_rental}. Can you confirm all three?"
