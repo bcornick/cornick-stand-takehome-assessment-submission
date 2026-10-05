@@ -380,7 +380,7 @@ export interface components {
          */
         BlockerDetail: {
             /** Cause */
-            cause: string | null;
+            cause: ("late_reply" | "unread_reply" | "off_topic_reply" | "declining_reply" | "reply_after_terminal_status" | "draft_held_by_stop" | "draft_held_class_off" | "round_limit" | "identity_score_missing" | "identity_score_unsupported") | null;
             /**
              * Cause Persists
              * @default false
@@ -394,7 +394,7 @@ export interface components {
             /** Intent Id */
             intent_id: string | null;
             /** Item Kind */
-            item_kind: string | null;
+            item_kind: ("draft" | "observation" | "delivery_unknown" | "no_contact_route" | "review") | null;
             /** Observation Id */
             observation_id: number | null;
             /** Resume Trigger */

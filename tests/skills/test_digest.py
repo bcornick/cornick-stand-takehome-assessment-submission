@@ -8,7 +8,7 @@ from uwh.skills.digest import skill_digest
 
 FILES = {
     "skills/__init__.py": "",
-    "skills/vertical.py": "STATUSES = 1\n",
+    "skills/vertical.py": "TRANSITIONS = 1\n",
     "skills/demo/__init__.py": "",
     "skills/demo/manifest.yaml": "name: demo\n",
     "skills/demo/skill.py": "def run(x):\n    return x\n",

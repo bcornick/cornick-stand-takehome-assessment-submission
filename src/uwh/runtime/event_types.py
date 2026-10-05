@@ -37,9 +37,34 @@ class EventType(StrEnum):
     fault_injected = "fault_injected"
 
 
-# Runtime-level value sets: section 7.3 observations, section 9.4 provider results, A.1 columns,
-# section 8 skill statuses. The names the vertical registers (observation sources, blocker owners,
-# approval item kinds) are `str` fields, constrained by the `Registration` tuple named beside each.
+# The value sets of the A.1 columns and the event payloads: section 7.1 statuses and blocker kinds,
+# section 7.3 observation sources, section 7.4 actors, A.1 owners, intent kinds and approval item
+# kinds, A.11 review causes, section 9.4 provider results and section 8 skill statuses. The store
+# builds its CHECK lists from these.
+Status = Literal["received", "triaged", "in_progress", "quote_sent", "declined"]
+# Ordered by priority, highest first (`uwh.skills.vertical.BLOCKER_KINDS_BY_PRIORITY` holds the order).
+BlockerKind = Literal[
+    "delivery_unknown", "underwriter_question", "underwriter_review", "data", "producer_reply"
+]
+BlockerOwner = Literal["underwriter", "producer", "data_team"]
+# The intent kinds; each is one section 10.1 message class.
+MessageKind = Literal["routine_request", "sensitive_request", "quote_packet", "decline_notice"]
+ApprovalItemKind = Literal["draft", "observation", "delivery_unknown", "no_contact_route", "review"]
+ObservationSource = Literal["submitted", "fetched", "derived", "assumed", "reply", "underwriter"]
+Actor = Literal["workflow", "underwriter", "assistant", "mcp_client", "inbound"]
+# What raised an `underwriter_review` item of item kind `review`.
+ReviewCause = Literal[
+    "late_reply",
+    "unread_reply",
+    "off_topic_reply",
+    "declining_reply",
+    "reply_after_terminal_status",
+    "draft_held_by_stop",
+    "draft_held_class_off",
+    "round_limit",
+    "identity_score_missing",
+    "identity_score_unsupported",
+]
 ObservationStatus = Literal["accepted", "pending_review", "rejected"]
 ProviderStatus = Literal["found", "not_found", "blocked", "unavailable"]
 ApprovalDecision = Literal["approved", "rejected"]
@@ -75,7 +100,7 @@ class ReplayMiss(Payload):
 
 class DraftEdited(Payload):
     intent_id: str
-    kind: str  # the intent's kind after the edit (section 7.5), one of `Registration.message_kinds`
+    kind: MessageKind  # the intent's kind after the edit (section 7.5)
     subject: str
     body: str
     payload_hash: str
@@ -100,7 +125,7 @@ class FactObserved(Payload):
     observation_id: int
     key: str  # a registry field name, or a catalogue id prefixed `q:`
     value: JsonValue
-    source: str  # one of `Registration.observation_sources`
+    source: ObservationSource
     evidence: dict[
         str, JsonValue
     ]  # quoted span, provider name, derivation id or interpretation row id
@@ -113,7 +138,7 @@ class FactSelected(Payload):
     key: str
     observation_id: int
     value: JsonValue
-    source: str  # one of `Registration.observation_sources`
+    source: ObservationSource
     confirmed: bool
 
 
@@ -157,10 +182,8 @@ class PlanBuilt(Payload):
 class BlockerDetail(Payload):
     """What a blocker carries beyond its kind and owner; also the shape of `blockers.detail_json`."""
 
-    item_kind: str | None = (
-        None  # one of `Registration.item_kinds`; None for a blocker that is not a human item
-    )
-    cause: str | None = None  # what raised a review, for example a late reply or the round limit
+    item_kind: ApprovalItemKind | None = None  # None for a blocker that is not a human item
+    cause: ReviewCause | None = None  # what raised a review
     cause_persists: bool = (
         False  # a review whose cause persists is refused until the cause is removed
     )
@@ -173,20 +196,20 @@ class BlockerDetail(Payload):
 
 class BlockerOpened(Payload):
     blocker_id: int
-    kind: str
-    owner: str  # one of `Registration.blocker_owners`
+    kind: BlockerKind
+    owner: BlockerOwner
     detail: BlockerDetail
 
 
 class BlockerClosed(Payload):
     blocker_id: int
-    kind: str
+    kind: BlockerKind
 
 
 class IntentCreated(Payload):
     intent_id: str
     round: int
-    kind: str
+    kind: MessageKind
     recipient: str
     subject: str
     body: str
@@ -256,7 +279,7 @@ class ReplyRead(Payload):
 
 class ApprovalRecorded(Payload):
     item_id: int  # the blocker the decision settles
-    item_kind: str  # one of `Registration.item_kinds`
+    item_kind: ApprovalItemKind
     intent_id: str | None
     # The five frozen values of the approval binding (section 7.4). `ruleset_hash` shares its name
     # with an event row column on purpose: it is the ruleset the approval is bound to.

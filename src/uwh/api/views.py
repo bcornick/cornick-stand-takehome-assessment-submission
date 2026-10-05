@@ -1,94 +1,62 @@
 # ABOUTME: Request and response models of the app's HTTP routes (A.5, A.11, section 11); the OpenAPI file and the web client's types come from them.
-# ABOUTME: Vertical vocabularies are typed from uwh.skills.vertical in one place, and no shape holds a model confidence (section 11).
-from dataclasses import dataclass
-from typing import Annotated, Any, Literal, Self, get_args
+# ABOUTME: Value sets are the Literal types of uwh.runtime.event_types and uwh.skills.vertical, and no shape holds a model confidence (section 11).
+from typing import Annotated, Any, Literal, Self
 
-from pydantic import (
-    Field,
-    GetCoreSchemaHandler,
-    GetJsonSchemaHandler,
-    JsonValue,
-    ValidationError,
-    model_validator,
-)
-from pydantic.json_schema import JsonSchemaValue
-from pydantic_core import core_schema
+from pydantic import Field, JsonValue, ValidationError, model_validator
 
 from uwh.rules.models import (
     ActionPlan,
-    Decided,
-    DeclinesOnEveryBranch,
     OpenChoice,
     PlannedEffect,
     RuleTrace,
     StrictModel,
-    Undecided,
 )
 from uwh.runtime.event_types import (
     PAYLOAD_MODELS,
+    Actor,
+    ApprovalItemKind,
     BlockerDetail,
+    BlockerKind,
+    BlockerOwner,
     EventType,
     IntentState,
+    MessageKind,
+    ObservationSource,
     ObservationStatus,
     ProposalKind,
     ProposalState,
+    ReviewCause,
     SkillStatus,
+    Status,
 )
-from uwh.settings import RUN_MODES
-from uwh.skills import vertical
+from uwh.settings import RunMode
+from uwh.skills.vertical import REVIEW_CAUSES, AutonomyLevel
 
-
-@dataclass(frozen=True)
-class Vocabulary:
-    """Marks a `str` field as one of a registered vocabulary: checked on validation and an enum
-    in the OpenAPI document, so the schema cannot drift from the registration."""
-
-    values: tuple[str, ...]
-
-    def __get_pydantic_core_schema__(
-        self, source: Any, handler: GetCoreSchemaHandler
-    ) -> core_schema.CoreSchema:
-        def check(value: str) -> str:
-            if value not in self.values:
-                raise ValueError(f"{value!r} is not one of {', '.join(self.values)}")
-            return value
-
-        return core_schema.no_info_after_validator_function(check, handler(source))
-
-    def __get_pydantic_json_schema__(
-        self, schema: core_schema.CoreSchema, handler: GetJsonSchemaHandler
-    ) -> JsonSchemaValue:
-        json_schema = handler(schema)
-        json_schema["enum"] = list(self.values)
-        return json_schema
-
-
-# The vertical's vocabularies (section 7) and the settings' run modes.
-Status = Annotated[str, Vocabulary(vertical.STATUSES)]
-BlockerKind = Annotated[str, Vocabulary(vertical.BLOCKER_KINDS_BY_PRIORITY)]
-MessageKind = Annotated[str, Vocabulary(vertical.MESSAGE_KINDS)]
-AutonomyLevel = Annotated[str, Vocabulary(vertical.AUTONOMY_LEVELS)]
-Actor = Annotated[str, Vocabulary(vertical.ACTORS)]
-BlockerOwner = Annotated[str, Vocabulary(vertical.BLOCKER_OWNERS)]
-ApprovalItemKind = Annotated[str, Vocabulary(vertical.ITEM_KINDS)]
-ObservationSource = Annotated[str, Vocabulary(vertical.OBSERVATION_SOURCES)]
-ReviewCause = Annotated[str, Vocabulary(tuple(name for name, _ in vertical.REVIEW_CAUSES))]
 
 # Autonomy applies to a class that has a default level (7.4); the human-only classes have none.
-AutonomyClassName = Annotated[
-    str, Vocabulary(tuple(c.name for c in vertical.COMMAND_CLASSES if c.default_level is not None))
+AutonomyClassName = Literal[
+    "fetch_data",
+    "send_routine_request",
+    "send_sensitive_request",
+    "send_quote_packet",
+    "send_decline_notice",
+    "deliver_reply",
+    "propose_command",
 ]
-RunMode = Annotated[str, Vocabulary(RUN_MODES)]
-
-# A.11: workflow-only classes are submitted in process and are not accepted over HTTP.
-HTTP_COMMAND_TYPES = tuple(c.name for c in vertical.COMMAND_CLASSES if c.actors != ("workflow",))
-HttpCommandType = Annotated[str, Vocabulary(HTTP_COMMAND_TYPES)]
 
 # A.11: a proposal holds one of ten HTTP commands: never approve, reject or another proposal.
-PROPOSABLE_COMMAND_TYPES = tuple(
-    t for t in HTTP_COMMAND_TYPES if t not in ("approve", "reject", "propose_command")
-)
-ProposableCommandType = Annotated[str, Vocabulary(PROPOSABLE_COMMAND_TYPES)]
+ProposableCommandType = Literal[
+    "deliver_reply",
+    "edit_draft",
+    "resolve_fact",
+    "decline_lead",
+    "record_ruling",
+    "propose_rule_change",
+    "apply_rule_change",
+    "change_setting",
+    "emergency_stop",
+    "start_run",
+]
 
 # A fact's reported value as a command carries it.
 FactValue = str | int | float | bool
@@ -164,12 +132,8 @@ class FactView(StrictModel):
     is_stub: bool  # a stand-in value, shown as such (9.4)
 
 
-# Section 9.6's three node results, read from the models, and the page that was not evaluated.
-NODE_RESULTS = tuple(
-    get_args(model.model_fields["result"].annotation)[0]
-    for model in (Decided, Undecided, DeclinesOnEveryBranch)
-)
-PageResult = Annotated[str, Vocabulary((*NODE_RESULTS, "not_evaluated"))]
+# Section 9.6's three node results, and the page that was not evaluated.
+PageResult = Literal["decided", "undecided", "declines_on_every_branch", "not_evaluated"]
 
 
 class PlaybookPage(StrictModel):
@@ -291,7 +255,7 @@ class BlockerView(StrictModel):
             raise ValueError("detail.observation_id is the observation's observation_id")
 
     def _review_cause_is_registered(self) -> None:
-        causes = dict(vertical.REVIEW_CAUSES)
+        causes = dict(REVIEW_CAUSES)
         if self.item_kind != "review":
             if self.review_cause is not None:
                 raise ValueError("only a review has a review_cause")

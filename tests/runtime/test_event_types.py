@@ -1,7 +1,7 @@
 # ABOUTME: Tests that the event-type enum holds the 28 names of A.2 and that each type has a payload model named after it.
 # ABOUTME: The names and each payload's field set are written out here; every payload forbids unknown fields and round-trips through JSON.
 from datetime import date
-from typing import get_args
+from typing import Any, get_args
 
 import pytest
 from pydantic import BaseModel, ValidationError
@@ -11,11 +11,19 @@ from uwh.runtime import event_types
 from uwh.runtime.event_types import (
     PAYLOAD_MODELS,
     AbstentionReason,
+    Actor,
+    ApprovalItemKind,
     BlockerDetail,
+    BlockerKind,
+    BlockerOwner,
     EventType,
     LocatedCandidate,
+    MessageKind,
+    ObservationSource,
     ReplyClassification,
+    ReviewCause,
     RulingRecorded,
+    Status,
 )
 
 # A.2, in order.
@@ -459,22 +467,82 @@ def test_provider_status_and_observation_status_are_closed_sets() -> None:
         observed.model_validate({**SAMPLES["fact_observed"], "status": "maybe"})
 
 
+# The value sets written out from the architecture: 7.1 statuses and blocker kinds, A.1 owners,
+# intent kinds and item kinds, 7.3 sources, 7.4 actors, A.11 review causes.
+EXPECTED_VALUE_SETS = [
+    (Status, ["received", "triaged", "in_progress", "quote_sent", "declined"]),
+    (
+        BlockerKind,
+        [
+            "delivery_unknown",
+            "underwriter_question",
+            "underwriter_review",
+            "data",
+            "producer_reply",
+        ],
+    ),
+    (BlockerOwner, ["underwriter", "producer", "data_team"]),
+    (MessageKind, ["routine_request", "sensitive_request", "quote_packet", "decline_notice"]),
+    (
+        ApprovalItemKind,
+        ["draft", "observation", "delivery_unknown", "no_contact_route", "review"],
+    ),
+    (ObservationSource, ["submitted", "fetched", "derived", "assumed", "reply", "underwriter"]),
+    (Actor, ["workflow", "underwriter", "assistant", "mcp_client", "inbound"]),
+    (
+        ReviewCause,
+        [
+            "late_reply",
+            "unread_reply",
+            "off_topic_reply",
+            "declining_reply",
+            "reply_after_terminal_status",
+            "draft_held_by_stop",
+            "draft_held_class_off",
+            "round_limit",
+            "identity_score_missing",
+            "identity_score_unsupported",
+        ],
+    ),
+]
+
+
+@pytest.mark.parametrize(("literal", "expected"), EXPECTED_VALUE_SETS)
+def test_each_value_set_holds_the_architectures_values(literal: Any, expected: list[str]) -> None:
+    assert sorted(get_args(literal)) == sorted(expected)
+    assert len(get_args(literal)) == len(expected)
+
+
 @pytest.mark.parametrize(
-    ("name", "field"),
+    ("name", "field", "good"),
     [
-        ("fact_observed", "source"),
-        ("fact_selected", "source"),
-        ("blocker_opened", "owner"),
-        ("approval_recorded", "item_kind"),
+        ("fact_observed", "source", "fetched"),
+        ("fact_selected", "source", "reply"),
+        ("blocker_opened", "kind", "data"),
+        ("blocker_opened", "owner", "data_team"),
+        ("blocker_closed", "kind", "producer_reply"),
+        ("intent_created", "kind", "quote_packet"),
+        ("draft_edited", "kind", "decline_notice"),
+        ("approval_recorded", "item_kind", "no_contact_route"),
     ],
 )
-def test_the_names_a_vertical_registers_are_strings_the_runtime_does_not_constrain(
-    name: str, field: str
+def test_a_payload_field_takes_its_value_set_and_refuses_another(
+    name: str, field: str, good: str
 ) -> None:
-    payload = PAYLOAD_MODELS[EventType(name)].model_validate({**SAMPLES[name], field: "any_name"})
-    assert getattr(payload, field) == "any_name"
-    detail = BlockerDetail.model_validate({"resume_trigger": "x", "text": "y", "item_kind": "any"})
-    assert detail.item_kind == "any"
+    model = PAYLOAD_MODELS[EventType(name)]
+    assert getattr(model.model_validate({**SAMPLES[name], field: good}), field) == good
+    with pytest.raises(ValidationError):
+        model.model_validate({**SAMPLES[name], field: "any_name"})
+
+
+def test_a_blocker_detail_takes_an_item_kind_and_a_review_cause_of_their_sets() -> None:
+    detail = {"resume_trigger": "x", "text": "y"}
+    assert BlockerDetail.model_validate({**detail, "item_kind": "review"}).item_kind == "review"
+    assert BlockerDetail.model_validate({**detail, "cause": "late_reply"}).cause == "late_reply"
+    with pytest.raises(ValidationError):
+        BlockerDetail.model_validate({**detail, "item_kind": "any"})
+    with pytest.raises(ValidationError):
+        BlockerDetail.model_validate({**detail, "cause": "any"})
 
 
 RULING = SAMPLES["ruling_recorded"]

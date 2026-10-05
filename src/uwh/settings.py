@@ -5,13 +5,15 @@ from __future__ import annotations
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass
+from typing import Literal, cast, get_args
 
-RUN_MODES = ("live", "replay", "record")
+RunMode = Literal["live", "replay", "record"]
+RUN_MODES = get_args(RunMode)
 
 
 @dataclass(frozen=True)
 class Settings:
-    run_mode: str
+    run_mode: RunMode
     seed: int
     model_id: str
     model_base_url: str
@@ -35,7 +37,7 @@ class Settings:
         if "UWH_DB" not in env:
             raise ValueError("UWH_DB must be set to the path of the application database")
         return cls(
-            run_mode=run_mode,
+            run_mode=cast(RunMode, run_mode),  # checked against RUN_MODES above
             seed=seed,
             model_id=env.get("MODEL_ID", "deepseek-flash"),
             model_base_url=env.get("MODEL_BASE_URL", "https://api.deepseek.com/anthropic"),

@@ -1,12 +1,13 @@
-# ABOUTME: Tests of the route shapes: the section 11 queue columns, the lead detail, the items view, the A.11 commands and the vertical's vocabularies.
+# ABOUTME: Tests of the route shapes: the section 11 queue columns, the lead detail, the items view, the A.11 commands and the value sets.
 # ABOUTME: The architecture's lists are written out here and compared with the models and with the app's OpenAPI document.
-from typing import Any
+from typing import Any, get_args
 
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
 from uwh.api import views
 from uwh.api.app import create_app
+from uwh.rules.models import Decided, DeclinesOnEveryBranch, Undecided
 from uwh.runtime.event_types import PAYLOAD_MODELS, EventType
 from uwh.settings import Settings
 from uwh.skills import vertical
@@ -467,10 +468,24 @@ def test_only_a_held_draft_review_carries_a_held_draft_hash() -> None:
         views.BlockerView.model_validate(blocker(held_draft_payload_hash="ab" * 32))
 
 
-def test_review_cause_is_an_enum_of_the_registered_causes_in_the_schema() -> None:
+REVIEW_CAUSES = [
+    "late_reply",
+    "unread_reply",
+    "off_topic_reply",
+    "declining_reply",
+    "reply_after_terminal_status",
+    "draft_held_by_stop",
+    "draft_held_class_off",
+    "round_limit",
+    "identity_score_missing",
+    "identity_score_unsupported",
+]
+
+
+def test_review_cause_is_an_enum_of_the_review_causes_in_the_schema() -> None:
     node = schema("BlockerView")["properties"]["review_cause"]
     enum = [m["enum"] for m in node["anyOf"] if "enum" in m]
-    assert enum == [[name for name, _ in vertical.REVIEW_CAUSES]]
+    assert enum == [REVIEW_CAUSES]
 
 
 @pytest.mark.parametrize(("cause", "persists"), vertical.REVIEW_CAUSES)
@@ -1270,17 +1285,54 @@ def test_an_actor_is_one_of_the_five_of_7_4() -> None:
         views.ProposalView.model_validate(proposal_row | {"actor": "robot"})
 
 
-def test_vocabulary_enums_in_the_schema_equal_the_verticals() -> None:
-    assert schema("QueueRow")["properties"]["status"]["enum"] == list(vertical.STATUSES)
-    assert schema("LeadDetail")["properties"]["status"]["enum"] == list(vertical.STATUSES)
-    assert schema("BlockerView")["properties"]["kind"]["enum"] == list(
-        vertical.BLOCKER_KINDS_BY_PRIORITY
-    )
-    assert schema("DraftView")["properties"]["kind"]["enum"] == list(vertical.MESSAGE_KINDS)
-    assert schema("AutonomySetting")["properties"]["level"]["enum"] == list(
-        vertical.AUTONOMY_LEVELS
-    )
+def test_value_set_enums_in_the_schema_are_the_architectures_lists() -> None:
+    statuses = ["received", "triaged", "in_progress", "quote_sent", "declined"]
+    assert schema("QueueRow")["properties"]["status"]["enum"] == statuses
+    assert schema("LeadDetail")["properties"]["status"]["enum"] == statuses
+    assert schema("BlockerView")["properties"]["kind"]["enum"] == [
+        "delivery_unknown",
+        "underwriter_question",
+        "underwriter_review",
+        "data",
+        "producer_reply",
+    ]
+    assert schema("DraftView")["properties"]["kind"]["enum"] == [
+        "routine_request",
+        "sensitive_request",
+        "quote_packet",
+        "decline_notice",
+    ]
+    assert schema("AutonomySetting")["properties"]["level"]["enum"] == ["auto", "review", "off"]
     assert schema("RunView")["properties"]["mode"]["enum"] == ["live", "replay", "record"]
+
+
+def test_a_blocker_detail_shows_its_item_kind_and_cause_as_enums() -> None:
+    properties = schema("BlockerDetail")["properties"]
+    assert [m["enum"] for m in properties["item_kind"]["anyOf"] if "enum" in m] == [
+        ["draft", "observation", "delivery_unknown", "no_contact_route", "review"]
+    ]
+    assert [m["enum"] for m in properties["cause"]["anyOf"] if "enum" in m] == [REVIEW_CAUSES]
+
+
+def test_the_autonomy_classes_are_the_classes_with_a_default_level() -> None:
+    expected = [c.name for c in vertical.COMMAND_CLASSES if c.default_level is not None]
+    assert list(get_args(views.AutonomyClassName)) == expected
+
+
+def test_the_proposable_command_types_are_the_http_classes_but_approve_reject_and_proposals() -> (
+    None
+):
+    http = [c.name for c in vertical.COMMAND_CLASSES if c.actors != ("workflow",)]
+    expected = [t for t in http if t not in ("approve", "reject", "propose_command")]
+    assert list(get_args(views.ProposableCommandType)) == expected
+
+
+def test_the_page_results_are_the_node_results_and_not_evaluated() -> None:
+    node_results = [
+        get_args(model.model_fields["result"].annotation)[0]
+        for model in (Decided, Undecided, DeclinesOnEveryBranch)
+    ]
+    assert sorted(get_args(views.PageResult)) == sorted([*node_results, "not_evaluated"])
 
 
 def test_a_value_outside_a_vocabulary_is_refused() -> None:
@@ -1296,21 +1348,30 @@ def test_no_schema_property_is_named_confidence_or_carries_one() -> None:
     assert [n for n in names if "confidence" in n.lower()] == []
 
 
-# The runtime's payloads hold these as plain strings; the API shows the registered names as an
-# enum and refuses any other.
+# The API shows each value set as an enum and refuses any other value.
 @pytest.mark.parametrize(
-    ("model", "data", "field", "registered"),
+    ("model", "data", "field", "values"),
     [
-        (views.FactView, fact(), "source", vertical.OBSERVATION_SOURCES),
-        (views.BlockerView, blocker(), "owner", vertical.BLOCKER_OWNERS),
-        (views.BlockerView, blocker(), "item_kind", vertical.ITEM_KINDS),
+        (
+            views.FactView,
+            fact(),
+            "source",
+            ["submitted", "fetched", "derived", "assumed", "reply", "underwriter"],
+        ),
+        (views.BlockerView, blocker(), "owner", ["underwriter", "producer", "data_team"]),
+        (
+            views.BlockerView,
+            blocker(),
+            "item_kind",
+            ["draft", "observation", "delivery_unknown", "no_contact_route", "review"],
+        ),
     ],
 )
-def test_the_api_shows_the_registered_names_and_refuses_others(
-    model: Any, data: dict[str, Any], field: str, registered: tuple[str, ...]
+def test_the_api_shows_the_value_set_and_refuses_others(
+    model: Any, data: dict[str, Any], field: str, values: list[str]
 ) -> None:
     node = schema(model.__name__)["properties"][field]
     enum = node["enum"] if "enum" in node else node["anyOf"][0]["enum"]
-    assert enum == list(registered)
-    with pytest.raises(ValidationError, match="is not one of"):
+    assert enum == values
+    with pytest.raises(ValidationError, match=field):
         model.model_validate({**data, field: "made_up"})

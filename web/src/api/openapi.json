@@ -275,6 +275,18 @@
           "cause": {
             "anyOf": [
               {
+                "enum": [
+                  "late_reply",
+                  "unread_reply",
+                  "off_topic_reply",
+                  "declining_reply",
+                  "reply_after_terminal_status",
+                  "draft_held_by_stop",
+                  "draft_held_class_off",
+                  "round_limit",
+                  "identity_score_missing",
+                  "identity_score_unsupported"
+                ],
                 "type": "string"
               },
               {
@@ -310,6 +322,13 @@
           "item_kind": {
             "anyOf": [
               {
+                "enum": [
+                  "draft",
+                  "observation",
+                  "delivery_unknown",
+                  "no_contact_route",
+                  "review"
+                ],
                 "type": "string"
               },
               {

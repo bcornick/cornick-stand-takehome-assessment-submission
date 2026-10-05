@@ -18,11 +18,12 @@ from uwh.rules.models import (
     StrictModel,
     SurchargeEffect,
 )
-from uwh.api.views import BlockerOwner
 from uwh.providers.models import ProviderResult
 from uwh.runtime.event_types import (
     AbstentionReason,
     BlockerDetail,
+    BlockerKind,
+    BlockerOwner,
     Candidate,
     ConflictOpened,
     LocatedCandidate,
@@ -65,7 +66,7 @@ class ResolvedObservation(StrictModel):
 
 
 class BlockerRequest(StrictModel):
-    kind: str
+    kind: BlockerKind
     owner: BlockerOwner
     detail: BlockerDetail
 
