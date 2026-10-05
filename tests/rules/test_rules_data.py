@@ -39,10 +39,10 @@ def test_the_two_derived_inputs_declare_their_inputs() -> None:
     ratio = derived["coverage_to_rce_ratio"]
     assert ratio["operation"] == "ratio"
     assert ratio["inputs"] == ["coverage_a", "replacement_cost"]
-    assert ratio["divisor"] == "replacement_cost"
     age = derived["roof_age_years"]
     assert age["operation"] == "years_before_reference"
     assert age["inputs"] == ["roof_replacement_year"]
+    assert set(ratio) == set(age) == {"operation", "inputs"}
 
 
 # ---------------------------------------------------------------------------
@@ -77,10 +77,23 @@ ARCHITECTURE_ROWS = [
     for cells in table_cells(between(SECTION_97, "| Id |", "**Underwriter choices.**"))
     if re.fullmatch(r"I\d\d", cells[0])
 ]
-ARCHITECTURE_CHOICES = {
-    cells[0].strip("`"): re.findall(r"`([^`]+)`", cells[1])
+CHOICE_CELLS = [
+    cells
     for cells in table_cells(between(SECTION_97, "| Choice id |", "**Fan-outs"))
     if cells[0].startswith("`I")
+]
+ARCHITECTURE_CHOICES = {
+    re.match(r"`([^`]+)`", cells[0]).group(1): re.findall(r"`([^`]+)`", cells[1])  # type: ignore[union-attr]
+    for cells in CHOICE_CELLS
+}
+# The rows that carry a choice: the row the id is named for, or the rows the table says share it.
+CHOICE_CARRIERS = {
+    re.match(r"`([^`]+)`", cells[0]).group(1): (  # type: ignore[union-attr]
+        set(re.findall(r"I\d\d", cells[0].split("(shared by")[1]))
+        if "(shared by" in cells[0]
+        else {cells[0][1:4]}
+    )
+    for cells in CHOICE_CELLS
 }
 SECTION_95 = between(ARCHITECTURE, "### 9.5 Conflict validators", "### 9.6 Decision graphs")
 VALIDATOR_ROWS = [cells for cells in table_cells(SECTION_95) if cells[0].startswith("`")]
@@ -117,7 +130,8 @@ def test_the_architecture_table_parses_to_fifty_seven_rows_of_five_cells() -> No
     assert len(ARCHITECTURE_ROWS) == 57
     assert all(len(cells) == 5 for cells in ARCHITECTURE_ROWS)
     assert sorted(cells[0] for cells in ARCHITECTURE_ROWS) == ALL_IDS
-    assert len(ARCHITECTURE_CHOICES) == 12
+    assert len(ARCHITECTURE_CHOICES) == 10
+    assert CHOICE_CARRIERS["I14.road_access"] == {"I14", "I44", "I49"}
 
 
 def test_rows_run_from_i01_to_i57_in_order() -> None:
@@ -176,13 +190,17 @@ def test_choices_sit_on_the_underwriter_rows_and_equal_the_choices_table() -> No
         "I49",
     }
     assert {row["id"] for row in rows if "choices" in row} == underwriter_rows
-    held = {choice["id"]: choice["options"] for row in rows for choice in row.get("choices", [])}
-    assert held == ARCHITECTURE_CHOICES
-    assert sum(len(row.get("choices", [])) for row in rows) == 12
+    held: dict[str, list[str]] = {}
+    carriers: dict[str, set[str]] = {}
     for row in rows:
         for choice in row.get("choices", []):
             assert set(choice) == {"id", "options"}
-            assert choice["id"].startswith(row["id"] + "."), choice["id"]
+            # a choice carried by several rows has the same options on each
+            assert held.setdefault(choice["id"], choice["options"]) == choice["options"], row["id"]
+            carriers.setdefault(choice["id"], set()).add(row["id"])
+    assert held == ARCHITECTURE_CHOICES
+    assert len(held) == 10
+    assert carriers == CHOICE_CARRIERS
 
 
 def test_fan_outs_equal_the_fire_simulation_paragraph() -> None:
@@ -220,36 +238,63 @@ def test_rows_not_evaluated_are_the_kind_n_rows() -> None:
     assert {row["id"] for row in rows if "N" in row["kind"]} == {"I04", "I11", "I36", "I46", "I54"}
 
 
-# The category each `applied_in` opens with: a validator, a derivation, a resolution rule, a rendering
-# step, and the two this table needs beyond those, a typed deadline and source precedence.
+# `applied_in` reads "<category>: <what> (<citation>)". The category is one of the six places a row can be
+# applied outside a graph node (section 9.6); the first backticked name after the colon is the thing named.
+APPLIED_IN_CATEGORIES = {
+    "validator",
+    "derivation",
+    "resolution rule",
+    "rendering step",
+    "graph page",
+    "effect field",
+}
+# The section 9.5 validator that goes to the underwriter has an id but no confirmation template.
+VALIDATOR_WITHOUT_TEMPLATE = "kyc_score_out_of_range"
 APPLIED_IN_CATEGORY = {
     "I01": "validator",
+    "I02": "graph page",
+    "I06": "graph page",
+    "I10": "graph page",
+    "I12": "graph page",
+    "I19": "graph page",
     "I20": "derivation",
-    "I31": "source precedence",
-    "I45": "typed deadlines",
+    "I23": "graph page",
+    "I25": "graph page",
+    "I31": "resolution rule",
+    "I34": "graph page",
+    "I45": "effect field",
     "I47": "rendering step",
     "I51": "resolution rule",
     "I53": "validator",
-    "I56": "typed deadline",
+    "I55": "graph page",
+    "I56": "effect field",
     "I57": "resolution rule",
 }
 
 
-def test_rows_applied_outside_the_graphs_name_what_applies_them() -> None:
+def test_rows_applied_outside_the_graph_nodes_name_what_applies_them() -> None:
     rows = row_by_id()
     assert {id_ for id_, row in rows.items() if "applied_in" in row} == set(APPLIED_IN_CATEGORY)
     confirmations = load("wording.yaml")["confirmations"]
     for id_, category in APPLIED_IN_CATEGORY.items():
         text = rows[id_]["applied_in"]
-        assert re.match(rf"{category}\b", text), id_
+        assert category in APPLIED_IN_CATEGORIES, id_
+        assert text.startswith(category + ": "), id_
         named = re.findall(r"`([^`]+)`", text.split(" (")[0])
         if category == "validator":
-            assert len(named) == 1 and named[0] in confirmations, id_
-        if category == "typed deadline":
-            assert len(named) == 1 and named[0] in ARCHITECTURE, id_
+            assert len(named) == 1, id_
+            assert named[0] in {*confirmations, VALIDATOR_WITHOUT_TEMPLATE}, id_
+        if category == "graph page":
+            assert len(named) == 1 and (ROOT / "docs/playbook" / named[0]).is_dir(), id_
+        if category == "effect field":
+            assert named == ["deadline"] and "(text, deadline)" in ARCHITECTURE, id_
         for file in re.findall(r"`([^`]+\.yaml)`", text):
             assert (DATA / file).is_file(), id_
     assert "derivations.yaml" in rows["I20"]["applied_in"]
+    # the pairs that share a test: the row a test cites needs no applied_in, the outcome-only row does
+    assert not {"I18", "I24", "I39", "I50"} & {
+        id_ for id_, row in rows.items() if "applied_in" in row
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -299,10 +344,14 @@ def test_catalogue_rows_exist_and_the_producer_rows_are_kind_p() -> None:
 # ---------------------------------------------------------------------------
 
 # The registry fields a section 9.5 row names in its Validator cell, in the order the row gives them.
+# The kyc_score range validator goes to the underwriter, so it has no confirmation (A.7).
+PRODUCER_VALIDATOR_ROWS = [cells for cells in VALIDATOR_ROWS if "`kyc_score`" not in cells[0]]
 VALIDATOR_FIELDS = [
     list(dict.fromkeys(f for f in re.findall(r"`([^`]+)`", cells[0]) if f in REGISTRY))
-    for cells in VALIDATOR_ROWS
+    for cells in PRODUCER_VALIDATOR_ROWS
 ]
+# A required-when form whose dependents are blocked while protection class is unresolved (section 9.2).
+BLOCKED_DEPENDENTS_FORM = "protection_class in (9, 10)"
 
 
 def all_wording() -> list[str]:
@@ -324,17 +373,21 @@ def test_every_producer_editable_field_has_a_question_and_no_other_field_does() 
     )
 
 
-def test_the_registry_has_six_distinct_required_when_forms_and_each_has_a_preamble() -> None:
+def test_each_required_when_form_a_follow_on_can_take_has_a_preamble() -> None:
     assert len(REQUIRED_WHEN) == 6
+    assert BLOCKED_DEPENDENTS_FORM in REQUIRED_WHEN
     preambles = load("wording.yaml")["preambles"]
-    assert set(preambles) == REQUIRED_WHEN
+    assert set(preambles) == REQUIRED_WHEN - {BLOCKED_DEPENDENTS_FORM}
+    assert len(preambles) == 5
     assert all(isinstance(text, str) and text.startswith("If ") for text in preambles.values())
 
 
-def test_there_is_one_confirmation_per_section_95_row_and_each_lists_its_fields() -> None:
+def test_there_is_one_confirmation_per_producer_validator_and_each_lists_its_fields() -> None:
     assert len(VALIDATOR_ROWS) == 12
+    assert len(PRODUCER_VALIDATOR_ROWS) == 11
     confirmations = load("wording.yaml")["confirmations"]
-    assert len(confirmations) == len(VALIDATOR_ROWS)
+    assert len(confirmations) == 11
+    assert VALIDATOR_WITHOUT_TEMPLATE not in confirmations
     assert [entry["fields"] for entry in confirmations.values()] == VALIDATOR_FIELDS
     for entry in confirmations.values():
         assert set(entry["fields"]) <= set(REGISTRY)
@@ -355,3 +408,24 @@ def test_wording_is_plain_and_states_no_consequence() -> None:
         lowered = text.lower()
         for word in INTERNAL_TERMS + CONSEQUENCE_WORDS:
             assert word not in lowered, (word, text)
+
+
+def test_wording_addresses_the_applicant() -> None:
+    for text in all_wording():
+        lowered = text.lower()
+        assert "insured" not in lowered and "client" not in lowered, text
+
+
+def test_kt_areas_says_any_high_draw_area_is_answered_high_draw() -> None:
+    entry = load("catalogue.yaml")["questions"]["kt_areas"]
+    assert entry["options"] == ["high_draw", "low_draw"]
+    assert "any high draw area" in entry["wording"]
+    assert "answer high draw" in entry["wording"]
+
+
+def test_willing_to_mitigate_uses_the_boards_words_and_names_no_distance() -> None:
+    board = (ROOT / "docs/playbook/04-fire-simulation/flowchart.md").read_text()
+    phrase = re.search(r"willingness to (mitigate [a-z ]+?)\"", board)
+    assert phrase and phrase.group(1) == "mitigate greater distance"
+    wording = load("catalogue.yaml")["questions"]["willing_to_mitigate"]["wording"]
+    assert wording == "Is the applicant willing to " + phrase.group(1) + "?"

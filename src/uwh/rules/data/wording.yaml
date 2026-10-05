@@ -9,14 +9,14 @@ fields:
   state: "What state is the property in?"
   zip: "What is the property's zip code?"
   listed_for_sale: "Is the property currently listed for sale?"
-  first_name: "What is the insured's first name?"
-  last_name: "What is the insured's last name?"
+  first_name: "What is the applicant's first name?"
+  last_name: "What is the applicant's last name?"
   residence_held_in_trust: "Is the property owned by a trust?"
   trust_name: "What is the name of the trust?"
-  owner_email: "What is the insured's email address?"
-  owner_phone_number: "What is the insured's phone number?"
-  insured_dob: "What is the insured's date of birth?"
-  occupation: "What is the insured's occupation?"
+  owner_email: "What is the applicant's email address?"
+  owner_phone_number: "What is the applicant's phone number?"
+  insured_dob: "What is the applicant's date of birth?"
+  occupation: "What is the applicant's occupation?"
   number_of_residents: "How many people live in the home?"
   effective_date: "What date should the policy start?"
   coverage_a: "What Coverage A (dwelling) amount is requested?"
@@ -65,7 +65,8 @@ fields:
   physical_barriers: "Does the property have gates or other physical barriers?"
   is_7a_compliant: "Is the home Chapter 7A compliant?"
 
-# One preamble per distinct `requiredWhen` string in the registry, keyed by that exact string.
+# One preamble per distinct `requiredWhen` string in the registry that a follow-on question can take, keyed
+# by that exact string. `protection_class in (9, 10)` has none: its dependents are blocked, never follow-ons.
 # A follow-on question reads "<preamble>: <question>", for example "If the property has a pool: is the pool fenced?".
 preambles:
   "residence_held_in_trust = true": "If the property is held in a trust"
@@ -73,12 +74,10 @@ preambles:
   "pool_type = Above Ground": "If the pool is above ground"
   "foundation_type in (Piers, Stilts, Pilings)": "If the home is on piers, stilts or pilings"
   "water_heater_type = Tank": "If the water heater is a tank"
-  "protection_class in (9, 10)": "If the property's fire protection class is 9 or 10"
 
-# One confirmation per conflict check of section 9.5, in that table's order. `fields` lists the registry
-# fields the check covers; `{field}` in a question is replaced by that field's reported value.
-# The `kyc_score_out_of_range` check goes to the underwriter, not to the producer; its template is the
-# neutral wording of the same confirmation.
+# One confirmation per conflict check of section 9.5 that goes to a producer, in that table's order.
+# `fields` lists the registry fields the check covers; `{field}` in a question is replaced by that field's
+# reported value. The `kyc_score_out_of_range` check goes to the underwriter and has no confirmation.
 confirmations:
   roof_year_in_future:
     fields: [roof_replacement_year]
@@ -113,6 +112,3 @@ confirmations:
   tankless_with_tank_fields:
     fields: [water_heater_type, water_heater_age_years, water_heater_location]
     question: "The water heater is listed as {water_heater_type} and also has an age or a location listed. Can you confirm the water heater type?"
-  kyc_score_out_of_range:
-    fields: [kyc_score]
-    question: "The KYC score on file is {kyc_score}. Can you confirm that score?"

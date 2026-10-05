@@ -9,7 +9,7 @@ questions:
     options: [isolated, whole_house]
     row: I27
   kt_areas:
-    wording: "Is the knob-and-tube wiring in high draw areas (kitchens, bathrooms, equipment rooms) or in low draw areas (bedrooms, hallways, living and dining rooms)?"
+    wording: "Is the knob-and-tube wiring in any high draw area (kitchens, bathrooms, equipment rooms), or only in low draw areas (bedrooms, hallways, living and dining rooms)? If any high draw area has it, answer high draw."
     answer_type: choice
     options: [high_draw, low_draw]
     row: I27
@@ -42,7 +42,7 @@ questions:
     answer_type: yes_no
     row: I41
   willing_to_mitigate:
-    wording: "Is the client willing to mitigate a greater distance around the home?"
+    wording: "Is the applicant willing to mitigate greater distance?"
     answer_type: yes_no
     row: I17
   rce_documentation:
