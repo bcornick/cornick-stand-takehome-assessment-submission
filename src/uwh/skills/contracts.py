@@ -117,26 +117,32 @@ class PlanAsksInput(StrictModel):
 
 
 class PlanAsksResult(StrictModel):
-    """`asks` is the asks of the request to send; it is empty when no request is sent: nothing is
-    asked, a request is open, or the round limit is reached. `round` serves 7.5 ("the first request
-    is round 1") and `round_limit_reached` serves 10.1 ("after two rounds the lead goes to the
-    underwriter"); the limit is the skill's behaviour, not part of this contract."""
+    """`asks` is always the outstanding asks, so "nothing left to ask" and "cannot send now" stay
+    apart (9.6 sends a quote packet only when no ask remains). `request` says what happens to them:
+
+    - `send`: a request goes out; `message_class` and `round` are set (7.5: "the first request is
+      round 1"; 10.1 gives the class).
+    - `none`: `asks` is empty and nothing is sent.
+    - `request_open`: 10.1 "One open request per lead. A second request is allowed only after a
+      reply."; the asks wait for the reply.
+    - `round_limit`: 10.1 "After two rounds the lead goes to the underwriter."; the asks stay for
+      the underwriter, who closes the review by supplying the fact (A.11 `resolve_fact`).
+
+    The limit itself is the skill's behaviour, not part of this contract."""
 
     asks: list[Ask]
-    message_class: Literal["routine_request", "sensitive_request"] | None  # 10.1; None with no asks
-    round: int | None  # `requests_sent + 1`; None when there is no request to send
-    round_limit_reached: (
-        bool  # the plan still asks and `requests_sent` is at the limit: no request is planned
-    )
+    message_class: Literal["routine_request", "sensitive_request"] | None  # 10.1; set for `send`
+    round: int | None  # `requests_sent + 1`; set for `send`
+    request: Literal["send", "none", "request_open", "round_limit"]
 
     @model_validator(mode="after")
-    def has_a_class_exactly_when_it_asks(self) -> Self:
-        if (self.message_class is None) != (not self.asks):
-            raise ValueError("message_class is None exactly when asks is empty")
-        if (self.round is None) != (self.message_class is None):
-            raise ValueError("round is None exactly when message_class is None")
-        if self.round_limit_reached and self.message_class is not None:
-            raise ValueError("round_limit_reached plans no request: message_class is None")
+    def request_fits_asks_class_and_round(self) -> Self:
+        if (self.request == "none") != (not self.asks):
+            raise ValueError("request is none exactly when asks is empty")
+        if (self.request == "send") != (self.message_class is not None):
+            raise ValueError("message_class is set exactly when request is send")
+        if (self.request == "send") != (self.round is not None):
+            raise ValueError("round is set exactly when request is send")
         return self
 
 

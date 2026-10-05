@@ -187,6 +187,8 @@ class PlaybookPage(StrictModel):
             raise ValueError("a page whose applies is `no` has no result and no effects")
         if self.applies == "unknown" and self.result != "undecided":
             raise ValueError("a page whose applies is `unknown` is undecided")
+        if self.applies == "unknown" and self.effects:
+            raise ValueError("a page whose applies is `unknown` contributes no effects")
         if self.applies == "yes" and self.result is None:
             raise ValueError("a page that applies has a result")
         if (self.result == "undecided") != bool(self.waits_on):

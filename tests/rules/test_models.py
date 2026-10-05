@@ -1,5 +1,6 @@
 # ABOUTME: Tests the rules-core domain models: triage enums, the eight effects, deadlines, node results, rule traces, the action plan and asks.
 # ABOUTME: Every expected value list is written out here from section 9.2, 9.6, 9.7 and 10.2; every model forbids unknown fields and round-trips through JSON.
+import hashlib
 import json
 from enum import StrEnum
 from typing import Any, get_args
@@ -586,11 +587,14 @@ def plan_in_order(forward: bool) -> ActionPlan:
     )
 
 
-def test_equal_plans_built_in_different_orders_are_equal_and_hash_equally() -> None:
-    forward, backward = plan_in_order(True), plan_in_order(False)
-    assert forward == backward
-    assert forward.model_dump(mode="json") == backward.model_dump(mode="json")
-    assert plan_hash(forward.model_dump(mode="json")) == plan_hash(backward.model_dump(mode="json"))
+def test_plans_built_in_different_orders_hash_equally_over_a_pinned_input() -> None:
+    forward_dump = plan_in_order(True).model_dump(mode="json")
+    backward_dump = plan_in_order(False).model_dump(mode="json")
+    assert plan_hash(forward_dump) == plan_hash(backward_dump)
+    # The hash input is pinned apart from `plan_hash`: SHA-256 of the sorted-key, compact,
+    # non-ASCII-preserving JSON of the dump.
+    text = json.dumps(forward_dump, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    assert plan_hash(forward_dump) == hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def test_a_plan_puts_every_list_in_a_stable_order() -> None:

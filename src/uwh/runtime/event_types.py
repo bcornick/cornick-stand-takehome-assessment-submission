@@ -290,6 +290,8 @@ class RulingRecorded(Payload):
             raise ValueError(f"a {self.kind} ruling needs refers_to_event_id")
         if self.kind == "reopened_choice" and self.choice_id is None:
             raise ValueError("a reopened_choice ruling needs choice_id")
+        if self.kind == "reopened_choice" and self.option is not None:
+            raise ValueError("a reopened_choice ruling holds no option")
         return self
 
 

@@ -453,7 +453,7 @@ RULING = SAMPLES["ruling_recorded"]
         {"kind": "suppression", "choice_id": None, "option": None, "suppressed_rule_ids": ["PP-3"]},
         {"kind": "decline", "choice_id": None, "option": None},
         {"kind": "withdrawal", "choice_id": None, "option": None, "refers_to_event_id": 5},
-        {"kind": "reopened_choice", "refers_to_event_id": 5},
+        {"kind": "reopened_choice", "option": None, "refers_to_event_id": 5},
     ],
 )
 def test_a_ruling_with_its_required_parts_is_valid(overrides: dict[str, object]) -> None:
@@ -467,8 +467,9 @@ def test_a_ruling_with_its_required_parts_is_valid(overrides: dict[str, object])
         {"kind": "choice", "option": None},
         {"kind": "suppression", "suppressed_rule_ids": []},
         {"kind": "withdrawal", "refers_to_event_id": None},
-        {"kind": "reopened_choice", "refers_to_event_id": None},
-        {"kind": "reopened_choice", "choice_id": None, "refers_to_event_id": 5},
+        {"kind": "reopened_choice", "option": None, "refers_to_event_id": None},
+        {"kind": "reopened_choice", "choice_id": None, "option": None, "refers_to_event_id": 5},
+        {"kind": "reopened_choice", "option": "under_60_days", "refers_to_event_id": 5},
         {"kind": "approved"},
     ],
 )

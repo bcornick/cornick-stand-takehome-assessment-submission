@@ -212,7 +212,7 @@ RESULTS: dict[str, dict[str, Any]] = {
         "asks": [ASK],
         "message_class": "routine_request",
         "round": 1,
-        "round_limit_reached": False,
+        "request": "send",
     },
     "render_message": {
         "subject": "Information needed for your quote: LEAD-00000042-001",
@@ -361,8 +361,9 @@ def test_render_message_names_the_audience_of_the_wording() -> None:
         RenderMessageInput.model_validate(without)
 
 
-# No request to send: no class, no round.
-NO_REQUEST = {"asks": [], "message_class": None, "round": None, "round_limit_reached": False}
+# No request to send: no class, no round. `asks` is the outstanding asks, empty only for "none".
+NO_REQUEST = {"asks": [], "message_class": None, "round": None, "request": "none"}
+HELD = {**NO_REQUEST, "asks": [ASK]}
 
 
 def test_plan_asks_input_counts_the_requests_the_lead_has_had_and_whether_one_is_open() -> None:
@@ -386,51 +387,78 @@ def test_the_round_a_request_takes_is_set_exactly_when_there_is_a_request() -> N
         PlanAsksResult.model_validate({**RESULTS["plan_asks"], "round": None})
     with pytest.raises(ValidationError, match="round"):
         PlanAsksResult.model_validate({**NO_REQUEST, "round": 1})
+    with pytest.raises(ValidationError, match="round"):
+        PlanAsksResult.model_validate({**HELD, "request": "round_limit", "round": 3})
 
 
-def test_a_lead_at_the_round_limit_plans_no_request_and_says_so() -> None:
-    # 10.1 "After two rounds the lead goes to the underwriter": no class and no round; the limit
-    # itself is the skill's behaviour, not part of the contract.
-    at_limit = PlanAsksResult.model_validate({**NO_REQUEST, "round_limit_reached": True})
-    assert (
-        at_limit.round_limit_reached and at_limit.message_class is None and at_limit.round is None
-    )
-    with pytest.raises(ValidationError, match="round_limit_reached"):
-        PlanAsksResult.model_validate({**RESULTS["plan_asks"], "round_limit_reached": True})
+@pytest.mark.parametrize("request_value", ["request_open", "round_limit"])
+def test_a_held_request_keeps_the_outstanding_asks(request_value: str) -> None:
+    # 10.1 "One open request per lead. A second request is allowed only after a reply." and
+    # "After two rounds the lead goes to the underwriter": the asks stay, nothing is sent.
+    held = PlanAsksResult.model_validate({**HELD, "request": request_value})
+    assert held.request == request_value
+    assert [a.model_dump() for a in held.asks] == RESULTS["plan_asks"]["asks"]
+    assert held.message_class is None and held.round is None
+
+
+def test_nothing_left_to_ask_is_none_and_has_no_asks() -> None:
+    nothing = PlanAsksResult.model_validate(NO_REQUEST)
+    assert (nothing.request, nothing.asks) == ("none", [])
+
+
+def test_a_request_is_sent_with_its_asks_class_and_round() -> None:
+    sent = PlanAsksResult.model_validate(RESULTS["plan_asks"])
+    assert (sent.request, sent.message_class, sent.round) == ("send", "routine_request", 1)
+    assert sent.asks
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        # none: asks is empty
+        {**NO_REQUEST, "asks": [ASK]},
+        # send: asks, class and round all set
+        {**RESULTS["plan_asks"], "asks": []},
+        {**RESULTS["plan_asks"], "message_class": None},
+        {**RESULTS["plan_asks"], "round": None},
+        # request_open and round_limit: asks stay, no class, no round
+        {**NO_REQUEST, "request": "request_open"},
+        {**NO_REQUEST, "request": "round_limit"},
+        {**HELD, "request": "request_open", "message_class": "routine_request"},
+        {**HELD, "request": "round_limit", "message_class": "routine_request"},
+        {**HELD, "request": "request_open", "round": 1},
+        # a class outside the two request classes, and a value outside the four
+        {**RESULTS["plan_asks"], "message_class": "quote_packet"},
+        {**RESULTS["plan_asks"], "request": "later"},
+        # the removed flag is no field
+        {**NO_REQUEST, "round_limit_reached": False},
+    ],
+)
+def test_a_plan_asks_result_that_breaks_its_request_value_is_refused(
+    bad: dict[str, object],
+) -> None:
+    with pytest.raises(ValidationError):
+        PlanAsksResult.model_validate(bad)
 
 
 def test_plan_asks_names_the_message_class_of_its_asks() -> None:
-    assert list(PlanAsksResult.model_fields) == [
-        "asks",
-        "message_class",
-        "round",
-        "round_limit_reached",
-    ]
+    assert list(PlanAsksResult.model_fields) == ["asks", "message_class", "round", "request"]
     classes = [
         arg
         for arg in get_args(PlanAsksResult.model_fields["message_class"].annotation)
         if arg is not type(None)
     ]
     assert [get_args(c) for c in classes] == [("routine_request", "sensitive_request")]
+    assert get_args(PlanAsksResult.model_fields["request"].annotation) == (
+        "send",
+        "none",
+        "request_open",
+        "round_limit",
+    )
     sensitive = PlanAsksResult.model_validate(
         {**RESULTS["plan_asks"], "message_class": "sensitive_request"}
     )
     assert sensitive.message_class == "sensitive_request"
-    nothing = PlanAsksResult.model_validate({**NO_REQUEST, "asks": []})
-    assert nothing.message_class is None
-
-
-def test_the_message_class_is_none_exactly_when_there_is_nothing_to_ask() -> None:
-    with pytest.raises(ValidationError):
-        PlanAsksResult.model_validate(
-            {**RESULTS["plan_asks"], "message_class": None, "round": None}
-        )
-    with pytest.raises(ValidationError):
-        PlanAsksResult.model_validate(
-            {**NO_REQUEST, "message_class": "routine_request", "round": 1}
-        )
-    with pytest.raises(ValidationError):
-        PlanAsksResult.model_validate({**RESULTS["plan_asks"], "message_class": "quote_packet"})
 
 
 def test_a_rendered_message_has_no_recipient_field() -> None:

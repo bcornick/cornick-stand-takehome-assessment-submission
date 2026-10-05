@@ -595,6 +595,36 @@ def test_a_playbook_page_flags_an_exception_exactly_by_the_section_11_rule(
         ({"applies": "no", "result": None, "effects": [PLANNED_NO_ACTION]}, "applies"),
         ({"applies": "unknown", "result": "decided"}, "applies"),
         ({"applies": "unknown", "result": None}, "applies"),
+        # an unknown page is undecided and contributes nothing (9.6): no effect, no decline
+        (
+            {
+                "applies": "unknown",
+                "result": "undecided",
+                "waits_on": ["pool_type"],
+                "effects": [PLANNED_REQUIREMENT],
+                "exception": True,
+            },
+            "applies",
+        ),
+        (
+            {
+                "applies": "unknown",
+                "result": "undecided",
+                "waits_on": ["pool_type"],
+                "declines_on_every_branch": DECLINE_ON_EVERY_BRANCH,
+                "exception": True,
+            },
+            "declines_on_every_branch",
+        ),
+        (
+            {
+                "applies": "unknown",
+                "result": "declines_on_every_branch",
+                "declines_on_every_branch": DECLINE_ON_EVERY_BRANCH,
+                "exception": True,
+            },
+            "applies",
+        ),
         ({"applies": "yes", "result": None}, "result"),
         ({"applies": "maybe"}, "applies"),
         ({"result": "pending"}, "result"),
