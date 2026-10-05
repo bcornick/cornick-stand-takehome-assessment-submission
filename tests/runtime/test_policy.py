@@ -7,8 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from uwh.runtime.policy import ApprovalBinding, autonomy_level, binding_changes
+from uwh.runtime.policy import ApprovalBinding, autonomy_level, binding_changes, manifest_refusal
 from uwh.runtime.store import open_store
+from uwh.skills.manifest import SkillManifest
 from uwh.skills.vertical import COMMAND_CLASSES, CommandClass
 
 SEND_CLASSES = [c for c in COMMAND_CLASSES if c.default_level is not None]
@@ -127,3 +128,24 @@ def test_several_changes_are_all_named() -> None:
     current = replace(APPROVED, lead_revision=9, recipient="other@example.com")
 
     assert binding_changes(APPROVED, current) == ("lead_revision", "recipient")
+
+
+def manifest_declaring(*command_classes: str) -> SkillManifest:
+    return SkillManifest(
+        name="asker",
+        version="1",
+        purpose="Asks the producer.",
+        trigger="a fact is missing",
+        command_classes=list(command_classes),
+        fallback="none",
+        pass_threshold=1.0,
+    )
+
+
+def test_a_manifest_refuses_a_class_it_does_not_declare_and_admits_one_it_does() -> None:
+    manifest = manifest_declaring("send_routine_request")
+
+    assert manifest_refusal(manifest, "send_routine_request") is None
+    assert manifest_refusal(manifest, "send_quote_packet") == (
+        "the manifest of asker does not declare send_quote_packet"
+    )

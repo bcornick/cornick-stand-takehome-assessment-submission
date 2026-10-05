@@ -1,5 +1,5 @@
-# ABOUTME: The autonomy level of a command class (7.4), from the settings table or the class's default with a locked class never at auto, and the check of an approval's five bound values.
-# ABOUTME: Pure checks over the settings table and two bindings; the stop, the send and the decision to dispatch belong to other modules.
+# ABOUTME: The autonomy level of a command class (7.4), from the settings table or the class's default with a locked class never at auto, the check of an approval's five bound values and the check of a skill's manifest.
+# ABOUTME: Pure checks over the settings table, two bindings and a manifest; the stop, the send and the decision to dispatch belong to other modules.
 import json
 import sqlite3
 from dataclasses import dataclass, fields
@@ -7,6 +7,7 @@ from typing import cast, get_args
 
 from uwh.runtime.event_types import AutonomyLevel
 from uwh.skills import vertical
+from uwh.skills.manifest import SkillManifest
 
 
 def autonomy_level(db: sqlite3.Connection, command_class: str) -> AutonomyLevel:
@@ -54,3 +55,10 @@ def binding_changes(approved: ApprovalBinding, current: ApprovalBinding) -> tupl
         for field in fields(ApprovalBinding)
         if getattr(approved, field.name) != getattr(current, field.name)
     )
+
+
+def manifest_refusal(manifest: SkillManifest, command_class: str) -> str | None:
+    """The reason the skill may not issue the command class, or None when its manifest declares it (8)."""
+    if command_class not in manifest.command_classes:
+        return f"the manifest of {manifest.name} does not declare {command_class}"
+    return None

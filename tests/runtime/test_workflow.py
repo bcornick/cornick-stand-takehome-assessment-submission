@@ -30,6 +30,7 @@ from uwh.runtime.workflow import (
     run_leads,
     run_steps,
     transition,
+    transition_refusal,
     unit_of_work,
 )
 from uwh.skills.vertical import TERMINAL_STATUSES, TRANSITIONS
@@ -123,6 +124,21 @@ def test_a_transition_succeeds_exactly_along_the_a3_table_and_a_refusal_writes_n
             transition(db, LEAD, target)
         assert status_of(db) == start
     assert len(read_events(db)) == events_before
+
+
+@pytest.mark.parametrize(("start", "target"), list(itertools.product(get_args(Status), repeat=2)))
+def test_a_transition_refusal_names_the_move_exactly_when_the_a3_table_lacks_it(
+    db: sqlite3.Connection, start: Status, target: Status
+) -> None:
+    set_status(db, start)
+
+    refusal = transition_refusal(db, LEAD, target)
+
+    if (start, target) in TRANSITIONS:
+        assert refusal is None
+    else:
+        assert refusal == f"a lead cannot move from {start} to {target}"
+    assert status_of(db) == start
 
 
 @pytest.mark.parametrize("start", ["received", "triaged", "in_progress"])

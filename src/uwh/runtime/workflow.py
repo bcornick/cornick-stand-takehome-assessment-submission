@@ -95,6 +95,15 @@ def _status(db: sqlite3.Connection, lead_id: str) -> Status:
     return status
 
 
+def transition_refusal(db: sqlite3.Connection, lead_id: str, target: Status) -> str | None:
+    """Why the lead cannot move to `target` along the A.3 table, or None when it can. Raises ValueError
+    for a lead that does not exist."""
+    current = _status(db, lead_id)
+    if (current, target) not in TRANSITIONS:
+        return f"a lead cannot move from {current} to {target}"
+    return None
+
+
 def transition(db: sqlite3.Connection, lead_id: str, target: Status) -> None:
     """Move the lead to `target` along the A.3 table. The caller commits.
 
@@ -102,9 +111,9 @@ def transition(db: sqlite3.Connection, lead_id: str, target: Status) -> None:
     `declined` when a packet or a decline notice is sent. Raises ValueError, writing nothing, for a
     move outside the table.
     """
-    current = _status(db, lead_id)
-    if (current, target) not in TRANSITIONS:
-        raise ValueError(f"a lead cannot move from {current} to {target}")
+    refusal = transition_refusal(db, lead_id, target)
+    if refusal is not None:
+        raise ValueError(refusal)
     db.execute("UPDATE leads SET status = ? WHERE lead_id = ?", (target, lead_id))
 
 
