@@ -13,6 +13,8 @@ check:
 	uv run mypy
 	python3 scripts/check_discipline.py
 	uv run pytest -m "$(FAST)"
+	uv run python tools/export_openapi.py --check
+	uv run python tools/check_generated_types.py
 	pnpm --dir web exec tsc -b
 	pnpm --dir web exec vitest run
 

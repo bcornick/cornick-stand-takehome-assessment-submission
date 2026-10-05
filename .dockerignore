@@ -1,3 +1,5 @@
+# ABOUTME: Paths kept out of the image build context: secrets, git data, local environments, build output and editor leftovers.
+# ABOUTME: Docker reads it when building; `.env` stays out of the image and the `.env.*` files with it.
 .env
 .env.*
 .git

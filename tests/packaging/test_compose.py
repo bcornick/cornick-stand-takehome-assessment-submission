@@ -128,3 +128,10 @@ def test_dockerignore_lists_the_excluded_paths():
     lines = (ROOT / ".dockerignore").read_text(encoding="utf-8").splitlines()
     for entry in (".env", ".git", ".venv", "web/node_modules", "web/dist"):
         assert entry in lines
+
+
+@pytest.mark.parametrize("name", ["pyproject.toml", ".dockerignore", ".env.example"])
+def test_a_configuration_file_starts_with_two_aboutme_comment_lines(name: str) -> None:
+    lines = (ROOT / name).read_text(encoding="utf-8").splitlines()
+    assert [line.startswith("# ABOUTME: ") for line in lines[:2]] == [True, True]
+    assert lines[1].endswith(".") and lines[0].endswith(".")

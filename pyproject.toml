@@ -1,3 +1,5 @@
+# ABOUTME: The uwh package definition: its dependencies, the pytest markers, and the ruff and mypy settings.
+# ABOUTME: uv reads this file and uv.lock to build the environment, locally and in the image.
 [project]
 name = "uwh"
 version = "0.1.0"
