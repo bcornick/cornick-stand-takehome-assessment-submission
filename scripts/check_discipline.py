@@ -47,7 +47,10 @@ TEMPORAL = re.compile(
 def tracked_and_untracked() -> list[str]:
     out = subprocess.run(
         ["git", "ls-files", "--cached", "--others", "--exclude-standard"],
-        cwd=ROOT, capture_output=True, text=True, check=True,
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
     ).stdout
     return [line for line in out.splitlines() if line]
 
@@ -63,7 +66,10 @@ def exempt(path: str) -> bool:
 def ignored_under_src() -> list[str]:
     out = subprocess.run(
         ["git", "ls-files", "--others", "--ignored", "--exclude-standard", "--", "src"],
-        cwd=ROOT, capture_output=True, text=True, check=True,
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
     ).stdout
     skip = ("__pycache__", ".DS_Store", ".egg-info/")
     return [line for line in out.splitlines() if line and not any(s in line for s in skip)]
@@ -93,9 +99,13 @@ def main() -> int:
     stand_import = re.compile(r"^\s*(from|import)\s+(leadgen|shared|mailbox)\b")
     for rel in paths:
         if rel.startswith("src/") and rel.endswith(".py"):
-            for number, line in enumerate((ROOT / rel).read_text(encoding="utf-8").splitlines(), start=1):
+            for number, line in enumerate(
+                (ROOT / rel).read_text(encoding="utf-8").splitlines(), start=1
+            ):
                 if stand_import.match(line) or "/debug" in line:
-                    problems.append(f"{rel}:{number}: src/ must not import Stand's code or name the debug path")
+                    problems.append(
+                        f"{rel}:{number}: src/ must not import Stand's code or name the debug path"
+                    )
 
     test_names = {Path(p).name for p in paths if p.startswith("tests/")}
     for rel in paths:
