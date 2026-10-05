@@ -38,3 +38,12 @@ def test_mailbox_round_trips_metadata(host_urls: dict[str, str]) -> None:
         assert [m["id"] for m in listed] == [sent["id"]]
         assert listed[0]["metadata"] == metadata
         assert client.get(sent["id"])["metadata"] == metadata
+
+
+def test_post_queue_sends_count(host_urls: dict[str, str]) -> None:
+    with httpx2.Client(base_url=host_urls["leadgen"]) as http:
+        client = LeadgenClient(http)
+        queue = client.post_queue(seed=42, count=3)
+        expected = [f"LEAD-00000042-{i:03d}" for i in range(3)]
+        assert queue["lead_ids"] == expected
+        assert [s["lead_id"] for s in client.list_leads()] == expected
