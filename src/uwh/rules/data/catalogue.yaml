@@ -38,7 +38,7 @@ questions:
     answer_type: yes_no
     row: I41
   paved_roads_year_round:
-    wording: "Are the paved roads to the home accessible all year?"
+    wording: "Is the home reached by paved roads that are accessible all year?"
     answer_type: yes_no
     row: I41
   willing_to_mitigate:
@@ -46,6 +46,6 @@ questions:
     answer_type: yes_no
     row: I17
   rce_documentation:
-    wording: "Please send documentation of the replacement cost, for example the current declarations page."
+    wording: "Please send documentation supporting the Coverage A amount requested, for example the current declarations page."
     answer_type: document
     row: I37

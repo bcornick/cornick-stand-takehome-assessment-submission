@@ -21,15 +21,15 @@ def test_derivation_maps_equal_stands_generator_maps_and_cite_them() -> None:
     maps = load("derivations.yaml")["maps"]
     assert maps["roof_classification"]["map"] == ROOF_CLASS
     assert maps["siding_classification"]["map"] == SIDING_CLASS
-    for field, symbol, source_field in (
-        ("roof_classification", "ROOF_CLASS", "roof_material"),
-        ("siding_classification", "SIDING_CLASS", "siding_material"),
+    for field, symbol in (
+        ("roof_classification", "ROOF_CLASS"),
+        ("siding_classification", "SIDING_CLASS"),
     ):
         assert maps[field]["source"] == {
             "file": "sim-harness/leadgen/generator.py",
             "symbol": symbol,
         }
-        assert maps[field]["from"] == source_field
+        assert maps[field]["from"] == REGISTRY[field]["derivedFrom"]
     assert (ROOT / "sim-harness/leadgen/generator.py").is_file()
 
 
@@ -84,6 +84,7 @@ ARCHITECTURE_CHOICES = {
 }
 SECTION_95 = between(ARCHITECTURE, "### 9.5 Conflict validators", "### 9.6 Decision graphs")
 VALIDATOR_ROWS = [cells for cells in table_cells(SECTION_95) if cells[0].startswith("`")]
+CATALOGUE_SENTENCE = between(ARCHITECTURE, "`catalogue.yaml` holds id,", "`wording.yaml` holds")
 
 ALL_IDS = [f"I{n:02d}" for n in range(1, 58)]
 LENIENT = {"I03", "I19", "I20", "I21", "I24", "I25", "I29", "I30", "I32", "I42"}
@@ -127,7 +128,7 @@ def test_each_row_carries_the_table_cells_exactly() -> None:
     rows = row_by_id()
     for id_, page, gap, ruling, kind in ARCHITECTURE_ROWS:
         row = rows[id_]
-        assert row["page"] == page, id_
+        assert row["source"] == page, id_
         assert squash(row["gap"]) == gap, id_
         assert squash(row["ruling"]) == ruling, id_
         assert row["kind"] == [letter.strip() for letter in kind.split(",")], id_
@@ -219,31 +220,43 @@ def test_rows_not_evaluated_are_the_kind_n_rows() -> None:
     assert {row["id"] for row in rows if "N" in row["kind"]} == {"I04", "I11", "I36", "I46", "I54"}
 
 
-APPLIED_IN_CITES = {
-    "I01": "kyc_score_out_of_range",
-    "I06": "months_unoccupied_in_primary_home",
+# The category each `applied_in` opens with: a validator, a derivation, a resolution rule, a rendering
+# step, and the two this table needs beyond those, a typed deadline and source precedence.
+APPLIED_IN_CATEGORY = {
+    "I01": "validator",
     "I20": "derivation",
-    "I31": "section 9.1",
+    "I31": "source precedence",
     "I45": "typed deadlines",
-    "I47": "links",
-    "I51": "section 9.3",
-    "I53": "tenant_use_without_rental",
-    "I56": "duration_of_non_occupancy",
-    "I57": "collection rule",
+    "I47": "rendering step",
+    "I51": "resolution rule",
+    "I53": "validator",
+    "I56": "typed deadline",
+    "I57": "resolution rule",
 }
 
 
 def test_rows_applied_outside_the_graphs_name_what_applies_them() -> None:
     rows = row_by_id()
-    for id_, cited in APPLIED_IN_CITES.items():
-        assert cited in rows[id_]["applied_in"], id_
-    assert {id_ for id_, row in rows.items() if "applied_in" in row} == set(APPLIED_IN_CITES)
+    assert {id_ for id_, row in rows.items() if "applied_in" in row} == set(APPLIED_IN_CATEGORY)
+    confirmations = load("wording.yaml")["confirmations"]
+    for id_, category in APPLIED_IN_CATEGORY.items():
+        text = rows[id_]["applied_in"]
+        assert re.match(rf"{category}\b", text), id_
+        named = re.findall(r"`([^`]+)`", text.split(" (")[0])
+        if category == "validator":
+            assert len(named) == 1 and named[0] in confirmations, id_
+        if category == "typed deadline":
+            assert len(named) == 1 and named[0] in ARCHITECTURE, id_
+        for file in re.findall(r"`([^`]+\.yaml)`", text):
+            assert (DATA / file).is_file(), id_
+    assert "derivations.yaml" in rows["I20"]["applied_in"]
 
 
 # ---------------------------------------------------------------------------
 # catalogue.yaml
 # ---------------------------------------------------------------------------
 
+CATALOGUE_IDS = re.findall(r"`([a-z0-9_]+)`", CATALOGUE_SENTENCE.split("for each:")[1])
 CATALOGUE_ROWS = {
     "kt_extent": "I27",
     "kt_areas": "I27",
@@ -262,7 +275,9 @@ ANSWER_TYPES = {"yes_no", "choice", "text", "document"}
 
 def test_catalogue_holds_exactly_the_eleven_a7_ids() -> None:
     questions = load("catalogue.yaml")["questions"]
-    assert {id_ for id_ in questions} == set(CATALOGUE_ROWS)
+    assert len(CATALOGUE_IDS) == 11
+    assert list(questions) == CATALOGUE_IDS
+    assert list(CATALOGUE_ROWS) == CATALOGUE_IDS
     for id_, entry in questions.items():
         assert entry["row"] == CATALOGUE_ROWS[id_], id_
         assert entry["answer_type"] in ANSWER_TYPES, id_
@@ -283,28 +298,11 @@ def test_catalogue_rows_exist_and_the_producer_rows_are_kind_p() -> None:
 # wording.yaml
 # ---------------------------------------------------------------------------
 
-VALIDATOR_FIELDS = {
-    "roof_year_in_future": ["roof_replacement_year"],
-    "roof_year_before_year_built": ["roof_replacement_year", "year_built"],
-    "effective_date_in_past": ["effective_date"],
-    "panel_size_below_60": ["electrical_panel_size_amps"],
-    "no_residents_in_primary_home": ["number_of_residents", "dwelling_use_type", "dwelling_type"],
-    "acreage_zero": ["acreage"],
-    "months_unoccupied_in_primary_home": [
-        "months_unoccupied",
-        "dwelling_use_type",
-        "dwelling_type",
-    ],
-    "primary_use_with_rental": ["dwelling_use_type", "is_rental"],
-    "owner_occupied_with_other_use": ["dwelling_type", "dwelling_use_type"],
-    "tenant_use_without_rental": ["dwelling_use_type", "is_rental"],
-    "tankless_with_tank_fields": [
-        "water_heater_type",
-        "water_heater_age_years",
-        "water_heater_location",
-    ],
-    "kyc_score_out_of_range": ["kyc_score"],
-}
+# The registry fields a section 9.5 row names in its Validator cell, in the order the row gives them.
+VALIDATOR_FIELDS = [
+    list(dict.fromkeys(f for f in re.findall(r"`([^`]+)`", cells[0]) if f in REGISTRY))
+    for cells in VALIDATOR_ROWS
+]
 
 
 def all_wording() -> list[str]:
@@ -337,7 +335,7 @@ def test_there_is_one_confirmation_per_section_95_row_and_each_lists_its_fields(
     assert len(VALIDATOR_ROWS) == 12
     confirmations = load("wording.yaml")["confirmations"]
     assert len(confirmations) == len(VALIDATOR_ROWS)
-    assert {id_: entry["fields"] for id_, entry in confirmations.items()} == VALIDATOR_FIELDS
+    assert [entry["fields"] for entry in confirmations.values()] == VALIDATOR_FIELDS
     for entry in confirmations.values():
         assert set(entry["fields"]) <= set(REGISTRY)
 

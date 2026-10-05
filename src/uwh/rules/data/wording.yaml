@@ -39,7 +39,7 @@ fields:
   construction_type: "What is the construction type: concrete, frame, masonry, log, modular, mobile or manufactured, or steel?"
   siding_material: "What is the siding material?"
   foundation_type: "What type of foundation does the home have?"
-  post_pier_supports_living_area: "Does the post and pier foundation support the living area, and not just decking?"
+  post_pier_supports_living_area: "Does the post and pier foundation support any part of the living area, or only decking?"
   deck_height_ft: "How high is the deck above grade, in feet?"
   square_feet: "What is the total living square footage?"
   num_stories: "How many stories does the home have?"

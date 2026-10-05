@@ -1,5 +1,5 @@
 # ABOUTME: Interpretation rows I01 to I57, the choices an underwriter answers, and the Fire Simulation fan-out semantics.
-# ABOUTME: Each row is a ruling on something the board leaves open (section 9.7); every row waits for Brett's review.
+# ABOUTME: A row holds its source page, the gap, the ruling, its kind and a rationale; flags mark lenient readings, questions for Stand and rows not evaluated.
 
 # Branch semantics of the seven Fire Simulation board boxes that fan out (section 9.7).
 fan_outs:
@@ -13,47 +13,46 @@ fan_outs:
 
 rows:
   - id: I01
-    page: "Profile"
+    source: "Profile"
     gap: "KYC scale undefined; example payload shows 82"
     ruling: "Scale is 1 to 10; other values are unsupported"
     kind: [A]
     rationale: "The board leaves the KYC scale undefined and the example payload shows 82 (section 9.7 gap)."
     applied_in: "validator `kyc_score_out_of_range` (section 9.5: `kyc_score` outside 1 to 10 is `unsupported` and goes to the underwriter)"
   - id: I02
-    page: "Profile"
+    source: "Profile"
     gap: "KYC 5 or below"
     ruling: "Page does not apply"
     kind: [A]
     rationale: "Section 9.6 sets the Profile page to apply when `kyc_score` is above 5."
   - id: I03
-    page: "Profile"
+    source: "Profile"
     gap: "\"In the spotlight\" versus \"private\" for KYC 6 to 7"
     ruling: "Both branches begin with Exclude Liability, so the quote carries the exclusion; the distinction is recorded as an advisory for negotiation Traces use `02:SPOT`, `02:SPOT1` for KYC 6 to 7 (the generator's own note on these leads reads \"in spotlight\") and `02:HIGH`, `02:HIGH1` for KYC 8 to 10."
     kind: [A]
     rationale: "The board leaves open whether KYC 6 to 7 is \"in the spotlight\" or \"private\"; both branches begin with Exclude Liability (section 9.7 gap and ruling)."
     lenient: true
   - id: I04
-    page: "Profile"
+    source: "Profile"
     gap: "\"Reputational damage to Stand\""
     ruling: "Not evaluated by the system; the underwriter can decline at packet approval"
     kind: [N]
     rationale: "The board names reputational damage to Stand with no criterion; kind N is not evaluated and shown as a non-blocking note (section 9.7)."
     not_evaluated: true
   - id: I05
-    page: "Profile"
+    source: "Profile"
     gap: "\"Deal killer\" ladders"
     ruling: "`ladder`: first rung in the packet, later rungs as an advisory"
     kind: [A]
     rationale: "Section 9.6 defines `ladder` as ordered fallbacks used in negotiation after a quote: only the first rung is an effect and the rest are recorded as an advisory."
   - id: I06
-    page: "Occupancy"
+    source: "Occupancy"
     gap: "Which branch applies"
     ruling: "Rentals when `is_rental` is not \"No\"; Vacant/Unoccupied when `months_unoccupied` is 1 or more; For Sale when `listed_for_sale` is true Traces for the vacant or unoccupied branch use board box `03:UNOCC`, the box named after the registry field."
     kind: [A]
     rationale: "The board does not say which Occupancy branch applies; section 9.6 sets the page to apply when any I06 branch condition holds."
-    applied_in: "validator `months_unoccupied_in_primary_home` (section 9.5: its threshold source reads \"Agrees with I06\")"
   - id: I07
-    page: "Occupancy"
+    source: "Occupancy"
     gap: "60 days against a field in months"
     ruling: "1 month is under 60 days; 3 or more months is over 60 days; exactly 2 months is an underwriter choice"
     kind: [A, U]
@@ -62,13 +61,13 @@ rows:
       - id: I07.two_months
         options: ["under_60_days", "over_60_days"]
   - id: I08
-    page: "Occupancy"
+    source: "Occupancy"
     gap: "\"Primary w/ Stand\""
     ruling: "`has_primary_policy_with_stand`"
     kind: [A]
     rationale: "The board's \"Primary w/ Stand\" has no registry field of that name; `has_primary_policy_with_stand` is the registry field for a primary policy with Stand."
   - id: I09
-    page: "Occupancy"
+    source: "Occupancy"
     gap: "Rental exceptions other than Tier 1 broker (\"lead line\", \"well-managed in excess of $5m\")"
     ruling: "Underwriter choice between exception and decline"
     kind: [U]
@@ -77,27 +76,27 @@ rows:
       - id: I09.rental_exception
         options: ["exception", "decline"]
   - id: I10
-    page: "Occupancy"
+    source: "Occupancy"
     gap: "\"Consider w/ modifications\""
     ruling: "The listed modifications are effects on the quote"
     kind: [A]
     rationale: "The board says \"Consider w/ modifications\" and lists the modifications (section 9.7 gap)."
   - id: I11
-    page: "Occupancy"
+    source: "Occupancy"
     gap: "\"Unrelated NIs\" on the overview"
     ruling: "Not evaluated"
     kind: [N]
     rationale: "The overview names \"Unrelated NIs\" and the board leaves it open (section 9.7 gap)."
     not_evaluated: true
   - id: I12
-    page: "Fire Simulation"
+    source: "Fire Simulation"
     gap: "No field holds the simulation result"
     ruling: "Fail when `p_f` is above 0.50; \"Do Not Write\" is never produced; at or below 0.50 the page does not apply. The threshold is this submission's invention and the first question for Stand. Generated values fall at or below 0.20 or at or above 0.55, so no generated lead distinguishes thresholds between them; hand cases at 0.21 and 0.54 record the dependence."
     kind: [A]
     rationale: "No field holds the simulation result; the threshold is this submission's invention and the first question for Stand (section 9.7 ruling)."
     question_for_stand: true
   - id: I13
-    page: "Fire Simulation"
+    source: "Fire Simulation"
     gap: "Decline versus legacy underwriting after a fail"
     ruling: "Underwriter choice, shown with the legacy checklist values"
     kind: [U]
@@ -106,7 +105,7 @@ rows:
       - id: I13.fire_fail
         options: ["decline", "legacy_underwriting"]
   - id: I14
-    page: "Fire Simulation"
+    source: "Fire Simulation"
     gap: "Access wording against `road_access` options"
     ruling: "Multiple Access Points continues; Limited / Dead-end / No Turnaround declines; Single Access Point and Unknown are an underwriter choice `road_access` drives the `04:INGRESS` branch; the separate `04:TURN` branch is not evaluated, since the registry's one value covers both."
     kind: [A, U]
@@ -115,7 +114,7 @@ rows:
       - id: I14.access
         options: ["adequate", "limited"]
   - id: I15
-    page: "Fire Simulation"
+    source: "Fire Simulation"
     gap: "Vegetation wording against `vegetation_clearance`"
     ruling: "Too Close is Heavy; Adequate is Moderate/Light; Marginal and Unknown are an underwriter choice"
     kind: [A, U]
@@ -124,7 +123,7 @@ rows:
       - id: I15.vegetation
         options: ["heavy", "moderate_or_light"]
   - id: I16
-    page: "Fire Simulation"
+    source: "Fire Simulation"
     gap: "\"Steep\" slope and \"too close\" neighbour distance have no thresholds"
     ruling: "No number is invented; underwriter choice showing the value"
     kind: [U]
@@ -135,26 +134,26 @@ rows:
       - id: I16.distance
         options: ["adequate", "too_close"]
   - id: I17
-    page: "Fire Simulation"
+    source: "Fire Simulation"
     gap: "Client willingness to mitigate"
     ruling: "Producer catalogue question"
     kind: [P]
     rationale: "The board asks to determine the client's willingness to mitigate; no registry field holds it and A.7 lists `willing_to_mitigate` as a catalogue question."
   - id: I18
-    page: "Roof"
+    source: "Roof"
     gap: "Non-Class A at `p_f` exactly 0.50"
     ruling: "Middle band, matching the Unknown Class and Siding pages"
     kind: [A]
     rationale: "The board is silent for a non-Class A roof at `p_f` exactly 0.50 (section 9.7 gap)."
   - id: I19
-    page: "Roof"
+    source: "Roof"
     gap: "\"Or decline\" beside a requirement"
     ruling: "The requirement is the effect; decline remains the underwriter's option at packet approval"
     kind: [A]
     rationale: "The board writes \"or decline\" beside a requirement (section 9.7 gap)."
     lenient: true
   - id: I20
-    page: "Roof"
+    source: "Roof"
     gap: "Roof age when the material is known; the Unknown Class branch"
     ruling: "Class comes from the derivation map; roof age is handled by I52. The Unknown Class branch is not encoded. While `roof_material` is missing, a submitted roof class is used (section 9.3); with both missing the Roof graph is undecided on `roof_material`, which the registry asks for anyway."
     kind: [A]
@@ -162,40 +161,40 @@ rows:
     lenient: true
     applied_in: "derivation (section 9.3 rule 2: roof class is derived from the effective material, with the maps in `derivations.yaml`)"
   - id: I21
-    page: "Siding"
+    source: "Siding"
     gap: "Nine materials against two branches"
     ruling: "Wood and Wood Shake / Shingle take the wood branch. Vinyl, Aluminum / Steel and Other (class C in the derivation map) take no action with an advisory on the quote. The rest take no action."
     kind: [A]
     rationale: "The board has two branches for the registry's nine siding materials (section 9.7 gap)."
     lenient: true
   - id: I22
-    page: "Siding"
+    source: "Siding"
     gap: "\"Class A\" on the siding page"
     ruling: "Read as non-combustible siding"
     kind: [A]
-    rationale: "The siding page uses the label \"Class A\" (section 9.7 gap)."
+    rationale: "The siding page's branches are \"Non-combustible\" and \"Wood Shake or Shingle\"; the words \"Class A\" appear only inside the requirement boxes (\"Require confirnation of Class A or replacement\"), and the board does not define them (section 9.7 gap)."
   - id: I23
-    page: "Post & Pier"
+    source: "Post & Pier"
     gap: "When the page applies"
     ruling: "`foundation_type` is Piers, Stilts or Pilings"
     kind: [A]
     rationale: "Section 9.6 sets the Post & Pier page to apply when `foundation_type` is Piers, Stilts or Pilings."
   - id: I24
-    page: "Plumbing"
+    source: "Plumbing"
     gap: "Exactly 30 years; heater exactly 10 years"
     ruling: "Not older"
     kind: [A]
     rationale: "The board does not say what happens at exactly 30 years or at a heater of exactly 10 years (section 9.7 gap)."
     lenient: true
   - id: I25
-    page: "Plumbing"
+    source: "Plumbing"
     gap: "Tank heater newer than 10 years has no outcome"
     ruling: "No action"
     kind: [A]
     rationale: "The board draws no outcome for a tank heater newer than 10 years (section 9.7 gap)."
     lenient: true
   - id: I26
-    page: "Plumbing, Electrical"
+    source: "Plumbing, Electrical"
     gap: "\"Tier one broker or rounded account\""
     ruling: "Tier 1 answers yes. Otherwise underwriter choice on \"rounded account\", shown with `has_primary_policy_with_stand`"
     kind: [A, U]
@@ -204,80 +203,80 @@ rows:
       - id: I26.rounded_account
         options: ["yes", "no"]
   - id: I27
-    page: "Electrical"
+    source: "Electrical"
     gap: "Isolated versus whole-house knob-and-tube; high or low draw areas"
     ruling: "Producer catalogue questions"
     kind: [P]
     rationale: "The board asks isolated versus whole-house knob-and-tube and high versus low draw areas; section 9.6 sends a fact with no registry field to the catalogue."
   - id: I28
-    page: "Electrical"
+    source: "Electrical"
     gap: "\"Ineligible panels\" names no brands"
     ruling: "Federal Pacific, Stab-Lok, Zinsco, Challenger, Sylvania. Only Federal Pacific is supported by Stand's code; the other four are this submission's assumption and a question for Stand."
     kind: [A]
     rationale: "The board names no brands; only Federal Pacific is supported by Stand's code and the other four are this submission's assumption and a question for Stand (section 9.7 ruling)."
     question_for_stand: true
   - id: I29
-    page: "Electrical"
+    source: "Electrical"
     gap: "Panel brand Unknown or Other"
     ruling: "Not ineligible; advisory on the quote"
     kind: [A]
-    rationale: "The board's ineligible panels name no brands, so Unknown and Other cannot match them (section 9.7 gap)."
+    rationale: "The registry offers Unknown and Other as `electrical_panel_brand` options, and the board does not say whether a panel whose brand is not identified counts as an ineligible panel (section 9.7 gap)."
     lenient: true
   - id: I30
-    page: "Electrical"
+    source: "Electrical"
     gap: "Exactly 120 amps"
     ruling: "Not under 120"
     kind: [A]
-    rationale: "The board's \"Less than 120 Amp\" does not cover exactly 120 (section 9.7 gap)."
+    rationale: "The board's \"Less than 120 Amp\" leaves a panel of exactly 120 amps to be read (section 9.7 gap)."
     lenient: true
   - id: I31
-    page: "Electrical"
+    source: "Electrical"
     gap: "Overview page shows a different subtree"
     ruling: "Detail page wins"
     kind: [A]
     rationale: "Section 9.1: where the overview disagrees with a detail page, the detail page wins."
     applied_in: "source precedence (section 9.1: the detail page wins over the overview page)"
   - id: I32
-    page: "Pools"
+    source: "Pools"
     gap: "\"Fenced\" against \"self-locking gate or safety cover\""
     ruling: "Fenced satisfies the branch"
     kind: [A]
-    rationale: "The board lists \"self-locking gate or safety cover\" beside \"Fenced\" (section 9.7 gap)."
+    rationale: "The board's box reads \"Fenced with Self-Locking Gate or with Safety Cover\" as one box, and the registry's `pool_security` option \"Fenced\" says nothing about a gate or a cover (section 9.7 gap)."
     lenient: true
   - id: I33
-    page: "Pools"
+    source: "Pools"
     gap: "\"Gated community or multi-acre property\""
     ruling: "`is_gated_community` alone; the registry labels that field \"in gated community or multi-acre property\""
     kind: [A]
     rationale: "The registry labels `is_gated_community` \"in gated community or multi-acre property\" (section 9.7 ruling)."
   - id: I34
-    page: "Trusts"
+    source: "Trusts"
     gap: "Questionnaire, screening and cancellation fall after binding"
     ruling: "Recorded as obligations; coverage notes as an advisory"
     kind: [A]
     rationale: "The questionnaire, screening and cancellation fall after binding, and section 9.6 defines `obligation` as post-bind and never executed."
   - id: I35
-    page: "Replacement Cost"
+    source: "Replacement Cost"
     gap: "\"At RCE\" tolerance"
     ruling: "Within 10% either side The tolerance is the row's parameter `tolerance: 0.10`, read by the graph."
     kind: [A]
     rationale: "A.6: the Replacement Cost graph bands `coverage_to_rce_ratio` at `1 - I35.tolerance`, `1 + I35.tolerance` and 1.5."
     params: {tolerance: 0.10}
   - id: I36
-    page: "Replacement Cost"
+    source: "Replacement Cost"
     gap: "\"Reason to suspect fraud\""
     ruling: "Not evaluated; underwriter's option at packet approval"
     kind: [N]
     rationale: "The board gives no criterion for \"reason to suspect fraud\"; kind N is not evaluated and shown as a non-blocking note (section 9.7)."
     not_evaluated: true
   - id: I37
-    page: "Replacement Cost"
+    source: "Replacement Cost"
     gap: "Documentation above 150%"
     ruling: "Document request in the message"
     kind: [P]
     rationale: "The board has the broker supply documentation above 150% of RCE; A.7 lists `rce_documentation` as a document request."
   - id: I38
-    page: "PC 9 & 10"
+    source: "PC 9 & 10"
     gap: "Staffing wording against `fire_department_type`"
     ruling: "Career and Mostly Career are paid; Volunteer and Mostly Volunteer are volunteer; Unknown is an underwriter choice"
     kind: [A, U]
@@ -286,38 +285,38 @@ rows:
       - id: I38.staffing
         options: ["paid", "volunteer"]
   - id: I39
-    page: "PC 9 & 10"
+    source: "PC 9 & 10"
     gap: "Exactly 4,000 and 7,500 square feet"
     ruling: "Both fall in the middle band"
     kind: [A]
     rationale: "The board's size bands do not say where exactly 4,000 and 7,500 square feet fall (section 9.7 gap)."
   - id: I40
-    page: "PC 9 & 10"
+    source: "PC 9 & 10"
     gap: "Hydrant \"within 1000'\""
     ruling: "`dist_to_nearest_fire_hydrant` of 1,000 or less"
     kind: [A]
     rationale: "The board writes the hydrant test as \"within 1000'\"; the registry field is a distance in feet (section 9.7 gap)."
   - id: I41
-    page: "PC 9 & 10"
+    source: "PC 9 & 10"
     gap: "Tankers, source within 1,000 feet, year-round access, dry hydrant, fittings, paved roads"
     ruling: "Producer catalogue questions"
     kind: [P]
     rationale: "A.7 lists these as catalogue questions; they are facts with no registry field."
   - id: I42
-    page: "PC 9 & 10"
+    source: "PC 9 & 10"
     gap: "\"Central Station Fire Alarm\" yes has no outcome"
     ruling: "Central Alarm and Direct Alarm are yes with no requirement"
     kind: [A]
     rationale: "The board draws no outcome for \"Central Station Fire Alarm\" yes (section 9.7 gap; page 13 reading notes)."
     lenient: true
   - id: I43
-    page: "PC 9 & 10"
+    source: "PC 9 & 10"
     gap: "Gates step drawn on some branches only; dry hydrant and retrofit outcomes drawn as terminal"
     ruling: "Gates step encoded as drawn. Dry hydrant and retrofit are requirements and evaluation continues to the paved-roads check, so a less-equipped home does not skip decline checks."
     kind: [A]
     rationale: "The board draws the Gates step on some branches only and draws the dry hydrant and retrofit outcomes as terminal (page 13 reading notes)."
   - id: I44
-    page: "PC 9 & 10"
+    source: "PC 9 & 10"
     gap: "`road_access` Single Access Point"
     ruling: "Underwriter choice"
     kind: [U]
@@ -326,34 +325,34 @@ rows:
       - id: I44.road_access
         options: ["multiple", "limited"]
   - id: I45
-    page: "All"
+    source: "All"
     gap: "\"UWing period\", \"first term\", \"60 days\""
     ruling: "Typed deadlines, not converted"
     kind: [A]
     rationale: "Section 9.6: deadlines are a typed enum and are never converted to one another."
     applied_in: "typed deadlines (section 9.6: deadlines are a typed enum, never converted)"
   - id: I46
-    page: "Overview"
+    source: "Overview"
     gap: "Animals; other attractive nuisances"
     ruling: "Not evaluated; non-blocking note on the lead"
     kind: [N]
-    rationale: "The overview names animals and other attractive nuisances with no detail page (section 9.7 gap)."
+    rationale: "The overview names Animals and Construction's Other attractive nuisances, and its drill-down table lists no detail page on the board for either (section 9.7 gap)."
     not_evaluated: true
   - id: I47
-    page: "Pools, Post & Pier, Fire Simulation, Profile"
+    source: "Pools, Post & Pier, Fire Simulation, Profile"
     gap: "Board notes and boxes calling for a map or listing check"
     ruling: "Links for the underwriter; the registry's collection rule applies"
     kind: [A]
     rationale: "Section 9.1: a board note that conflicts with the registry's collection rule is cited in the row and the registry wins for collection; section 11 gives the underwriter search and map links where the board calls for a human look."
     applied_in: "rendering step: the search and map links in the underwriter detail pane (section 11)"
   - id: I48
-    page: "Pools"
+    source: "Pools"
     gap: "An unfenced pool matches both \"Unfenced / Uncovered\" and \"Fenced = No\""
     ruling: "`pool_security` Unfenced or None takes the \"Unfenced / Uncovered\" branch through the gated check; \"Fenced = No\" is unreachable from registry values"
     kind: [A]
     rationale: "An unfenced pool matches both \"Unfenced / Uncovered\" and \"Fenced = No\" on the board (section 9.7 gap)."
   - id: I49
-    page: "PC 9 & 10"
+    source: "PC 9 & 10"
     gap: "`fire_dept_response_time` Unknown; `road_access` Unknown"
     ruling: "Underwriter choice"
     kind: [U]
@@ -364,54 +363,54 @@ rows:
       - id: I49.road_access
         options: ["multiple", "limited"]
   - id: I50
-    page: "PC 9 & 10"
+    source: "PC 9 & 10"
     gap: "Branch A at exactly 7,500 square feet; `interior_sprinklers` without central monitoring"
     ruling: "7,500 is not under 7,500, so sprinklers are required; \"Interior Sprinklers\" does not satisfy \"centrally monitored\""
     kind: [A]
-    rationale: "The board does not say which side of Branch A exactly 7,500 square feet falls on, or whether `interior_sprinklers` meets \"centrally monitored\" (section 9.7 gap)."
+    rationale: "Branch A's box asks whether the home is under 7500 square feet, while Branches B and C band at smaller than and larger than 7500 (I39); the registry's `interior_sprinklers` has an option \"Interior Sprinklers\" beside \"Centrally Monitored Interior Sprinklers\", and the board requires the centrally monitored kind (section 9.7 gap)."
   - id: I51
-    page: "Electrical"
+    source: "Electrical"
     gap: "Knob-and-tube missing on a home built in 1950 or later"
     ruling: "Ask the producer; the board's note covers the pre-1950 inference only"
     kind: [A]
     rationale: "Section 9.3 rule 4: the default applies only with `year_built` below 1950, and with `year_built` 1950 or later the question is asked (I51)."
     applied_in: "resolution rule: the knob-and-tube default and ask (section 9.3 rule 4)"
   - id: I52
-    page: "Roof"
+    source: "Roof"
     gap: "Composition shingles older than 20 years sit in neither Unknown Class list; the branch is unreachable once the material is known (I20)"
     ruling: "Advisory on the quote for roofs whose `roof_material` is \"Asphalt Fiberglass Composite\" or \"Architecture Shingles\" with `roof_replacement_year` more than 20 years before the reference year and `p_f` above 0.15. A question for Stand."
     kind: [A]
     rationale: "Composition shingles older than 20 years sit in neither Unknown Class list and the branch is unreachable once the material is known (section 9.7 gap)."
     question_for_stand: true
   - id: I53
-    page: "Occupancy"
+    source: "Occupancy"
     gap: "`dwelling_use_type` Tenant or Mixed with `is_rental` \"No\""
     ruling: "Conflict validator (section 9.5); confirmed with the producer"
     kind: [A]
     rationale: "Section 9.5 lists it as a conflict validator whose threshold source is I53."
     applied_in: "validator `tenant_use_without_rental` (section 9.5 row for `dwelling_use_type` Tenant or Mixed with `is_rental` \"No\", which cites I53)"
   - id: I54
-    page: "Trusts"
+    source: "Trusts"
     gap: "No registry field identifies an LLC owner"
     ruling: "The page applies on `residence_held_in_trust` only; LLC ownership is not evaluated"
     kind: [N]
     rationale: "No registry field identifies an LLC owner; kind N is not evaluated and shown as a non-blocking note (section 9.7)."
     not_evaluated: true
   - id: I55
-    page: "Fire Simulation"
+    source: "Fire Simulation"
     gap: "\"Determine preliminary mitigation plan to discuss with broker\""
     ruling: "Advisory on the quote"
     kind: [A]
     rationale: "The board says \"Determine preliminary mitigation plan to discuss with broker\" (section 9.7 gap)."
   - id: I56
-    page: "Occupancy"
+    source: "Occupancy"
     gap: "Modifications apply \"for duration of non-occupancy\""
     ruling: "Deadline value `duration_of_non_occupancy`"
     kind: [A]
     rationale: "Section 9.6: a deadline on a surcharge or a coverage adjustment says how long the modification applies (I56)."
     applied_in: "typed deadline `duration_of_non_occupancy` (section 9.6)"
   - id: I57
-    page: "Occupancy"
+    source: "Occupancy"
     gap: "Board note: \"You can provide the quote without this information but you must follow up after\""
     ruling: "The registry's always-required occupancy fields are requested before the quote"
     kind: [A]
