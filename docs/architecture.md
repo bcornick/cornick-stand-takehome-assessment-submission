@@ -171,7 +171,7 @@ docs/                     this file, critique, plan, progress, brief, playbook
 
 - **Backend:** Python 3.12, `uv` with a lockfile, FastAPI (server-sent events built in), Pydantic, SQLite, pytest, ruff, mypy.
 - **Frontend:** pnpm, Vite, React, TypeScript, shadcn/ui, built inside the container to static files that FastAPI serves.
-- **Models:** DeepSeek V4.1 Flash (`deepseek-flash`), an open-weights model, through DeepSeek's Anthropic-format endpoint (`https://api.deepseek.com/anthropic`) with the Anthropic SDK. `MODEL_API_KEY`, `MODEL_BASE_URL` and `MODEL_ID` configure it. Structured output is a forced tool call: one tool whose input schema is the output model's JSON schema, `tool_choice` naming that tool, and the tool input validated with Pydantic. `messages.parse()` is not used; the endpoint ignores its output format. Jev (`jev-1.13.0`, TypeSafe SDK) answers reply classification first when its key is set, with the language model as the fallback.
+- **Models:** DeepSeek V4.1 Flash (`deepseek-flash`), an open-weights model, through DeepSeek's Anthropic-format endpoint (`https://api.deepseek.com/anthropic`) with the Anthropic SDK. `MODEL_API_KEY`, `MODEL_BASE_URL` and `MODEL_ID` configure it. Structured output is a forced tool call: one tool whose input schema is the output model's JSON schema, `tool_choice` naming that tool, thinking disabled, and the tool input validated with Pydantic. Every forced-tool call sends `thinking` disabled. `messages.parse()` is not used; the endpoint ignores its output format. Jev (`jev-1.13.0`, TypeSafe SDK) answers reply classification first when its key is set, with the language model as the fallback.
 - **Stand's harness** keeps its own Python 3.11 images.
 
 ## 7. Runtime
@@ -613,11 +613,11 @@ The ask plan is a list of typed asks: `field_request`, `follow_on_question`, `ca
 `read_reply` returns:
 
 - a **classification**: `answers_all`, `answers_some`, `declines_to_answer`, `off_topic`;
-- **candidate observations**: ask id, normalised value, exact span offsets. Values are extracted only for the asks in the open intent.
+- **candidate observations**: ask id, normalised value, and the quote: the reply text the value was read from, copied exactly. Values are extracted only for the asks in the open intent.
 
 Then code:
 
-1. checks every span occurs verbatim in the stored reply;
+1. finds each candidate's quote in the stored reply and records its offsets, taking the first occurrence when the quote occurs more than once; a candidate whose quote does not occur verbatim is dropped and the drop is recorded, because a quote that is not in the reply is an invented answer;
 2. coerces values to the registry's types and option strings;
 3. runs the conflict validators;
 4. applies the source-authority rules of section 7.3;
@@ -758,7 +758,7 @@ One experiment answers "where is the agent?" with a measurement: the ten seed-42
 - `.gitattributes` sets `eol=lf`. The frontend builds inside the container. Images build for linux/amd64 and linux/arm64.
 - Stage 13 runs the compose file on macOS (arm64), on an amd64 Linux host, and on Windows with WSL2, and records each result in the README. A platform that was not run is stated as not run.
 - Requires Docker Compose 2.20 or later.
-- Stage 1 checks the structured-output call and the forced-`tool_choice` restriction against the SDK documentation and pins the SDK version in the lockfile.
+- Stage 1 checks the forced tool call against DeepSeek's documentation and with a live call, and pins the SDK version in the lockfile.
 
 ## 15. Open issues
 
@@ -971,13 +971,22 @@ class Candidate(BaseModel):
     field: str             # the registry field or q: id the value is for; for a confirmation,
                            # one of the fields its validator covers
     value: str | int | float | bool
-    span_start: int
-    span_end: int
+    quote: str             # the reply text the value was read from, copied exactly; not empty
 
 class ReplyReading(BaseModel):
     classification: Literal["answers_all", "answers_some", "declines_to_answer", "off_topic"]
     candidates: list[Candidate]
+
+class LocatedCandidate(Candidate):
+    span_start: int        # computed by code, never by the model
+    span_end: int          # body[span_start:span_end] == quote
 ```
+
+`ReplyReading` is what the model returns: its JSON schema is the input schema of the forced tool, and it holds no offsets. Code then locates each candidate's `quote` in the reply body:
+
+- The quote must occur verbatim in the body. A candidate whose quote is not found is dropped and yields no observation; the drop is recorded on the `reply_read` event with the candidate as the model returned it.
+- When the quote occurs more than once, the first occurrence is taken.
+- A found candidate becomes a `LocatedCandidate`. The stored output of `read_reply` is the classification with the located candidates, so everything downstream that shows a span reads `span_start` and `span_end` from it.
 
 Reply bodies are capped at 8,000 characters. The model id comes from `MODEL_ID`. The prompt lives in `src/uwh/skills/read_reply/prompt.md`.
 
@@ -985,7 +994,7 @@ Reply bodies are capped at 8,000 characters. The model id comes from `MODEL_ID`.
 
 - Lead concurrency: 4.
 - Skill pass threshold: 1.0 unless a manifest states another value with its reason.
-- `read_reply` sends `temperature` 0 and a forced tool choice. A tool input that fails validation repeats the call once; a second failure, or a `refusal` stop reason, maps to the skill's typed abstention. Stage 1 confirms with DeepSeek's documentation and one live call that `MODEL_ID` honours both.
+- `read_reply` sends a forced tool choice with `thinking` disabled, and `temperature` 0. The Anthropic SDK from 1.0 has no `temperature` argument, so the value goes in the call's `extra_body`. A tool input that fails validation repeats the call once; a second failure, or a `refusal` stop reason, maps to the skill's typed abstention. Stage 1 confirms with DeepSeek's documentation and a live call that `MODEL_ID` accepts the forced tool choice and the temperature; whether `temperature` 0 gives agreeing repeats is measured by the three-repeat check of the Reply reading grader.
 - Rounds before the lead goes to the underwriter: 2.
 - Jev confidence threshold: 0.7 per question, in the skill manifest.
 - Reply-reading repeats in evals: 3.

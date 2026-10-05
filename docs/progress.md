@@ -93,3 +93,20 @@ Questions for Brett that the live call raised; none is settled in code:
 - A script that printed the model's tool input also printed the reply's substring at the returned offsets, which is how the wrong offsets were seen. Worth keeping in the stage 9 recording step.
 
 **Next:** Stage 2, task 1, on `stage-02-contracts-t0`, after Brett's go-ahead and his answers to questions 1 to 3.
+
+## Stage 01: amendments from the live call (stage-01-scaffold-t0)
+
+**Done:** Brett ruled on the three questions of the model provider entry, and the architecture and plan are amended in one commit.
+1. **Thinking.** §6.2 and A.10 say every forced-tool call sends `thinking` disabled. The reason is the endpoint's answer to a forced tool choice without it: HTTP 400, `Thinking mode does not support this tool_choice`.
+2. **Temperature.** anthropic stays on 1.x. A.10 says `temperature` 0 goes in the call's `extra_body`. One call cannot show that the value takes effect; the three-repeat agreement check of the Reply reading grader at stage 9 is where that is found out.
+3. **Offsets.** A.9: the model returns a `quote` for each candidate and no offsets. Code finds the quote in the reply body. A quote that is not found verbatim drops the candidate and the drop is recorded on the `reply_read` event; a quote that occurs more than once takes the first occurrence; the stored output holds `LocatedCandidate`s with `span_start` and `span_end` computed by code. §10.4 step 1, plan stage 2 task 5, stage 3 task 7 and stage 9 tasks 2 and 3 follow. Stage 9 task 2 gains `test_candidate_with_unfound_quote_is_dropped`.
+
+Two edits in that commit go beyond Brett's wording and are for him to confirm at the stage 2 gate, where the diff is shown with the data shapes:
+- A.9 says the quote is not empty. An empty string occurs in every body, so without this an empty quote would always be "found".
+- §14 said Stage 1 checks "the forced-`tool_choice` restriction against the SDK documentation", a sentence left from the Claude design. It says what stage 1 does under the DeepSeek design.
+
+No acceptance check mentions offsets, thinking or the temperature route, so `docs/acceptance.json` is unchanged.
+
+Jev: Brett added `TYPESAFE_API_KEY` to `.env` with $5 of credit, for stage 12 only. No Jev call is made before the Jev adapter task. Nothing in `src/` reads the variable; if its presence changes behaviour or a skill status before stage 12, work stops and Brett is told.
+
+**Next:** Stage 2, task 1, on `stage-02-contracts-t0`. Brett gave the go-ahead; the stage ends at his review of the data shapes.
