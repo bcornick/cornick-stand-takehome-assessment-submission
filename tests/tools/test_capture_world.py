@@ -2,12 +2,13 @@
 # ABOUTME: The generator runs in process; the two not_found leads are checked against the lead's own fields.
 import copy
 import json
+import random
 import sys
 from pathlib import Path
 from typing import Any
 
 import pytest
-from leadgen import generator  # Stand's module; tests/conftest.py puts it on sys.path
+from leadgen import archetypes, generator  # Stand's module; tests/conftest.py puts it on sys.path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
 import capture_world  # noqa: E402
@@ -32,17 +33,17 @@ def test_wrapped_output_equals_unwrapped_output_field_for_field(
     seed: int, config: dict[str, Any]
 ) -> None:
     unwrapped = generator.generate_queue(seed, 10, "mixed", copy.deepcopy(config))
-    with capture_world.recording() as recorder:
+    with capture_world.recording() as records:
         wrapped = generator.generate_queue(seed, 10, "mixed", copy.deepcopy(config))
     assert len(wrapped) == len(unwrapped) == 10
     for got, want in zip(wrapped, unwrapped, strict=True):
         assert got.keys() == want.keys()
         for key in want:
             assert got[key] == want[key], (want["lead_id"], key)
-    assert len(recorder.leads) == 10
+    assert len(records) == 10
 
 
-def test_wrapper_restores_the_generator_after_a_generation(config: dict[str, Any]) -> None:
+def test_wrapper_restores_the_generator_after_a_generation() -> None:
     before = (generator._base_lead, generator.generate_lead, dict(generator.archetypes.ARCHETYPES))
     with capture_world.recording():
         assert generator._base_lead is not before[0]
@@ -55,9 +56,9 @@ def test_wrapper_restores_the_generator_after_a_generation(config: dict[str, Any
 def test_recording_is_non_empty_and_consistent_with_the_final_lead(
     seed: int, config: dict[str, Any]
 ) -> None:
-    leads, recorder = capture_world.capture_queue(seed, config)
-    assert sum(len(r.effects) for r in recorder.leads) > 0
-    for lead, record in zip(leads, recorder.leads, strict=True):
+    leads, records = capture_world.capture_queue(seed, config)
+    assert sum(len(r.effects) for r in records) > 0
+    for lead, record in zip(leads, records, strict=True):
         assert record.lead_id == lead["lead_id"]
         assert len(record.base) == 73
         for effect in record.effects:
@@ -69,8 +70,8 @@ def test_recording_is_non_empty_and_consistent_with_the_final_lead(
 
 
 def test_seed_42_recording_holds_the_named_archetypes(config: dict[str, Any]) -> None:
-    _, recorder = capture_world.capture_queue(42, config)
-    names = sorted(e.archetype for r in recorder.leads for e in r.effects)
+    _, records = capture_world.capture_queue(42, config)
+    names = sorted(e.archetype for r in records for e in r.effects)
     assert names == sorted(
         ["occupancy_conflict"] * 2
         + ["post_and_pier"]
@@ -84,10 +85,17 @@ def test_guarantee_pass_assertion_raises_when_the_guarantee_exceeds_the_natural_
 ) -> None:
     raised = copy.deepcopy(config)
     raised["queue"]["guarantee_hard_archetypes"] = 10
+    base_lead = generator._base_lead
+    generate_lead = generator.generate_lead
+    archetype_table = dict(archetypes.ARCHETYPES)
     with pytest.raises(capture_world.GuaranteePassFired, match="guarantee pass"):
         capture_world.capture_queue(42, raised)
     # the generator is restored after the error
-    assert capture_world.capture_queue(42, config)[1].leads
+    assert generator._base_lead is base_lead
+    assert generator.generate_lead is generate_lead
+    assert archetypes.ARCHETYPES.keys() == archetype_table.keys()
+    for name, original in archetype_table.items():
+        assert archetypes.ARCHETYPES[name] is original
 
 
 @pytest.mark.parametrize("seed", SEEDS)
@@ -103,9 +111,9 @@ def test_each_entry_holds_every_provider_field_and_a_fingerprint_of_the_final_le
     seed: int, worlds: dict[int, dict[str, Any]], config: dict[str, Any]
 ) -> None:
     world = worlds[seed]
-    leads, recorder = capture_world.capture_queue(seed, config)
+    leads, records = capture_world.capture_queue(seed, config)
     assert list(world["leads"]) == [ld["lead_id"] for ld in leads]
-    for lead, record in zip(leads, recorder.leads, strict=True):
+    for lead, record in zip(leads, records, strict=True):
         entry = world["leads"][lead["lead_id"]]
         assert entry["fingerprint"] == hash_json(lead["fields"])
         assert entry["fields"] == lead["fields"]
@@ -123,16 +131,27 @@ def test_each_entry_holds_every_provider_field_and_a_fingerprint_of_the_final_le
             assert lead["fields"][name] == value
 
 
-def test_a_clean_base_value_differs_from_the_perturbed_final_value_where_the_lead_lost_it(
-    worlds: dict[int, dict[str, Any]],
+def test_replacement_cost_holds_the_base_value_that_predates_the_archetype_nulling_it(
+    worlds: dict[int, dict[str, Any]], config: dict[str, Any]
 ) -> None:
-    # LEAD-00000011-001: replacement_cost_gap nulled replacement_cost; the provider still holds
-    # the clean base value, which is not the null on the lead.
-    entry = worlds[11]["leads"]["LEAD-00000011-001"]
-    assert entry["fields"]["replacement_cost"] is None
-    result = entry["provider_values"]["replacement_cost"]
+    # Lead 0 of seed 11 is drawn the way generate_queue draws it: the tier shuffle first, then
+    # the lead's own _base_lead on the same stream.
+    rng = random.Random(11)
+    tier_mix = config["queue"]["tier_mix"]
+    generator._tier_sequence(rng, capture_world.COUNT, capture_world.DIFFICULTY, tier_mix)
+    base = generator._base_lead(rng)
+    first = worlds[11]["leads"]["LEAD-00000011-000"]
+    for name in capture_world.PROVIDER_FIELDS:
+        assert first["provider_values"][name] == {"status": "found", "value": base[name]}
+
+    # LEAD-00000011-001: replacement_cost_gap nulled replacement_cost and moved coverage_a. The
+    # provider keeps the base value, which sits outside the ratio band of the final coverage_a.
+    gap = worlds[11]["leads"]["LEAD-00000011-001"]
+    assert gap["fields"]["replacement_cost"] is None
+    result = gap["provider_values"]["replacement_cost"]
     assert result["status"] == "found"
-    assert isinstance(result["value"], int)
+    final_coverage = gap["fields"]["coverage_a"]
+    assert not int(final_coverage * 0.95) <= result["value"] <= int(final_coverage * 1.1)
 
 
 def test_wildfire_archetype_values_are_recorded_as_set_and_the_base_value_is_kept_apart(
@@ -164,7 +183,7 @@ def test_protection_class_is_not_found_on_lead_15_003_which_holds_the_full_addre
         assert entry["fields"][name]
 
 
-def test_only_the_two_named_leads_hold_not_found_entries(
+def test_not_found_entries_are_exactly_the_four_nulled_by_the_rural_and_profile_archetypes(
     worlds: dict[int, dict[str, Any]],
 ) -> None:
     not_found = {
@@ -174,9 +193,17 @@ def test_only_the_two_named_leads_hold_not_found_entries(
         for name, result in entry["provider_values"].items()
         if result["status"] == "not_found"
     }
-    assert ("LEAD-00000011-008", "kyc_score") in not_found
-    assert ("LEAD-00000015-003", "protection_class") in not_found
-    assert {lead_id for lead_id, _ in not_found if lead_id.startswith("LEAD-00000042")} == set()
+    assert not_found == {
+        ("LEAD-00000011-008", "kyc_score"),
+        ("LEAD-00000015-003", "protection_class"),
+        ("LEAD-00000015-004", "protection_class"),
+        ("LEAD-00000015-007", "protection_class"),
+    }
+    assert not any(
+        result["status"] == "not_found"
+        for entry in worlds[42]["leads"].values()
+        for result in entry["provider_values"].values()
+    )
 
 
 @pytest.fixture
@@ -215,3 +242,8 @@ def test_check_fails_and_leaves_the_file_when_one_value_differs(
     assert capture_world.main(["--seed", "42", "--check"]) == 1
     assert "differs" in capsys.readouterr().err
     assert path.read_text(encoding="utf-8") == edited
+
+
+@pytest.mark.parametrize("seed", SEEDS)
+def test_committed_fixture_equals_a_fresh_capture(seed: int) -> None:
+    assert capture_world.main(["--seed", str(seed), "--check"]) == 0

@@ -63,20 +63,19 @@ class LeadRecord:
     effects: list[ArchetypeEffect] = field(default_factory=list)
 
 
-@dataclass
-class Recorder:
-    leads: list[LeadRecord] = field(default_factory=list)
+class CaptureMismatch(RuntimeError):
+    """A check the capture depends on failed: the recording changed the output or lost a lead."""
 
 
 @contextmanager
-def recording() -> Iterator[Recorder]:
+def recording() -> Iterator[list[LeadRecord]]:
     """Patch the generator's `_base_lead`, `generate_lead` and each archetype for one generation.
 
     `generate_lead` is wrapped only to tell an archetype call made inside a lead's own pass from
     one made by the guarantee pass in `generate_queue`; the latter raises GuaranteePassFired.
     The wrappers pass arguments and results through unchanged. The originals are restored on exit.
     """
-    recorder = Recorder()
+    records: list[LeadRecord] = []
     original_base_lead = generator._base_lead
     original_generate_lead = generator.generate_lead
     original_archetypes = dict(archetypes.ARCHETYPES)
@@ -95,7 +94,7 @@ def recording() -> Iterator[Recorder]:
         finally:
             current.clear()
         record.lead_id = lead["lead_id"]
-        recorder.leads.append(record)
+        records.append(record)
         return lead
 
     def wrap_archetype(name: str, original: Callable[..., Any]) -> Callable[..., Any]:
@@ -125,7 +124,7 @@ def recording() -> Iterator[Recorder]:
     for name, original in original_archetypes.items():
         archetypes.ARCHETYPES[name] = wrap_archetype(name, original)
     try:
-        yield recorder
+        yield records
     finally:
         generator._base_lead = original_base_lead
         generator.generate_lead = original_generate_lead
@@ -139,17 +138,20 @@ def load_config() -> dict[str, Any]:
     return config
 
 
-def capture_queue(seed: int, config: dict[str, Any]) -> tuple[list[dict[str, Any]], Recorder]:
-    """The queue the generator makes for `seed`, with the recording of one wrapped generation.
+def capture_queue(
+    seed: int, config: dict[str, Any]
+) -> tuple[list[dict[str, Any]], list[LeadRecord]]:
+    """The queue the generator makes for `seed`, with the records of one wrapped generation.
 
-    Raises AssertionError when the wrapped output differs from the unwrapped output and
+    Raises CaptureMismatch when the wrapped output differs from the unwrapped output and
     GuaranteePassFired when the guarantee pass added an archetype.
     """
     unwrapped = generator.generate_queue(seed, COUNT, DIFFICULTY, copy.deepcopy(config))
-    with recording() as recorder:
+    with recording() as records:
         wrapped = generator.generate_queue(seed, COUNT, DIFFICULTY, copy.deepcopy(config))
-    assert wrapped == unwrapped, f"the recording wrapper changed the output for seed {seed}"
-    return wrapped, recorder
+    if wrapped != unwrapped:
+        raise CaptureMismatch(f"the recording wrapper changed the output for seed {seed}")
+    return wrapped, records
 
 
 def provider_entry(lead: dict[str, Any], record: LeadRecord) -> dict[str, Any]:
@@ -184,15 +186,16 @@ def provider_entry(lead: dict[str, Any], record: LeadRecord) -> dict[str, Any]:
 
 
 def build_world(seed: int, config: dict[str, Any]) -> dict[str, Any]:
-    leads, recorder = capture_queue(seed, config)
-    assert [r.lead_id for r in recorder.leads] == [ld["lead_id"] for ld in leads]
+    leads, records = capture_queue(seed, config)
+    if [r.lead_id for r in records] != [ld["lead_id"] for ld in leads]:
+        raise CaptureMismatch(f"the recorded leads for seed {seed} differ from the generated leads")
     return {
         "seed": seed,
         "count": COUNT,
         "difficulty": DIFFICULTY,
         "leads": {
             ld["lead_id"]: provider_entry(ld, record)
-            for ld, record in zip(leads, recorder.leads, strict=True)
+            for ld, record in zip(leads, records, strict=True)
         },
     }
 
