@@ -46,7 +46,7 @@ from uwh.runtime.waits import Blocker, close_blocker, open_blocker_by_id, open_b
 from uwh.runtime.workflow import Step, reevaluate, unit_of_work
 from uwh.settings import RunMode
 from uwh.skills.manifest import SkillFolderError, load_manifest
-from uwh.skills.vertical import HELD_DRAFT_CAUSES, command_class
+from uwh.skills.vertical import command_class
 
 
 # The reviews a reply raises about an open round (7.3 rule 9, A.11): acknowledging one closes that round.
@@ -175,7 +175,7 @@ def _send_after_commit(
     """Re-check the delivery an approval asked about, unless another command has settled it since, then
     dispatch every draft of the lead that can go. The command has committed, so what the mailbox or a
     draft's state makes impossible is recorded on the intent or the draft and never raised; only
-    StaleRun, the emergency stop and a class set to `off` raise. `make_context` carries the command's
+    StaleRun raises. `make_context` carries the command's
     run and builds each event's context when the event is written, after its own post."""
     if recheck_intent_id is not None:
         rechecked = read_intent(db, recheck_intent_id)
@@ -372,14 +372,12 @@ def _settle(
     *,
     approve: bool,
 ) -> _Outcome:
-    """`approve` or `reject` of an item, by the A.11 table. `approve` of a held draft's review and
-    `reject` of a draft decline notice raise NotImplementedError."""
+    """`approve` or `reject` of an item, by the A.11 table. `reject` of a draft decline notice raises
+    NotImplementedError."""
     command = "approve" if approve else "reject"
     item = _open_item(db, payload)
     reason = _text(payload, "reason") if approve else _nonempty_text(payload, "reason")
     detail = item.detail
-    if detail.cause in HELD_DRAFT_CAUSES and approve:
-        raise NotImplementedError(f"{command} of a {detail.cause} item")
     if item.kind not in ("underwriter_review", "delivery_unknown"):
         raise _Refusal(f"item {item.id} is a {item.kind}, not an item to {command}")
     if payload.get("artifact_hash") is not None and not (approve and detail.item_kind == "draft"):

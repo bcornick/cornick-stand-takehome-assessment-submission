@@ -13,7 +13,6 @@ from uwh.runtime.event_types import (
     MessageKind,
     ObservationSource,
     ObservationStatus,
-    ProposalKind,
     ProposalState,
     RunStatus,
     Status,
@@ -72,12 +71,8 @@ def table_ddl() -> dict[str, str]:
             {_in_set("mode", RUN_MODES)},
             {_in_set("status", get_args(RunStatus))})""",
         "proposals": f"""CREATE TABLE IF NOT EXISTS proposals (
-            id INTEGER PRIMARY KEY, kind TEXT, payload_json TEXT, diff_hash TEXT, state TEXT,
-            actor TEXT, event_id INTEGER,
-            {_in_set("kind", get_args(ProposalKind))},
+            id INTEGER PRIMARY KEY, payload_json TEXT, state TEXT, actor TEXT, event_id INTEGER,
             {_in_set("state", get_args(ProposalState))})""",
-        "settings": """CREATE TABLE IF NOT EXISTS settings (
-            key TEXT PRIMARY KEY, value_json TEXT)""",
     }
 
 

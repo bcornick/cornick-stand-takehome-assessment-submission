@@ -15,7 +15,6 @@ from uwh.runtime.event_types import (
     PAYLOAD_MODELS,
     Actor,
     ApprovalItemKind,
-    AutonomyLevel,
     BlockerDetail,
     BlockerKind,
     BlockerOwner,
@@ -24,38 +23,21 @@ from uwh.runtime.event_types import (
     MessageKind,
     ObservationSource,
     ObservationStatus,
-    ProposalKind,
     ProposalState,
     RequestKind,
-    SkillStatus,
     Status,
 )
 from uwh.settings import RunMode
-from uwh.skills.vertical import HELD_DRAFT_CAUSES, refuse_unservable_blocker
+from uwh.skills.vertical import refuse_unservable_blocker
 
 
-# Autonomy applies to a class that has a default level (7.4); the human-only classes have none.
-AutonomyClassName = Literal[
-    "fetch_data",
-    "send_routine_request",
-    "send_sensitive_request",
-    "send_quote_packet",
-    "send_decline_notice",
-    "deliver_reply",
-    "propose_command",
-]
-
-# A.11: a proposal holds one of ten HTTP commands: never approve, reject or another proposal.
+# A.11: a proposal holds one of six HTTP commands: never approve, reject or another proposal.
 ProposableCommandType = Literal[
     "deliver_reply",
     "edit_draft",
     "resolve_fact",
     "decline_lead",
     "record_ruling",
-    "propose_rule_change",
-    "apply_rule_change",
-    "change_setting",
-    "emergency_stop",
     "start_run",
 ]
 
@@ -197,8 +179,7 @@ class BlockerView(StrictModel):
 
     The detail pane offers the actions for every open item (section 11), so the blocker carries
     what its action needs: a pending observation's value (`observation`, required exactly for the
-    item kind `observation`) and, for a held draft, the payload hash an `approve` carries
-    (`held_draft_payload_hash`, 7.4). The item kind and, for a review, the cause are in `detail`.
+    item kind `observation`). The item kind and, for a review, the cause are in `detail`.
     """
 
     item_id: int
@@ -206,13 +187,11 @@ class BlockerView(StrictModel):
     owner: BlockerOwner
     detail: BlockerDetail
     observation: FactView | None  # the pending observation of an `observation` item
-    held_draft_payload_hash: str | None  # a held draft's hash, for a draft-held review
 
     @model_validator(mode="after")
     def item_kind_fits_the_blocker(self) -> Self:
         refuse_unservable_blocker(self.kind, self.detail)
         self._observation_is_the_pending_one()
-        self._held_draft_carries_its_hash()
         return self
 
     def _observation_is_the_pending_one(self) -> None:
@@ -226,11 +205,6 @@ class BlockerView(StrictModel):
             raise ValueError("the observation of an item is pending_review")
         if self.detail.observation_id != self.observation.observation_id:
             raise ValueError("detail.observation_id is the observation's observation_id")
-
-    def _held_draft_carries_its_hash(self) -> None:
-        held = self.detail.cause in HELD_DRAFT_CAUSES
-        if held != (self.held_draft_payload_hash is not None):
-            raise ValueError("held_draft_payload_hash is set exactly for a held draft's review")
 
 
 class DraftView(StrictModel):
@@ -359,7 +333,7 @@ class ReviewItem(BlockerView):
     type: Literal["review"]
     lead_id: str
     item: ReviewItemName
-    draft: DraftView | None = None  # a held draft's review may carry it too
+    draft: DraftView | None = None
 
     @model_validator(mode="after")
     def row_fits_the_blocker(self) -> Self:
@@ -378,12 +352,6 @@ class ReviewItem(BlockerView):
             self.item == "review_cause_persists"
         ):
             raise ValueError("detail.cause_persists is true exactly for review_cause_persists")
-        if self.held_draft_payload_hash is not None and self.draft is not None:
-            if (self.draft.intent_id, self.draft.payload_hash) != (
-                self.detail.intent_id,
-                self.held_draft_payload_hash,
-            ):
-                raise ValueError("the draft shown is the held draft: its intent and payload hash")
         return self
 
 
@@ -464,43 +432,18 @@ class ReplyRequest(StrictModel):
 DeliverReplyPayload = ReplyRequest
 
 
-class ChangeSettingPayload(StrictModel):
-    key: str  # `autonomy.<command_class>`, `emergency_stop` or `ruleset.active`
-    value: JsonValue
-
-
-class EmergencyStopPayload(StrictModel):
-    engaged: bool
-
-
 class StartRunPayload(StrictModel):
     seed: int
 
 
-class ProposeRuleChangePayload(StrictModel):
-    row_id: str
-    param: str
-    value: FactValue
-    reason: str
-
-
-class ApplyRuleChangePayload(StrictModel):
-    proposal_id: int
-    diff_hash: str
-
-
-# The payload models of the ten commands a proposal can hold, by command type (A.11).
+# The payload models of the six commands a proposal can hold, by command type (A.11).
 PROPOSABLE_PAYLOADS: dict[str, type[StrictModel]] = {
     "edit_draft": EditDraftPayload,
     "record_ruling": RecordRulingPayload,
     "resolve_fact": ResolveFactPayload,
     "decline_lead": DeclineLeadPayload,
     "deliver_reply": DeliverReplyPayload,
-    "change_setting": ChangeSettingPayload,
-    "emergency_stop": EmergencyStopPayload,
     "start_run": StartRunPayload,
-    "propose_rule_change": ProposeRuleChangePayload,
-    "apply_rule_change": ApplyRuleChangePayload,
 }
 
 ProposedPayload = (
@@ -509,16 +452,12 @@ ProposedPayload = (
     | ResolveFactPayload
     | DeclineLeadPayload
     | DeliverReplyPayload
-    | ChangeSettingPayload
-    | EmergencyStopPayload
     | StartRunPayload
-    | ProposeRuleChangePayload
-    | ApplyRuleChangePayload
 )
 
 
 class ProposeCommandPayload(StrictModel):
-    """`{type, payload, rationale}` (A.11): `type` and `payload` together are one of the ten
+    """`{type, payload, rationale}` (A.11): `type` and `payload` together are one of the six
     proposable HTTP commands, never `approve`, `reject` or `propose_command`. The payload is read as
     the model of `type` before the union field sees it."""
 
@@ -584,29 +523,9 @@ class DeliverReplyCommand(StrictModel):
     payload: DeliverReplyPayload
 
 
-class ChangeSettingCommand(StrictModel):
-    type: Literal["change_setting"]
-    payload: ChangeSettingPayload
-
-
-class EmergencyStopCommand(StrictModel):
-    type: Literal["emergency_stop"]
-    payload: EmergencyStopPayload
-
-
 class StartRunCommand(StrictModel):
     type: Literal["start_run"]
     payload: StartRunPayload
-
-
-class ProposeRuleChangeCommand(StrictModel):
-    type: Literal["propose_rule_change"]
-    payload: ProposeRuleChangePayload
-
-
-class ApplyRuleChangeCommand(StrictModel):
-    type: Literal["apply_rule_change"]
-    payload: ApplyRuleChangePayload
 
 
 class ProposeCommandCommand(StrictModel):
@@ -614,7 +533,7 @@ class ProposeCommandCommand(StrictModel):
     payload: ProposeCommandPayload
 
 
-# The commands `POST /api/commands` accepts: A.11's 13 rows, none of them workflow-only.
+# The commands `POST /api/commands` accepts: A.11's nine rows, none of them workflow-only.
 Command = Annotated[
     ApproveCommand
     | RejectCommand
@@ -623,11 +542,7 @@ Command = Annotated[
     | ResolveFactCommand
     | DeclineLeadCommand
     | DeliverReplyCommand
-    | ChangeSettingCommand
-    | EmergencyStopCommand
     | StartRunCommand
-    | ProposeRuleChangeCommand
-    | ApplyRuleChangeCommand
     | ProposeCommandCommand,
     Field(discriminator="type"),
 ]
@@ -655,45 +570,11 @@ class FixtureRepliesResponse(StrictModel):
 # ---- read views (A.5, A.11, sections 8, 11) -------------------------------------------------------------
 
 
-class AutonomySetting(StrictModel):
-    """The `autonomy.<command_class>` setting of a class autonomy applies to (7.4)."""
-
-    command_class: AutonomyClassName
-    level: AutonomyLevel
-    default_level: AutonomyLevel
-    locked: bool  # never `auto`
-
-
-class SettingsView(StrictModel):
-    autonomy: list[AutonomySetting]
-    emergency_stop: bool
-    ruleset_active: str | None  # the `ruleset.active` hash; None for the image's data
-
-
-class SkillResult(StrictModel):
-    """`skill_results.<name>` of the latest scored run row that matches the skill's digest (section 8)."""
-
-    cases_passed: int
-    cases_total: int
-    passed: bool
-
-
-class SkillView(StrictModel):
-    name: str
-    status: SkillStatus
-    last_result: SkillResult | None  # None while the skill is untested
-    threshold: float
-    fallback: str
-    rules_changed_since_eval: bool  # A.4: shown beside the status after a rule change
-
-
 class ProposalView(StrictModel):
     """A `proposals` row (A.1). A command proposal's payload is `{type, payload, rationale}`."""
 
     proposal_id: int
-    kind: ProposalKind
     payload: dict[str, JsonValue]
-    diff_hash: str | None
     state: ProposalState
     actor: Actor
     event_id: int

@@ -1,8 +1,7 @@
-# ABOUTME: SHA-256 over canonical JSON (A.4): the plan, payload and ruleset hashes, and the rule for naming the active ruleset directory.
+# ABOUTME: SHA-256 over canonical JSON (A.4): the plan, payload and ruleset hashes.
 # ABOUTME: Pure functions of values and paths; nothing here reads settings, the database or the environment.
 import hashlib
 import json
-import re
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
@@ -96,19 +95,3 @@ def ruleset_hash(directory: Path) -> str:
     if not directory.is_dir():
         raise FileNotFoundError(f"ruleset directory not found: {directory}")
     return hash_json(file_entries(directory, source_files(directory)))
-
-
-_SHA256_HEX = re.compile(r"[0-9a-f]{64}")
-
-
-def active_ruleset_dir(active: str | None, rulesets_root: Path, image_data: Path) -> Path:
-    """The directory the setting `ruleset.active` names, or the image's rules data when it is unset.
-
-    `active` is a ruleset hash (64 lowercase hex characters, A.4) and names
-    `rulesets_root / active`. Any other value raises ValueError.
-    """
-    if active is None:
-        return image_data
-    if not _SHA256_HEX.fullmatch(active):
-        raise ValueError(f"ruleset.active must be a ruleset hash, got {active!r}")
-    return rulesets_root / active

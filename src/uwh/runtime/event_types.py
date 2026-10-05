@@ -32,9 +32,6 @@ class EventType(StrEnum):
     approval_recorded = "approval_recorded"
     ruling_recorded = "ruling_recorded"
     command_refused = "command_refused"
-    setting_changed = "setting_changed"
-    class_demoted = "class_demoted"
-    rule_change_applied = "rule_change_applied"
     skill_fallback_used = "skill_fallback_used"
     model_called = "model_called"
     fault_injected = "fault_injected"
@@ -57,7 +54,7 @@ RequestKind = Literal["routine_request", "sensitive_request"]
 MessageKind = Literal[RequestKind, "quote_packet", "decline_notice"]
 ApprovalItemKind = Literal["draft", "observation", "delivery_unknown", "no_contact_route", "review"]
 ObservationSource = Literal["submitted", "fetched", "derived", "assumed", "reply", "underwriter"]
-Actor = Literal["workflow", "underwriter", "assistant", "mcp_client", "inbound"]
+Actor = Literal["workflow", "underwriter", "assistant", "inbound"]
 # What raised an `underwriter_review` item of item kind `review`.
 ReviewCause = Literal[
     "late_reply",
@@ -65,15 +62,12 @@ ReviewCause = Literal[
     "off_topic_reply",
     "declining_reply",
     "reply_after_terminal_status",
-    "draft_held_by_stop",
-    "draft_held_class_off",
     "round_limit",
     "identity_score_missing",
     "identity_score_unsupported",
 ]
 ObservationStatus = Literal["accepted", "pending_review", "rejected"]
 ApprovalDecision = Literal["approved", "rejected"]
-ProposalKind = Literal["rule_change", "command"]
 ProposalState = Literal["open", "applied", "dismissed"]
 IntentState = Literal["draft", "dispatching", "sent", "unknown", "closed_unsent"]
 RunStatus = Literal["processing", "settled"]
@@ -82,7 +76,7 @@ SkillStatus = Literal["untested", "passing", "failing", "unavailable"]
 AbstentionReason = Literal["invalid_tool_input", "refusal"]
 ReplyClassification = Literal["answers_all", "answers_some", "declines_to_answer", "off_topic"]
 RulingKind = Literal["choice", "suppression", "decline", "withdrawal", "reopened_choice"]
-AutonomyLevel = Literal["auto", "review", "off"]
+AutonomyLevel = Literal["auto", "review"]
 
 
 class RunStarted(StrictModel):
@@ -107,11 +101,7 @@ class DraftEdited(StrictModel):
 
 
 class ProposalCreated(StrictModel):
-    """`diff_hash` is the dry-run diff hash: a rule change always has one, a command proposal has none."""
-
     proposal_id: int
-    kind: ProposalKind
-    diff_hash: str | None
 
 
 class LeadReceived(StrictModel):
@@ -328,25 +318,6 @@ class CommandRefused(StrictModel):
     reason: str
 
 
-class SettingChanged(StrictModel):
-    key: str
-    value: JsonValue
-
-
-class ClassDemoted(StrictModel):
-    command_class: str
-    reason: str
-
-
-class RuleChangeApplied(StrictModel):
-    """The event row's `ruleset_hash` holds the ruleset in force before the change;
-    `applied_ruleset_hash` is the one the change produced."""
-
-    proposal_id: int
-    diff_hash: str
-    applied_ruleset_hash: str
-
-
 class SkillFallbackUsed(StrictModel):
     skill: str
     status: SkillStatus
@@ -389,9 +360,6 @@ PAYLOAD_MODELS: dict[EventType, type[StrictModel]] = {
     EventType.approval_recorded: ApprovalRecorded,
     EventType.ruling_recorded: RulingRecorded,
     EventType.command_refused: CommandRefused,
-    EventType.setting_changed: SettingChanged,
-    EventType.class_demoted: ClassDemoted,
-    EventType.rule_change_applied: RuleChangeApplied,
     EventType.skill_fallback_used: SkillFallbackUsed,
     EventType.model_called: ModelCalled,
     EventType.fault_injected: FaultInjected,

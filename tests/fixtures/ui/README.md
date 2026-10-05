@@ -1,8 +1,8 @@
 # UI fixtures
 
-Display data for the stand-in API (`tools/standin_api.py`) and the web unit tests. **No grader and no label author reads these files.** Values are illustrative and are not expected results: the expected first pass of each seed-42 lead is fixed by `evals/labels/`, which is written without these files.
+Display data for the web unit tests. **No grader and no label author reads these files.** Values are illustrative and are not expected results: the expected first pass of each seed-42 lead is fixed by `evals/labels/`, which is written without these files.
 
-Every file is JSON that follows a response model of `src/uwh/api/views.py`. The stand-in parses each file into its model when it starts, so a file that does not fit its model stops the server with the validation error.
+Every file is JSON that follows a response model of `src/uwh/api/views.py`.
 
 | File | Response model | Route |
 |---|---|---|
@@ -11,11 +11,7 @@ Every file is JSON that follows a response model of `src/uwh/api/views.py`. The 
 | `lead/<lead_id>.json` | `LeadDetail` | `GET /api/leads/{id}` |
 | `events/<lead_id>.json` | `LeadEvents` | `GET /api/leads/{id}/events` |
 | `items.json` | `list[Item]` | `GET /api/items` |
-| `settings.json` | `SettingsView` | `GET /api/settings` |
-| `skills.json` | `list[SkillView]` | `GET /api/skills` |
 | `proposals.json` | `list[ProposalView]` | `GET /api/proposals` |
-
-`tests/tools/test_standin_api.py` checks that the files agree with each other: the queue order, each row against its lead's detail and events, the items against the open blockers, the run's seven counts against the leads (follow-ups count every request sent, in any round; each lead counts once among the four waiting counts, by its primary next action), the payload hashes and the plan hash.
 
 ## What the content is
 
@@ -25,5 +21,4 @@ Every file is JSON that follows a response model of `src/uwh/api/views.py`. The 
 - **Playbook pages.** Every lead lists twelve pages. Plumbing and Electrical are `not_evaluated` on every lead, each with its note (section 4.1). The other pages are `no`, `unknown` or `yes` from the lead's facts, so the fixtures hold each `applies` value and the results `decided`, `undecided` and `not_evaluated`. An open conflict makes a page undecided, so no page here declines on every branch.
 - **Where the leads depart from section 5.** Section 5 names what a lead is notable for. The fixtures add what the facts imply: a blocked `kyc_score` lookup leaves Profile undecided, a missing `pool_type` leaves Pools undecided, a blocked `protection_class` lookup leaves PC 9 & 10 undecided and keeps the four fields conditional on protection class 9 or 10 out of the request. Lead 000 holds the occupancy conflict (section 2.2), so its Occupancy page is undecided; its one decline is Post & Pier, and its decline notice is round 0 because the lead has had no request. Its Profile, Pools, PC 9 & 10 and Replacement Cost pages are undecided beside it, and no request or confirmation goes out (section 9.6, precedence 1). Lead 008 carries an `unevaluated_skill` note for `read_reply`; no lead carries a `skill_fallback` note, because the one model skill with a fallback is untested, not failing.
 - **Items.** `items.json` holds the decline-notice draft review of lead 000 and the question cards of leads 003 and 006. There is no pending-observation, persistent-cause or `delivery_unknown` item, because section 5 describes none.
-- **Settings, skills, proposals.** `deliver_reply` is set to `review` to show a level that differs from its default. Every skill threshold is 1.0 (A.10). No skill is `failing`: a deterministic skill that failed would stop its lead with a `data` blocker (section 8), and every lead here holds a rendered message. `read_reply` is `untested`, `chat` is `unavailable`. One open command proposal is a `resolve_fact` giving lead 001's street address, the missing input of its blocked lookups (a proposal never holds `approve` or `reject`); one open rule-change proposal is for row I12.
-- **Event stream.** `GET /api/events/stream` answers 501 in the stand-in, as it does in the app; a client sees no live updates.
+- **Proposals.** One open command proposal is a `resolve_fact` giving lead 001's street address, the missing input of its blocked lookups (a proposal never holds `approve` or `reject`).

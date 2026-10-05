@@ -674,8 +674,7 @@
         "choice_ids": [],
         "text": "Review the decline notice before it is sent."
       },
-      "observation": null,
-      "held_draft_payload_hash": null
+      "observation": null
     }
   ],
   "drafts": [

@@ -236,7 +236,7 @@ def create_draft(
         subject,
         body,
         ask_ids,
-        waits_for_approval=autonomy_level(db, _class_of(kind)) != "auto",
+        waits_for_approval=autonomy_level(_class_of(kind)) != "auto",
     )
 
 
@@ -285,7 +285,7 @@ def edit_draft(
         ),
         lead_id=intent.lead_id,
     )
-    if autonomy_level(db, _class_of(kind)) != "auto" and _draft_item(db, edited) is None:
+    if autonomy_level(_class_of(kind)) != "auto" and _draft_item(db, edited) is None:
         _open_draft_item(db, context, edited)
     return event_id
 
@@ -311,16 +311,6 @@ def _approved_binding(db: sqlite3.Connection, intent_id: str) -> ApprovalBinding
         (intent_id,),
     ).fetchone()
     return None if row is None else ApprovalBinding(*row)
-
-
-def _refuse_held_dispatch(db: sqlite3.Connection, intent: Intent) -> None:
-    """A dispatch that the emergency stop or a class set to `off` refuses holds the draft in review
-    with the reason (7.4). Raises NotImplementedError for either: no command writes those settings."""
-    if autonomy_level(db, _class_of(intent.kind)) == "off":
-        raise NotImplementedError("holding a draft whose class is off")
-    row = db.execute("SELECT value_json FROM settings WHERE key = 'emergency_stop'").fetchone()
-    if row is not None and json.loads(row[0]) is True:
-        raise NotImplementedError("holding a draft while the emergency stop is engaged")
 
 
 def _return_to_review(
@@ -357,9 +347,8 @@ def _begin_dispatch(
         if intent is None or intent.state != "draft":
             return None
         _require_current_run(db, context, intent)
-        _refuse_held_dispatch(db, intent)
         item = _draft_item(db, intent)
-        if autonomy_level(db, _class_of(intent.kind)) == "review" or item is not None:
+        if autonomy_level(_class_of(intent.kind)) == "review" or item is not None:
             approved = _approved_binding(db, intent_id)
             if approved is None:
                 if item is None:
@@ -412,7 +401,7 @@ def dispatch(
     whose approval does not hold against the current values, or whose packet or notice the lead's
     status does not allow, returns to review and loses the approval; another intent of the lead in
     flight leaves the draft for a later pass. `make_context` builds the context of each event when it
-    is written. Raises RuntimeError inside a transaction and NotImplementedError for a held dispatch.
+    is written. Raises RuntimeError inside a transaction.
     Raises StaleRun when the run of the draft or the run of the context has been replaced, before the
     post or after it; nothing is written then (14).
     """

@@ -260,21 +260,6 @@ def record_reply(
     return observe_reply(db, context, lead_id, values, rules)
 
 
-def run_is_settled(db: sqlite3.Connection, run_id: str) -> bool:
-    """True when no lead of the run has a runnable step (A.5). A lead has one when it is `received` or
-    `triaged` and holds no open blocker; an `in_progress` lead has completed a pass and a terminal
-    lead has finished. Call it when no lead's steps are executing, after `run_leads`."""
-    placeholders = ", ".join("?" for _ in _FIRST_PASS_STATUSES)
-    row = db.execute(
-        f"SELECT 1 FROM leads WHERE run_id = ? AND status IN ({placeholders})"
-        " AND NOT EXISTS (SELECT 1 FROM blockers"
-        "   WHERE blockers.lead_id = leads.lead_id AND blockers.closed_event_id IS NULL)"
-        " LIMIT 1",
-        (run_id, *_FIRST_PASS_STATUSES),
-    ).fetchone()
-    return row is None
-
-
 def interrupted_leads(db: sqlite3.Connection) -> list[str]:
     """The leads whose pass a restart runs again (7.1): `received` or `triaged` with no open blocker,
     or only a step-failure blocker, in the order they were received. Every other lead keeps its state."""

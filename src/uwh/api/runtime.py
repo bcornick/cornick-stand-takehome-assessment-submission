@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 # The steps of a lead's pass in order, and the rules of the fact ledger.
 WORKFLOW_STEPS: tuple[Step, ...] = ()
 LEDGER_RULES = LedgerRules()
-# The image's rules data: the ruleset every run uses when `ruleset.active` is unset (A.4).
+# The image's rules data: the ruleset every run uses (A.4).
 IMAGE_RULES_DATA = Path(uwh.rules.__file__).parent / "data"
 
 

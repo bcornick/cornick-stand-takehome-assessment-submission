@@ -1,5 +1,5 @@
 # ABOUTME: The skill digest of A.4: the skill's own source, one shared hash of the Python source outside the skill folders, the image's rules data and the model id.
-# ABOUTME: Takes the `src/uwh` directory as a path; it never reads the active ruleset, settings or the environment.
+# ABOUTME: Takes the `src/uwh` directory as a path; it never reads settings or the environment.
 from pathlib import Path
 
 from uwh.runtime.hashing import (
@@ -18,7 +18,7 @@ def skill_digest(src_root: Path, skill: str, model_id: str | None = None) -> str
     - every Python file under `src_root` outside the skill folders, with the modules directly
       under `skills/` included, so a change to the rules core, a provider or the runtime changes
       every skill's digest while a change to another skill's folder changes none but its own;
-    - the hash of `rules/data/` in `src_root`, never the active ruleset;
+    - the hash of `rules/data/` in `src_root`;
     - `model_id`, for a model skill.
 
     Compiled files are never hashed.

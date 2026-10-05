@@ -39,33 +39,28 @@ class CommandClass:
 
     name: str
     default_level: AutonomyLevel | None
-    locked: bool  # True: never runs without an underwriter approval
     actors: tuple[Actor, ...]  # who may submit it
 
 
 def _human_only(name: str) -> CommandClass:
-    return CommandClass(name, None, False, ("underwriter",))
+    return CommandClass(name, None, ("underwriter",))
 
 
 COMMAND_CLASSES = (
-    CommandClass("fetch_data", "auto", False, ("workflow",)),
-    CommandClass("send_routine_request", "auto", False, ("workflow",)),
-    CommandClass("send_sensitive_request", "review", False, ("workflow",)),
-    CommandClass("send_quote_packet", "review", True, ("workflow",)),
-    CommandClass("send_decline_notice", "review", True, ("workflow",)),
-    CommandClass("deliver_reply", "auto", False, ("inbound", "underwriter")),
+    CommandClass("fetch_data", "auto", ("workflow",)),
+    CommandClass("send_routine_request", "auto", ("workflow",)),
+    CommandClass("send_sensitive_request", "review", ("workflow",)),
+    CommandClass("send_quote_packet", "review", ("workflow",)),
+    CommandClass("send_decline_notice", "review", ("workflow",)),
+    CommandClass("deliver_reply", "auto", ("inbound", "underwriter")),
     _human_only("approve"),
     _human_only("reject"),
     _human_only("edit_draft"),
     _human_only("resolve_fact"),
     _human_only("decline_lead"),
     _human_only("record_ruling"),
-    _human_only("propose_rule_change"),
-    _human_only("apply_rule_change"),
-    _human_only("change_setting"),
-    _human_only("emergency_stop"),
     _human_only("start_run"),
-    CommandClass("propose_command", "auto", False, ("assistant", "mcp_client")),
+    CommandClass("propose_command", "auto", ("assistant",)),
 )
 
 
@@ -88,9 +83,6 @@ _REVIEW_ITEM_KINDS: tuple[ApprovalItemKind, ...] = (
     "no_contact_route",
     "review",
 )
-
-# 7.4: a dispatch the stop or a class set to `off` refused leaves its draft in review.
-HELD_DRAFT_CAUSES: tuple[ReviewCause, ...] = ("draft_held_by_stop", "draft_held_class_off")
 
 
 def refuse_unservable_blocker(kind: BlockerKind, detail: BlockerDetail) -> None:
@@ -120,8 +112,6 @@ def refuse_unservable_blocker(kind: BlockerKind, detail: BlockerDetail) -> None:
             raise ValueError(f"cause_persists is {persists} for {detail.cause}")
     elif detail.cause is not None:
         raise ValueError("only a review has a cause")
-    if detail.cause in HELD_DRAFT_CAUSES and detail.intent_id is None:
-        raise ValueError("a held draft's review names its draft: intent_id")
     if kind == "underwriter_question" and not detail.choice_ids:
         raise ValueError("a question blocker names its choices: choice_ids")
     if kind != "underwriter_question" and detail.choice_ids:

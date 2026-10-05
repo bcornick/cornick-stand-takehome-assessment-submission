@@ -22,8 +22,8 @@ from uwh.skills.vertical import REFERENCE_MORNING
 # The run id of an event written before any run exists (7.2).
 PRE_RUN_ID = "pre-run"
 
-# The tables a start recreates: every A.1 table but `settings`, which persists across runs (14).
-_RUN_TABLES = [name for name in table_ddl() if name != "settings"]
+# The tables a start recreates: every A.1 table (14).
+_RUN_TABLES = list(table_ddl())
 
 
 @dataclass(frozen=True)
@@ -89,7 +89,7 @@ def begin_run(
 ) -> int:
     """Start a run and return the id of its `run_started` event. The caller commits.
 
-    Recreates every table but `settings`, writes the `runs` row as `processing` with the real time
+    Recreates every table, writes the `runs` row as `processing` with the real time
     of `context` as its start, writes `run_started`, posts the queue for `seed`, ingests its leads as
     `received`, each with `lead_received`, and resets the mailbox last, after everything that can
     fail has succeeded. `context` names who started the run; the leads are received by the workflow.

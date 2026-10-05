@@ -921,8 +921,7 @@
         "choice_ids": [],
         "text": "Waiting on the reply to request round 1 (6 asks)."
       },
-      "observation": null,
-      "held_draft_payload_hash": null
+      "observation": null
     }
   ],
   "drafts": [

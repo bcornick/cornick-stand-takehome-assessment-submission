@@ -1,7 +1,6 @@
 [
   {
     "proposal_id": 1,
-    "kind": "command",
     "payload": {
       "type": "resolve_fact",
       "payload": {
@@ -12,23 +11,8 @@
       },
       "rationale": "The street address unblocks the protection class, fire station and neighbour lookups, which wait on the full address."
     },
-    "diff_hash": null,
     "state": "open",
     "actor": "assistant",
     "event_id": 685
-  },
-  {
-    "proposal_id": 2,
-    "kind": "rule_change",
-    "payload": {
-      "row_id": "I12",
-      "param": "threshold",
-      "value": 0.45,
-      "reason": "Test a lower fire simulation failure threshold."
-    },
-    "diff_hash": "ba5c03d2ee2be7146dc910c535f8bb20b5d9231b40f24f879e48aed3096bcdbd",
-    "state": "open",
-    "actor": "underwriter",
-    "event_id": 9001
   }
 ]

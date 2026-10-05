@@ -14,7 +14,6 @@
       "text": "Review the decline notice before it is sent."
     },
     "observation": null,
-    "held_draft_payload_hash": null,
     "type": "review",
     "lead_id": "LEAD-00000042-000",
     "item": "draft_decline_notice",
@@ -46,7 +45,6 @@
       "text": "The fire simulation failed; the underwriter decides how to proceed."
     },
     "observation": null,
-    "held_draft_payload_hash": null,
     "type": "question",
     "lead_id": "LEAD-00000042-003",
     "choices": [
@@ -93,7 +91,6 @@
       "text": "The fire simulation failed; the underwriter decides how to proceed."
     },
     "observation": null,
-    "held_draft_payload_hash": null,
     "type": "question",
     "lead_id": "LEAD-00000042-006",
     "choices": [

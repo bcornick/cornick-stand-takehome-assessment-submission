@@ -108,44 +108,6 @@
         "title": "AdvisoryEffect",
         "type": "object"
       },
-      "ApplyRuleChangeCommand": {
-        "additionalProperties": false,
-        "properties": {
-          "payload": {
-            "$ref": "#/components/schemas/ApplyRuleChangePayload"
-          },
-          "type": {
-            "const": "apply_rule_change",
-            "title": "Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "type",
-          "payload"
-        ],
-        "title": "ApplyRuleChangeCommand",
-        "type": "object"
-      },
-      "ApplyRuleChangePayload": {
-        "additionalProperties": false,
-        "properties": {
-          "diff_hash": {
-            "title": "Diff Hash",
-            "type": "string"
-          },
-          "proposal_id": {
-            "title": "Proposal Id",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "proposal_id",
-          "diff_hash"
-        ],
-        "title": "ApplyRuleChangePayload",
-        "type": "object"
-      },
       "ApproveCommand": {
         "additionalProperties": false,
         "properties": {
@@ -219,55 +181,6 @@
         "title": "Assumption",
         "type": "object"
       },
-      "AutonomySetting": {
-        "additionalProperties": false,
-        "description": "The `autonomy.<command_class>` setting of a class autonomy applies to (7.4).",
-        "properties": {
-          "command_class": {
-            "enum": [
-              "fetch_data",
-              "send_routine_request",
-              "send_sensitive_request",
-              "send_quote_packet",
-              "send_decline_notice",
-              "deliver_reply",
-              "propose_command"
-            ],
-            "title": "Command Class",
-            "type": "string"
-          },
-          "default_level": {
-            "enum": [
-              "auto",
-              "review",
-              "off"
-            ],
-            "title": "Default Level",
-            "type": "string"
-          },
-          "level": {
-            "enum": [
-              "auto",
-              "review",
-              "off"
-            ],
-            "title": "Level",
-            "type": "string"
-          },
-          "locked": {
-            "title": "Locked",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "command_class",
-          "level",
-          "default_level",
-          "locked"
-        ],
-        "title": "AutonomySetting",
-        "type": "object"
-      },
       "BlockerDetail": {
         "additionalProperties": false,
         "description": "What a blocker carries beyond its kind and owner; also the shape of `blockers.detail_json`.",
@@ -281,8 +194,6 @@
                   "off_topic_reply",
                   "declining_reply",
                   "reply_after_terminal_status",
-                  "draft_held_by_stop",
-                  "draft_held_class_off",
                   "round_limit",
                   "identity_score_missing",
                   "identity_score_unsupported"
@@ -372,21 +283,10 @@
       },
       "BlockerView": {
         "additionalProperties": false,
-        "description": "An open blocker. `item_id` is `blockers.id`, the id an `approve` or `reject` names.\n\nThe detail pane offers the actions for every open item (section 11), so the blocker carries\nwhat its action needs: a pending observation's value (`observation`, required exactly for the\nitem kind `observation`) and, for a held draft, the payload hash an `approve` carries\n(`held_draft_payload_hash`, 7.4). The item kind and, for a review, the cause are in `detail`.",
+        "description": "An open blocker. `item_id` is `blockers.id`, the id an `approve` or `reject` names.\n\nThe detail pane offers the actions for every open item (section 11), so the blocker carries\nwhat its action needs: a pending observation's value (`observation`, required exactly for the\nitem kind `observation`). The item kind and, for a review, the cause are in `detail`.",
         "properties": {
           "detail": {
             "$ref": "#/components/schemas/BlockerDetail"
-          },
-          "held_draft_payload_hash": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Held Draft Payload Hash"
           },
           "item_id": {
             "title": "Item Id",
@@ -428,47 +328,9 @@
           "kind",
           "owner",
           "detail",
-          "observation",
-          "held_draft_payload_hash"
+          "observation"
         ],
         "title": "BlockerView",
-        "type": "object"
-      },
-      "ChangeSettingCommand": {
-        "additionalProperties": false,
-        "properties": {
-          "payload": {
-            "$ref": "#/components/schemas/ChangeSettingPayload"
-          },
-          "type": {
-            "const": "change_setting",
-            "title": "Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "type",
-          "payload"
-        ],
-        "title": "ChangeSettingCommand",
-        "type": "object"
-      },
-      "ChangeSettingPayload": {
-        "additionalProperties": false,
-        "properties": {
-          "key": {
-            "title": "Key",
-            "type": "string"
-          },
-          "value": {
-            "$ref": "#/components/schemas/JsonValue"
-          }
-        },
-        "required": [
-          "key",
-          "value"
-        ],
-        "title": "ChangeSettingPayload",
         "type": "object"
       },
       "ChatRequest": {
@@ -818,39 +680,6 @@
         "title": "EditDraftPayload",
         "type": "object"
       },
-      "EmergencyStopCommand": {
-        "additionalProperties": false,
-        "properties": {
-          "payload": {
-            "$ref": "#/components/schemas/EmergencyStopPayload"
-          },
-          "type": {
-            "const": "emergency_stop",
-            "title": "Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "type",
-          "payload"
-        ],
-        "title": "EmergencyStopCommand",
-        "type": "object"
-      },
-      "EmergencyStopPayload": {
-        "additionalProperties": false,
-        "properties": {
-          "engaged": {
-            "title": "Engaged",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "engaged"
-        ],
-        "title": "EmergencyStopPayload",
-        "type": "object"
-      },
       "EventRow": {
         "additionalProperties": false,
         "description": "An `events` row. `payload` is an object that follows `PAYLOAD_MODELS[type]`; the row checks\nit, so the schema stays one object type rather than 28 row variants.",
@@ -860,7 +689,6 @@
               "workflow",
               "underwriter",
               "assistant",
-              "mcp_client",
               "inbound"
             ],
             "title": "Actor",
@@ -1009,9 +837,6 @@
           "approval_recorded",
           "ruling_recorded",
           "command_refused",
-          "setting_changed",
-          "class_demoted",
-          "rule_change_applied",
           "skill_fallback_used",
           "model_called",
           "fault_injected"
@@ -1653,34 +1478,14 @@
               "workflow",
               "underwriter",
               "assistant",
-              "mcp_client",
               "inbound"
             ],
             "title": "Actor",
             "type": "string"
           },
-          "diff_hash": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Diff Hash"
-          },
           "event_id": {
             "title": "Event Id",
             "type": "integer"
-          },
-          "kind": {
-            "enum": [
-              "rule_change",
-              "command"
-            ],
-            "title": "Kind",
-            "type": "string"
           },
           "payload": {
             "additionalProperties": {
@@ -1705,9 +1510,7 @@
         },
         "required": [
           "proposal_id",
-          "kind",
           "payload",
-          "diff_hash",
           "state",
           "actor",
           "event_id"
@@ -1736,7 +1539,7 @@
       },
       "ProposeCommandPayload": {
         "additionalProperties": false,
-        "description": "`{type, payload, rationale}` (A.11): `type` and `payload` together are one of the ten\nproposable HTTP commands, never `approve`, `reject` or `propose_command`. The payload is read as\nthe model of `type` before the union field sees it.",
+        "description": "`{type, payload, rationale}` (A.11): `type` and `payload` together are one of the six\nproposable HTTP commands, never `approve`, `reject` or `propose_command`. The payload is read as\nthe model of `type` before the union field sees it.",
         "properties": {
           "payload": {
             "anyOf": [
@@ -1756,19 +1559,7 @@
                 "$ref": "#/components/schemas/ReplyRequest"
               },
               {
-                "$ref": "#/components/schemas/ChangeSettingPayload"
-              },
-              {
-                "$ref": "#/components/schemas/EmergencyStopPayload"
-              },
-              {
                 "$ref": "#/components/schemas/StartRunPayload"
-              },
-              {
-                "$ref": "#/components/schemas/ProposeRuleChangePayload"
-              },
-              {
-                "$ref": "#/components/schemas/ApplyRuleChangePayload"
               }
             ],
             "title": "Payload"
@@ -1784,10 +1575,6 @@
               "resolve_fact",
               "decline_lead",
               "record_ruling",
-              "propose_rule_change",
-              "apply_rule_change",
-              "change_setting",
-              "emergency_stop",
               "start_run"
             ],
             "title": "Type",
@@ -1800,67 +1587,6 @@
           "rationale"
         ],
         "title": "ProposeCommandPayload",
-        "type": "object"
-      },
-      "ProposeRuleChangeCommand": {
-        "additionalProperties": false,
-        "properties": {
-          "payload": {
-            "$ref": "#/components/schemas/ProposeRuleChangePayload"
-          },
-          "type": {
-            "const": "propose_rule_change",
-            "title": "Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "type",
-          "payload"
-        ],
-        "title": "ProposeRuleChangeCommand",
-        "type": "object"
-      },
-      "ProposeRuleChangePayload": {
-        "additionalProperties": false,
-        "properties": {
-          "param": {
-            "title": "Param",
-            "type": "string"
-          },
-          "reason": {
-            "title": "Reason",
-            "type": "string"
-          },
-          "row_id": {
-            "title": "Row Id",
-            "type": "string"
-          },
-          "value": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "integer"
-              },
-              {
-                "type": "number"
-              },
-              {
-                "type": "boolean"
-              }
-            ],
-            "title": "Value"
-          }
-        },
-        "required": [
-          "row_id",
-          "param",
-          "value",
-          "reason"
-        ],
-        "title": "ProposeRuleChangePayload",
         "type": "object"
       },
       "QuestionItem": {
@@ -1877,17 +1603,6 @@
           },
           "detail": {
             "$ref": "#/components/schemas/BlockerDetail"
-          },
-          "held_draft_payload_hash": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Held Draft Payload Hash"
           },
           "item_id": {
             "title": "Item Id",
@@ -1939,7 +1654,6 @@
           "owner",
           "detail",
           "observation",
-          "held_draft_payload_hash",
           "type",
           "lead_id",
           "choices"
@@ -2319,17 +2033,6 @@
               }
             ]
           },
-          "held_draft_payload_hash": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Held Draft Payload Hash"
-          },
           "item": {
             "enum": [
               "draft_request",
@@ -2394,7 +2097,6 @@
           "owner",
           "detail",
           "observation",
-          "held_draft_payload_hash",
           "type",
           "lead_id",
           "item",
@@ -2540,116 +2242,6 @@
           "summary"
         ],
         "title": "RunView",
-        "type": "object"
-      },
-      "SettingsView": {
-        "additionalProperties": false,
-        "properties": {
-          "autonomy": {
-            "items": {
-              "$ref": "#/components/schemas/AutonomySetting"
-            },
-            "title": "Autonomy",
-            "type": "array"
-          },
-          "emergency_stop": {
-            "title": "Emergency Stop",
-            "type": "boolean"
-          },
-          "ruleset_active": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Ruleset Active"
-          }
-        },
-        "required": [
-          "autonomy",
-          "emergency_stop",
-          "ruleset_active"
-        ],
-        "title": "SettingsView",
-        "type": "object"
-      },
-      "SkillResult": {
-        "additionalProperties": false,
-        "description": "`skill_results.<name>` of the latest scored run row that matches the skill's digest (section 8).",
-        "properties": {
-          "cases_passed": {
-            "title": "Cases Passed",
-            "type": "integer"
-          },
-          "cases_total": {
-            "title": "Cases Total",
-            "type": "integer"
-          },
-          "passed": {
-            "title": "Passed",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "cases_passed",
-          "cases_total",
-          "passed"
-        ],
-        "title": "SkillResult",
-        "type": "object"
-      },
-      "SkillView": {
-        "additionalProperties": false,
-        "properties": {
-          "fallback": {
-            "title": "Fallback",
-            "type": "string"
-          },
-          "last_result": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/SkillResult"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "rules_changed_since_eval": {
-            "title": "Rules Changed Since Eval",
-            "type": "boolean"
-          },
-          "status": {
-            "enum": [
-              "untested",
-              "passing",
-              "failing",
-              "unavailable"
-            ],
-            "title": "Status",
-            "type": "string"
-          },
-          "threshold": {
-            "title": "Threshold",
-            "type": "number"
-          }
-        },
-        "required": [
-          "name",
-          "status",
-          "last_result",
-          "threshold",
-          "fallback",
-          "rules_changed_since_eval"
-        ],
-        "title": "SkillView",
         "type": "object"
       },
       "StartRunCommand": {
@@ -2870,15 +2462,11 @@
               "schema": {
                 "discriminator": {
                   "mapping": {
-                    "apply_rule_change": "#/components/schemas/ApplyRuleChangeCommand",
                     "approve": "#/components/schemas/ApproveCommand",
-                    "change_setting": "#/components/schemas/ChangeSettingCommand",
                     "decline_lead": "#/components/schemas/DeclineLeadCommand",
                     "deliver_reply": "#/components/schemas/DeliverReplyCommand",
                     "edit_draft": "#/components/schemas/EditDraftCommand",
-                    "emergency_stop": "#/components/schemas/EmergencyStopCommand",
                     "propose_command": "#/components/schemas/ProposeCommandCommand",
-                    "propose_rule_change": "#/components/schemas/ProposeRuleChangeCommand",
                     "record_ruling": "#/components/schemas/RecordRulingCommand",
                     "reject": "#/components/schemas/RejectCommand",
                     "resolve_fact": "#/components/schemas/ResolveFactCommand",
@@ -2909,19 +2497,7 @@
                     "$ref": "#/components/schemas/DeliverReplyCommand"
                   },
                   {
-                    "$ref": "#/components/schemas/ChangeSettingCommand"
-                  },
-                  {
-                    "$ref": "#/components/schemas/EmergencyStopCommand"
-                  },
-                  {
                     "$ref": "#/components/schemas/StartRunCommand"
-                  },
-                  {
-                    "$ref": "#/components/schemas/ProposeRuleChangeCommand"
-                  },
-                  {
-                    "$ref": "#/components/schemas/ApplyRuleChangeCommand"
                   },
                   {
                     "$ref": "#/components/schemas/ProposeCommandCommand"
@@ -2956,55 +2532,6 @@
           }
         },
         "summary": "Submit Command"
-      }
-    },
-    "/api/events/stream": {
-      "get": {
-        "operationId": "stream_events_api_events_stream_get",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "last-event-id",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Last-Event-Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              },
-              "text/event-stream": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "description": "Server-sent events; each carries an event id."
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Stream Events"
       }
     },
     "/api/items": {
@@ -3277,46 +2804,6 @@
           }
         },
         "summary": "Start Run"
-      }
-    },
-    "/api/settings": {
-      "get": {
-        "operationId": "get_settings_api_settings_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SettingsView"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Get Settings"
-      }
-    },
-    "/api/skills": {
-      "get": {
-        "operationId": "list_skills_api_skills_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/SkillView"
-                  },
-                  "title": "Response List Skills Api Skills Get",
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "List Skills"
       }
     }
   }

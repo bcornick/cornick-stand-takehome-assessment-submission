@@ -1,8 +1,8 @@
 # ABOUTME: The A.5 routes that answer 501, declared with their request and response models.
-# ABOUTME: `/mcp` is mounted outside OpenAPI and is not declared here.
-from typing import Annotated, NoReturn
+# ABOUTME: A route declared here answers 501 until its handler exists.
+from typing import NoReturn
 
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, HTTPException
 
 from uwh.api.views import (
     ChatRequest,
@@ -15,8 +15,6 @@ from uwh.api.views import (
     QueueRow,
     ReplyRequest,
     ReplyResponse,
-    SettingsView,
-    SkillView,
 )
 
 router = APIRouter()
@@ -56,16 +54,6 @@ def deliver_fixture_replies() -> FixtureRepliesResponse:
     not_implemented("POST /api/replies/fixtures")
 
 
-@router.get("/api/settings")
-def get_settings() -> SettingsView:
-    not_implemented("GET /api/settings")
-
-
-@router.get("/api/skills")
-def list_skills() -> list[SkillView]:
-    not_implemented("GET /api/skills")
-
-
 @router.get("/api/proposals")
 def list_proposals() -> list[ProposalView]:
     not_implemented("GET /api/proposals")
@@ -74,19 +62,3 @@ def list_proposals() -> list[ProposalView]:
 @router.post("/api/chat")
 def chat(request: ChatRequest) -> ChatResponse:
     not_implemented("POST /api/chat")
-
-
-@router.get(
-    "/api/events/stream",
-    response_model=None,
-    responses={
-        200: {
-            "description": "Server-sent events; each carries an event id.",
-            "content": {"text/event-stream": {"schema": {"type": "string"}}},
-        }
-    },
-)
-def stream_events(
-    last_event_id: Annotated[str | None, Header()] = None,
-) -> None:
-    not_implemented("GET /api/events/stream")

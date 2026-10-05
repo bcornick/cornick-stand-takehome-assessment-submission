@@ -38,23 +38,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/events/stream": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Stream Events */
-        get: operations["stream_events_api_events_stream_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/items": {
         parameters: {
             query?: never;
@@ -208,40 +191,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/settings": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Settings */
-        get: operations["get_settings_api_settings_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/skills": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Skills */
-        get: operations["list_skills_api_skills_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -302,22 +251,6 @@ export interface components {
              */
             type: "advisory";
         };
-        /** ApplyRuleChangeCommand */
-        ApplyRuleChangeCommand: {
-            payload: components["schemas"]["ApplyRuleChangePayload"];
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "apply_rule_change";
-        };
-        /** ApplyRuleChangePayload */
-        ApplyRuleChangePayload: {
-            /** Diff Hash */
-            diff_hash: string;
-            /** Proposal Id */
-            proposal_id: number;
-        };
         /** ApproveCommand */
         ApproveCommand: {
             payload: components["schemas"]["ApprovePayload"];
@@ -352,35 +285,12 @@ export interface components {
             };
         };
         /**
-         * AutonomySetting
-         * @description The `autonomy.<command_class>` setting of a class autonomy applies to (7.4).
-         */
-        AutonomySetting: {
-            /**
-             * Command Class
-             * @enum {string}
-             */
-            command_class: "fetch_data" | "send_routine_request" | "send_sensitive_request" | "send_quote_packet" | "send_decline_notice" | "deliver_reply" | "propose_command";
-            /**
-             * Default Level
-             * @enum {string}
-             */
-            default_level: "auto" | "review" | "off";
-            /**
-             * Level
-             * @enum {string}
-             */
-            level: "auto" | "review" | "off";
-            /** Locked */
-            locked: boolean;
-        };
-        /**
          * BlockerDetail
          * @description What a blocker carries beyond its kind and owner; also the shape of `blockers.detail_json`.
          */
         BlockerDetail: {
             /** Cause */
-            cause: ("late_reply" | "unread_reply" | "off_topic_reply" | "declining_reply" | "reply_after_terminal_status" | "draft_held_by_stop" | "draft_held_class_off" | "round_limit" | "identity_score_missing" | "identity_score_unsupported") | null;
+            cause: ("late_reply" | "unread_reply" | "off_topic_reply" | "declining_reply" | "reply_after_terminal_status" | "round_limit" | "identity_score_missing" | "identity_score_unsupported") | null;
             /**
              * Cause Persists
              * @default false
@@ -408,13 +318,10 @@ export interface components {
          *
          *     The detail pane offers the actions for every open item (section 11), so the blocker carries
          *     what its action needs: a pending observation's value (`observation`, required exactly for the
-         *     item kind `observation`) and, for a held draft, the payload hash an `approve` carries
-         *     (`held_draft_payload_hash`, 7.4). The item kind and, for a review, the cause are in `detail`.
+         *     item kind `observation`). The item kind and, for a review, the cause are in `detail`.
          */
         BlockerView: {
             detail: components["schemas"]["BlockerDetail"];
-            /** Held Draft Payload Hash */
-            held_draft_payload_hash: string | null;
             /** Item Id */
             item_id: number;
             /**
@@ -428,21 +335,6 @@ export interface components {
              * @enum {string}
              */
             owner: "underwriter" | "producer" | "data_team";
-        };
-        /** ChangeSettingCommand */
-        ChangeSettingCommand: {
-            payload: components["schemas"]["ChangeSettingPayload"];
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "change_setting";
-        };
-        /** ChangeSettingPayload */
-        ChangeSettingPayload: {
-            /** Key */
-            key: string;
-            value: components["schemas"]["JsonValue"];
         };
         /**
          * ChatRequest
@@ -582,20 +474,6 @@ export interface components {
             /** Subject */
             subject: string;
         };
-        /** EmergencyStopCommand */
-        EmergencyStopCommand: {
-            payload: components["schemas"]["EmergencyStopPayload"];
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "emergency_stop";
-        };
-        /** EmergencyStopPayload */
-        EmergencyStopPayload: {
-            /** Engaged */
-            engaged: boolean;
-        };
         /**
          * EventRow
          * @description An `events` row. `payload` is an object that follows `PAYLOAD_MODELS[type]`; the row checks
@@ -606,7 +484,7 @@ export interface components {
              * Actor
              * @enum {string}
              */
-            actor: "workflow" | "underwriter" | "assistant" | "mcp_client" | "inbound";
+            actor: "workflow" | "underwriter" | "assistant" | "inbound";
             /** Id */
             id: number;
             /** Lead Id */
@@ -642,7 +520,7 @@ export interface components {
          * EventType
          * @enum {string}
          */
-        EventType: "run_started" | "replay_miss" | "draft_edited" | "proposal_created" | "lead_received" | "fact_observed" | "fact_selected" | "conflict_opened" | "conflict_closed" | "triage_completed" | "provider_called" | "plan_built" | "blocker_opened" | "blocker_closed" | "intent_created" | "message_sent" | "delivery_unknown" | "reply_received" | "reply_read" | "approval_recorded" | "ruling_recorded" | "command_refused" | "setting_changed" | "class_demoted" | "rule_change_applied" | "skill_fallback_used" | "model_called" | "fault_injected";
+        EventType: "run_started" | "replay_miss" | "draft_edited" | "proposal_created" | "lead_received" | "fact_observed" | "fact_selected" | "conflict_opened" | "conflict_closed" | "triage_completed" | "provider_called" | "plan_built" | "blocker_opened" | "blocker_closed" | "intent_created" | "message_sent" | "delivery_unknown" | "reply_received" | "reply_read" | "approval_recorded" | "ruling_recorded" | "command_refused" | "skill_fallback_used" | "model_called" | "fault_injected";
         /** ExclusionOrEndorsementEffect */
         ExclusionOrEndorsementEffect: {
             /** Rule */
@@ -881,16 +759,9 @@ export interface components {
              * Actor
              * @enum {string}
              */
-            actor: "workflow" | "underwriter" | "assistant" | "mcp_client" | "inbound";
-            /** Diff Hash */
-            diff_hash: string | null;
+            actor: "workflow" | "underwriter" | "assistant" | "inbound";
             /** Event Id */
             event_id: number;
-            /**
-             * Kind
-             * @enum {string}
-             */
-            kind: "rule_change" | "command";
             /** Payload */
             payload: {
                 [key: string]: components["schemas"]["JsonValue"];
@@ -914,40 +785,20 @@ export interface components {
         };
         /**
          * ProposeCommandPayload
-         * @description `{type, payload, rationale}` (A.11): `type` and `payload` together are one of the ten
+         * @description `{type, payload, rationale}` (A.11): `type` and `payload` together are one of the six
          *     proposable HTTP commands, never `approve`, `reject` or `propose_command`. The payload is read as
          *     the model of `type` before the union field sees it.
          */
         ProposeCommandPayload: {
             /** Payload */
-            payload: components["schemas"]["EditDraftPayload"] | components["schemas"]["RecordRulingPayload"] | components["schemas"]["ResolveFactPayload"] | components["schemas"]["DeclineLeadPayload"] | components["schemas"]["ReplyRequest"] | components["schemas"]["ChangeSettingPayload"] | components["schemas"]["EmergencyStopPayload"] | components["schemas"]["StartRunPayload"] | components["schemas"]["ProposeRuleChangePayload"] | components["schemas"]["ApplyRuleChangePayload"];
+            payload: components["schemas"]["EditDraftPayload"] | components["schemas"]["RecordRulingPayload"] | components["schemas"]["ResolveFactPayload"] | components["schemas"]["DeclineLeadPayload"] | components["schemas"]["ReplyRequest"] | components["schemas"]["StartRunPayload"];
             /** Rationale */
             rationale: string;
             /**
              * Type
              * @enum {string}
              */
-            type: "deliver_reply" | "edit_draft" | "resolve_fact" | "decline_lead" | "record_ruling" | "propose_rule_change" | "apply_rule_change" | "change_setting" | "emergency_stop" | "start_run";
-        };
-        /** ProposeRuleChangeCommand */
-        ProposeRuleChangeCommand: {
-            payload: components["schemas"]["ProposeRuleChangePayload"];
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "propose_rule_change";
-        };
-        /** ProposeRuleChangePayload */
-        ProposeRuleChangePayload: {
-            /** Param */
-            param: string;
-            /** Reason */
-            reason: string;
-            /** Row Id */
-            row_id: string;
-            /** Value */
-            value: string | number | boolean;
+            type: "deliver_reply" | "edit_draft" | "resolve_fact" | "decline_lead" | "record_ruling" | "start_run";
         };
         /**
          * QuestionItem
@@ -957,8 +808,6 @@ export interface components {
             /** Choices */
             choices: components["schemas"]["OpenChoiceView"][];
             detail: components["schemas"]["BlockerDetail"];
-            /** Held Draft Payload Hash */
-            held_draft_payload_hash: string | null;
             /** Item Id */
             item_id: number;
             /**
@@ -1114,8 +963,6 @@ export interface components {
         ReviewItem: {
             detail: components["schemas"]["BlockerDetail"];
             draft: components["schemas"]["DraftView"] | null;
-            /** Held Draft Payload Hash */
-            held_draft_payload_hash: string | null;
             /**
              * Item
              * @enum {string}
@@ -1204,44 +1051,6 @@ export interface components {
             /** Sim Now */
             sim_now: string | null;
             summary: components["schemas"]["RunSummary"];
-        };
-        /** SettingsView */
-        SettingsView: {
-            /** Autonomy */
-            autonomy: components["schemas"]["AutonomySetting"][];
-            /** Emergency Stop */
-            emergency_stop: boolean;
-            /** Ruleset Active */
-            ruleset_active: string | null;
-        };
-        /**
-         * SkillResult
-         * @description `skill_results.<name>` of the latest scored run row that matches the skill's digest (section 8).
-         */
-        SkillResult: {
-            /** Cases Passed */
-            cases_passed: number;
-            /** Cases Total */
-            cases_total: number;
-            /** Passed */
-            passed: boolean;
-        };
-        /** SkillView */
-        SkillView: {
-            /** Fallback */
-            fallback: string;
-            last_result: components["schemas"]["SkillResult"] | null;
-            /** Name */
-            name: string;
-            /** Rules Changed Since Eval */
-            rules_changed_since_eval: boolean;
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "untested" | "passing" | "failing" | "unavailable";
-            /** Threshold */
-            threshold: number;
         };
         /** StartRunCommand */
         StartRunCommand: {
@@ -1353,7 +1162,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ApproveCommand"] | components["schemas"]["RejectCommand"] | components["schemas"]["EditDraftCommand"] | components["schemas"]["RecordRulingCommand"] | components["schemas"]["ResolveFactCommand"] | components["schemas"]["DeclineLeadCommand"] | components["schemas"]["DeliverReplyCommand"] | components["schemas"]["ChangeSettingCommand"] | components["schemas"]["EmergencyStopCommand"] | components["schemas"]["StartRunCommand"] | components["schemas"]["ProposeRuleChangeCommand"] | components["schemas"]["ApplyRuleChangeCommand"] | components["schemas"]["ProposeCommandCommand"];
+                "application/json": components["schemas"]["ApproveCommand"] | components["schemas"]["RejectCommand"] | components["schemas"]["EditDraftCommand"] | components["schemas"]["RecordRulingCommand"] | components["schemas"]["ResolveFactCommand"] | components["schemas"]["DeclineLeadCommand"] | components["schemas"]["DeliverReplyCommand"] | components["schemas"]["StartRunCommand"] | components["schemas"]["ProposeCommandCommand"];
             };
         };
         responses: {
@@ -1364,38 +1173,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CommandResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    stream_events_api_events_stream_get: {
-        parameters: {
-            query?: never;
-            header?: {
-                "last-event-id"?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Server-sent events; each carries an event id. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                    "text/event-stream": string;
                 };
             };
             /** @description Validation Error */
@@ -1631,46 +1408,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_settings_api_settings_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SettingsView"];
-                };
-            };
-        };
-    };
-    list_skills_api_skills_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SkillView"][];
                 };
             };
         };

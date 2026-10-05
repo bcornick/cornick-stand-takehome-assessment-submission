@@ -828,8 +828,7 @@
         ],
         "text": "The fire simulation failed; the underwriter decides how to proceed."
       },
-      "observation": null,
-      "held_draft_payload_hash": null
+      "observation": null
     },
     {
       "item_id": 5,
@@ -845,8 +844,7 @@
         "choice_ids": [],
         "text": "Waiting on the reply to request round 1 (14 asks)."
       },
-      "observation": null,
-      "held_draft_payload_hash": null
+      "observation": null
     }
   ],
   "drafts": [
