@@ -343,3 +343,27 @@ Unread items now read: `vertical.TRANSITIONS`, `TERMINAL_STATUSES` and `BLOCKER_
 - A builder's brief named S04-A2 for the "no column null" check; it is S04-A5.
 
 **Next:** Brett's rulings above. Then task 6 (command layer), task 7 (send primitive), task 9 (run start), task 10 (integration faults), verify, cross-review and the stage entry.
+
+## Replan: one branch, seven milestones (submission, 3db8b9a)
+
+Brett replaced the staged plan with `docs/plan.md` from branch `replan` (1625f9a): the build had reached about 14,600 lines of tests with no lead processed end to end. Stages 3 and 4 are merged into the one branch `submission`; every other worktree and branch is removed. The entries above this one describe the staged plan and its open rulings; rulings that concern cut items need no answer.
+
+Brett's decisions carried into milestone 1: an underwriter's value that still trips a validator opens no conflict and sends no confirmation; a draft built at an older lead revision is never sent and re-evaluation replaces it; a lead with an open `delivery_unknown` item sends nothing automatically; item ids never repeat across runs if that is a small change, with no run id on commands. The lead's own: `read_reply` calls the model outside the database transaction, then one short transaction records and re-evaluates; a failed first pass leaves each unfinished lead with a `data` blocker and its reason; `start_run` is refused while an intent is `dispatching`; a waited start reports the run it started. Brett reviewed the interpretation rows; he signs the ten seed-42 labels in milestone 2; I52's `p_f` dependency goes to him only if a seed-42 lead is held by it.
+
+## Milestone 0: Reset (8aced52)
+
+**Done:**
+- Rules: `AGENTS.md`, the `stage`, `verify` and `cross-review` skills and the builder and reviewer definitions follow the new plan. `scripts/check_discipline.py` no longer requires a test file per module.
+- Tests: 1,555 collected before, 322 after. Python lines under `tests/`: 14,614 before, 5,552 after. Twelve test files of the excluded kinds are gone; the kept files hold about one test per fact rule, send-safety property, command effect, stale-run and startup property. The eight named safety tests pass.
+- Code: Python lines under `src/`: 5,712 before, 5,380 after. Removed: the `settings` table, emergency stop, `change_setting`, the rule-change flow, demotion, held drafts, the `off` level and locked classes, the MCP actor, the settings, skills and event-stream routes, `run_is_settled`, `tools/standin_api.py`, the seed 11 and 15 world fixtures, `MailboxClient.get`, `RevisionChange`, `binding_changes`. `CommandEnvironment` is `RunEnvironment` in `runs.py`.
+- Data: 23 interpretation rows of the five cut pages deleted; 34 remain, each `reviewed_by: Brett`, I18 at the stricter band; `lenient` and `question_for_stand` removed. The catalogue holds `willing_to_mitigate` and `rce_documentation`.
+- Architecture: 1,054 lines before, 987 after; §4.1 states the cut line; tiers, cut pages, MCP, SSE, settings, the stop, rule changes, the sweep, extra controls and packet cases are out; the appendix agrees with the tables, events, routes and commands in code.
+- `docs/acceptance.json` holds the three milestone 1 checks.
+
+**Not done / carried:** nothing under `src/` reads yet: the skill contracts, the view models and stubbed routes, `Settings.model_id`, `model_base_url`, `registry_path`, `git_commit`, `CONFIRMATION_ONLY_CLASS`, the `identity_score_*` review causes, several event types (`triage_completed`, `plan_built`, `provider_called`, `reply_received`, `reply_read`, `model_called`, `skill_fallback_used`, `proposal_created`, `replay_miss`). Each is read by a milestone the plan names; whatever is unread when that milestone ends is deleted then. The architecture keeps old "stage N" references in a few sections and skill-status text in §8; the milestone 6 removal pass takes them. The lead-detail display fixtures under `tests/fixtures/ui/lead/` list twelve pages; they go when the queue page reads live data.
+
+**Checks:** `make check` clean, run by the lead after the second prune: 303 fast Python tests, both drift checks, `tsc`, 51 web tests. The builder reported it clean after the architecture commit.
+
+**Decisions:** tests deleted with no replacement under "delete borderline": startup reconcile with the mailbox down, `approve` of `delivery_unknown` with no message, one stale-run command test. A cut page that applies to a lead (Plumbing and Electrical apply to every lead) shows as a `not_evaluated` note naming the page.
+
+**Next:** milestone 1: lead 008 from the queue to a sent quote packet.
