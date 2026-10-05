@@ -9,7 +9,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from uwh.api.views import BlockerView, FactView
+from uwh.api.views import BlockerView, FactView, QuestionItem
 from uwh.runtime.event_types import BlockerDetail, BlockerKind, BlockerOwner, EventType
 from uwh.runtime.events import EventContext, read_events
 from uwh.runtime.store import open_store
@@ -34,11 +34,11 @@ def add_lead(db: sqlite3.Connection, lead_id: str, status: str) -> None:
     )
 
 
-def add_observation(db: sqlite3.Connection, status: str) -> int:
+def add_observation(db: sqlite3.Connection, status: str, lead_id: str = "L-1") -> int:
     cursor = db.execute(
         "INSERT INTO observations (lead_id, key, value_json, source, evidence_json, status)"
-        " VALUES ('L-1', 'acreage', '2', 'reply', '{}', ?)",
-        (status,),
+        " VALUES (?, 'acreage', '2', 'reply', '{}', ?)",
+        (lead_id, status),
     )
     assert cursor.lastrowid is not None
     return cursor.lastrowid
@@ -117,13 +117,13 @@ def test_the_primary_next_action_is_the_highest_priority_open_blocker(
     db: sqlite3.Connection,
 ) -> None:
     opened: dict[str, int] = {}
-    # opened in the reverse of priority order
+    # opened in an order that is neither the priority order nor its reverse
     for kind, owner, item in (
-        ("producer_reply", "producer", {}),
         ("data", "data_team", {}),
-        ("underwriter_review", "underwriter", {"item_kind": "review", "cause": "late_reply"}),
-        ("underwriter_question", "underwriter", {}),
         ("delivery_unknown", "underwriter", {"item_kind": "delivery_unknown"}),
+        ("producer_reply", "producer", {}),
+        ("underwriter_review", "underwriter", {"item_kind": "review", "cause": "late_reply"}),
+        ("underwriter_question", "underwriter", {"choice_ids": ["c1"]}),
     ):
         opened[kind] = open_blocker(db, CONTEXT, "L-1", kind, owner, detail(**item))  # type: ignore[arg-type]
     order = [
@@ -252,6 +252,19 @@ REFUSED: dict[str, Case] = {
 }
 
 
+# Refused by `open_blocker` alone: no view model states these rules. `BlockerView` does not read
+# `detail.choice_ids`, and `QuestionItem` is the only view that does.
+RUNTIME_ONLY_REFUSED: dict[str, Case] = {
+    "choice_ids on a data blocker": ("data", "data_team", {"choice_ids": ["c1"]}),
+    "choice_ids on a review": (
+        "underwriter_review",
+        "underwriter",
+        {"item_kind": "review", "cause": "late_reply", "choice_ids": ["c1"]},
+    ),
+    "choice_ids on a producer reply": ("producer_reply", "producer", {"choice_ids": ["c1"]}),
+}
+
+
 def view_of(
     kind: BlockerKind,
     owner: BlockerOwner,
@@ -328,3 +341,47 @@ def test_an_observation_item_for_a_missing_observation_is_refused(db: sqlite3.Co
     blocker_detail = detail(item_kind="observation", observation_id=41)
     with pytest.raises(ValueError, match="not a pending_review"):
         open_blocker(db, CONTEXT, "L-1", "underwriter_review", "underwriter", blocker_detail)
+
+
+@pytest.mark.parametrize("name", RUNTIME_ONLY_REFUSED)
+def test_every_blocker_only_the_runtime_refuses_is_refused_at_the_write(
+    db: sqlite3.Connection, name: str
+) -> None:
+    kind, owner, fields = RUNTIME_ONLY_REFUSED[name]
+    with pytest.raises(ValueError, match="choice_ids"):
+        open_blocker(db, CONTEXT, "L-1", kind, owner, detail(**fields))
+    assert db.execute("SELECT COUNT(*) FROM blockers").fetchone() == (0,)
+    assert read_events(db) == []
+
+
+def test_a_question_without_choices_is_refused_by_both(db: sqlite3.Connection) -> None:
+    blocker_detail = detail()
+    with pytest.raises(ValidationError):
+        QuestionItem(
+            item_id=1,
+            kind="underwriter_question",
+            owner="underwriter",
+            detail=blocker_detail,
+            observation=None,
+            held_draft_payload_hash=None,
+            type="question",
+            lead_id="L-1",
+            choices=[],
+        )
+    with pytest.raises(ValueError, match="choice_ids"):
+        open_blocker(db, CONTEXT, "L-1", "underwriter_question", "underwriter", blocker_detail)
+    assert db.execute("SELECT COUNT(*) FROM blockers").fetchone() == (0,)
+    assert read_events(db) == []
+
+
+def test_an_observation_item_for_another_leads_observation_is_refused(
+    db: sqlite3.Connection,
+) -> None:
+    # `BlockerView` compares only the observation ids, so no view refuses this; the write does.
+    add_lead(db, "L-2", "in_progress")
+    observation_id = add_observation(db, "pending_review", "L-2")
+    blocker_detail = detail(item_kind="observation", observation_id=observation_id)
+    with pytest.raises(ValueError, match="not a pending_review"):
+        open_blocker(db, CONTEXT, "L-1", "underwriter_review", "underwriter", blocker_detail)
+    assert db.execute("SELECT COUNT(*) FROM blockers").fetchone() == (0,)
+    assert read_events(db) == []

@@ -1,9 +1,10 @@
 # ABOUTME: The waiting primitive of 7.1: a blocker row with a kind, an owner and a resume trigger; opens and closes blockers, lists a lead's open ones and names its primary next action.
-# ABOUTME: Opening refuses any blocker the lead detail view would refuse to serve, so a bad write fails at the write; every change writes its event and the caller commits.
+# ABOUTME: Opening refuses the blockers `BlockerView` and `QuestionItem` refuse, and the ones whose observation is another lead's or whose choice ids sit on the wrong kind, so a bad write fails at the write; every change writes its event and the caller commits.
 import sqlite3
 from dataclasses import dataclass
 
 from uwh.runtime.event_types import (
+    ApprovalItemKind,
     BlockerClosed,
     BlockerDetail,
     BlockerKind,
@@ -20,7 +21,12 @@ from uwh.skills.vertical import (
 )
 
 # The item kinds an underwriter_review blocker takes (A.11).
-_REVIEW_ITEM_KINDS = ("draft", "observation", "no_contact_route", "review")
+_REVIEW_ITEM_KINDS: tuple[ApprovalItemKind, ...] = (
+    "draft",
+    "observation",
+    "no_contact_route",
+    "review",
+)
 
 # 7.4: a dispatch the stop or a class set to `off` refused leaves its draft in review.
 _HELD_DRAFT_CAUSES: tuple[ReviewCause, ...] = ("draft_held_by_stop", "draft_held_class_off")
@@ -35,8 +41,11 @@ class Blocker:
     detail: BlockerDetail
 
 
-def _refuse_unservable(db: sqlite3.Connection, kind: BlockerKind, detail: BlockerDetail) -> None:
-    """Raise ValueError for a blocker the lead detail view (`BlockerView`) would refuse."""
+def _refuse_unservable(
+    db: sqlite3.Connection, lead_id: str, kind: BlockerKind, detail: BlockerDetail
+) -> None:
+    """Raise ValueError for a blocker `BlockerView` or `QuestionItem` would refuse, for an observation
+    item naming another lead's observation, and for choice ids on a blocker that is not a question."""
     item_kind = detail.item_kind
     if kind == "underwriter_review":
         if item_kind not in _REVIEW_ITEM_KINDS:
@@ -60,14 +69,22 @@ def _refuse_unservable(db: sqlite3.Connection, kind: BlockerKind, detail: Blocke
         raise ValueError("only a review has a cause")
     if detail.cause in _HELD_DRAFT_CAUSES and detail.intent_id is None:
         raise ValueError("a held draft's review names its draft: intent_id")
+    if kind == "underwriter_question" and not detail.choice_ids:
+        raise ValueError("a question blocker names its choices: choice_ids")
+    if kind != "underwriter_question" and detail.choice_ids:
+        raise ValueError(f"a {kind} blocker has no choice_ids")
     if item_kind == "observation":
-        _require_pending_observation(db, detail.observation_id)
+        _require_pending_observation(db, lead_id, detail.observation_id)
 
 
-def _require_pending_observation(db: sqlite3.Connection, observation_id: int | None) -> None:
+def _require_pending_observation(
+    db: sqlite3.Connection, lead_id: str, observation_id: int | None
+) -> None:
     if observation_id is None:
         raise ValueError("an observation item names its observation: observation_id")
-    row = db.execute("SELECT status FROM observations WHERE id = ?", (observation_id,)).fetchone()
+    row = db.execute(
+        "SELECT status FROM observations WHERE id = ? AND lead_id = ?", (observation_id, lead_id)
+    ).fetchone()
     if row is None or row[0] != "pending_review":
         raise ValueError(f"observation {observation_id} is not a pending_review observation")
 
@@ -82,9 +99,10 @@ def open_blocker(
 ) -> int:
     """Insert an open blocker, write `blocker_opened` and return the blocker id. The caller commits.
 
-    Raises ValueError, writing nothing, for a blocker the lead detail view would refuse.
+    Raises ValueError, writing nothing, for a blocker the lead detail view would refuse, for an
+    observation item naming another lead's observation and for choice ids on a non-question blocker.
     """
-    _refuse_unservable(db, kind, detail)
+    _refuse_unservable(db, lead_id, kind, detail)
     cursor = db.execute(
         "INSERT INTO blockers (lead_id, kind, owner, detail_json) VALUES (?, ?, ?, ?)",
         (lead_id, kind, owner, detail.model_dump_json()),
