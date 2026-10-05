@@ -2,7 +2,7 @@
 // ABOUTME: The load runs again when the key changes; a result that arrives for an old key is dropped.
 import { useEffect, useState } from 'react'
 
-export type Remote<T> =
+type Remote<T> =
   | { state: 'loading' }
   | { state: 'error'; message: string }
   | { state: 'ready'; data: T }

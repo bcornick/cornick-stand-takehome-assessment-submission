@@ -4,7 +4,7 @@ import type { components } from '@/api/types'
 
 type Schemas = components['schemas']
 
-export class ApiError extends Error {
+class ApiError extends Error {
   readonly path: string
   readonly status: number
 
