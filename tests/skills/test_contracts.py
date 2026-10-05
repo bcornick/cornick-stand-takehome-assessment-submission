@@ -662,6 +662,13 @@ def test_a_blocker_request_carries_the_runtimes_blocker_detail() -> None:
         )
 
 
+def test_a_blocker_request_refuses_an_owner_the_vertical_did_not_register() -> None:
+    blocker = RESULTS["resolve_data"]["blockers"][0]
+    assert BlockerRequest.model_validate({**blocker, "owner": "data_team"}).owner == "data_team"
+    with pytest.raises(ValidationError, match="is not one of"):
+        BlockerRequest.model_validate({**blocker, "owner": "made_up"})
+
+
 # A.9 and A.1: `ask_id` is a registry field name, a bare catalogue id or a validator id; `fields`
 # holds fact keys, which for a catalogue question is the id prefixed `q:`.
 ASK_CONVENTION_SAMPLES = [

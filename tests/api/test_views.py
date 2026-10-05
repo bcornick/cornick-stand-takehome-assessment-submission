@@ -1247,3 +1247,23 @@ def test_no_schema_property_is_named_confidence_or_carries_one() -> None:
         names += [name for name in node.get("properties", {})]
     assert names, "the walk found no properties"
     assert [n for n in names if "confidence" in n.lower()] == []
+
+
+# The runtime's payloads hold these as plain strings; the API shows the registered names as an
+# enum and refuses any other.
+@pytest.mark.parametrize(
+    ("model", "data", "field", "registered"),
+    [
+        (views.FactView, fact(), "source", vertical.OBSERVATION_SOURCES),
+        (views.BlockerView, blocker(), "owner", vertical.BLOCKER_OWNERS),
+        (views.BlockerView, blocker(), "item_kind", vertical.ITEM_KINDS),
+    ],
+)
+def test_the_api_shows_the_registered_names_and_refuses_others(
+    model: Any, data: dict[str, Any], field: str, registered: tuple[str, ...]
+) -> None:
+    node = schema(model.__name__)["properties"][field]
+    enum = node["enum"] if "enum" in node else node["anyOf"][0]["enum"]
+    assert enum == list(registered)
+    with pytest.raises(ValidationError, match="is not one of"):
+        model.model_validate({**data, field: "made_up"})

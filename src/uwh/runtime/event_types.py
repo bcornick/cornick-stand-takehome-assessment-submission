@@ -38,12 +38,10 @@ class EventType(StrEnum):
 
 
 # Runtime-level value sets: section 7.3 observations, section 9.4 provider results, A.1 columns,
-# section 8 skill statuses.
-ObservationSource = Literal["submitted", "fetched", "derived", "assumed", "reply", "underwriter"]
+# section 8 skill statuses. The names the vertical registers (observation sources, blocker owners,
+# approval item kinds) are `str` fields, constrained by the `Registration` tuple named beside each.
 ObservationStatus = Literal["accepted", "pending_review", "rejected"]
 ProviderStatus = Literal["found", "not_found", "blocked", "unavailable"]
-BlockerOwner = Literal["underwriter", "producer", "data_team"]
-ApprovalItemKind = Literal["draft", "observation", "delivery_unknown", "no_contact_route", "review"]
 ApprovalDecision = Literal["approved", "rejected"]
 ProposalKind = Literal["rule_change", "command"]
 ProposalState = Literal["open", "applied", "dismissed"]
@@ -99,7 +97,7 @@ class FactObserved(Payload):
     observation_id: int
     key: str  # a registry field name, or a catalogue id prefixed `q:`
     value: JsonValue
-    source: ObservationSource
+    source: str  # one of `Registration.observation_sources`
     evidence: dict[
         str, JsonValue
     ]  # quoted span, provider name, derivation id or interpretation row id
@@ -112,7 +110,7 @@ class FactSelected(Payload):
     key: str
     observation_id: int
     value: JsonValue
-    source: ObservationSource
+    source: str  # one of `Registration.observation_sources`
     confirmed: bool
 
 
@@ -156,24 +154,24 @@ class PlanBuilt(Payload):
 class BlockerDetail(Payload):
     """What a blocker carries beyond its kind and owner; also the shape of `blockers.detail_json`."""
 
-    item_kind: ApprovalItemKind | None = None  # None for a blocker that is not an underwriter item
+    item_kind: str | None = (
+        None  # one of `Registration.item_kinds`; None for a blocker that is not a human item
+    )
     cause: str | None = None  # what raised a review, for example a late reply or the round limit
     cause_persists: bool = (
         False  # a review whose cause persists is refused until the cause is removed
     )
     resume_trigger: str  # what resumes the lead (section 7.1)
-    intent_id: str | None = (
-        None  # the draft a review is about; the request a producer reply waits on
-    )
+    intent_id: str | None = None  # the draft a review is about; the request a reply waits on
     observation_id: int | None = None  # a pending observation
     choice_ids: list[str] = []  # the open choices of a question card (section 9.6)
-    text: str  # the reason shown to the underwriter (section 7.4)
+    text: str  # the reason shown to the human reviewer (section 7.4)
 
 
 class BlockerOpened(Payload):
     blocker_id: int
     kind: str
-    owner: BlockerOwner
+    owner: str  # one of `Registration.blocker_owners`
     detail: BlockerDetail
 
 
@@ -243,7 +241,7 @@ class ReplyRead(Payload):
 
 class ApprovalRecorded(Payload):
     item_id: int  # the blocker the decision settles
-    item_kind: ApprovalItemKind
+    item_kind: str  # one of `Registration.item_kinds`
     intent_id: str | None
     # The five frozen values of the approval binding (section 7.4). `ruleset_hash` shares its name
     # with an event row column on purpose: it is the ruleset the approval is bound to.
@@ -257,7 +255,7 @@ class ApprovalRecorded(Payload):
 
 
 class RulingRecorded(Payload):
-    """An underwriter ruling. `refers_to_event_id` is the `ruling_recorded` event a withdrawal
+    """A human ruling. `refers_to_event_id` is the `ruling_recorded` event a withdrawal
     withdraws, or the choice ruling a reopening reopens; None otherwise."""
 
     kind: RulingKind

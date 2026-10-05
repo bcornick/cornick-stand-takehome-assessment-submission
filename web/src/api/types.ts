@@ -391,7 +391,7 @@ export interface components {
             /** Intent Id */
             intent_id: string | null;
             /** Item Kind */
-            item_kind: ("draft" | "observation" | "delivery_unknown" | "no_contact_route" | "review") | null;
+            item_kind: string | null;
             /** Observation Id */
             observation_id: number | null;
             /** Resume Trigger */

@@ -309,13 +309,6 @@
           "item_kind": {
             "anyOf": [
               {
-                "enum": [
-                  "draft",
-                  "observation",
-                  "delivery_unknown",
-                  "no_contact_route",
-                  "review"
-                ],
                 "type": "string"
               },
               {

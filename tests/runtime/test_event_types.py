@@ -432,15 +432,31 @@ def test_a_located_candidate_span_starts_inside_the_body() -> None:
         LocatedCandidate.model_validate({**LOCATED_CANDIDATE, "span_start": -2, "span_end": 2})
 
 
-def test_provider_status_and_observation_values_are_closed_sets() -> None:
+def test_provider_status_and_observation_status_are_closed_sets() -> None:
     provider = PAYLOAD_MODELS[EventType.provider_called]
     with pytest.raises(ValidationError):
         provider.model_validate({**SAMPLES["provider_called"], "status": "maybe"})
     observed = PAYLOAD_MODELS[EventType.fact_observed]
     with pytest.raises(ValidationError):
-        observed.model_validate({**SAMPLES["fact_observed"], "source": "guess"})
-    with pytest.raises(ValidationError):
         observed.model_validate({**SAMPLES["fact_observed"], "status": "maybe"})
+
+
+@pytest.mark.parametrize(
+    ("name", "field"),
+    [
+        ("fact_observed", "source"),
+        ("fact_selected", "source"),
+        ("blocker_opened", "owner"),
+        ("approval_recorded", "item_kind"),
+    ],
+)
+def test_the_names_a_vertical_registers_are_strings_the_runtime_does_not_constrain(
+    name: str, field: str
+) -> None:
+    payload = PAYLOAD_MODELS[EventType(name)].model_validate({**SAMPLES[name], field: "any_name"})
+    assert getattr(payload, field) == "any_name"
+    detail = BlockerDetail.model_validate({"resume_trigger": "x", "text": "y", "item_kind": "any"})
+    assert detail.item_kind == "any"
 
 
 RULING = SAMPLES["ruling_recorded"]
@@ -552,8 +568,6 @@ def test_blocker_detail_needs_a_resume_trigger_and_text_and_defaults_the_rest() 
             BlockerDetail.model_validate(full)
     with pytest.raises(ValidationError):
         BlockerDetail.model_validate({"resume_trigger": "x", "text": "y", "surprise": 1})
-    with pytest.raises(ValidationError):
-        BlockerDetail.model_validate({"resume_trigger": "x", "text": "y", "item_kind": "other"})
 
 
 @pytest.mark.parametrize(

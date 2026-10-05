@@ -18,10 +18,10 @@ from uwh.rules.models import (
     StrictModel,
     SurchargeEffect,
 )
+from uwh.api.views import BlockerOwner
 from uwh.providers.models import ProviderResult
 from uwh.runtime.event_types import (
     BlockerDetail,
-    BlockerOwner,
     Candidate,
     ConflictOpened,
     LocatedCandidate,

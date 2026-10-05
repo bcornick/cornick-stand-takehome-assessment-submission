@@ -26,12 +26,9 @@ from uwh.rules.models import (
 )
 from uwh.runtime.event_types import (
     PAYLOAD_MODELS,
-    ApprovalItemKind,
     BlockerDetail,
-    BlockerOwner,
     EventType,
     IntentState,
-    ObservationSource,
     ObservationStatus,
     ProposalKind,
     ProposalState,
@@ -72,6 +69,9 @@ BlockerKind = Annotated[str, Vocabulary(vertical.BLOCKER_KINDS_BY_PRIORITY)]
 MessageKind = Annotated[str, Vocabulary(vertical.MESSAGE_KINDS)]
 AutonomyLevel = Annotated[str, Vocabulary(vertical.AUTONOMY_LEVELS)]
 Actor = Annotated[str, Vocabulary(vertical.ACTORS)]
+BlockerOwner = Annotated[str, Vocabulary(vertical.BLOCKER_OWNERS)]
+ApprovalItemKind = Annotated[str, Vocabulary(vertical.ITEM_KINDS)]
+ObservationSource = Annotated[str, Vocabulary(vertical.OBSERVATION_SOURCES)]
 ReviewCause = Annotated[str, Vocabulary(tuple(name for name, _ in vertical.REVIEW_CAUSES))]
 
 # Autonomy applies to a class that has a default level (7.4); the human-only classes have none.

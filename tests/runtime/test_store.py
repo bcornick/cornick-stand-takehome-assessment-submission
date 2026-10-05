@@ -5,7 +5,9 @@ from pathlib import Path
 
 import pytest
 
+from uwh.runtime.registration import Registration
 from uwh.runtime.store import create_tables, open_store
+from uwh.skills.vertical import UNDERWRITING
 
 INTENT_KINDS = ("routine_request", "sensitive_request", "quote_packet", "decline_notice")
 
@@ -126,6 +128,18 @@ VALUE_SETS = [
     ("proposals", "kind", ("rule_change", "command")),
     ("proposals", "state", ("open", "applied", "dismissed")),
     ("blockers", "owner", ("underwriter", "producer", "data_team")),
+    ("leads", "status", ("received", "triaged", "in_progress", "quote_sent", "declined")),
+    (
+        "blockers",
+        "kind",
+        (
+            "delivery_unknown",
+            "underwriter_question",
+            "underwriter_review",
+            "data",
+            "producer_reply",
+        ),
+    ),
     (
         "observations",
         "source",
@@ -139,7 +153,7 @@ VALUE_SETS = [
 
 @pytest.fixture
 def db(tmp_path: Path) -> sqlite3.Connection:
-    return open_store(str(tmp_path / "uwh.db"), intent_kinds=INTENT_KINDS)
+    return open_store(str(tmp_path / "uwh.db"), UNDERWRITING)
 
 
 def test_opened_database_has_exactly_the_a1_tables(db: sqlite3.Connection) -> None:
@@ -170,11 +184,61 @@ def test_store_accepts_each_allowed_value_and_refuses_others(
     assert count == len(allowed)
 
 
-def test_intent_kinds_come_from_the_caller(tmp_path: Path) -> None:
-    db = open_store(str(tmp_path / "other.db"), intent_kinds=("alpha",))
-    db.execute("INSERT INTO intents (id, kind) VALUES ('i1', 'alpha')")
+OTHER = Registration(
+    statuses=("new", "done"),
+    terminal_statuses=("done",),
+    transitions=(("new", "done"),),
+    blocker_kinds_by_priority=("lost", "inspect", "lookup"),
+    blocker_owners=("reviewer", "clerk"),
+    message_kinds=("note",),
+    item_kinds=("note_item", "fact_item", "lost_item", "inspect_item"),
+    observation_sources=("given", "ruling"),
+    delivery_unknown_kind="lost",
+    human_review_kind="inspect",
+    data_kind="lookup",
+    human_owner="reviewer",
+    data_owner="clerk",
+    draft_item_kind="note_item",
+    observation_item_kind="fact_item",
+    delivery_unknown_item_kind="lost_item",
+    review_item_kind="inspect_item",
+    human_source="ruling",
+)
+
+# (table, column, the other registration's names, an underwriting name it refuses).
+OTHER_SETS = [
+    ("leads", "status", OTHER.statuses, "received"),
+    ("blockers", "kind", OTHER.blocker_kinds_by_priority, "underwriter_review"),
+    ("blockers", "owner", OTHER.blocker_owners, "underwriter"),
+    ("intents", "kind", OTHER.message_kinds, "routine_request"),
+    ("approvals", "item_kind", OTHER.item_kinds, "draft"),
+    ("observations", "source", OTHER.observation_sources, "underwriter"),
+]
+
+
+@pytest.mark.parametrize(("table", "column", "allowed", "underwriting_name"), OTHER_SETS)
+def test_the_registration_gives_the_vertical_value_sets(
+    tmp_path: Path, table: str, column: str, allowed: tuple[str, ...], underwriting_name: str
+) -> None:
+    db = open_store(str(tmp_path / "other.db"), OTHER)
+    for value in allowed:
+        db.execute(f"INSERT INTO {table} ({column}) VALUES (?)", (value,))
     with pytest.raises(sqlite3.IntegrityError):
-        db.execute("INSERT INTO intents (id, kind) VALUES ('i2', 'routine_request')")
+        db.execute(f"INSERT INTO {table} ({column}) VALUES (?)", (underwriting_name,))
+
+
+def test_the_runtime_sets_hold_under_another_registration(tmp_path: Path) -> None:
+    db = open_store(str(tmp_path / "other.db"), OTHER)
+    db.execute("INSERT INTO intents (id, state) VALUES ('i1', 'dispatching')")
+    with pytest.raises(sqlite3.IntegrityError):
+        db.execute("INSERT INTO intents (id, state) VALUES ('i2', 'sent_ish')")
+
+
+def test_the_append_only_triggers_hold_under_another_registration(tmp_path: Path) -> None:
+    db = open_store(str(tmp_path / "other.db"), OTHER)
+    db.execute("INSERT INTO events (id, type) VALUES (1, 'run_started')")
+    with pytest.raises(sqlite3.DatabaseError, match="append-only"):
+        db.execute("DELETE FROM events WHERE id = 1")
 
 
 def test_events_refuse_update_and_delete(db: sqlite3.Connection) -> None:
@@ -216,19 +280,19 @@ def test_other_tables_stay_updatable_and_deletable(db: sqlite3.Connection) -> No
 
 def test_reopening_keeps_rows(tmp_path: Path) -> None:
     path = str(tmp_path / "uwh.db")
-    first = open_store(path, intent_kinds=INTENT_KINDS)
+    first = open_store(path, UNDERWRITING)
     first.execute("INSERT INTO leads (lead_id, status) VALUES ('L1', 'received')")
     first.execute("INSERT INTO events (id, type) VALUES (1, 'run_started')")
     first.commit()
     first.close()
-    second = open_store(path, intent_kinds=INTENT_KINDS)
+    second = open_store(path, UNDERWRITING)
     assert second.execute("SELECT lead_id, status FROM leads").fetchall() == [("L1", "received")]
     assert second.execute("SELECT COUNT(*) FROM events").fetchone()[0] == 1
 
 
 def test_recreating_events_restores_the_append_only_triggers(db: sqlite3.Connection) -> None:
     db.execute("DROP TABLE events")
-    create_tables(db, ["events"], intent_kinds=INTENT_KINDS)
+    create_tables(db, ["events"], UNDERWRITING)
     db.execute("INSERT INTO events (id, type) VALUES (1, 'run_started')")
     with pytest.raises(sqlite3.DatabaseError, match="append-only"):
         db.execute("UPDATE events SET type = 'x' WHERE id = 1")
@@ -247,7 +311,7 @@ def test_recreating_every_table_but_settings_leaves_settings_rows(db: sqlite3.Co
     names = [t for t in EXPECTED_TABLES if t != "settings"]
     for name in names:
         db.execute(f"DROP TABLE {name}")
-    create_tables(db, names, intent_kinds=INTENT_KINDS)
+    create_tables(db, names, UNDERWRITING)
     assert db.execute("SELECT key, value_json FROM settings").fetchall() == [
         ("autonomy.fetch_data", '"review"')
     ]
@@ -255,13 +319,3 @@ def test_recreating_every_table_but_settings_leaves_settings_rows(db: sqlite3.Co
     db.execute("INSERT INTO events (id, type) VALUES (1, 'run_started')")
     with pytest.raises(sqlite3.DatabaseError, match="append-only"):
         db.execute("DELETE FROM events WHERE id = 1")
-
-
-def test_a_generator_of_intent_kinds_constrains_every_intent_insert(tmp_path: Path) -> None:
-    kinds = (kind for kind in INTENT_KINDS)
-    db = open_store(str(tmp_path / "generator.db"), intent_kinds=kinds)
-    for kind in INTENT_KINDS:
-        db.execute("INSERT INTO intents (id, kind) VALUES (?, ?)", (f"i-{kind}", kind))
-    with pytest.raises(sqlite3.IntegrityError):
-        db.execute("INSERT INTO intents (id, kind) VALUES ('bad', 'not_a_kind')")
-    assert db.execute("SELECT COUNT(*) FROM intents").fetchone()[0] == len(INTENT_KINDS)

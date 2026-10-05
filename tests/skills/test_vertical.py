@@ -95,8 +95,57 @@ def test_message_kinds_are_the_intent_kinds() -> None:
     )
 
 
-def test_confirmation_only_class_is_routine() -> None:
-    assert vertical.CONFIRMATION_ONLY_CLASS == "routine"
+def test_confirmation_only_class_is_routine_request() -> None:
+    # 10.1: the class takes one of the two request kinds, and is set to routine_request.
+    assert vertical.CONFIRMATION_ONLY_CLASS in ("routine_request", "sensitive_request")
+    assert vertical.CONFIRMATION_ONLY_CLASS == "routine_request"
+
+
+def test_owners_item_kinds_and_observation_sources() -> None:
+    # A.1: blocker owners, approvals item kinds; 7.3: the six observation sources.
+    assert vertical.BLOCKER_OWNERS == ("underwriter", "producer", "data_team")
+    assert vertical.ITEM_KINDS == (
+        "draft",
+        "observation",
+        "delivery_unknown",
+        "no_contact_route",
+        "review",
+    )
+    assert vertical.OBSERVATION_SOURCES == (
+        "submitted",
+        "fetched",
+        "derived",
+        "assumed",
+        "reply",
+        "underwriter",
+    )
+
+
+def test_the_registration_names_each_runtime_role() -> None:
+    # 7: the name the underwriting vertical gives each role the runtime knows.
+    registration = vertical.UNDERWRITING
+    assert registration.delivery_unknown_kind == "delivery_unknown"
+    assert registration.human_review_kind == "underwriter_review"
+    assert registration.data_kind == "data"
+    assert registration.human_owner == "underwriter"
+    assert registration.data_owner == "data_team"
+    assert registration.draft_item_kind == "draft"
+    assert registration.observation_item_kind == "observation"
+    assert registration.delivery_unknown_item_kind == "delivery_unknown"
+    assert registration.review_item_kind == "review"
+    assert registration.human_source == "underwriter"
+
+
+def test_the_registration_holds_the_module_level_sets() -> None:
+    registration = vertical.UNDERWRITING
+    assert registration.statuses == vertical.STATUSES
+    assert registration.terminal_statuses == vertical.TERMINAL_STATUSES
+    assert registration.transitions == vertical.TRANSITIONS
+    assert registration.blocker_kinds_by_priority == vertical.BLOCKER_KINDS_BY_PRIORITY
+    assert registration.blocker_owners == vertical.BLOCKER_OWNERS
+    assert registration.message_kinds == vertical.MESSAGE_KINDS
+    assert registration.item_kinds == vertical.ITEM_KINDS
+    assert registration.observation_sources == vertical.OBSERVATION_SOURCES
 
 
 def test_reference_morning() -> None:
