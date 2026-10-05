@@ -10,6 +10,7 @@ from uwh.api.runtime import RuntimeDependency
 from uwh.api.views import BlockerView, DraftView, FactView, LeadDetail, QueueGroup, QueueRow
 from uwh.rules.models import ActionPlan
 from uwh.runtime.clock import age_business_days
+from uwh.runtime.event_types import REQUEST_KINDS
 from uwh.runtime.facts import effective_facts
 from uwh.runtime.runs import current_run, run_sim_now
 from uwh.runtime.waits import Blocker, open_blockers, primary_next_action
@@ -37,10 +38,10 @@ def _group(status: str, action: Blocker | None) -> QueueGroup:
 
 def _ask_count(db: sqlite3.Connection, lead_id: str) -> int:
     asks: set[str] = set()
+    placeholders = ", ".join("?" for _ in REQUEST_KINDS)
     for (ask_ids,) in db.execute(
-        "SELECT ask_ids_json FROM intents WHERE lead_id = ? AND kind IN"
-        " ('routine_request', 'sensitive_request')",
-        (lead_id,),
+        f"SELECT ask_ids_json FROM intents WHERE lead_id = ? AND kind IN ({placeholders})",
+        (lead_id, *REQUEST_KINDS),
     ):
         asks.update(json.loads(ask_ids))
     return len(asks)

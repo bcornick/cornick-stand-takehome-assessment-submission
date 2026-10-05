@@ -39,7 +39,9 @@ class ForcedToolCall:
 
     @property
     def recording_key(self) -> RecordingKey:
-        return RecordingKey(self.skill, prompt_version(self.prompt_file, self.tool), input_hash(self.shown))
+        return RecordingKey(
+            self.skill, prompt_version(self.prompt_file, self.tool), input_hash(self.shown)
+        )
 
 
 # Makes the live call for `call`, to be stored under `key`.

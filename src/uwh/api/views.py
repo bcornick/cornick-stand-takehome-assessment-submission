@@ -26,6 +26,7 @@ from uwh.runtime.event_types import (
     Status,
 )
 from uwh.settings import RunMode
+from uwh.skills.read_reply.skill import MAX_BODY_CHARACTERS
 from uwh.skills.vertical import refuse_unservable_blocker
 
 
@@ -344,11 +345,11 @@ class DeclineLeadPayload(StrictModel):
 
 
 class ReplyRequest(StrictModel):
-    """`POST /api/replies` and the `deliver_reply` payload; the body is capped at 8,000 characters (A.9)."""
+    """`POST /api/replies` and the `deliver_reply` payload; the body is capped at `MAX_BODY_CHARACTERS` (A.9)."""
 
     lead_id: str
     intent_id: str
-    body: str = Field(max_length=8000)
+    body: str = Field(max_length=MAX_BODY_CHARACTERS)
 
 
 DeliverReplyPayload = ReplyRequest

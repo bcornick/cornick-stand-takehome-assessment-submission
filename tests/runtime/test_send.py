@@ -783,7 +783,9 @@ def test_a_draft_for_a_round_closed_after_an_unknown_delivery_waits_for_approval
     assert submit_command(
         store, env, "underwriter", "reject", {"item_id": item.id, "reason": "never arrived"}
     ).accepted
-    store.execute("UPDATE leads SET revision = revision + 1 WHERE lead_id = ?", (LEAD,))  # a late reply
+    store.execute(
+        "UPDATE leads SET revision = revision + 1 WHERE lead_id = ?", (LEAD,)
+    )  # a late reply
     store.commit()
     replace_stale_drafts(store, make_context(), LEAD)
     rebuilt = draft(store, make_context)

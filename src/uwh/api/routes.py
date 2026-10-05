@@ -1,5 +1,5 @@
 # ABOUTME: The A.5 routes that answer 501, declared with their request and response models.
-# ABOUTME: A route declared here answers 501 until its handler exists.
+# ABOUTME: Each route declared here answers 501 and names itself in the error; the models fix the shape of the answer the route will give.
 from typing import NoReturn
 
 from fastapi import APIRouter, HTTPException

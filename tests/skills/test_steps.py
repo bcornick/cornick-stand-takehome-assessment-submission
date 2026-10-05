@@ -29,4 +29,6 @@ def test_the_resolve_step_is_refused_when_its_manifest_does_not_declare_fetch_da
     registry = load_registry(str(REGISTRY))
 
     with pytest.raises(ValueError, match="does not declare fetch_data"):
-        steps._resolve_step(registry, StandInProviders({}), LedgerRules(), db, ticking_context()(), "L-1")
+        steps._resolve_step(
+            registry, StandInProviders({}), LedgerRules(), db, ticking_context()(), "L-1"
+        )

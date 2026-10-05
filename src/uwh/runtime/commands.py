@@ -346,7 +346,9 @@ def _read_reply_first(
                 )
             raise _Refusal(str(miss)) from miss
         except anthropic.APIError:
-            reading = None  # the provider is unavailable: the reply is recorded unread, as with no key
+            reading = (
+                None  # the provider is unavailable: the reply is recorded unread, as with no key
+            )
     return partial(_record_reply, reading=reading)
 
 
