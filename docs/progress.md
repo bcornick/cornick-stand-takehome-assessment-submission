@@ -367,3 +367,22 @@ Brett's decisions carried into milestone 1: an underwriter's value that still tr
 **Decisions:** tests deleted with no replacement under "delete borderline": startup reconcile with the mailbox down, `approve` of `delivery_unknown` with no message, one stale-run command test. A cut page that applies to a lead (Plumbing and Electrical apply to every lead) shows as a `not_evaluated` note naming the page.
 
 **Next:** milestone 1: lead 008 from the queue to a sent quote packet.
+
+## Milestone 1: One lead, end to end (4983aeb)
+
+**Done:** `LEAD-00000042-008` runs from the posted queue to `quote_sent` through the running app, and the three acceptance checks pass on the containers: M1-A1 (the integration test drives it against real leadgen and mailbox), M1-A2 (the mailbox holds one request and one packet), M1-A3 (the queue and the detail are served from live data; the lead was also approved from the browser).
+- Rules core: registry loader, field triage (§9.2), the eleven validators, derivations, the Roof, Siding and Replacement Cost graphs with a band-completeness load check, `_not_encoded.yaml` with a producer sentence per cut page.
+- Skills as workflow steps: `triage_fields`, `resolve_data` (stand-in providers from `world-42.json`, `fetch_data` checked against the manifest), `evaluate_playbook`, `ask_producer` (`plan_asks` → `render_message` → `create_draft`), `build_quote_packet`; `read_reply` on DeepSeek through a forced tool call, record and replay keyed by the prompt and tool schema and the input the model is shown. Order in `skills/vertical.py`.
+- Commands and routes: `deliver_reply` (the model call outside the transaction, one short transaction after), `POST /api/replies`, `POST /api/replies/fixtures`, `GET /api/leads`, `GET /api/leads/{id}`; the queue page and detail pane on live data with Start, Deliver fixture replies and Approve.
+- Brett's decisions: a ruled value that still trips a validator opens no conflict; a draft built at an older revision is never sent and re-evaluation replaces it; an open `delivery_unknown` stops every automatic send; item ids never repeat across runs; `start_run` refused while an intent is `dispatching`; a waited start reports its own run; a provider or model error leaves the reply unread with an underwriter review.
+- The other leads: 001, 004 and 009 send one routine request each; 000, 002, 003, 005, 006 and 007 stop with a `data` blocker naming the page milestone 2 builds.
+
+**Live calls:** one record run of `read_reply` on lead 008's fixture reply: 1,165 input, 148 output tokens (`deepseek-flash`). One unplanned live call from the app container in `live` mode when the fixture reply was delivered on the running app: 141 input, 148 output tokens. Project total: 1,306 in, 296 out.
+
+**Checks:** `make check` clean at 4983aeb, run by the lead: 419 fast Python tests, 3 web tests, both drift checks. Python lines: `src/` 7,318, `tests/` 7,322. The reviewer read the milestone once: no blocker; its findings are fixed (a resend after an ambiguous delivery waits for approval; the recording key covers the tool schema; a model error is the unavailable case; producer wording; the fixture control in the queue header).
+
+**Decisions:** a missing or mismatched provider entry gives `unavailable` and a `data` blocker, not a stub value (§9.4 amended). Graph files carry no `branch` key; one load-time check covers numeric bands (A.6 amended). RC-4: a coverage ratio above 1.5 is a documentation requirement in the packet, since the architecture states no `documentation` outcome. Triage runs before and after resolution, because a fetched value changes its dependents' triage. `producer_text` per cut page lives in `_not_encoded.yaml`. DeepSeek returns no request id; `model_called` stores none. Replies to confirmations and catalogue questions are not read yet (milestone 2).
+
+**Open with Brett:** the default `RUN_MODE` for `make up` (proposed: `replay`, so a demo never spends money); RC-4's wording; whether cut-page registry fields (`electrical_panel_brand`) should be asked.
+
+**Next:** milestone 2: the other nine leads, the Profile, Occupancy, Fire Simulation and Post & Pier graphs, the decline path, underwriter choices; Brett signs the ten labels.
