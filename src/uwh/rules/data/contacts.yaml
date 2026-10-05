@@ -1,0 +1,4 @@
+# ABOUTME: A labelled mock directory of the address each producer source writes to; a `direct_web` lead goes to its own `owner_email` instead (10.3).
+# ABOUTME: The addresses are invented and reach nothing.
+agent_portal: agent-portal@producers.example
+broker_email: broker-desk@producers.example

@@ -1,0 +1,23 @@
+# ABOUTME: The five playbook pages no seed-42 lead reaches, each with the condition under which it applies; a lead it applies to carries a note that the page is not evaluated.
+# ABOUTME: Their interpretation rows, questions and wording are not in the data files (section 4.1).
+pages:
+  - id: plumbing
+    title: Plumbing
+    page: docs/playbook/08-plumbing/flowchart.md
+    applies_when: {always: true}
+  - id: electrical
+    title: Electrical
+    page: docs/playbook/09-electrical-systems/flowchart.md
+    applies_when: {always: true}
+  - id: pools
+    title: Pools
+    page: docs/playbook/10-swimming-pools/flowchart.md
+    applies_when: {field: pool_type, in: [Above Ground, Inground]}
+  - id: trusts
+    title: Trusts & LLCs
+    page: docs/playbook/11-trusts-and-llcs/flowchart.md
+    applies_when: {field: residence_held_in_trust, equals: true}
+  - id: protection_class_9_10
+    title: Protection Class 9 & 10
+    page: docs/playbook/13-protection-class-9-and-10/flowchart.md
+    applies_when: {field: protection_class, in: ["9", "10"]}

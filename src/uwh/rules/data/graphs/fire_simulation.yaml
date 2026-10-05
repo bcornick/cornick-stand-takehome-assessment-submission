@@ -1,0 +1,5 @@
+# ABOUTME: The Fire Simulation page: when it applies (I12). Its decision graph is not encoded yet, so a lead it applies to is stopped with a reason.
+# ABOUTME: A graph with no root holds only the page's `applies_when`.
+id: fire_simulation
+page: docs/playbook/04-fire-simulation/flowchart.md
+applies_when: {field: p_f, gt: 0.50}

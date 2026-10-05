@@ -1,0 +1,36 @@
+# ABOUTME: The Roof page as a decision graph: a Class A roof is okay to quote, and a roof of another class takes a requirement by the fire probability band.
+# ABOUTME: The Unknown Class branch is not encoded (I20): the class comes from the derivation map, and a missing class leaves the page undecided.
+id: roof
+page: docs/playbook/05-roof-class/flowchart.md
+applies_when: {always: true}
+root: roof_class
+nodes:
+  roof_class:
+    kind: test
+    field: roof_classification
+    board_path: ["05:ROOT"]
+    cases:
+      - {when: {equals: Class A}, then: okay_class_a}
+      - {when: {in: [Class B, Class C]}, then: non_class_a_band}
+  non_class_a_band:
+    kind: test
+    field: p_f
+    interpretation: I18
+    board_path: ["05:NCA"]
+    cases:
+      - {when: {lte: 0.15}, then: okay_low}
+      - {when: {gt: 0.15, lt: 0.50}, then: confirm_first_term}
+      # 0.50 takes this band: the board states both sides and leaves it in neither (I18).
+      - {when: {gte: 0.50}, then: confirm_60_days}
+  okay_class_a: {kind: outcome, board_path: ["05:CA", "05:OK_A"], effects: [{type: no_action, rule: RF-1}]}
+  okay_low: {kind: outcome, board_path: ["05:N_LO", "05:OK_B"], effects: [{type: no_action, rule: RF-2}]}
+  confirm_first_term:
+    kind: outcome
+    board_path: ["05:N_MID", "05:N_MID_R"]
+    effects:
+      - {type: requirement, rule: RF-3, text: "Confirmation of a Class A roof or its replacement", deadline: first_term}
+  confirm_60_days:
+    kind: outcome
+    board_path: ["05:N_HI", "05:N_HI_R"]
+    effects:
+      - {type: requirement, rule: RF-4, text: "Confirmation of a Class A roof or its replacement", deadline: within_60_days}

@@ -1,0 +1,42 @@
+# ABOUTME: The Siding page as a decision graph: non-combustible siding needs no action, and wood siding takes a requirement by the fire probability band.
+# ABOUTME: Siding class D is the wood branch (I21); class C (vinyl, aluminum or steel, other) takes no action with an advisory on the quote.
+id: siding
+page: docs/playbook/06-siding/flowchart.md
+applies_when: {always: true}
+root: siding_class
+nodes:
+  siding_class:
+    kind: test
+    field: siding_classification
+    interpretation: I21
+    board_path: ["06:ROOT"]
+    cases:
+      - {when: {in: [A, B]}, then: no_action_needed}
+      - {when: {equals: C}, then: no_action_with_advisory}
+      - {when: {equals: D}, then: wood_band}
+  wood_band:
+    kind: test
+    field: p_f
+    board_path: ["06:WOOD"]
+    cases:
+      - {when: {lte: 0.15}, then: wood_low}
+      - {when: {gt: 0.15, lte: 0.50}, then: confirm_first_term}
+      - {when: {gt: 0.50}, then: confirm_underwriting_period}
+  no_action_needed: {kind: outcome, board_path: ["06:NC", "06:NC_OK"], effects: [{type: no_action, rule: SD-1}]}
+  no_action_with_advisory:
+    kind: outcome
+    board_path: ["06:NC", "06:NC_OK"]
+    effects:
+      - {type: no_action, rule: SD-2}
+      - {type: advisory, rule: SD-2, text: "The siding is vinyl, aluminum or steel, or another material of class C; no action is taken."}
+  wood_low: {kind: outcome, board_path: ["06:LO", "06:LO_OK"], effects: [{type: no_action, rule: SD-3}]}
+  confirm_first_term:
+    kind: outcome
+    board_path: ["06:MID", "06:MID_R"]
+    effects:
+      - {type: requirement, rule: SD-4, text: "Confirmation of non-combustible siding or its replacement", deadline: first_term}
+  confirm_underwriting_period:
+    kind: outcome
+    board_path: ["06:HI", "06:HI_R"]
+    effects:
+      - {type: requirement, rule: SD-5, text: "Confirmation of non-combustible siding or its replacement", deadline: underwriting_period}

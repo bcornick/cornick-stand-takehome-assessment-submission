@@ -1,0 +1,9 @@
+# ABOUTME: The Occupancy page: when it applies (I06). Its decision graph is not encoded yet, so a lead it applies to is stopped with a reason.
+# ABOUTME: A graph with no root holds only the page's `applies_when`.
+id: occupancy
+page: docs/playbook/03-occupancy/flowchart.md
+applies_when:
+  any:
+    - {field: is_rental, in: [Short-Term Rentals, Long-Term Rentals]}
+    - {field: months_unoccupied, gte: 1}
+    - {field: listed_for_sale, equals: true}
