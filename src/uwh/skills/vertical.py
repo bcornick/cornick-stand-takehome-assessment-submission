@@ -1,0 +1,75 @@
+# ABOUTME: The underwriting vertical's registration: statuses, blocker kinds, transitions, command classes and message kinds.
+# ABOUTME: Plain data that the runtime reads; the runtime names none of these values itself.
+from dataclasses import dataclass
+from datetime import UTC, datetime
+
+STATUSES = ("received", "triaged", "in_progress", "quote_sent", "declined")
+TERMINAL_STATUSES = ("quote_sent", "declined")
+
+# Highest priority first: the first open kind is a lead's primary next action.
+BLOCKER_KINDS_BY_PRIORITY = (
+    "delivery_unknown",
+    "underwriter_question",
+    "underwriter_review",
+    "data",
+    "producer_reply",
+)
+
+# Allowed (from, to) status pairs. in_progress re-enters itself on re-evaluation.
+TRANSITIONS = (
+    ("received", "triaged"),
+    ("triaged", "in_progress"),
+    ("in_progress", "in_progress"),
+    ("in_progress", "quote_sent"),
+    ("in_progress", "declined"),
+)
+
+ACTORS = ("workflow", "underwriter", "assistant", "mcp_client", "inbound")
+AUTONOMY_LEVELS = ("auto", "review", "off")
+
+
+@dataclass(frozen=True)
+class CommandClass:
+    """One command class. `default_level` is None where autonomy does not apply (human only)."""
+
+    name: str
+    default_level: str | None
+    locked: bool  # True: never runs without an underwriter approval
+    human_only: bool
+    actors: tuple[str, ...]  # who may submit it
+
+
+def _human_only(name: str) -> CommandClass:
+    return CommandClass(name, None, False, True, ("underwriter",))
+
+
+COMMAND_CLASSES = (
+    CommandClass("fetch_data", "auto", False, False, ("workflow",)),
+    CommandClass("send_routine_request", "auto", False, False, ("workflow",)),
+    CommandClass("send_sensitive_request", "review", False, False, ("workflow",)),
+    CommandClass("send_quote_packet", "review", True, False, ("workflow",)),
+    CommandClass("send_decline_notice", "review", True, False, ("workflow",)),
+    CommandClass("deliver_reply", "auto", False, False, ("inbound", "underwriter")),
+    _human_only("approve"),
+    _human_only("reject"),
+    _human_only("edit_draft"),
+    _human_only("resolve_fact"),
+    _human_only("decline_lead"),
+    _human_only("record_ruling"),
+    _human_only("propose_rule_change"),
+    _human_only("apply_rule_change"),
+    _human_only("change_setting"),
+    _human_only("emergency_stop"),
+    _human_only("start_run"),
+    CommandClass("propose_command", "auto", False, False, ("assistant", "mcp_client")),
+)
+
+# The intent kinds; each is one section 10.1 message class.
+MESSAGE_KINDS = ("routine_request", "sensitive_request", "quote_packet", "decline_notice")
+
+# The class a request made only of confirmations takes. Setting it to "sensitive" makes an
+# underwriter see confirmations first.
+CONFIRMATION_ONLY_CLASS = "routine"
+
+# The generator's reference morning, the start of simulated time.
+REFERENCE_MORNING = datetime(2026, 6, 29, 8, 0, tzinfo=UTC)
