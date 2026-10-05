@@ -35,25 +35,37 @@ describe('DetailPane', () => {
     const { lead } = renderLead('LEAD-00000042-003')
     const rows = within(screen.getByRole('table', { name: 'Facts' })).getAllByRole('row')
     expect(rows).toHaveLength(lead.facts.length + 1)
+    // The payload carries p_f, so it is submitted; the lead's broker tier is looked up.
     const pf = factRow('p_f')
     expect(within(pf).getByText('0.79')).toBeInTheDocument()
-    expect(within(pf).getByText('Fetched')).toBeInTheDocument()
+    expect(within(pf).getByText('Submitted')).toBeInTheDocument()
+    expect(within(pf).queryByText('Fetched')).not.toBeInTheDocument()
+    expect(within(factRow('broker_tier')).getByText('Fetched')).toBeInTheDocument()
     const street = factRow('street_address')
     expect(within(street).getByText('9273 Hillside Ct')).toBeInTheDocument()
     expect(within(street).getByText('Submitted')).toBeInTheDocument()
   })
 
-  it('shows a derived fact and an assumed fact with their tags', () => {
+  it('shows a derived fact with its tag', () => {
     const lead = detail('LEAD-00000042-000')
-    const assumed = lead.facts.find((fact) => fact.source === 'assumed')!
-    renderLead('LEAD-00000042-000')
-    const row = factRow(assumed.key)
-    expect(within(row).getByText('Assumed')).toBeInTheDocument()
-    expect(within(row).getByText(String(assumed.value))).toBeInTheDocument()
     const derived = lead.facts.find((fact) => fact.source === 'derived')!
-    expect(
-      within(factRow(derived.key)).getByText('Derived'),
-    ).toBeInTheDocument()
+    renderLead('LEAD-00000042-000')
+    expect(within(factRow(derived.key)).getByText('Derived')).toBeInTheDocument()
+  })
+
+  it('shows an assumed fact with its tag', () => {
+    // No seed-42 lead has an assumed fact (the protection class default applies only to a lookup
+    // that returns not_found), so the fact is set on a copy of a lead.
+    const lead = structuredClone(detail('LEAD-00000042-004'))
+    expect(lead.facts.some((fact) => fact.source === 'assumed')).toBe(false)
+    lead.facts = lead.facts.map((fact) =>
+      fact.key === 'protection_class' ? { ...fact, value: '9', source: 'assumed' as const } : fact,
+    )
+    render(<DetailPane lead={lead} />)
+    const row = factRow('protection_class')
+    expect(within(row).getByText('Assumed')).toBeInTheDocument()
+    expect(within(row).getByText('9')).toBeInTheDocument()
+    expect(within(factRow('p_f')).queryByText('Assumed')).not.toBeInTheDocument()
   })
 
   it('shows a stub fact as a stub', () => {
@@ -110,6 +122,35 @@ describe('DetailPane', () => {
     expect(playbookItems()).toHaveLength(12)
   })
 
+  it('hides a page that applies and is no exception when the toggle is on, and shows it when off', async () => {
+    // Lead 008's Roof page applies and is decided with no_action: not an exception.
+    const { lead } = renderLead('LEAD-00000042-008')
+    const roof = lead.playbook.find((page) => page.graph === 'roof')!
+    expect(roof.applies).toBe('yes')
+    expect(roof.exception).toBe(false)
+    const roofHeading = () => screen.queryByRole('heading', { level: 4, name: pageLabel('roof') })
+    expect(roofHeading()).toBeInTheDocument()
+    const toggle = screen.getByRole('switch', { name: 'Exceptions only' })
+    await userEvent.click(toggle)
+    expect(roofHeading()).not.toBeInTheDocument()
+    await userEvent.click(toggle)
+    expect(roofHeading()).toBeInTheDocument()
+  })
+
+  it.each(Object.keys(details))(
+    'keeps exactly the exception pages of %s when the toggle is on',
+    async (leadId) => {
+      const { lead } = renderLead(leadId)
+      await userEvent.click(screen.getByRole('switch', { name: 'Exceptions only' }))
+      const shown = playbookItems().map(
+        (item) => within(item).getByRole('heading', { level: 4 }).textContent,
+      )
+      expect(shown).toEqual(
+        lead.playbook.filter((page) => page.exception).map((page) => pageLabel(page.graph)),
+      )
+    },
+  )
+
   it('shows the draft with its kind, recipient, subject, body, state and round', () => {
     const { lead } = renderLead('LEAD-00000042-000')
     const draft = lead.drafts[0]!
@@ -118,7 +159,11 @@ describe('DetailPane', () => {
     expect(within(section).getByText(draft.recipient)).toBeInTheDocument()
     expect(within(section).getByText(draft.subject)).toBeInTheDocument()
     expect(within(section).getByText('Draft')).toBeInTheDocument()
-    expect(within(section).getByText('Round 1')).toBeInTheDocument()
+    expect(draft.kind).toBe('decline_notice')
+    // The lead has had no request, so its decline notice is round 0 (section 7.5).
+    expect(draft.round).toBe(0)
+    expect(within(section).getByText('Round 0')).toBeInTheDocument()
+    expect(within(section).queryByText('Round 1')).not.toBeInTheDocument()
     expect(
       within(section).getByText((_, element) => element?.tagName === 'PRE' && element.textContent === draft.body),
     ).toBeInTheDocument()

@@ -69,6 +69,24 @@ describe('QueuePage', () => {
     ).toBeInTheDocument()
   })
 
+  it('puts each of six distinct counts beside its own label', () => {
+    const summary = {
+      quotes_sent: 11,
+      follow_ups_sent: 22,
+      declines_approved: 33,
+      waiting_on_underwriter: 44,
+      waiting_on_data: 55,
+      delivery_unknown: 66,
+    }
+    renderQueue({ run: { ...run, summary } })
+    expect(
+      screen.getByText(
+        '11 quotes sent, 22 follow-ups sent, 33 declines approved, ' +
+          '44 waiting on the underwriter, 55 waiting on data, 66 delivery unknown.',
+      ),
+    ).toBeInTheDocument()
+  })
+
   it('shows the mode and the run id', () => {
     renderQueue()
     expect(screen.getByText(`Mode: ${run.mode}`)).toBeInTheDocument()
@@ -84,7 +102,8 @@ describe('QueuePage', () => {
     expect(cells.getByText('Underwriter')).toBeInTheDocument()
     expect(cells.getByText('1.97 days')).toBeInTheDocument()
     expect(cells.getByText('2026-07-21')).toBeInTheDocument()
-    expect(cells.getByText('13')).toBeInTheDocument()
+    const lead003 = rows.find((candidate) => candidate.lead_id === 'LEAD-00000042-003')!
+    expect(cells.getByText(String(lead003.ask_count))).toBeInTheDocument()
   })
 
   it('labels the age column as an assumed service level and marks each breached row', () => {
