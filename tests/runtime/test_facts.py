@@ -12,7 +12,7 @@ from hypothesis import given
 from hypothesis import strategies as st
 from pydantic import JsonValue
 
-from uwh.runtime.event_types import EventType, FactSelected
+from uwh.runtime.event_types import ConflictClosed, EventType, FactSelected
 from uwh.runtime.events import EventContext, read_events
 from uwh.runtime.facts import (
     Conflict,
@@ -124,6 +124,19 @@ def reply(
     )
 
 
+def reply_values(db: sqlite3.Connection, *pairs: tuple[str, JsonValue]) -> RevisionChange:
+    values = [ReplyValue(key, value, {"quote": str(value)}) for key, value in pairs]
+    return observe_reply(db, CONTEXT, LEAD, values, RULES, round_closed=False)
+
+
+def selected_observation_ids(db: sqlite3.Connection, key: str) -> list[int]:
+    return [
+        e.payload.observation_id
+        for e in read_events(db, lead_id=LEAD)
+        if isinstance(e.payload, FactSelected) and e.payload.key == key
+    ]
+
+
 def observations(db: sqlite3.Connection, key: str) -> list[tuple[Any, str, str]]:
     rows = db.execute(
         "SELECT value_json, source, status FROM observations WHERE key = ? ORDER BY id", (key,)
@@ -164,6 +177,13 @@ def test_the_fact_selected_events_alone_rebuild_the_effective_facts(db: sqlite3.
     reply(db, "year_built", 1990)
     reply(db, "acreage", 3)  # pending: no selection
     resolve_fact(db, UNDERWRITER, LEAD, "acreage", 5, "measured", RULES)
+    submit(db, "roof_replacement_year", 2030)  # opens a conflict
+    reply(
+        db, "roof_replacement_year", 2030
+    )  # rule 6: confirms; the selected observation is the same
+    resolve_fact(
+        db, UNDERWRITER, LEAD, "roof_material", "asphalt", "photo", RULES
+    )  # recomputes roof_class
     rebuilt: dict[str, tuple[Any, str, bool]] = {}
     for event in read_events(db, lead_id=LEAD):
         if isinstance(event.payload, FactSelected):
@@ -173,6 +193,8 @@ def test_the_fact_selected_events_alone_rebuild_the_effective_facts(db: sqlite3.
         k: (f.value, f.source, f.confirmed) for k, f in effective_facts(db, LEAD).items()
     }
     assert rebuilt["acreage"] == (5, "underwriter", False)
+    assert rebuilt["roof_replacement_year"] == (2030, "submitted", True)
+    assert rebuilt["roof_class"] == ("shingle", "derived", False)
 
 
 # ---- rule 1 ----------------------------------------------------------------------------------
@@ -211,6 +233,36 @@ def test_rule_2_a_reply_replaces_an_assumed_value(db: sqlite3.Connection) -> Non
     assert open_kinds(db) == []
 
 
+def test_rule_2_a_reply_that_restates_an_assumed_value_replaces_it(
+    db: sqlite3.Connection,
+) -> None:
+    submit(db, "year_built", 1990, "assumed")
+    before = revision(db)
+    change = reply(db, "year_built", 1990)
+    assert effective(db, "year_built") == (1990, "reply", False)
+    assert observations(db, "year_built") == [
+        (1990, "assumed", "accepted"),
+        (1990, "reply", "accepted"),
+    ]
+    assert change.changed and revision(db) == before + 1
+    assert open_kinds(db) == []
+
+
+def test_rule_2_a_reply_that_restates_an_assumed_value_under_a_conflict_closes_it(
+    db: sqlite3.Connection,
+) -> None:
+    submit(db, "roof_replacement_year", 2030, "assumed")
+    assert [c.validator for c in open_conflicts(db, LEAD)] == ["roof_year_future"]
+    reply(db, "roof_replacement_year", 2030)
+    assert open_conflicts(db, LEAD) == []
+    assert effective(db, "roof_replacement_year") == (2030, "reply", True)
+    closed = [
+        e.payload for e in read_events(db, lead_id=LEAD) if isinstance(e.payload, ConflictClosed)
+    ]
+    reply_observation = effective_facts(db, LEAD)["roof_replacement_year"].observation_id
+    assert [c.observation_id for c in closed] == [reply_observation]
+
+
 # ---- rule 3 ----------------------------------------------------------------------------------
 
 
@@ -243,6 +295,33 @@ def test_rule_4_a_reply_never_sets_a_system_owned_field(
     assert effective(db, "kyc_score") == ((7, "submitted", False) if present else None)
     assert observations(db, "kyc_score")[-1] == (3, "reply", "rejected")
     assert open_kinds(db) == [] and not change.changed
+
+
+# ---- observe and assumed values ------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("source", ["submitted", "fetched"])
+def test_a_submitted_or_fetched_value_replaces_an_assumed_value(
+    db: sqlite3.Connection, source: str
+) -> None:
+    submit(db, "acreage", 2, "assumed")
+    submit(db, "acreage", 3, source)
+    assert effective(db, "acreage") == (3, source, False)
+
+
+@pytest.mark.parametrize("existing", ["submitted", "fetched", "assumed", "reply", "underwriter"])
+def test_an_assumed_value_does_not_replace_an_existing_value(
+    db: sqlite3.Connection, existing: str
+) -> None:
+    if existing == "reply":
+        reply(db, "acreage", 2)
+    elif existing == "underwriter":
+        resolve_fact(db, UNDERWRITER, LEAD, "acreage", 2, "measured", RULES)
+    else:
+        submit(db, "acreage", 2, existing)
+    submit(db, "acreage", 3, "assumed")
+    assert effective(db, "acreage") == (2, existing, False)
+    assert observations(db, "acreage")[-1] == (3, "assumed", "accepted")
 
 
 # ---- rule 5 ----------------------------------------------------------------------------------
@@ -285,6 +364,49 @@ def test_rule_5_an_underwriter_value_for_a_derived_key_is_not_recomputed(
     resolve_fact(db, UNDERWRITER, LEAD, "roof_class", "tile", "by sight", RULES)
     resolve_fact(db, UNDERWRITER, LEAD, "roof_material", "asphalt", "photo", RULES)
     assert effective(db, "roof_class") == ("tile", "underwriter", False)
+
+
+def test_rule_5_a_derivation_outranks_a_submitted_value_once_its_input_is_present(
+    db: sqlite3.Connection,
+) -> None:
+    submit(db, "roof_class", "tile")
+    before = revision(db)
+    submit(db, "roof_material", "steel")
+    assert effective(db, "roof_class") == ("metal", "derived", False)
+    assert observations(db, "roof_class") == [
+        ("tile", "submitted", "accepted"),
+        ("metal", "derived", "accepted"),
+    ]
+    derived_id = effective_facts(db, LEAD)["roof_class"].observation_id
+    assert selected_observation_ids(db, "roof_class") == [1, derived_id]
+    assert revision(db) == before + 1
+
+
+def test_rule_5_a_submitted_value_stays_effective_while_the_derivation_input_is_missing(
+    db: sqlite3.Connection,
+) -> None:
+    submit(db, "roof_class", "tile")
+    submit(db, "acreage", 2)
+    assert effective(db, "roof_class") == ("tile", "submitted", False)
+    assert len(observations(db, "roof_class")) == 1
+
+
+def test_rule_5_an_underwriter_value_outranks_the_derivation_of_its_key(
+    db: sqlite3.Connection,
+) -> None:
+    resolve_fact(db, UNDERWRITER, LEAD, "roof_class", "tile", "by sight", RULES)
+    submit(db, "roof_material", "steel")
+    assert effective(db, "roof_class") == ("tile", "underwriter", False)
+    assert len(observations(db, "roof_class")) == 1
+
+
+def test_rule_5_a_recomputed_value_that_equals_the_old_one_records_the_current_input(
+    db: sqlite3.Connection,
+) -> None:
+    submit(db, "roof_material", "steel")
+    resolve_fact(db, UNDERWRITER, LEAD, "roof_material", "steel", "photo", RULES)
+    assert effective(db, "roof_class") == ("metal", "derived", False)
+    assert effective_facts(db, LEAD)["roof_class"].evidence["inputs"] == {"roof_material": 3}
 
 
 def test_rule_5_a_derived_fact_is_usable_only_while_its_inputs_are(db: sqlite3.Connection) -> None:
@@ -370,6 +492,22 @@ def test_rule_6_a_restated_value_of_a_pair_closes_the_conflict(db: sqlite3.Conne
     assert open_conflicts(db, LEAD) == []
     assert effective(db, "year_built") == (2000, "submitted", True)
     assert effective(db, "roof_replacement_year") == (1990, "submitted", False)
+
+
+@pytest.mark.parametrize("restated_first", [True, False])
+def test_rule_6_one_reply_cannot_confirm_a_conflict_and_change_the_other_field_of_its_pair(
+    db: sqlite3.Connection, restated_first: bool
+) -> None:
+    submit(db, "year_built", 2000)
+    submit(db, "roof_replacement_year", 1990)
+    pairs: list[tuple[str, JsonValue]] = [("year_built", 2000), ("roof_replacement_year", 1985)]
+    reply_values(db, *(pairs if restated_first else pairs[::-1]))
+    assert [c.validator for c in open_conflicts(db, LEAD)] == ["roof_before_home"]
+    assert observations(db, "year_built")[-1] == (2000, "reply", "accepted")
+    assert observations(db, "roof_replacement_year")[-1] == (1985, "reply", "pending_review")
+    assert effective(db, "year_built") == (2000, "submitted", False)
+    assert effective(db, "roof_replacement_year") == (1990, "submitted", False)
+    assert open_kinds(db) == [("observation", None)]
 
 
 # ---- rule 7 ----------------------------------------------------------------------------------

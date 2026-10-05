@@ -191,23 +191,25 @@ class _Pass:
         return RevisionChange(before, before + 1)
 
     def _recompute_derived_facts(self) -> None:
+        """9.3 step 2: a derivation with its inputs present selects its value over any source but an underwriter's."""
         for derivation in self.rules.derivations:
             facts = effective_facts(self.db, self.lead_id)
             if any(name not in facts for name in derivation.inputs):
                 continue
             current = facts.get(derivation.key)
-            if current is not None and current.source != "derived":
+            if current is not None and current.source == "underwriter":
                 continue
-            inputs = {name: facts[name].observation_id for name in derivation.inputs}
-            if current is not None and current.evidence.get("inputs") == inputs:
+            inputs: dict[str, JsonValue] = {
+                name: facts[name].observation_id for name in derivation.inputs
+            }
+            if (
+                current is not None
+                and current.source == "derived"
+                and current.evidence.get("inputs") == inputs
+            ):
                 continue
             value = derivation.compute({name: facts[name].value for name in derivation.inputs})
-            if current is not None and _canonical(current.value) == _canonical(value):
-                continue
-            evidence: dict[str, JsonValue] = {
-                "derivation_id": derivation.id,
-                "inputs": dict(inputs),
-            }
+            evidence: dict[str, JsonValue] = {"derivation_id": derivation.id, "inputs": inputs}
             self.select(self.record(derivation.key, value, "derived", evidence, "accepted"))
 
     def _reconcile_conflicts(self) -> None:
@@ -260,14 +262,10 @@ def _conflict_events(
     for event in read_events(db, lead_id=lead_id):
         payload = event.payload
         if isinstance(payload, ConflictOpened):
-            question = payload.question
-            found.append(
-                (
-                    True,
-                    Conflict(payload.validator, tuple(payload.fields), payload.values, question),
-                    None,
-                )
+            opened = Conflict(
+                payload.validator, tuple(payload.fields), payload.values, payload.question
             )
+            found.append((True, opened, None))
         elif isinstance(payload, ConflictClosed):
             closed = Conflict(payload.validator, tuple(payload.fields), payload.values, "")
             found.append((False, closed, payload.observation_id))
@@ -381,8 +379,9 @@ def observe_reply(
     and the revision moves, whatever the values.
     """
     ledger = _Pass(db, context, lead_id, rules)
+    changed = set() if round_closed else _changed_keys(ledger, values)
     for reply_value in values:
-        _apply_reply_value(ledger, reply_value, round_closed)
+        _apply_reply_value(ledger, reply_value, round_closed, changed)
     if round_closed:
         ledger.raise_review(
             BlockerDetail(
@@ -396,7 +395,21 @@ def observe_reply(
     return ledger.finish()
 
 
-def _apply_reply_value(ledger: _Pass, reply_value: ReplyValue, round_closed: bool) -> None:
+def _changed_keys(ledger: _Pass, values: Sequence[ReplyValue]) -> set[str]:
+    """The keys the reply gives a value other than the one in effect; a system-owned field is never changed by a reply."""
+    facts = effective_facts(ledger.db, ledger.lead_id)
+    return {
+        v.key
+        for v in values
+        if v.key not in ledger.rules.system_owned_keys
+        and v.key in facts
+        and _canonical(facts[v.key].value) != _canonical(v.value)
+    }
+
+
+def _apply_reply_value(
+    ledger: _Pass, reply_value: ReplyValue, round_closed: bool, changed: set[str]
+) -> None:
     key, value, evidence = reply_value.key, reply_value.value, reply_value.evidence
     if key in ledger.rules.system_owned_keys:  # rule 4
         ledger.record(key, value, "reply", evidence, "rejected")
@@ -407,12 +420,19 @@ def _apply_reply_value(ledger: _Pass, reply_value: ReplyValue, round_closed: boo
     current = effective_facts(ledger.db, ledger.lead_id).get(key)
     if current is None:  # rule 2
         ledger.select(ledger.record(key, value, "reply", evidence, "accepted"))
-    elif _canonical(current.value) == _canonical(value):
-        _restate(ledger, current, reply_value)
+    elif current.source == "assumed":  # rule 2
+        observation_id = ledger.record(key, value, "reply", evidence, "accepted")
+        restates = _canonical(current.value) == _canonical(value)
+        ledger.select(
+            observation_id,
+            confirmed=restates and _close_confirmed_conflicts(ledger, key, observation_id, changed),
+        )
+    elif _canonical(current.value) == _canonical(value):  # rule 6
+        observation_id = ledger.record(key, value, "reply", evidence, "accepted")
+        if _close_confirmed_conflicts(ledger, key, observation_id, changed):
+            ledger.select(current.observation_id, confirmed=True)
     elif current.source == "underwriter":  # rule 1
         ledger.record(key, value, "reply", evidence, "rejected")
-    elif current.source == "assumed":  # rule 2
-        ledger.select(ledger.record(key, value, "reply", evidence, "accepted"))
     else:  # rules 3, 6 and 7
         observation_id = ledger.record(key, value, "reply", evidence, "pending_review")
         ledger.raise_review(
@@ -425,17 +445,20 @@ def _apply_reply_value(ledger: _Pass, reply_value: ReplyValue, round_closed: boo
         )
 
 
-def _restate(ledger: _Pass, current: Fact, reply_value: ReplyValue) -> None:
-    """A reply gives the effective value again: it is evidence, and rule 6 closes the conflicts the key is part of."""
-    observation_id = ledger.record(
-        reply_value.key, reply_value.value, "reply", reply_value.evidence, "accepted"
-    )
-    restated = [c for c in open_conflicts(ledger.db, ledger.lead_id) if reply_value.key in c.fields]
-    if not restated:
-        return
-    for conflict in restated:
+def _close_confirmed_conflicts(
+    ledger: _Pass, key: str, observation_id: int, changed: set[str]
+) -> bool:
+    """Rule 6: close the open conflicts the restated key is part of, unless the same reply changes
+    another field of the conflict (that value follows rule 3 and the conflict stays open).
+    True when a conflict closed."""
+    closing = [
+        c
+        for c in open_conflicts(ledger.db, ledger.lead_id)
+        if key in c.fields and changed.isdisjoint(c.fields)
+    ]
+    for conflict in closing:
         ledger.close_conflict(conflict, observation_id)
-    ledger.select(current.observation_id, confirmed=True)
+    return bool(closing)
 
 
 def _awaiting_blocker_id(db: sqlite3.Connection, lead_id: str, observation_id: int) -> int:
