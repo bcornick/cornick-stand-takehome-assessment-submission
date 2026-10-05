@@ -52,6 +52,8 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# The repository root is importable, so tests import `evals`.
+pythonpath = ["."]
 addopts = "--strict-markers --import-mode=importlib"
 markers = [
     "slow: slow tests",
