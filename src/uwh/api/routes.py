@@ -1,4 +1,4 @@
-# ABOUTME: The A.5 routes not yet served, declared with their request and response models; each answers 501.
+# ABOUTME: The A.5 routes that answer 501, declared with their request and response models.
 # ABOUTME: `/mcp` is mounted outside OpenAPI and is not declared here.
 from typing import Annotated, NoReturn
 

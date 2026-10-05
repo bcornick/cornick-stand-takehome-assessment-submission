@@ -12,6 +12,7 @@ from uwh.api.routes import router
 from uwh.api.runtime import open_runtime
 from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
+from uwh.runtime.runs import resume_after_restart
 from uwh.settings import Settings
 
 
@@ -22,13 +23,17 @@ def create_app(
     mailbox: MailboxClient | None = None,
 ) -> FastAPI:
     """Build the app. At startup a service client that is not passed is built from the settings' URL for
-    that service; a test passes clients that reach Stand's apps in process."""
+    that service; a test passes clients that reach Stand's apps in process. The lifespan runs the
+    restart recovery of 7.1 and 7.5 before the app serves."""
     settings = Settings.load() if settings is None else settings
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         with open_runtime(settings, leadgen, mailbox) as runtime:
-            runtime.resume()
+            env = runtime.env
+            resume_after_restart(
+                settings.db_path, env.mailbox, env.mode, env.ruleset_hash, env.now, env.steps
+            )
             app.state.runtime = runtime
             yield
 

@@ -4,7 +4,6 @@ from fastapi import APIRouter, HTTPException
 
 from uwh.api.runtime import RuntimeDependency
 from uwh.api.views import Command, CommandResponse
-from uwh.runtime.commands import submit_command as submit
 
 router = APIRouter()
 
@@ -14,15 +13,9 @@ router = APIRouter()
 def submit_command(command: Command, runtime: RuntimeDependency) -> CommandResponse:
     with runtime.database() as db:
         try:
-            result = submit(
-                db,
-                runtime.env,
-                "underwriter",
-                command.type,
-                command.payload.model_dump(mode="json"),
+            result, _ = runtime.submit_as_underwriter(
+                db, command.type, command.payload.model_dump(mode="json")
             )
         except NotImplementedError as error:
             raise HTTPException(status_code=501, detail=str(error)) from error
-        if result.accepted and command.type == "start_run":
-            runtime.launch_first_pass(db)
     return CommandResponse(accepted=result.accepted, event_id=result.event_id, reason=result.reason)

@@ -1,4 +1,4 @@
-# ABOUTME: A stand-in for the app's HTTP surface that serves the A.5 read routes from tests/fixtures/ui; the other routes answer 501 as the app's do.
+# ABOUTME: A stand-in for the app's HTTP surface that serves the A.5 read routes from tests/fixtures/ui; the start and command routes keep the app's handlers and the other routes answer 501.
 # ABOUTME: It is the app's own application with each read handler replaced, so paths, response models and OpenAPI are the app's; run it with --port.
 import argparse
 import sys
@@ -133,7 +133,7 @@ def create_standin_app(fixtures_dir: Path = DEFAULT_FIXTURES) -> FastAPI:
     real = create_app(Settings.load({"UWH_DB": "unused.db"}))
     declared = [
         r
-        for r in (*real.router.routes, *router.routes, *run.router.routes, *commands.router.routes)
+        for r in (*router.routes, *run.router.routes, *commands.router.routes)
         if isinstance(r, APIRoute)
     ]
     standin = FastAPI(title=real.title, version=real.version)

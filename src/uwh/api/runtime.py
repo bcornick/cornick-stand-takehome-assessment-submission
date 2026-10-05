@@ -1,8 +1,8 @@
 # ABOUTME: What the app holds while it runs: the settings, the command environment read once at startup (mode, ruleset hash, steps, clients), a database connection per request and the single worker that runs a run's first pass.
-# ABOUTME: The workflow steps and the ledger rules are module constants that the skills supply; both are empty until a skill supplies one.
+# ABOUTME: The workflow steps and the ledger rules are module constants; the steps run in order on every lead and the ledger rules govern its facts.
 import logging
 import sqlite3
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import ExitStack, closing, contextmanager
 from dataclasses import dataclass
@@ -12,16 +12,17 @@ from typing import Annotated
 
 import httpx2
 from fastapi import Depends, Request
+from pydantic import JsonValue
 
 import uwh.rules
 import uwh.skills
 from uwh.runtime.bootstrap import TIMEOUT_SECONDS
-from uwh.runtime.commands import CommandEnvironment
+from uwh.runtime.commands import CommandEnvironment, CommandResult, submit_command
 from uwh.runtime.facts import LedgerRules
 from uwh.runtime.hashing import ruleset_hash
 from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
-from uwh.runtime.runs import current_run, pass_context, resume_after_restart, run_first_pass
+from uwh.runtime.runs import current_run, pass_context, run_first_pass
 from uwh.runtime.store import open_store
 from uwh.runtime.workflow import Step
 from uwh.settings import Settings
@@ -31,7 +32,7 @@ logger = logging.getLogger(__name__)
 # The steps of a lead's pass in order, and the rules of the fact ledger.
 WORKFLOW_STEPS: tuple[Step, ...] = ()
 LEDGER_RULES = LedgerRules()
-# The ruleset every run uses (A.4).
+# The image's rules data: the ruleset every run uses when `ruleset.active` is unset (A.4).
 IMAGE_RULES_DATA = Path(uwh.rules.__file__).parent / "data"
 
 
@@ -48,14 +49,18 @@ class Runtime:
         with closing(open_store(self.settings.db_path)) as db:
             yield db
 
-    def resume(self) -> None:
-        """The restart recovery of 7.1 and 7.5, run before the app serves."""
-        env = self.env
-        resume_after_restart(
-            self.settings.db_path, env.mailbox, env.mode, env.ruleset_hash, env.now, env.steps
-        )
+    def submit_as_underwriter(
+        self, db: sqlite3.Connection, command_type: str, payload: Mapping[str, JsonValue]
+    ) -> tuple[CommandResult, Future[None] | None]:
+        """Submit the command as the underwriter, the actor the REST transport binds. An accepted
+        `start_run` also launches the first pass of its run on the worker; the future of that pass is
+        returned for a caller that waits for it, and is None for every other result."""
+        result = submit_command(db, self.env, "underwriter", command_type, payload)
+        if result.accepted and command_type == "start_run":
+            return result, self._launch_first_pass(db)
+        return result, None
 
-    def launch_first_pass(self, db: sqlite3.Connection) -> Future[None]:
+    def _launch_first_pass(self, db: sqlite3.Connection) -> Future[None]:
         """Run the first pass of the current run on the worker. A failure is logged with the run id, and
         the pass has settled the run by then."""
         run = current_run(db)
