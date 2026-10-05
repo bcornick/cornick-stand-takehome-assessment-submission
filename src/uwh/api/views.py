@@ -1,7 +1,7 @@
 # ABOUTME: Request and response models of the app's HTTP routes (A.5, A.11, section 11); the OpenAPI file and the web client's types come from them.
 # ABOUTME: Vertical vocabularies are typed from uwh.skills.vertical in one place, and no shape holds a model confidence (section 11).
 from dataclasses import dataclass
-from typing import Annotated, Any, Literal, Self
+from typing import Annotated, Any, Literal, Self, get_args
 
 from pydantic import (
     Field,
@@ -14,7 +14,16 @@ from pydantic import (
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
 
-from uwh.rules.models import ActionPlan, OpenChoice, RuleTrace, StrictModel
+from uwh.rules.models import (
+    ActionPlan,
+    Decided,
+    DeclinesOnEveryBranch,
+    OpenChoice,
+    PlannedEffect,
+    RuleTrace,
+    StrictModel,
+    Undecided,
+)
 from uwh.runtime.event_types import (
     PAYLOAD_MODELS,
     ApprovalItemKind,
@@ -62,12 +71,22 @@ Status = Annotated[str, Vocabulary(vertical.STATUSES)]
 BlockerKind = Annotated[str, Vocabulary(vertical.BLOCKER_KINDS_BY_PRIORITY)]
 MessageKind = Annotated[str, Vocabulary(vertical.MESSAGE_KINDS)]
 AutonomyLevel = Annotated[str, Vocabulary(vertical.AUTONOMY_LEVELS)]
-CommandClassName = Annotated[str, Vocabulary(tuple(c.name for c in vertical.COMMAND_CLASSES))]
+Actor = Annotated[str, Vocabulary(vertical.ACTORS)]
+ReviewCause = Annotated[str, Vocabulary(tuple(name for name, _ in vertical.REVIEW_CAUSES))]
+
+# Autonomy applies to a class that has a default level (7.4); the human-only classes have none.
+AutonomyClassName = Annotated[
+    str, Vocabulary(tuple(c.name for c in vertical.COMMAND_CLASSES if c.default_level is not None))
+]
 RunMode = Annotated[str, Vocabulary(RUN_MODES)]
 
 # A.11: workflow-only classes are submitted in process and are not accepted over HTTP.
 HTTP_COMMAND_TYPES = tuple(c.name for c in vertical.COMMAND_CLASSES if c.actors != ("workflow",))
 HttpCommandType = Annotated[str, Vocabulary(HTTP_COMMAND_TYPES)]
+
+# A.11: a proposal holds one of the other twelve HTTP commands, never another proposal.
+PROPOSABLE_COMMAND_TYPES = tuple(t for t in HTTP_COMMAND_TYPES if t != "propose_command")
+ProposableCommandType = Annotated[str, Vocabulary(PROPOSABLE_COMMAND_TYPES)]
 
 # A fact's reported value as a command carries it.
 FactValue = str | int | float | bool
@@ -133,28 +152,61 @@ class FactView(StrictModel):
     status: ObservationStatus
     confirmed: bool
     evidence: dict[str, JsonValue]
+    observation_id: int  # `observations.id`, which `BlockerDetail.observation_id` joins on
+    is_stub: bool  # a stand-in value, shown as such (9.4)
 
 
-PageResult = Literal["decided", "undecided", "not_evaluated"]
+# Section 9.6's three node results, read from the models, and the page that was not evaluated.
+NODE_RESULTS = tuple(
+    get_args(model.model_fields["result"].annotation)[0]
+    for model in (Decided, Undecided, DeclinesOnEveryBranch)
+)
+PageResult = Annotated[str, Vocabulary((*NODE_RESULTS, "not_evaluated"))]
 
 
 class PlaybookPage(StrictModel):
-    """One line of the playbook path checklist (section 11). A page that does not apply has no result."""
+    """One line of the playbook path checklist (section 11). `applies` is `unknown` when the
+    page's `applies_when` rests on an unknown fact: the graph is undecided and contributes
+    nothing (9.6). A page that does not apply has no result and no effects. `exception` marks
+    what the exceptions-only toggle shows: an undecided page, a decline, a page that applies and
+    was not evaluated, or any effect other than `no_action`."""
 
-    page: str  # a decision-graph page id
-    applies: bool
+    graph: str  # a decision-graph id, as `UndecidedPage.graph`
+    applies: Literal["yes", "no", "unknown"]
     result: PageResult | None
     waits_on: list[str]  # the fields, catalogue ids or choice ids an undecided page waits on
-    trace: RuleTrace | None  # the page's rule trace, when it is decided
+    effects: list[PlannedEffect]  # an `all_of` page holds several, on separate paths
+    declines_on_every_branch: (
+        RuleTrace | None
+    )  # the trace of that result, one branch per alternative
+    exception: bool
 
     @model_validator(mode="after")
     def result_follows_applies(self) -> Self:
-        if self.applies != (self.result is not None):
-            raise ValueError("result is set exactly when the page applies")
+        if self.applies == "no" and (self.result is not None or self.effects):
+            raise ValueError("a page whose applies is `no` has no result and no effects")
+        if self.applies == "unknown" and self.result != "undecided":
+            raise ValueError("a page whose applies is `unknown` is undecided")
+        if self.applies == "yes" and self.result is None:
+            raise ValueError("a page that applies has a result")
         if (self.result == "undecided") != bool(self.waits_on):
             raise ValueError("waits_on is non-empty exactly when the page is undecided")
-        if self.trace is not None and self.result != "decided":
-            raise ValueError("only a decided page has a trace")
+        if (self.result == "declines_on_every_branch") != (
+            self.declines_on_every_branch is not None
+        ):
+            raise ValueError(
+                "declines_on_every_branch is present exactly when that is the page's result"
+            )
+        if (
+            self.declines_on_every_branch is not None
+            and not self.declines_on_every_branch.alternatives
+        ):
+            raise ValueError("declines_on_every_branch carries one alternative per branch")
+        expected = self.result in ("undecided", "declines_on_every_branch", "not_evaluated") or any(
+            planned.effect.type != "no_action" for planned in self.effects
+        )
+        if self.exception != expected:
+            raise ValueError(f"exception is {expected} for this page")
         return self
 
 
@@ -173,15 +225,28 @@ class LeadNote(StrictModel):
 # A.11: the approvals item kinds of an `underwriter_review` blocker.
 _REVIEW_ITEM_KINDS = ("draft", "observation", "no_contact_route", "review")
 
+# 7.4: a dispatch the stop or a class set to `off` refused leaves its draft in review.
+_HELD_DRAFT_CAUSES = ("draft_held_by_stop", "draft_held_class_off")
+
 
 class BlockerView(StrictModel):
-    """An open blocker. `item_id` is `blockers.id`, the id an `approve` or `reject` names."""
+    """An open blocker. `item_id` is `blockers.id`, the id an `approve` or `reject` names.
+
+    The detail pane offers the actions for every open item (section 11), so the blocker carries
+    what its action needs: a pending observation's value (`observation`, required exactly for the
+    item kind `observation`), a review's cause as a registered name (`review_cause`, required
+    exactly for the item kind `review`, equal to `detail.cause`) and, for a held draft, the payload
+    hash an `approve` carries (`held_draft_payload_hash`, 7.4).
+    """
 
     item_id: int
     kind: BlockerKind
     item_kind: ApprovalItemKind | None  # None for a blocker that is not an approvals item
     owner: BlockerOwner
     detail: BlockerDetail
+    observation: FactView | None  # the pending observation of an `observation` item
+    review_cause: ReviewCause | None  # `detail.cause` of a `review` item
+    held_draft_payload_hash: str | None  # a held draft's hash, for a draft-held review
 
     @model_validator(mode="after")
     def item_kind_fits_the_blocker(self) -> Self:
@@ -197,11 +262,43 @@ class BlockerView(StrictModel):
             raise ValueError(f"a {self.kind} blocker has no item_kind")
         if self.item_kind == "draft" and self.detail.intent_id is None:
             raise ValueError("a draft review names its draft: detail.intent_id")
-        if self.item_kind == "review" and self.detail.cause is None:
-            raise ValueError("a review states its cause")
         if self.detail.cause_persists and self.item_kind != "review":
             raise ValueError("only a review holds a persistent cause")
+        self._observation_is_the_pending_one()
+        self._review_cause_is_registered()
         return self
+
+    def _observation_is_the_pending_one(self) -> None:
+        if self.item_kind != "observation":
+            if self.observation is not None:
+                raise ValueError("only an observation item carries an observation")
+            return
+        if self.observation is None:
+            raise ValueError("an observation item carries its observation")
+        if self.observation.status != "pending_review":
+            raise ValueError("the observation of an item is pending_review")
+        if self.detail.observation_id != self.observation.observation_id:
+            raise ValueError("detail.observation_id is the observation's observation_id")
+
+    def _review_cause_is_registered(self) -> None:
+        causes = dict(vertical.REVIEW_CAUSES)
+        if self.item_kind != "review":
+            if self.review_cause is not None:
+                raise ValueError("only a review has a review_cause")
+        else:
+            if self.detail.cause not in causes:
+                raise ValueError(f"a review's cause is one of {', '.join(causes)}")
+            if self.detail.cause_persists != causes[self.detail.cause]:
+                raise ValueError(
+                    f"detail.cause_persists is {causes[self.detail.cause]} for {self.detail.cause}"
+                )
+            if self.review_cause != self.detail.cause:
+                raise ValueError("review_cause is detail.cause")
+        held = self.review_cause in _HELD_DRAFT_CAUSES
+        if held and self.detail.intent_id is None:
+            raise ValueError("a held draft's review names its draft: detail.intent_id")
+        if held != (self.held_draft_payload_hash is not None):
+            raise ValueError("held_draft_payload_hash is set exactly for a held draft's review")
 
 
 class DraftView(StrictModel):
@@ -267,7 +364,7 @@ class EventRow(StrictModel):
     lead_id: str | None  # None for a run-level event
     type: EventType
     payload: dict[str, JsonValue]
-    actor: str
+    actor: Actor
     ruleset_hash: str | None
     prompt_versions: dict[str, str] | None
     model_id: str | None
@@ -315,6 +412,14 @@ _REVIEW_ROWS: dict[str, tuple[str, str]] = {
 }
 
 
+# The message kinds of the draft each A.11 draft row holds.
+_DRAFT_ROW_KINDS = {
+    "draft_request": ("routine_request", "sensitive_request"),
+    "draft_quote_packet": ("quote_packet",),
+    "draft_decline_notice": ("decline_notice",),
+}
+
+
 class ReviewItem(BlockerView):
     """An open review: `item` says which A.11 row it is, so the client knows what `approve` and
     `reject` do. A draft row carries the draft whose `payload_hash` an `approve` echoes."""
@@ -323,7 +428,6 @@ class ReviewItem(BlockerView):
     lead_id: str
     item: ReviewItemName
     draft: DraftView | None = None  # a held draft's review may carry it too
-    observation: FactView | None = None  # the pending observation, for that row
 
     @model_validator(mode="after")
     def row_fits_the_blocker(self) -> Self:
@@ -333,14 +437,21 @@ class ReviewItem(BlockerView):
         if item_kind == "draft":
             if self.draft is None or self.draft.intent_id != self.detail.intent_id:
                 raise ValueError("a draft item carries the draft its blocker reviews: draft")
-        if self.item == "pending_observation" and (
-            self.observation is None or self.observation.status != "pending_review"
-        ):
+            if self.draft.kind not in _DRAFT_ROW_KINDS[self.item]:
+                raise ValueError(f"{self.item} holds a draft of kind {_DRAFT_ROW_KINDS[self.item]}")
+        if self.item == "pending_observation" and self.observation is None:
             raise ValueError("a pending_observation item carries its pending observation")
+        # The cause's registered flag (`BlockerView` checks it) picks the row.
         if item_kind == "review" and self.detail.cause_persists != (
             self.item == "review_cause_persists"
         ):
             raise ValueError("detail.cause_persists is true exactly for review_cause_persists")
+        if self.held_draft_payload_hash is not None and self.draft is not None:
+            if (self.draft.intent_id, self.draft.payload_hash) != (
+                self.detail.intent_id,
+                self.held_draft_payload_hash,
+            ):
+                raise ValueError("the draft shown is the held draft: its intent and payload hash")
         return self
 
 
@@ -439,10 +550,68 @@ class ApplyRuleChangePayload(StrictModel):
     diff_hash: str
 
 
+# The payload models of the twelve commands a proposal can hold, by command type (A.11).
+PROPOSABLE_PAYLOADS: dict[str, type[StrictModel]] = {
+    "approve": ApprovePayload,
+    "reject": RejectPayload,
+    "edit_draft": EditDraftPayload,
+    "record_ruling": RecordRulingPayload,
+    "resolve_fact": ResolveFactPayload,
+    "decline_lead": DeclineLeadPayload,
+    "deliver_reply": DeliverReplyPayload,
+    "change_setting": ChangeSettingPayload,
+    "emergency_stop": EmergencyStopPayload,
+    "start_run": StartRunPayload,
+    "propose_rule_change": ProposeRuleChangePayload,
+    "apply_rule_change": ApplyRuleChangePayload,
+}
+
+ProposedPayload = (
+    ApprovePayload
+    | RejectPayload
+    | EditDraftPayload
+    | RecordRulingPayload
+    | ResolveFactPayload
+    | DeclineLeadPayload
+    | DeliverReplyPayload
+    | ChangeSettingPayload
+    | EmergencyStopPayload
+    | StartRunPayload
+    | ProposeRuleChangePayload
+    | ApplyRuleChangePayload
+)
+
+
 class ProposeCommandPayload(StrictModel):
-    type: HttpCommandType
-    payload: dict[str, JsonValue]
+    """`{type, payload, rationale}` (A.11): `type` and `payload` together are one of the other twelve
+    HTTP commands. Some payload shapes fit two commands, so the payload is read as the model of
+    `type` before the union field sees it."""
+
+    type: ProposableCommandType
+    payload: ProposedPayload
     rationale: str
+
+    @model_validator(mode="before")
+    @classmethod
+    def payload_is_the_models_of_its_type(cls, data: Any) -> Any:
+        if isinstance(data, dict) and data.get("type") in PROPOSABLE_PAYLOADS:
+            model = PROPOSABLE_PAYLOADS[data["type"]]
+            payload = data.get("payload")
+            if isinstance(payload, dict):
+                try:
+                    payload = model.model_validate(payload)
+                except ValidationError as error:
+                    raise ValueError(
+                        f"the payload is not a {data['type']} payload: {error}"
+                    ) from None
+                return {**data, "payload": payload}
+        return data
+
+    @model_validator(mode="after")
+    def payload_is_not_another_commands(self) -> Self:
+        if type(self.payload) is not PROPOSABLE_PAYLOADS[self.type]:
+            raise ValueError(f"the payload is not a {self.type} payload")
+        return self
 
 
 class ApproveCommand(StrictModel):
@@ -554,7 +723,7 @@ class FixtureRepliesResponse(StrictModel):
 class AutonomySetting(StrictModel):
     """The `autonomy.<command_class>` setting of a class autonomy applies to (7.4)."""
 
-    command_class: CommandClassName
+    command_class: AutonomyClassName
     level: AutonomyLevel
     default_level: AutonomyLevel
     locked: bool  # never `auto`
@@ -591,7 +760,7 @@ class ProposalView(StrictModel):
     payload: dict[str, JsonValue]
     diff_hash: str | None
     state: ProposalState
-    actor: str
+    actor: Actor
     event_id: int
 
 

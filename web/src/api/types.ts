@@ -357,7 +357,7 @@ export interface components {
              * Command Class
              * @enum {string}
              */
-            command_class: "fetch_data" | "send_routine_request" | "send_sensitive_request" | "send_quote_packet" | "send_decline_notice" | "deliver_reply" | "approve" | "reject" | "edit_draft" | "resolve_fact" | "decline_lead" | "record_ruling" | "propose_rule_change" | "apply_rule_change" | "change_setting" | "emergency_stop" | "start_run" | "propose_command";
+            command_class: "fetch_data" | "send_routine_request" | "send_sensitive_request" | "send_quote_packet" | "send_decline_notice" | "deliver_reply" | "propose_command";
             /**
              * Default Level
              * @enum {string}
@@ -402,9 +402,17 @@ export interface components {
         /**
          * BlockerView
          * @description An open blocker. `item_id` is `blockers.id`, the id an `approve` or `reject` names.
+         *
+         *     The detail pane offers the actions for every open item (section 11), so the blocker carries
+         *     what its action needs: a pending observation's value (`observation`, required exactly for the
+         *     item kind `observation`), a review's cause as a registered name (`review_cause`, required
+         *     exactly for the item kind `review`, equal to `detail.cause`) and, for a held draft, the payload
+         *     hash an `approve` carries (`held_draft_payload_hash`, 7.4).
          */
         BlockerView: {
             detail: components["schemas"]["BlockerDetail"];
+            /** Held Draft Payload Hash */
+            held_draft_payload_hash: string | null;
             /** Item Id */
             item_id: number;
             /** Item Kind */
@@ -414,11 +422,14 @@ export interface components {
              * @enum {string}
              */
             kind: "delivery_unknown" | "underwriter_question" | "underwriter_review" | "data" | "producer_reply";
+            observation: components["schemas"]["FactView"] | null;
             /**
              * Owner
              * @enum {string}
              */
             owner: "underwriter" | "producer" | "data_team";
+            /** Review Cause */
+            review_cause: ("late_reply" | "unread_reply" | "off_topic_reply" | "declining_reply" | "reply_after_terminal_status" | "draft_held_by_stop" | "draft_held_class_off" | "round_limit" | "identity_score_missing" | "identity_score_unsupported") | null;
         };
         /** ChangeSettingCommand */
         ChangeSettingCommand: {
@@ -586,8 +597,11 @@ export interface components {
          *     it, so the schema stays one object type rather than 28 row variants.
          */
         EventRow: {
-            /** Actor */
-            actor: string;
+            /**
+             * Actor
+             * @enum {string}
+             */
+            actor: "workflow" | "underwriter" | "assistant" | "mcp_client" | "inbound";
             /** Id */
             id: number;
             /** Lead Id */
@@ -662,8 +676,12 @@ export interface components {
             evidence: {
                 [key: string]: components["schemas"]["JsonValue"];
             };
+            /** Is Stub */
+            is_stub: boolean;
             /** Key */
             key: string;
+            /** Observation Id */
+            observation_id: number;
             /**
              * Source
              * @enum {string}
@@ -825,16 +843,27 @@ export interface components {
         };
         /**
          * PlaybookPage
-         * @description One line of the playbook path checklist (section 11). A page that does not apply has no result.
+         * @description One line of the playbook path checklist (section 11). `applies` is `unknown` when the
+         *     page's `applies_when` rests on an unknown fact: the graph is undecided and contributes
+         *     nothing (9.6). A page that does not apply has no result and no effects. `exception` marks
+         *     what the exceptions-only toggle shows: an undecided page, a decline, a page that applies and
+         *     was not evaluated, or any effect other than `no_action`.
          */
         PlaybookPage: {
-            /** Applies */
-            applies: boolean;
-            /** Page */
-            page: string;
+            /**
+             * Applies
+             * @enum {string}
+             */
+            applies: "yes" | "no" | "unknown";
+            declines_on_every_branch: components["schemas"]["RuleTrace"] | null;
+            /** Effects */
+            effects: components["schemas"]["PlannedEffect"][];
+            /** Exception */
+            exception: boolean;
+            /** Graph */
+            graph: string;
             /** Result */
-            result: ("decided" | "undecided" | "not_evaluated") | null;
-            trace: components["schemas"]["RuleTrace"] | null;
+            result: ("decided" | "undecided" | "declines_on_every_branch" | "not_evaluated") | null;
             /** Waits On */
             waits_on: string[];
         };
@@ -843,8 +872,11 @@ export interface components {
          * @description A `proposals` row (A.1). A command proposal's payload is `{type, payload, rationale}`.
          */
         ProposalView: {
-            /** Actor */
-            actor: string;
+            /**
+             * Actor
+             * @enum {string}
+             */
+            actor: "workflow" | "underwriter" | "assistant" | "mcp_client" | "inbound";
             /** Diff Hash */
             diff_hash: string | null;
             /** Event Id */
@@ -875,19 +907,22 @@ export interface components {
              */
             type: "propose_command";
         };
-        /** ProposeCommandPayload */
+        /**
+         * ProposeCommandPayload
+         * @description `{type, payload, rationale}` (A.11): `type` and `payload` together are one of the other twelve
+         *     HTTP commands. Some payload shapes fit two commands, so the payload is read as the model of
+         *     `type` before the union field sees it.
+         */
         ProposeCommandPayload: {
             /** Payload */
-            payload: {
-                [key: string]: components["schemas"]["JsonValue"];
-            };
+            payload: components["schemas"]["ApprovePayload"] | components["schemas"]["RejectPayload"] | components["schemas"]["EditDraftPayload"] | components["schemas"]["RecordRulingPayload"] | components["schemas"]["ResolveFactPayload"] | components["schemas"]["DeclineLeadPayload"] | components["schemas"]["ReplyRequest"] | components["schemas"]["ChangeSettingPayload"] | components["schemas"]["EmergencyStopPayload"] | components["schemas"]["StartRunPayload"] | components["schemas"]["ProposeRuleChangePayload"] | components["schemas"]["ApplyRuleChangePayload"];
             /** Rationale */
             rationale: string;
             /**
              * Type
              * @enum {string}
              */
-            type: "deliver_reply" | "approve" | "reject" | "edit_draft" | "resolve_fact" | "decline_lead" | "record_ruling" | "propose_rule_change" | "apply_rule_change" | "change_setting" | "emergency_stop" | "start_run" | "propose_command";
+            type: "deliver_reply" | "approve" | "reject" | "edit_draft" | "resolve_fact" | "decline_lead" | "record_ruling" | "propose_rule_change" | "apply_rule_change" | "change_setting" | "emergency_stop" | "start_run";
         };
         /** ProposeRuleChangeCommand */
         ProposeRuleChangeCommand: {
@@ -917,6 +952,8 @@ export interface components {
             /** Choices */
             choices: components["schemas"]["OpenChoiceView"][];
             detail: components["schemas"]["BlockerDetail"];
+            /** Held Draft Payload Hash */
+            held_draft_payload_hash: string | null;
             /** Item Id */
             item_id: number;
             /** Item Kind */
@@ -928,11 +965,14 @@ export interface components {
             kind: "delivery_unknown" | "underwriter_question" | "underwriter_review" | "data" | "producer_reply";
             /** Lead Id */
             lead_id: string;
+            observation: components["schemas"]["FactView"] | null;
             /**
              * Owner
              * @enum {string}
              */
             owner: "underwriter" | "producer" | "data_team";
+            /** Review Cause */
+            review_cause: ("late_reply" | "unread_reply" | "off_topic_reply" | "declining_reply" | "reply_after_terminal_status" | "draft_held_by_stop" | "draft_held_class_off" | "round_limit" | "identity_score_missing" | "identity_score_unsupported") | null;
             /**
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
@@ -1073,6 +1113,8 @@ export interface components {
         ReviewItem: {
             detail: components["schemas"]["BlockerDetail"];
             draft: components["schemas"]["DraftView"] | null;
+            /** Held Draft Payload Hash */
+            held_draft_payload_hash: string | null;
             /**
              * Item
              * @enum {string}
@@ -1095,6 +1137,8 @@ export interface components {
              * @enum {string}
              */
             owner: "underwriter" | "producer" | "data_team";
+            /** Review Cause */
+            review_cause: ("late_reply" | "unread_reply" | "off_topic_reply" | "declining_reply" | "reply_after_terminal_status" | "draft_held_by_stop" | "draft_held_class_off" | "round_limit" | "identity_score_missing" | "identity_score_unsupported") | null;
             /**
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}

@@ -69,8 +69,13 @@ def test_openapi_paths_are_the_a5_table() -> None:
         assert set(paths[path]) == methods, path
 
 
-def test_mcp_is_not_in_the_openapi_document() -> None:
-    assert "/mcp" not in document()["paths"]
+def test_no_route_or_mount_of_the_app_is_under_mcp() -> None:
+    # The 14-path equality above covers the OpenAPI document; this covers mounts, which the
+    # document never lists.
+    app = create_app(Settings.load({"UWH_DB": "unused.db"}))
+    paths = [getattr(route, "path", "") for route in app.routes]
+    assert paths
+    assert [p for p in paths if p.startswith("/mcp")] == []
 
 
 @pytest.mark.parametrize(("method", "url", "body"), NOT_BUILT)

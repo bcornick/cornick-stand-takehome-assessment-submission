@@ -148,8 +148,26 @@ LEAD_DETAIL_FIELDS = {
     "next_action",
     "links",
 }
-FACT_FIELDS = {"key", "value", "source", "status", "confirmed", "evidence"}
-BLOCKER_FIELDS = {"item_id", "kind", "item_kind", "owner", "detail"}
+FACT_FIELDS = {
+    "key",
+    "value",
+    "source",
+    "status",
+    "confirmed",
+    "evidence",
+    "observation_id",
+    "is_stub",
+}
+BLOCKER_FIELDS = {
+    "item_id",
+    "kind",
+    "item_kind",
+    "owner",
+    "detail",
+    "observation",
+    "review_cause",
+    "held_draft_payload_hash",
+}
 DRAFT_FIELDS = {
     "intent_id",
     "payload_hash",
@@ -161,13 +179,35 @@ DRAFT_FIELDS = {
     "round",
 }
 OPEN_CHOICE_FIELDS = {"choice_id", "options", "prompt", "show", "shown_values"}
-PLAYBOOK_FIELDS = {"page", "applies", "result", "waits_on", "trace"}
+PLAYBOOK_FIELDS = {
+    "graph",
+    "applies",
+    "result",
+    "waits_on",
+    "effects",
+    "declines_on_every_branch",
+    "exception",
+}
+
+
+def fact(**changes: Any) -> dict[str, Any]:
+    return {
+        "key": "roof_year",
+        "value": 1998,
+        "source": "reply",
+        "status": "pending_review",
+        "confirmed": False,
+        "evidence": {"quote": "built in 1998"},
+        "observation_id": 4,
+        "is_stub": False,
+    } | changes
 
 
 def blocker(**changes: Any) -> dict[str, Any]:
+    """A review raised by a late reply; `review_cause` follows `detail.cause` unless given."""
     detail = {
         "item_kind": "review",
-        "cause": "a late reply",
+        "cause": "late_reply",
         "cause_persists": False,
         "resume_trigger": "underwriter approves",
         "text": "A reply arrived after the round closed.",
@@ -177,10 +217,15 @@ def blocker(**changes: Any) -> dict[str, Any]:
         "kind": "underwriter_review",
         "item_kind": "review",
         "owner": "underwriter",
-        "detail": detail,
+        "observation": None,
+        "held_draft_payload_hash": None,
     }
     detail_changes = changes.pop("detail", {})
-    return base | changes | {"detail": detail | detail_changes}
+    merged_detail = detail | detail_changes
+    view = base | changes | {"detail": merged_detail}
+    if "review_cause" not in view:
+        view["review_cause"] = merged_detail["cause"] if view["item_kind"] == "review" else None
+    return view
 
 
 def draft(**changes: Any) -> dict[str, Any]:
@@ -216,43 +261,74 @@ def test_lead_detail_carries_the_a5_and_section_11_parts() -> None:
 
 
 def test_lead_detail_reuses_the_rules_and_runtime_models() -> None:
-    from uwh.rules.models import ActionPlan, OpenChoice, RuleTrace
+    from uwh.rules.models import ActionPlan, OpenChoice, PlannedEffect, RuleTrace
     from uwh.runtime.event_types import BlockerDetail
 
     assert views.LeadDetail.model_fields["plan"].annotation == ActionPlan | None
     assert views.BlockerView.model_fields["detail"].annotation is BlockerDetail
     assert issubclass(views.OpenChoiceView, OpenChoice)
-    assert views.PlaybookPage.model_fields["trace"].annotation == RuleTrace | None
-
-
-def test_p_f_is_an_ordinary_fact() -> None:
-    fact = views.FactView.model_validate(
-        {
-            "key": "p_f",
-            "value": 0.79,
-            "source": "fetched",
-            "status": "accepted",
-            "confirmed": False,
-            "evidence": {"provider": "fire_simulation"},
-        }
+    assert views.PlaybookPage.model_fields["effects"].annotation == list[PlannedEffect]
+    assert views.PlaybookPage.model_fields["declines_on_every_branch"].annotation == (
+        RuleTrace | None
     )
-    assert fact.key == "p_f"
-    assert fact.value == 0.79
+
+
+def test_p_f_is_validated_like_any_other_fact_and_is_not_a_confidence() -> None:
+    p_f = fact(
+        key="p_f",
+        value=0.79,
+        source="fetched",
+        status="accepted",
+        evidence={"provider": "fire_simulation"},
+    )
+    view = views.FactView.model_validate(p_f)
+    assert (view.key, view.value) == ("p_f", 0.79)
+    other = views.FactView.model_validate(fact(key="year_built", value=1950))
+    assert set(view.model_dump()) == set(other.model_dump())
+    # The no-confidence walk of the schema flags a property by its name; a fact's `p_f` key is a value.
+    assert [n for n in views.FactView.model_fields if "confidence" in n.lower()] == []
+    with pytest.raises(ValidationError):
+        views.FactView.model_validate(p_f | {"confidence": 0.79})
+
+
+def test_a_fact_carries_its_observation_id_and_whether_its_value_is_a_stub() -> None:
+    stub = views.FactView.model_validate(
+        fact(source="fetched", status="accepted", is_stub=True, observation_id=9)
+    )
+    assert (stub.observation_id, stub.is_stub) == (9, True)
+    for missing in ("observation_id", "is_stub"):
+        with pytest.raises(ValidationError, match=missing):
+            views.FactView.model_validate({k: v for k, v in fact().items() if k != missing})
 
 
 def test_a_blocker_carries_item_id_kind_item_kind_and_its_cause() -> None:
     view = views.BlockerView.model_validate(blocker())
     assert (view.item_id, view.kind, view.item_kind) == (7, "underwriter_review", "review")
-    assert view.detail.cause == "a late reply"
+    assert view.detail.cause == "late_reply"
     assert view.detail.cause_persists is False
+    assert view.review_cause == "late_reply"
 
 
 def test_a_review_whose_cause_persists_differs_from_one_an_event_raised() -> None:
-    event = views.BlockerView.model_validate(blocker())
-    persists = views.BlockerView.model_validate(
-        blocker(detail={"cause": "the round limit", "cause_persists": True})
-    )
-    assert event.detail.cause_persists != persists.detail.cause_persists
+    event = views.ReviewItem.model_validate(review_item("review_raised_by_event"))
+    persists = views.ReviewItem.model_validate(review_item("review_cause_persists"))
+    assert (event.review_cause, event.detail.cause_persists) == ("late_reply", False)
+    assert (persists.review_cause, persists.detail.cause_persists) == ("round_limit", True)
+    assert (event.item, persists.item) == ("review_raised_by_event", "review_cause_persists")
+    # The flag follows the registered cause, not the item row alone.
+    with pytest.raises(ValidationError, match="cause_persists"):
+        views.ReviewItem.model_validate(
+            review_item(
+                "review_cause_persists", detail=blocker(detail={"cause": "round_limit"})["detail"]
+            )
+        )
+    with pytest.raises(ValidationError, match="cause_persists"):
+        views.ReviewItem.model_validate(
+            review_item(
+                "review_raised_by_event",
+                detail=blocker(detail={"cause": "late_reply", "cause_persists": True})["detail"],
+            )
+        )
 
 
 def test_a_draft_review_names_its_draft() -> None:
@@ -272,11 +348,32 @@ def test_a_draft_review_names_its_draft() -> None:
         # item kind and detail disagree
         blocker(item_kind="draft", detail={"item_kind": "review"}),
         # a review raised by an event has its cause
-        blocker(detail={"cause": None}),
+        blocker(detail={"cause": None}, review_cause=None),
+        # the cause is one of the registered review causes
+        blocker(detail={"cause": "a late reply"}),
+        # the cause's flag is the registered one
+        blocker(detail={"cause": "late_reply", "cause_persists": True}),
+        blocker(detail={"cause": "round_limit", "cause_persists": False}),
+        # the review cause field is the detail's cause
+        blocker(review_cause="round_limit"),
+        blocker(review_cause=None),
+        # only a review has a review cause
+        blocker(
+            kind="delivery_unknown",
+            item_kind="delivery_unknown",
+            detail={"item_kind": "delivery_unknown", "cause": None},
+            review_cause="late_reply",
+        ),
         # only a review can hold a persistent cause
         blocker(
             item_kind="observation",
-            detail={"item_kind": "observation", "cause_persists": True, "observation_id": 3},
+            detail={
+                "item_kind": "observation",
+                "cause": None,
+                "cause_persists": True,
+                "observation_id": 4,
+            },
+            observation=fact(),
         ),
         # delivery_unknown is its own blocker kind
         blocker(
@@ -306,6 +403,92 @@ def test_a_delivery_unknown_blocker_is_its_own_kind_and_item_kind() -> None:
     assert view.kind == "delivery_unknown"
 
 
+def observation_blocker(**changes: Any) -> dict[str, Any]:
+    detail = {"item_kind": "observation", "cause": None, "observation_id": 4}
+    return blocker(item_kind="observation", observation=fact(), detail=detail) | changes
+
+
+def test_a_pending_observation_blocker_carries_the_value_to_approve() -> None:
+    view = views.BlockerView.model_validate(observation_blocker())
+    assert view.observation is not None
+    assert (view.observation.key, view.observation.value) == ("roof_year", 1998)
+    assert view.observation.observation_id == view.detail.observation_id == 4
+    assert view.review_cause is None
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        # an observation item shows its observation
+        observation_blocker(observation=None),
+        # the observation is pending review
+        observation_blocker(observation=fact(status="accepted")),
+        observation_blocker(observation=fact(status="rejected")),
+        # it is the observation the detail names
+        observation_blocker(observation=fact(observation_id=5)),
+        observation_blocker(detail={"item_kind": "observation", "observation_id": None}),
+        # no other item carries an observation
+        blocker(observation=fact()),
+    ],
+)
+def test_an_observation_blocker_refuses_a_missing_or_mismatched_observation(
+    bad: dict[str, Any],
+) -> None:
+    with pytest.raises(ValidationError):
+        views.BlockerView.model_validate(bad)
+
+
+def held_blocker(cause: str, **changes: Any) -> dict[str, Any]:
+    return (
+        blocker(
+            detail={"cause": cause, "intent_id": "intent-1"},
+            held_draft_payload_hash="ab" * 32,
+        )
+        | changes
+    )
+
+
+@pytest.mark.parametrize("cause", ["draft_held_by_stop", "draft_held_class_off"])
+def test_a_held_draft_review_names_its_draft_and_the_hash_an_approve_carries(cause: str) -> None:
+    view = views.BlockerView.model_validate(held_blocker(cause))
+    assert (view.detail.intent_id, view.held_draft_payload_hash) == ("intent-1", "ab" * 32)
+    for bad in (
+        held_blocker(cause, held_draft_payload_hash=None),
+        held_blocker(cause, detail={"cause": cause, "intent_id": None}),
+    ):
+        with pytest.raises(ValidationError):
+            views.BlockerView.model_validate(bad)
+
+
+def test_only_a_held_draft_review_carries_a_held_draft_hash() -> None:
+    with pytest.raises(ValidationError, match="held_draft_payload_hash"):
+        views.BlockerView.model_validate(blocker(held_draft_payload_hash="ab" * 32))
+
+
+def test_review_cause_is_an_enum_of_the_registered_causes_in_the_schema() -> None:
+    node = schema("BlockerView")["properties"]["review_cause"]
+    enum = [m["enum"] for m in node["anyOf"] if "enum" in m]
+    assert enum == [[name for name, _ in vertical.REVIEW_CAUSES]]
+
+
+@pytest.mark.parametrize(("cause", "persists"), vertical.REVIEW_CAUSES)
+def test_every_registered_review_cause_validates_with_its_flag_only(
+    cause: str, persists: bool
+) -> None:
+    held = cause.startswith("draft_held")
+    extra: dict[str, Any] = (
+        {"held_draft_payload_hash": "ab" * 32, "detail": {"intent_id": "intent-1"}} if held else {}
+    )
+
+    def view(flag: bool) -> dict[str, Any]:
+        detail = {"cause": cause, "cause_persists": flag} | extra.get("detail", {})
+        return blocker(detail=detail) | {k: v for k, v in extra.items() if k != "detail"}
+
+    assert views.BlockerView.model_validate(view(persists)).review_cause == cause
+    with pytest.raises(ValidationError, match="cause_persists"):
+        views.BlockerView.model_validate(view(not persists))
+
+
 def test_a_draft_carries_intent_id_and_payload_hash() -> None:
     view = views.DraftView.model_validate(draft())
     assert (view.intent_id, view.payload_hash) == ("intent-1", "ab" * 32)
@@ -322,24 +505,119 @@ def test_an_open_choice_carries_its_choice_id_option_ids_and_shown_values() -> N
     assert view.shown_values["p_f"] == 0.79
 
 
-def test_a_playbook_page_is_applies_undecided_decided_or_not_evaluated() -> None:
-    assert schema("PlaybookPage")["properties"]["result"]["anyOf"][0]["enum"] == [
-        "decided",
-        "undecided",
-        "not_evaluated",
+PLANNED_NO_ACTION = {
+    "effect": {"type": "no_action", "rule": "R-01-1"},
+    "trace": {"board_path": ["01:START", "01:OK"]},
+    "committed": True,
+}
+PLANNED_REQUIREMENT = {
+    "effect": {"type": "requirement", "rule": "R-01-2", "text": "Provide the roof report."},
+    "trace": {"board_path": ["01:START", "01:ROOF"]},
+    "committed": True,
+}
+PLANNED_DECLINE = {
+    "effect": {"type": "decline", "rule": "R-07-1"},
+    "trace": {"board_path": ["07:LIVING", "07:D1"]},
+    "committed": True,
+}
+DECLINE_ON_EVERY_BRANCH = {
+    "board_path": [],
+    "alternatives": [
+        {
+            "assumed": [{"field": "p_f", "when": {"gt": 0.5}}],
+            "board_path": ["04:START", "04:D1"],
+            "rule": "R-04-1",
+        }
+    ],
+}
+
+
+def page(**changes: Any) -> dict[str, Any]:
+    return {
+        "graph": "pools",
+        "applies": "yes",
+        "result": "decided",
+        "waits_on": [],
+        "effects": [],
+        "declines_on_every_branch": None,
+        "exception": False,
+    } | changes
+
+
+def test_a_playbook_result_is_a_node_result_or_not_evaluated() -> None:
+    # Section 9.6's three node results, then the page that was not evaluated.
+    node = schema("PlaybookPage")["properties"]["result"]
+    assert [m["enum"] for m in node["anyOf"] if "enum" in m] == [
+        ["decided", "undecided", "declines_on_every_branch", "not_evaluated"]
     ]
-    skipped = views.PlaybookPage.model_validate(
-        {"page": "pools", "applies": False, "result": None, "waits_on": [], "trace": None}
-    )
-    assert skipped.result is None
-    with pytest.raises(ValidationError, match="result"):
-        views.PlaybookPage.model_validate(
-            {"page": "pools", "applies": True, "result": None, "waits_on": [], "trace": None}
-        )
-    with pytest.raises(ValidationError, match="waits_on"):
-        views.PlaybookPage.model_validate(
-            {"page": "roof", "applies": True, "result": "undecided", "waits_on": [], "trace": None}
-        )
+    assert schema("PlaybookPage")["properties"]["applies"]["enum"] == ["yes", "no", "unknown"]
+
+
+@pytest.mark.parametrize(
+    ("changes", "exception"),
+    [
+        # a page that does not apply is not an exception and has no result
+        ({"applies": "no", "result": None}, False),
+        # a decided page whose effects are all no_action is not an exception
+        ({}, False),
+        ({"effects": [PLANNED_NO_ACTION]}, False),
+        # any other effect is
+        ({"effects": [PLANNED_NO_ACTION, PLANNED_REQUIREMENT]}, True),
+        ({"effects": [PLANNED_DECLINE]}, True),
+        # an undecided page is, whether the controlling fact is unknown or the page applies
+        ({"applies": "unknown", "result": "undecided", "waits_on": ["pool_type"]}, True),
+        ({"result": "undecided", "waits_on": ["I12.mitigation"]}, True),
+        # a decline on every branch is
+        (
+            {
+                "result": "declines_on_every_branch",
+                "declines_on_every_branch": DECLINE_ON_EVERY_BRANCH,
+            },
+            True,
+        ),
+        # a page that applies and was not evaluated is
+        ({"result": "not_evaluated"}, True),
+    ],
+)
+def test_a_playbook_page_flags_an_exception_exactly_by_the_section_11_rule(
+    changes: dict[str, Any], exception: bool
+) -> None:
+    parsed = views.PlaybookPage.model_validate(page(exception=exception, **changes))
+    assert parsed.exception is exception
+    with pytest.raises(ValidationError, match="exception"):
+        views.PlaybookPage.model_validate(page(exception=not exception, **changes))
+
+
+@pytest.mark.parametrize(
+    ("bad", "match"),
+    [
+        ({"applies": "no", "result": "decided"}, "applies"),
+        ({"applies": "no", "result": None, "effects": [PLANNED_NO_ACTION]}, "applies"),
+        ({"applies": "unknown", "result": "decided"}, "applies"),
+        ({"applies": "unknown", "result": None}, "applies"),
+        ({"applies": "yes", "result": None}, "result"),
+        ({"applies": "maybe"}, "applies"),
+        ({"result": "pending"}, "result"),
+        ({"waits_on": ["pool_type"]}, "waits_on"),
+        ({"result": "undecided", "waits_on": [], "exception": True}, "waits_on"),
+        ({"declines_on_every_branch": DECLINE_ON_EVERY_BRANCH}, "declines_on_every_branch"),
+        (
+            {
+                "result": "declines_on_every_branch",
+                "declines_on_every_branch": None,
+                "exception": True,
+            },
+            "declines_on_every_branch",
+        ),
+        ({"trace": {"board_path": ["a"]}}, "trace"),
+        ({"page": "pools"}, "page"),
+    ],
+)
+def test_a_playbook_page_refuses_a_result_that_does_not_follow_whether_it_applies(
+    bad: dict[str, Any], match: str
+) -> None:
+    with pytest.raises(ValidationError, match=match):
+        views.PlaybookPage.model_validate(page(**bad))
 
 
 def test_a_lead_detail_validates_with_a_plan_and_a_trace() -> None:
@@ -364,13 +642,14 @@ def test_a_lead_detail_validates_with_a_plan_and_a_trace() -> None:
             "plan": plan,
             "plan_hash": "cd" * 32,
             "playbook": [
-                {
-                    "page": "post_and_pier",
-                    "applies": True,
-                    "result": "decided",
-                    "waits_on": [],
-                    "trace": {"board_path": ["07:LIVING", "07:D1"]},
-                }
+                page(graph="post_and_pier", effects=[PLANNED_DECLINE], exception=True),
+                page(
+                    graph="roof",
+                    applies="unknown",
+                    result="undecided",
+                    waits_on=["roof_year"],
+                    exception=True,
+                ),
             ],
             "notes": [{"kind": "not_evaluated", "ref": "I09", "text": "Not evaluated."}],
             "blockers": [blocker()],
@@ -405,22 +684,15 @@ def review_item(item: str, **changes: Any) -> dict[str, Any]:
         item_kind="draft",
         detail={"item_kind": "draft", "intent_id": "intent-1", "cause": None},
     )
-    extra: dict[str, Any] = {"draft": draft()}
+    kinds = {
+        "draft_request": "routine_request",
+        "draft_quote_packet": "quote_packet",
+        "draft_decline_notice": "decline_notice",
+    }
+    extra: dict[str, Any] = {"draft": draft(kind=kinds.get(item, "routine_request"))}
     if item in ("pending_observation",):
-        base = blocker(
-            item_kind="observation",
-            detail={"item_kind": "observation", "observation_id": 4, "cause": None},
-        )
-        extra = {
-            "observation": {
-                "key": "roof_year",
-                "value": 1998,
-                "source": "reply",
-                "status": "pending_review",
-                "confirmed": False,
-                "evidence": {"quote": "built in 1998"},
-            }
-        }
+        base = observation_blocker()
+        extra = {}
     elif item == "delivery_unknown":
         base = blocker(
             kind="delivery_unknown",
@@ -438,9 +710,17 @@ def review_item(item: str, **changes: Any) -> dict[str, Any]:
         base = blocker()
     elif item == "review_cause_persists":
         extra = {}
-        base = blocker(detail={"cause": "the round limit", "cause_persists": True})
+        base = blocker(detail={"cause": "round_limit", "cause_persists": True})
     assert (item in drafts) == ("draft" in extra)
-    return {"type": "review", "lead_id": LEAD, "item": item} | base | extra | changes
+    return {"type": "review", "lead_id": LEAD, "item": item, "draft": None} | base | extra | changes
+
+
+def held_review(**changes: Any) -> dict[str, Any]:
+    return (
+        {"type": "review", "lead_id": LEAD, "item": "review_raised_by_event", "draft": draft()}
+        | held_blocker("draft_held_by_stop")
+        | changes
+    )
 
 
 def question_item(**changes: Any) -> dict[str, Any]:
@@ -487,6 +767,16 @@ def test_a_draft_item_carries_the_payload_hash_an_approve_must_echo() -> None:
         review_item(
             "review_raised_by_event", detail=blocker(detail={"cause_persists": True})["detail"]
         ),
+        # a draft row holds a draft of its own message kind
+        review_item("draft_request", draft=draft(kind="quote_packet")),
+        review_item("draft_request", draft=draft(kind="decline_notice")),
+        review_item("draft_quote_packet", draft=draft(kind="routine_request")),
+        review_item("draft_quote_packet", draft=draft(kind="decline_notice")),
+        review_item("draft_decline_notice", draft=draft(kind="sensitive_request")),
+        review_item("draft_decline_notice", draft=draft(kind="quote_packet")),
+        # a held draft's review that carries its draft carries the one the blocker holds
+        held_review(draft=draft(payload_hash="cd" * 32)),
+        held_review(draft=draft(intent_id="intent-2")),
         # an item whose approvals kind is wrong for its row
         review_item("no_contact_route", item_kind="review"),
         # no notify item exists
@@ -496,6 +786,19 @@ def test_a_draft_item_carries_the_payload_hash_an_approve_must_echo() -> None:
 def test_review_item_refuses_a_row_its_blocker_does_not_fit(bad: dict[str, Any]) -> None:
     with pytest.raises(ValidationError):
         views.ReviewItem.model_validate(bad)
+
+
+@pytest.mark.parametrize("kind", ["routine_request", "sensitive_request"])
+def test_a_request_draft_row_holds_either_request_kind(kind: str) -> None:
+    parsed = views.ReviewItem.model_validate(review_item("draft_request", draft=draft(kind=kind)))
+    assert parsed.draft is not None and parsed.draft.kind == kind
+
+
+def test_a_held_draft_review_carries_its_draft_and_the_hash_an_approve_echoes() -> None:
+    parsed = views.ReviewItem.model_validate(held_review())
+    assert parsed.draft is not None
+    assert parsed.draft.payload_hash == parsed.held_draft_payload_hash
+    assert views.ReviewItem.model_validate(held_review(draft=None)).draft is None
 
 
 def test_a_question_item_carries_the_leads_open_choices_as_one_card() -> None:
@@ -582,11 +885,34 @@ def test_the_http_command_schema_omits_the_workflow_only_classes() -> None:
     assert accepted == {c.name for c in vertical.COMMAND_CLASSES} - workflow_only
 
 
-def test_a_proposed_command_names_only_a_type_the_http_surface_accepts() -> None:
+def test_a_proposed_command_names_one_of_the_other_twelve_http_types() -> None:
     proposed = command_variants()["propose_command"]["properties"]["type"]
     workflow_only = {c.name for c in vertical.COMMAND_CLASSES if c.actors == ("workflow",)}
     assert not set(proposed["enum"]) & workflow_only
-    assert set(proposed["enum"]) == set(A11_PAYLOADS)
+    assert "propose_command" not in proposed["enum"]
+    assert set(proposed["enum"]) == set(A11_PAYLOADS) - {"propose_command"}
+    assert len(proposed["enum"]) == 12
+
+
+def test_a_proposed_command_payload_is_a_union_of_the_twelve_payload_models() -> None:
+    doc = document()
+    inner = command_variants()["propose_command"]["properties"]["payload"]
+    refs = {m["$ref"].rsplit("/", 1)[1] for m in inner["anyOf"]}
+    assert refs == {
+        "ApprovePayload",
+        "RejectPayload",
+        "EditDraftPayload",
+        "RecordRulingPayload",
+        "ResolveFactPayload",
+        "DeclineLeadPayload",
+        "ReplyRequest",
+        "ChangeSettingPayload",
+        "EmergencyStopPayload",
+        "StartRunPayload",
+        "ProposeRuleChangePayload",
+        "ApplyRuleChangePayload",
+    }
+    assert refs <= set(doc["components"]["schemas"])
 
 
 command = TypeAdapter(views.Command)
@@ -622,6 +948,75 @@ def test_approve_carries_the_artifact_hash_it_echoes() -> None:
     ],
 )
 def test_a_malformed_command_is_refused(bad: dict[str, Any]) -> None:
+    with pytest.raises(ValidationError):
+        command.validate_python(bad)
+
+
+def proposal(command_type: str, payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "type": "propose_command",
+        "payload": {"type": command_type, "payload": payload, "rationale": "the roof is slate"},
+    }
+
+
+RESOLVE_FACT = {"lead_id": LEAD, "key": "roof_type", "value": "slate", "reason": "per the reply"}
+
+
+def test_a_proposed_command_holds_a_valid_inner_command() -> None:
+    parsed = command.validate_python(proposal("resolve_fact", RESOLVE_FACT))
+    inner = parsed.payload
+    assert isinstance(inner, views.ProposeCommandPayload)
+    assert inner.type == "resolve_fact"
+    assert isinstance(inner.payload, views.ResolveFactPayload)
+    assert inner.payload.value == "slate"
+    assert inner.rationale == "the roof is slate"
+
+
+def test_a_proposed_command_is_checked_by_its_type_not_by_the_shape_alone() -> None:
+    # {item_id, reason} fits approve and reject; the type picks reject, whose reason is required.
+    rejected = {"item_id": 7, "reason": "wrong recipient"}
+    parsed = command.validate_python(proposal("reject", rejected))
+    assert isinstance(parsed.payload.payload, views.RejectPayload)  # type: ignore[union-attr]
+    approved = command.validate_python(proposal("approve", rejected))
+    assert isinstance(approved.payload.payload, views.ApprovePayload)  # type: ignore[union-attr]
+    with pytest.raises(ValidationError):
+        command.validate_python(proposal("reject", {"item_id": 7, "reason": ""}))
+
+
+def test_a_proposed_command_built_from_models_cannot_pair_a_type_with_another_payload() -> None:
+    with pytest.raises(ValidationError, match="reject"):
+        views.ProposeCommandPayload(
+            type="reject",
+            payload=views.ApprovePayload(item_id=7, reason="x"),
+            rationale="r",
+        )
+
+
+def test_a_proposed_command_survives_a_json_round_trip() -> None:
+    parsed = command.validate_python(proposal("resolve_fact", RESOLVE_FACT))
+    again = command.validate_json(command.dump_json(parsed))
+    assert again == parsed
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        # a proposal does not nest a proposal
+        proposal("propose_command", proposal("resolve_fact", RESOLVE_FACT)["payload"]),
+        # the inner payload must be valid for the inner type
+        proposal("approve", {"nonsense": True}),
+        proposal("resolve_fact", {"lead_id": LEAD}),
+        proposal("approve", RESOLVE_FACT),
+        # a workflow-only class is not a command over HTTP, so it is not proposed either
+        proposal("fetch_data", {}),
+        proposal("send_quote_packet", {}),
+        # an unknown inner type
+        proposal("notify", {}),
+    ],
+)
+def test_a_proposed_command_that_is_not_one_of_the_other_twelve_is_refused(
+    bad: dict[str, Any],
+) -> None:
     with pytest.raises(ValidationError):
         command.validate_python(bad)
 
@@ -743,15 +1138,68 @@ def test_an_event_payload_must_follow_the_model_of_its_type() -> None:
 # ---- vocabularies and confidence ----------------------------------------------------------------
 
 
+AUTONOMY_CLASSES = [
+    "fetch_data",
+    "send_routine_request",
+    "send_sensitive_request",
+    "send_quote_packet",
+    "send_decline_notice",
+    "deliver_reply",
+    "propose_command",
+]
+
+
+def autonomy_setting(**changes: Any) -> dict[str, Any]:
+    return {
+        "command_class": "send_quote_packet",
+        "level": "review",
+        "default_level": "review",
+        "locked": True,
+    } | changes
+
+
+def test_autonomy_applies_only_to_the_classes_of_the_7_4_table_with_a_default_level() -> None:
+    assert [c.name for c in vertical.COMMAND_CLASSES if c.default_level is not None] == (
+        AUTONOMY_CLASSES
+    )
+    assert schema("AutonomySetting")["properties"]["command_class"]["enum"] == AUTONOMY_CLASSES
+    for name in AUTONOMY_CLASSES:
+        views.AutonomySetting.model_validate(autonomy_setting(command_class=name))
+    for human_only in ("approve", "emergency_stop", "start_run", "change_setting"):
+        with pytest.raises(ValidationError, match="command_class"):
+            views.AutonomySetting.model_validate(autonomy_setting(command_class=human_only))
+
+
+def test_an_actor_is_one_of_the_five_of_7_4() -> None:
+    actors = ["workflow", "underwriter", "assistant", "mcp_client", "inbound"]
+    assert schema("EventRow")["properties"]["actor"]["enum"] == actors
+    assert schema("ProposalView")["properties"]["actor"]["enum"] == actors
+    row = event_row("message_sent", {"intent_id": "i", "mailbox_id": 3})
+    for actor in actors:
+        assert views.EventRow.model_validate(row | {"actor": actor}).actor == actor
+    with pytest.raises(ValidationError, match="actor"):
+        views.EventRow.model_validate(row | {"actor": "robot"})
+    proposal_row = {
+        "proposal_id": 1,
+        "kind": "command",
+        "payload": {},
+        "diff_hash": None,
+        "state": "open",
+        "actor": "assistant",
+        "event_id": 5,
+    }
+    assert views.ProposalView.model_validate(proposal_row).actor == "assistant"
+    with pytest.raises(ValidationError, match="actor"):
+        views.ProposalView.model_validate(proposal_row | {"actor": "robot"})
+
+
 def test_vocabulary_enums_in_the_schema_equal_the_verticals() -> None:
-    classes = [c.name for c in vertical.COMMAND_CLASSES]
     assert schema("QueueRow")["properties"]["status"]["enum"] == list(vertical.STATUSES)
     assert schema("LeadDetail")["properties"]["status"]["enum"] == list(vertical.STATUSES)
     assert schema("BlockerView")["properties"]["kind"]["enum"] == list(
         vertical.BLOCKER_KINDS_BY_PRIORITY
     )
     assert schema("DraftView")["properties"]["kind"]["enum"] == list(vertical.MESSAGE_KINDS)
-    assert schema("AutonomySetting")["properties"]["command_class"]["enum"] == classes
     assert schema("AutonomySetting")["properties"]["level"]["enum"] == list(
         vertical.AUTONOMY_LEVELS
     )
