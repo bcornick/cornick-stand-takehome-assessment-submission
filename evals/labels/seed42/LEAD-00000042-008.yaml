@@ -1,0 +1,93 @@
+# ABOUTME: Expected first-pass result, the fixture reply and the approved quote packet for seed-42 lead 008, the demo case.
+# ABOUTME: Section 5 row: "Two missing fields | Routine request. With the full-reply fixture, this lead reaches an
+# ABOUTME: approved quote packet: the demo case."
+#
+# The address is complete and every system-owned field is on the lead or fetched. Two always-required fields are
+# missing. coverage_a 875000 against the fetched replacement cost 928992 is a ratio of 0.942, within the 10%
+# tolerance (I35): Submitted at Calculated RCE, Quote as Submitted.
+
+lead_id: LEAD-00000042-008
+reviewed_by: null
+first_pass:
+  status: in_progress
+  outcome: request_sent
+  request:
+    kind: routine_request
+    asks:
+      - property_purchase_date
+      - electrical_panel_brand
+    confirmations: []
+    catalogue_questions: []
+  not_asked:
+    occupation: bind_only
+    replacement_cost: fetched       # 928992
+    slope_angle_deg: fetched        # 5.5
+    min_distance_to_neighbor_ft: fetched    # 38
+    siding_classification: derived  # Stucco -> B
+    trust_name: condition_inactive
+    above_ground_pool_ladder: condition_inactive    # pool_type "None"
+    post_pier_supports_living_area: condition_inactive   # Slab
+    deck_height_ft: condition_inactive
+    water_heater_age_years: condition_inactive   # Tankless
+    water_heater_location: condition_inactive
+    fire_dept_response_time: condition_inactive  # protection_class "5"
+    alternative_water_source: condition_inactive
+    interior_sprinklers: condition_inactive
+    physical_barriers: condition_inactive
+    opening_protection: never_asked
+  underwriter_items: []
+  pages:
+    roof:
+      applies: yes
+      outcome: no_action
+      trace: ["05:ROOT", "05:CA", "05:OK_A"]   # Standing Seam Metal, Class A
+    siding:
+      applies: yes
+      outcome: no_action
+      trace: ["06:ROOT", "06:NC", "06:NC_OK"]
+    replacement_cost:
+      applies: yes
+      outcome: no_action
+      trace: ["12:ROOT", "12:AT", "12:AT_R"]
+    profile:
+      applies: no                  # kyc_score 2
+    occupancy:
+      applies: no                  # is_rental "No", months_unoccupied 0, listed_for_sale false
+    fire_simulation:
+      applies: no                  # p_f 0.14
+    post_and_pier:
+      applies: no
+  not_evaluated: [electrical, plumbing]
+  effects: []
+
+# The fixture reply answers both asks in full; the round closes, no ask remains, no graph is undecided and no blocker
+# is open, so the quote packet is drafted and waits for approval. Approval dispatches it.
+underwriter_actions:
+  - action: deliver_reply
+    fixture: fixtures/replies/LEAD-00000042-008.txt
+    intent: round 1 request
+  - action: approve
+    item: quote_packet
+    reason: "Clean lead; both answers in"
+after_actions:
+  status: quote_sent
+  outcome: quote_sent
+  request: null
+  underwriter_items: []
+  facts:
+    property_purchase_date: "2019-07-12"     # "they closed on the purchase on July 12, 2019"
+    electrical_panel_brand: "Square D"       # "the electrical panel in the house is a Square D unit"
+  messages: [routine_request, quote_packet]  # exactly one request and one packet in the mailbox
+  packet:
+    coverages:
+      coverage_a: 875000
+      coverage_e: 100000
+      coverage_f: 3000
+    coverage_adjustments: []
+    surcharges: []
+    requirements: []
+    exclusions_and_endorsements: []
+    advisories: []
+    obligations: []
+    not_evaluated: [electrical, plumbing]
+questions: []

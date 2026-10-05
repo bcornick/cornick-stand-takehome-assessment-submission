@@ -1,0 +1,61 @@
+# ABOUTME: Expected first-pass result for seed-42 lead 009.
+# ABOUTME: Section 5 row: "One missing field; animals | Routine request"
+#
+# acreage alone is missing. p_f (0.16) and road_access are fetched; everything else is on the lead. coverage_a 1025000
+# against replacement_cost 978879 is a ratio of 1.047, within the 10% tolerance (I35): Quote as Submitted.
+# has_animals true: the Animals criterion is not evaluated (I46) and carries a note.
+
+lead_id: LEAD-00000042-009
+reviewed_by: null
+first_pass:
+  status: in_progress
+  outcome: request_sent
+  request:
+    kind: routine_request
+    asks:
+      - acreage
+    confirmations: []
+    catalogue_questions: []
+  not_asked:
+    owner_phone_number: bind_only
+    p_f: fetched                    # 0.16
+    road_access: fetched            # Multiple Access Points
+    siding_classification: derived  # Stucco -> B
+    trust_name: condition_inactive
+    above_ground_pool_ladder: condition_inactive    # pool_type "None"
+    post_pier_supports_living_area: condition_inactive   # Slab
+    deck_height_ft: condition_inactive
+    water_heater_age_years: condition_inactive   # Tankless
+    water_heater_location: condition_inactive
+    fire_dept_response_time: condition_inactive  # protection_class "4"
+    alternative_water_source: condition_inactive
+    interior_sprinklers: condition_inactive
+    physical_barriers: condition_inactive
+    opening_protection: never_asked
+  underwriter_items: []
+  pages:
+    roof:
+      applies: yes
+      outcome: no_action
+      trace: ["05:ROOT", "05:CA", "05:OK_A"]   # Clay Tile, Class A
+    siding:
+      applies: yes
+      outcome: no_action
+      trace: ["06:ROOT", "06:NC", "06:NC_OK"]
+    replacement_cost:
+      applies: yes
+      outcome: no_action
+      trace: ["12:ROOT", "12:AT", "12:AT_R"]
+    profile:
+      applies: no                  # kyc_score 1
+    occupancy:
+      applies: no                  # is_rental "No", months_unoccupied 0, listed_for_sale false
+    fire_simulation:
+      applies: no                  # p_f 0.16
+    post_and_pier:
+      applies: no
+  not_evaluated: [electrical, plumbing, animals]
+  effects: []
+underwriter_actions: []
+after_actions: null
+questions: []

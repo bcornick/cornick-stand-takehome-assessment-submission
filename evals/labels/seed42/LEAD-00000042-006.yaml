@@ -1,0 +1,142 @@
+# ABOUTME: Expected first-pass result, the one underwriter choice and both rulings for seed-42 lead 006.
+# ABOUTME: Section 5 row: "Fire probability 0.89; wood shake siding; roof material missing | One underwriter card
+# ABOUTME: (failed fire simulation). A routine request with the registry asks, including roof material, sends
+# ABOUTME: automatically. Pool values already on the lead are not asked again. The Siding requirement is committed.
+# ABOUTME: The four protection-class questions are blocked, not asked."
+#
+# p_f 0.89 is on the lead: Fire Simulation applies, the root reaches Fail and the I13.fire_fail choice is open.
+# state and zip are missing, which blocks replacement_cost, protection_class and road_access; last_name is missing,
+# which blocks kyc_score. pool_type is missing while pool_security ("None") and pool_has_diving_board_or_slide (false)
+# are on the lead, so only above_ground_pool_ladder follows on. No validator fires.
+
+lead_id: LEAD-00000042-006
+reviewed_by: null
+first_pass:
+  status: in_progress
+  outcome: underwriter_card
+  request:
+    kind: routine_request
+    asks:
+      - state
+      - zip
+      - last_name
+      - coverage_e
+      - coverage_f
+      - year_built
+      - pool_type
+      - above_ground_pool_ladder    # follow-on: "If the pool is above ground"
+      - acreage
+      - structure_type
+      - square_feet
+      - num_stories
+      - roof_replacement_year
+      - roof_material
+      - heating_source
+      - plumbing_age_years
+      - water_heater_type
+      - water_heater_age_years      # follow-on: "If the water heater is a tank"
+      - water_heater_location       # follow-on: same preamble
+      - fire_alarm
+      - fire_department_type
+      - dist_to_nearest_fire_hydrant
+    confirmations: []
+    catalogue_questions: []        # willing_to_mitigate is held under the open I13 choice
+  not_asked:
+    owner_email: bind_only
+    owner_phone_number: bind_only
+    broker_tier: fetched            # Tier 1
+    has_primary_policy_with_stand: fetched   # false
+    kyc_score: blocked              # last_name missing
+    replacement_cost: blocked       # state and zip missing
+    protection_class: blocked
+    road_access: blocked
+    roof_classification: derived    # roof_material missing and no submitted class: undecided until the reply
+    trust_name: condition_inactive  # residence_held_in_trust false
+    post_pier_supports_living_area: condition_inactive   # Slab
+    deck_height_ft: condition_inactive
+    fire_dept_response_time: blocked    # conditional on the blocked protection_class
+    alternative_water_source: blocked
+    interior_sprinklers: blocked
+    physical_barriers: blocked
+    opening_protection: never_asked
+  underwriter_items: [I13.fire_fail]
+  pages:
+    fire_simulation:
+      applies: yes
+      outcome: choice_open
+      trace: ["04:ROOT", "04:FAIL"]
+    siding:
+      applies: yes
+      outcome: requirement
+      trace: ["06:ROOT", "06:WOOD", "06:HI", "06:HI_R"]
+    roof:
+      applies: yes
+      outcome: undecided           # roof_material missing (I20); the registry asks for it
+    replacement_cost:
+      applies: yes
+      outcome: undecided           # replacement_cost blocked
+    profile:
+      applies: unknown             # kyc_score blocked
+    occupancy:
+      applies: no                  # is_rental "No", months_unoccupied 0, listed_for_sale false
+    post_and_pier:
+      applies: no
+  not_evaluated: [electrical, plumbing, animals]
+  effects:
+    - type: requirement
+      text: "Confirmation of Class A siding or its replacement"
+      deadline: underwriting_period
+      from: "06:HI_R"
+
+underwriter_actions:
+  - action: record_ruling
+    choice_id: I13.fire_fail
+    option: decline
+    reason: "Failed simulation at 0.89; wood shake siding; neighbours 14 ft away; not 7A compliant"
+after_actions:
+  status: in_progress
+  outcome: proposed_decline
+  request: null                    # the round-1 request stays the only request
+  underwriter_items: [decline_notice]
+  pages:
+    fire_simulation:
+      applies: yes
+      outcome: decline
+      trace: ["04:ROOT", "04:FAIL", "04:D_FAIL"]
+  effects:
+    - type: decline
+      text: "Failed fire simulation"
+      from: "04:D_FAIL"
+    - type: requirement
+      text: "Confirmation of Class A siding or its replacement"
+      deadline: underwriting_period
+      from: "06:HI_R"
+
+alternatives:
+  legacy_underwriting:
+    # Map risk -> Ingress/Egress rests on road_access, blocked on state and zip: undecided. Assess Vegetation: Too
+    # Close is Heavy (I15) -> willingness to mitigate, collected. 7a Compliant false -> the same question.
+    # Min Distance 14 ft -> I16.distance opens with the value. The question waits for the reply to round 1.
+    underwriter_actions:
+      - action: record_ruling
+        choice_id: I13.fire_fail
+        option: legacy_underwriting
+        reason: "Tier 1 broker; check the legacy criteria before declining"
+    after_actions:
+      status: in_progress
+      outcome: underwriter_card
+      request: null
+      underwriter_items: [I16.distance]
+      held_catalogue_questions: [willing_to_mitigate]
+      pages:
+        fire_simulation:
+          applies: yes
+          outcome: undecided
+          trace: ["04:ROOT", "04:FAIL", "04:LEGACY"]
+      effects:
+        - type: requirement
+          text: "Confirmation of Class A siding or its replacement"
+          deadline: underwriting_period
+          from: "06:HI_R"
+questions:
+  - "owner_email and owner_phone_number are both missing; if the source is direct_web the lead has no contact route and the request waits on the underwriter. The fixture does not carry the source; which is it?"

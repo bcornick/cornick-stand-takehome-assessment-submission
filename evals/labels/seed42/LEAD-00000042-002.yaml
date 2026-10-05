@@ -1,0 +1,81 @@
+# ABOUTME: Expected first-pass result for seed-42 lead 002.
+# ABOUTME: Section 5 row: "KYC 8 | Request for missing fields; liability exclusion carried to the quote"
+#
+# kyc_score 8 is on the lead, so Profile applies and takes the KYC 8-10 branch: Exclude Liability is the first rung
+# (I03, I05); the later rung ("If Exclusion is deal killer" -> Decline) is an advisory. The address is complete, so
+# the blocked set is empty. is_gated_community is the one record on seed 42 decided by the section 9.2 table:
+# pool_type is "None", so it is inactive.
+
+lead_id: LEAD-00000042-002
+reviewed_by: null
+first_pass:
+  status: in_progress
+  outcome: request_sent
+  request:
+    kind: routine_request
+    asks:
+      - residence_held_in_trust
+      - trust_name                  # follow-on: "If the property is held in a trust"
+      - coverage_a
+      - is_rental
+      - roof_shape
+      - electrical_panel_brand
+      - dist_to_nearest_fire_hydrant
+    confirmations: []
+    catalogue_questions: []
+  not_asked:
+    owner_email: bind_only
+    has_primary_policy_with_stand: fetched   # false
+    p_f: fetched                    # 0.13
+    vegetation_clearance: fetched   # Adequate
+    road_access: fetched            # Multiple Access Points
+    roof_classification: derived    # Asphalt Fiberglass Composite -> Class A
+    siding_classification: derived  # Cement Fiber -> B
+    pool_security: condition_inactive         # pool_type is "None"
+    pool_has_diving_board_or_slide: condition_inactive
+    above_ground_pool_ladder: condition_inactive
+    is_gated_community: condition_inactive    # section 9.2 table: pool_type known and not Inground
+    post_pier_supports_living_area: condition_inactive   # Slab
+    deck_height_ft: condition_inactive
+    water_heater_age_years: condition_inactive   # Tankless
+    water_heater_location: condition_inactive
+    fire_dept_response_time: condition_inactive  # protection_class "5"
+    alternative_water_source: condition_inactive
+    interior_sprinklers: condition_inactive
+    physical_barriers: condition_inactive
+    opening_protection: never_asked
+  underwriter_items: []
+  pages:
+    profile:
+      applies: yes
+      outcome: exclusion
+      trace: ["02:ROOT", "02:HIGH", "02:HIGH1"]
+    roof:
+      applies: yes
+      outcome: no_action
+      trace: ["05:ROOT", "05:CA", "05:OK_A"]   # roof replaced 2010, 16 years: I52 does not fire
+    siding:
+      applies: yes
+      outcome: no_action
+      trace: ["06:ROOT", "06:NC", "06:NC_OK"]
+    replacement_cost:
+      applies: yes
+      outcome: undecided           # coverage_a missing; replacement_cost 489881 is on the lead
+    occupancy:
+      applies: unknown             # is_rental missing, so the Rentals condition of I06 is unknown
+    fire_simulation:
+      applies: no                  # p_f 0.13
+    post_and_pier:
+      applies: no
+  not_evaluated: [electrical, plumbing]
+  effects:
+    - type: exclusion_or_endorsement
+      text: "Exclude Liability"
+      from: "02:HIGH1"
+    - type: advisory
+      text: "Later rungs if the exclusion is a deal killer: Decline"
+      from: "02:HIGH2"
+underwriter_actions: []
+after_actions: null
+questions:
+  - "owner_email is missing and bind-only; if this lead's source is direct_web it has no contact route (section 10.3) and the request waits on the underwriter instead of sending. The fixture does not carry the source; which is it?"

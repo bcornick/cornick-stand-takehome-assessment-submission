@@ -1,0 +1,145 @@
+# ABOUTME: Expected first-pass result, the one underwriter choice and both rulings for seed-42 lead 003.
+# ABOUTME: Section 5 row: "Fire probability 0.79; wood shake siding; primary home unoccupied 3 months | One underwriter
+# ABOUTME: card (failed fire simulation). A routine request with the registry asks and the occupancy confirmation sends
+# ABOUTME: automatically. Mitigation questions are held until the choice is made. The Occupancy page is undecided while
+# ABOUTME: the conflict is open. The Siding requirement (wood shake, fire probability above 0.50) is committed. The four
+# ABOUTME: protection-class questions are blocked, not asked."
+#
+# p_f 0.79 is on the lead (an archetype value, never replaced), so Fire Simulation applies and the root reaches Fail.
+# Fail fans to Decline or Consider Legacy UWing with no criterion: the I13.fire_fail choice is open and the graph is
+# undecided. The catalogue question `willing_to_mitigate` (I17) sits beneath the choice and is held. city and zip are
+# missing, which blocks replacement_cost, protection_class and road_access; insured_dob is missing, which blocks
+# kyc_score. months_unoccupied 3 on a Primary home trips the occupancy validator; the confirmation joins the request.
+
+lead_id: LEAD-00000042-003
+reviewed_by: null
+first_pass:
+  status: in_progress
+  outcome: underwriter_card
+  request:
+    kind: routine_request
+    asks:
+      - city
+      - zip
+      - residence_held_in_trust
+      - trust_name                  # follow-on: "If the property is held in a trust"
+      - insured_dob
+      - coverage_f
+      - has_animals
+      - foundation_type
+      - post_pier_supports_living_area   # follow-on: "If the home is on piers, stilts or pilings"
+      - deck_height_ft              # follow-on: same preamble
+      - num_stories
+      - roof_material
+      - roof_shape
+      - electrical_panel_size_amps
+      - plumbing_age_years
+      - distance_to_fire_department
+    confirmations: [months_unoccupied_in_primary_home]
+    catalogue_questions: []        # willing_to_mitigate is held under the open I13 choice
+  not_asked:
+    owner_phone_number: bind_only
+    broker_tier: fetched            # Tier 1
+    has_primary_policy_with_stand: fetched   # false
+    kyc_score: blocked              # insured_dob missing
+    replacement_cost: blocked       # city and zip missing
+    protection_class: blocked
+    road_access: blocked
+    roof_classification: derived    # roof_material missing and no submitted class: undecided until the reply
+    pool_security: condition_inactive         # pool_type is "None"
+    above_ground_pool_ladder: condition_inactive
+    water_heater_age_years: condition_inactive   # Tankless
+    water_heater_location: condition_inactive
+    fire_dept_response_time: blocked    # conditional on the blocked protection_class
+    alternative_water_source: blocked
+    interior_sprinklers: blocked
+    physical_barriers: blocked
+    opening_protection: never_asked
+  underwriter_items: [I13.fire_fail]
+  pages:
+    fire_simulation:
+      applies: yes
+      outcome: choice_open
+      trace: ["04:ROOT", "04:FAIL"]
+    siding:
+      applies: yes
+      outcome: requirement
+      trace: ["06:ROOT", "06:WOOD", "06:HI", "06:HI_R"]
+    roof:
+      applies: yes
+      outcome: undecided           # roof_material missing (I20); the registry asks for it
+    replacement_cost:
+      applies: yes
+      outcome: undecided           # replacement_cost blocked
+    profile:
+      applies: unknown             # kyc_score blocked
+    occupancy:
+      applies: unknown             # months_unoccupied in the open conflict
+    post_and_pier:
+      applies: unknown             # foundation_type missing
+  not_evaluated: [electrical, plumbing]
+  effects:
+    - type: requirement
+      text: "Confirmation of Class A siding or its replacement"
+      deadline: underwriting_period
+      from: "06:HI_R"
+
+# The ruling `decline` makes the Fire Simulation root a decline; the plan becomes a proposed decline and the
+# underwriter gets the decline notice to approve. The sent request is history.
+underwriter_actions:
+  - action: record_ruling
+    choice_id: I13.fire_fail
+    option: decline
+    reason: "Failed simulation at 0.79 with wood shake siding and neighbours 14 ft away"
+after_actions:
+  status: in_progress
+  outcome: proposed_decline
+  request: null                    # no second message; the round-1 request stays the only request
+  underwriter_items: [decline_notice]
+  pages:
+    fire_simulation:
+      applies: yes
+      outcome: decline
+      trace: ["04:ROOT", "04:FAIL", "04:D_FAIL"]
+  effects:
+    - type: decline
+      text: "Failed fire simulation"
+      from: "04:D_FAIL"
+    - type: requirement
+      text: "Confirmation of Class A siding or its replacement"
+      deadline: underwriting_period
+      from: "06:HI_R"
+
+alternatives:
+  legacy_underwriting:
+    # Consider Legacy UWing is `all_of` over Map risk, 7a Compliant and Min Distance (section 9.7 fan-outs).
+    # Map risk -> Check Access -> Ingress/Egress rests on road_access, which is blocked: undecided.
+    # Map risk -> Assess Vegetation: Too Close is Heavy (I15) -> willingness to mitigate, a catalogue question now
+    # collected, since every branch above it is settled. 7a Compliant: false -> the same question.
+    # Min Distance: 14 ft has no threshold (I16), so the I16.distance choice opens, shown with the value.
+    # The catalogue question cannot be sent while round 1 is open (one open request per lead, section 10.1).
+    underwriter_actions:
+      - action: record_ruling
+        choice_id: I13.fire_fail
+        option: legacy_underwriting
+        reason: "Tier 1 broker; check the legacy criteria before declining"
+    after_actions:
+      status: in_progress
+      outcome: underwriter_card
+      request: null                # no second message until the producer replies
+      underwriter_items: [I16.distance]
+      held_catalogue_questions: [willing_to_mitigate]   # joins the next request, which is then sensitive
+      pages:
+        fire_simulation:
+          applies: yes
+          outcome: undecided       # road_access blocked, willing_to_mitigate unanswered, I16.distance open
+          trace: ["04:ROOT", "04:FAIL", "04:LEGACY"]
+      effects:
+        - type: requirement
+          text: "Confirmation of Class A siding or its replacement"
+          deadline: underwriting_period
+          from: "06:HI_R"
+questions:
+  - "The board's `UWing period` on the Siding requirement is labelled with the typed deadline `underwriting_period`; confirm the enum value."
+  - "After `legacy_underwriting`, the I16.distance card and the held mitigation question are labelled on this reading of the all_of fan-out; is `held_catalogue_questions` a key the graders should check, or only a note?"
+  - "After `decline`, the lead keeps `in_progress` because round 1 is sent and open; agreed?"

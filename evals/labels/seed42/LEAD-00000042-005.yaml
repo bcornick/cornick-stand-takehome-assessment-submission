@@ -1,0 +1,91 @@
+# ABOUTME: Expected first-pass result for seed-42 lead 005.
+# ABOUTME: Section 5 row: "KYC 6; zero residents; pool type missing | Routine request with a confirmation; liability
+# ABOUTME: exclusion carried to the quote; and follow-on questions for the missing pool fields only; the diving-board
+# ABOUTME: answer already on the lead is not asked again."
+#
+# kyc_score 6 is on the lead: Profile applies and takes the KYC 6-7 branch through SPOT (I03); Exclude Liability is
+# the first rung. state is missing, which blocks every address-keyed lookup. pool_type is missing: pool_security and
+# above_ground_pool_ladder are follow-ons; pool_has_diving_board_or_slide (false) and is_gated_community (false) are
+# present and not asked. months_unoccupied is missing, so the Occupancy page cannot decide whether it applies.
+
+lead_id: LEAD-00000042-005
+reviewed_by: null
+first_pass:
+  status: in_progress
+  outcome: request_sent
+  request:
+    kind: routine_request
+    asks:
+      - state
+      - first_name
+      - residence_held_in_trust
+      - trust_name                  # follow-on: "If the property is held in a trust"
+      - coverage_e
+      - months_unoccupied
+      - pool_type
+      - pool_security               # follow-on: "If the property has a pool"
+      - above_ground_pool_ladder    # follow-on: "If the pool is above ground"
+      - square_feet
+      - num_stories
+      - roof_material
+      - electrical_panel_size_amps
+      - water_heater_type
+      - water_heater_age_years      # follow-on: "If the water heater is a tank"
+      - water_heater_location       # follow-on: same preamble
+      - distance_to_fire_department
+      - fire_department_type
+      - dist_to_nearest_fire_hydrant
+    confirmations: [no_residents_in_primary_home]
+    catalogue_questions: []
+  not_asked:
+    broker_tier: fetched            # Tier 2
+    has_primary_policy_with_stand: fetched   # false
+    replacement_cost: blocked       # state missing
+    p_f: blocked
+    slope_angle_deg: blocked
+    min_distance_to_neighbor_ft: blocked
+    vegetation_clearance: blocked
+    road_access: blocked
+    roof_classification: derived    # roof_material missing and no submitted class: undecided until the reply
+    siding_classification: derived  # Cement Fiber -> B
+    post_pier_supports_living_area: condition_inactive   # Slab
+    deck_height_ft: condition_inactive
+    fire_dept_response_time: condition_inactive  # protection_class "5" on the lead
+    alternative_water_source: condition_inactive
+    interior_sprinklers: condition_inactive
+    physical_barriers: condition_inactive
+    opening_protection: never_asked
+  underwriter_items: []
+  pages:
+    profile:
+      applies: yes
+      outcome: exclusion
+      trace: ["02:ROOT", "02:SPOT", "02:SPOT1"]
+    siding:
+      applies: yes
+      outcome: no_action
+      trace: ["06:ROOT", "06:NC", "06:NC_OK"]
+    roof:
+      applies: yes
+      outcome: undecided           # roof_material missing (I20)
+    replacement_cost:
+      applies: yes
+      outcome: undecided           # replacement_cost blocked
+    occupancy:
+      applies: unknown             # months_unoccupied missing
+    fire_simulation:
+      applies: unknown             # p_f blocked on state
+    post_and_pier:
+      applies: no
+  not_evaluated: [electrical, plumbing, animals]
+  effects:
+    - type: exclusion_or_endorsement
+      text: "Exclude Liability"
+      from: "02:SPOT1"
+    - type: advisory
+      text: "Later rungs if the exclusion is a deal killer: Social Media Exclusion, Libel/Slander Exclusion, Defense within Limits; then Premises Liability Only; then Decline"
+      from: "02:SPOT2"
+underwriter_actions: []
+after_actions: null
+questions:
+  - "Pools is a cut page whose applies_when rests on the missing pool_type; it is left out of `not_evaluated` as unknown rather than applying. Agreed?"

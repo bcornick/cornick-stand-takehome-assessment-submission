@@ -1,0 +1,71 @@
+# ABOUTME: Expected first-pass result for seed-42 lead 004.
+# ABOUTME: Section 5 row: "Zero residents on an owner-occupied home; animals | Routine request with a confirmation question"
+#
+# number_of_residents 0 with dwelling_type Owner Occupied Single Family Residence trips the no_residents validator;
+# the neutral confirmation joins the request. dwelling_use_type is missing: it is one of the confirmation's fields
+# but a conflict covers only present values, so the registry asks for it. has_animals true: the overview's Animals
+# criterion is not evaluated (I46) and carries a note.
+
+lead_id: LEAD-00000042-004
+reviewed_by: null
+first_pass:
+  status: in_progress
+  outcome: request_sent
+  request:
+    kind: routine_request
+    asks:
+      - coverage_a
+      - dwelling_use_type
+      - property_purchase_date
+      - num_stories
+      - fire_department_type
+    confirmations: [no_residents_in_primary_home]
+    catalogue_questions: []
+  not_asked:
+    owner_phone_number: bind_only
+    broker_tier: fetched            # Tier 1
+    replacement_cost: fetched       # 832290
+    protection_class: fetched       # "4"
+    p_f: fetched                    # 0.14
+    slope_angle_deg: fetched        # 9.8
+    min_distance_to_neighbor_ft: fetched    # 37
+    vegetation_clearance: fetched   # Adequate
+    siding_classification: derived  # Stucco -> B
+    trust_name: condition_inactive
+    above_ground_pool_ladder: condition_inactive    # pool_type "None"
+    post_pier_supports_living_area: condition_inactive   # Slab
+    deck_height_ft: condition_inactive
+    water_heater_age_years: condition_inactive   # Tankless
+    water_heater_location: condition_inactive
+    fire_dept_response_time: condition_inactive  # protection_class "4"
+    alternative_water_source: condition_inactive
+    interior_sprinklers: condition_inactive
+    physical_barriers: condition_inactive
+    opening_protection: never_asked
+  underwriter_items: []
+  pages:
+    roof:
+      applies: yes
+      outcome: no_action
+      trace: ["05:ROOT", "05:CA", "05:OK_A"]   # Clay Tile, Class A
+    siding:
+      applies: yes
+      outcome: no_action
+      trace: ["06:ROOT", "06:NC", "06:NC_OK"]
+    replacement_cost:
+      applies: yes
+      outcome: undecided           # coverage_a missing
+    profile:
+      applies: no                  # kyc_score 4
+    occupancy:
+      applies: no                  # is_rental "No", months_unoccupied 0, listed_for_sale false
+    fire_simulation:
+      applies: no                  # p_f 0.14
+    post_and_pier:
+      applies: no
+  not_evaluated: [electrical, plumbing, animals]
+  effects: []
+underwriter_actions: []
+after_actions: null
+questions:
+  - "Animals (I46) is listed under `not_evaluated` beside the two cut pages because has_animals is true; is that where the note belongs, or is it only a lead note outside this list?"

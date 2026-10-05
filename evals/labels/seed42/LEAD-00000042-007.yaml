@@ -1,0 +1,86 @@
+# ABOUTME: Expected first-pass result for seed-42 lead 007.
+# ABOUTME: Section 5 row: "KYC 9 | Request for missing fields; liability exclusion carried to the quote. The four
+# ABOUTME: protection-class questions are blocked, not asked."
+#
+# kyc_score 9 is on the lead: Profile applies and takes the KYC 8-10 branch; Exclude Liability is the first rung.
+# zip is missing, which blocks replacement_cost, protection_class, slope_angle_deg, min_distance_to_neighbor_ft,
+# vegetation_clearance and road_access; p_f (0.1) is on the lead. No validator fires.
+
+lead_id: LEAD-00000042-007
+reviewed_by: null
+first_pass:
+  status: in_progress
+  outcome: request_sent
+  request:
+    kind: routine_request
+    asks:
+      - zip
+      - coverage_e
+      - dwelling_type
+      - property_purchase_date
+      - has_animals
+      - square_feet
+      - roof_shape
+      - electrical_panel_brand
+    confirmations: []
+    catalogue_questions: []
+  not_asked:
+    owner_email: bind_only
+    owner_phone_number: bind_only
+    occupation: bind_only
+    broker_tier: fetched            # Tier 1
+    has_primary_policy_with_stand: fetched   # false
+    replacement_cost: blocked       # zip missing
+    protection_class: blocked
+    slope_angle_deg: blocked
+    min_distance_to_neighbor_ft: blocked
+    vegetation_clearance: blocked
+    road_access: blocked
+    roof_classification: derived    # Asphalt Fiberglass Composite -> Class A
+    trust_name: condition_inactive
+    pool_security: condition_inactive         # pool_type "None"
+    above_ground_pool_ladder: condition_inactive
+    post_pier_supports_living_area: condition_inactive   # Slab
+    deck_height_ft: condition_inactive
+    water_heater_age_years: condition_inactive   # Tankless
+    water_heater_location: condition_inactive
+    fire_dept_response_time: blocked    # conditional on the blocked protection_class
+    alternative_water_source: blocked
+    interior_sprinklers: blocked
+    physical_barriers: blocked
+    opening_protection: never_asked
+  underwriter_items: []
+  pages:
+    profile:
+      applies: yes
+      outcome: exclusion
+      trace: ["02:ROOT", "02:HIGH", "02:HIGH1"]
+    roof:
+      applies: yes
+      outcome: no_action
+      trace: ["05:ROOT", "05:CA", "05:OK_A"]   # roof replaced 2019: I52 does not fire
+    siding:
+      applies: yes
+      outcome: no_action
+      trace: ["06:ROOT", "06:NC", "06:NC_OK"]   # Brick / Masonry Veneer, class A
+    replacement_cost:
+      applies: yes
+      outcome: undecided           # replacement_cost blocked
+    occupancy:
+      applies: no                  # is_rental "No", months_unoccupied 0, listed_for_sale false
+    fire_simulation:
+      applies: no                  # p_f 0.1
+    post_and_pier:
+      applies: no
+  not_evaluated: [electrical, plumbing]
+  effects:
+    - type: exclusion_or_endorsement
+      text: "Exclude Liability"
+      from: "02:HIGH1"
+    - type: advisory
+      text: "Later rungs if the exclusion is a deal killer: Decline"
+      from: "02:HIGH2"
+underwriter_actions: []
+after_actions: null
+questions:
+  - "owner_email is missing; if the source is direct_web the lead has no contact route. The fixture does not carry the source; which is it?"

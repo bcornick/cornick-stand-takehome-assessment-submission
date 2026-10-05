@@ -1,0 +1,106 @@
+# ABOUTME: Expected first-pass result and scripted underwriter actions for seed-42 lead 000.
+# ABOUTME: Section 5 row: "Pier foundation supporting living area; primary home unoccupied 8 months; no address |
+# ABOUTME: Proposed decline for the underwriter. No producer request."
+#
+# Post & Pier applies (foundation_type Piers, I23) and post_pier_supports_living_area is true, so the page's root
+# reaches Decline. A decline at the root of an applying page makes the lead a proposed decline and suppresses every
+# request, confirmations included (section 9.6, precedence rule 1). The 24 registry asks, 3 pool follow-ons and the
+# months_unoccupied confirmation that would otherwise go out are listed under `suppressed`, so the answer-key
+# grader's decline exemption count is pinned here (section 13.2).
+
+lead_id: LEAD-00000042-000
+reviewed_by: null
+first_pass:
+  status: triaged
+  outcome: proposed_decline
+  request: null
+  suppressed:                      # what the registry and validators would have asked, held back by the decline
+    asks:
+      - street_address
+      - city
+      - county
+      - state
+      - zip
+      - first_name
+      - last_name
+      - insured_dob
+      - number_of_residents
+      - year_built
+      - property_purchase_date
+      - pool_type
+      - pool_security               # follow-on: "If the property has a pool"
+      - pool_has_diving_board_or_slide   # follow-on: same preamble
+      - above_ground_pool_ladder    # follow-on: "If the pool is above ground"
+      - has_animals
+      - construction_type
+      - deck_height_ft              # conditional active: foundation_type Piers
+      - num_stories
+      - roof_replacement_year
+      - roof_shape
+      - electrical_panel_brand
+      - electrical_panel_size_amps
+      - fire_alarm
+      - distance_to_fire_department
+      - fire_department_type
+      - is_7a_compliant
+    confirmations: [months_unoccupied_in_primary_home]
+  not_asked:
+    kyc_score: blocked              # provider needs first_name, last_name, insured_dob; all missing
+    replacement_cost: blocked       # provider needs the full address; none of its four fields is present
+    protection_class: blocked
+    min_distance_to_neighbor_ft: blocked
+    vegetation_clearance: blocked
+    road_access: blocked
+    broker_tier: fetched            # Tier 1
+    has_primary_policy_with_stand: fetched   # false
+    roof_classification: derived    # Architecture Shingles -> Class A
+    trust_name: condition_inactive  # residence_held_in_trust is false
+    water_heater_age_years: condition_inactive   # water_heater_type is Tankless
+    water_heater_location: condition_inactive
+    fire_dept_response_time: blocked    # conditional on protection_class, whose lookup is blocked
+    alternative_water_source: blocked
+    interior_sprinklers: blocked
+    physical_barriers: blocked
+    opening_protection: never_asked
+  underwriter_items: [decline_notice]
+  pages:
+    post_and_pier:
+      applies: yes
+      outcome: decline
+      trace: ["07:ROOT", "07:LIVING", "07:D1"]
+    roof:
+      applies: yes
+      outcome: no_action
+      trace: ["05:ROOT", "05:CA", "05:OK_A"]
+    siding:
+      applies: yes
+      outcome: no_action
+      trace: ["06:ROOT", "06:NC", "06:NC_OK"]   # Stucco, class B, non-combustible branch (I21)
+    replacement_cost:
+      applies: yes
+      outcome: undecided           # replacement_cost lookup blocked on the address
+    profile:
+      applies: unknown             # kyc_score lookup blocked on name and date of birth
+    occupancy:
+      applies: unknown             # months_unoccupied 8 sits in the open months_unoccupied_in_primary_home conflict (I06, section 9.6 usable facts)
+    fire_simulation:
+      applies: no                  # p_f 0.13 on the lead, at or below 0.50 (I12)
+  not_evaluated: [electrical, plumbing]
+  effects:
+    - type: decline
+      text: "Post and pier foundation supports part of the living area"
+      from: "07:D1"
+underwriter_actions:
+  - action: approve
+    item: decline_notice
+    reason: "Living area on piers; the board declines on this path"
+after_actions:
+  status: declined
+  outcome: proposed_decline
+  request: null
+  underwriter_items: []
+  messages: [decline_notice]       # one decline notice in the mailbox, no request
+questions:
+  - "Status of a lead waiting on a decline notice: labelled `triaged` (nothing has been sent); should it be `in_progress`?"
+  - "Occupancy is `applies: unknown` because months_unoccupied is in an open conflict that the decline suppresses; is the decline traced to Post & Pier alone, as labelled, or should Occupancy's own decline path (03:UNOCC -> 03:V_NP -> DECLINE) appear as a second trace?"
+  - "Pools, Animals and PC 9 & 10 rest on missing facts (pool_type, has_animals, protection_class); the label lists only the pages that certainly apply. Should an unknown cut page also carry a note?"

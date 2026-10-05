@@ -1,0 +1,77 @@
+# ABOUTME: Expected first-pass result for seed-42 lead 001.
+# ABOUTME: Section 5 row: "No street address; several lookups blocked on it | Routine request including the address.
+# ABOUTME: The fire probability lookup is blocked, so the Fire Simulation page is undecided and raises no card."
+#
+# city, state and zip are present; street_address alone is missing, and it blocks every address-keyed lookup:
+# replacement_cost, p_f, slope_angle_deg, min_distance_to_neighbor_ft and vegetation_clearance. protection_class ("5")
+# and road_access are on the lead. kyc_score is fetched (2), so Profile does not apply.
+
+lead_id: LEAD-00000042-001
+reviewed_by: null
+first_pass:
+  status: in_progress
+  outcome: request_sent
+  request:
+    kind: routine_request
+    asks:
+      - street_address
+      - number_of_residents
+      - coverage_a
+      - coverage_f
+      - dwelling_type
+      - structure_type
+      - num_stories
+      - roof_shape
+      - electrical_panel_brand
+      - electrical_panel_size_amps
+      - water_heater_type
+      - water_heater_age_years      # follow-on: "If the water heater is a tank"
+      - water_heater_location       # follow-on: "If the water heater is a tank"
+      - fire_alarm
+      - dist_to_nearest_fire_hydrant
+    confirmations: []
+    catalogue_questions: []
+  not_asked:
+    occupation: bind_only
+    kyc_score: fetched              # 2
+    replacement_cost: blocked       # street_address missing
+    p_f: blocked
+    slope_angle_deg: blocked
+    min_distance_to_neighbor_ft: blocked
+    vegetation_clearance: blocked
+    roof_classification: derived    # Architecture Shingles -> Class A
+    trust_name: condition_inactive  # residence_held_in_trust is false
+    above_ground_pool_ladder: condition_inactive    # pool_type is "None"
+    post_pier_supports_living_area: condition_inactive   # foundation_type is Slab
+    deck_height_ft: condition_inactive
+    fire_dept_response_time: condition_inactive     # protection_class is "5"
+    alternative_water_source: condition_inactive
+    interior_sprinklers: condition_inactive
+    physical_barriers: condition_inactive
+    opening_protection: never_asked
+  underwriter_items: []
+  pages:
+    roof:
+      applies: yes
+      outcome: no_action
+      trace: ["05:ROOT", "05:CA", "05:OK_A"]
+    siding:
+      applies: yes
+      outcome: no_action
+      trace: ["06:ROOT", "06:NC", "06:NC_OK"]   # Cement Fiber, class B
+    replacement_cost:
+      applies: yes
+      outcome: undecided           # coverage_a missing and replacement_cost blocked
+    profile:
+      applies: no                  # kyc_score 2 (I02)
+    occupancy:
+      applies: no                  # is_rental "No", months_unoccupied 0, listed_for_sale false
+    fire_simulation:
+      applies: unknown             # p_f lookup blocked on street_address
+    post_and_pier:
+      applies: no                  # Slab
+  not_evaluated: [electrical, plumbing]
+  effects: []
+underwriter_actions: []
+after_actions: null
+questions: []

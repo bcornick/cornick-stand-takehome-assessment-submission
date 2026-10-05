@@ -1,0 +1,23 @@
+# ABOUTME: The terminal board edges that per-page cases do not cover, each with the interpretation row that removes it (section 13.2, "Case coverage").
+# ABOUTME: Edges are named by page number and the Mermaid node ids of the playbook transcription.
+
+edges:
+  # Profile: "Reputational Damage to Stand" is not evaluated (I04).
+  - {page: "02", from: REP, to: DECLINE, row: I04}
+  # Profile: rungs after the first are an advisory, never an outcome of their own (I05). The PRIV branch is also
+  # removed by I03, which traces KYC 6 to 7 through SPOT.
+  - {page: "02", from: SPOT6, to: DECLINE, row: I05}
+  - {page: "02", from: PRIV_FAV, to: ACCEPT, row: I05}
+  - {page: "02", from: PRIV_ADV, to: DECLINE, row: I05}
+  - {page: "02", from: HIGH2, to: DECLINE, row: I05}
+  # Fire Simulation: "Do Not Write" is never produced (I12).
+  - {page: "04", from: DNW, to: D_DNW, row: I12}
+  # Fire Simulation: the responder turn-around branch is not evaluated; `road_access` drives INGRESS alone (I14).
+  - {page: "04", from: SUFF, to: CTQ_A, row: I14}
+  - {page: "04", from: INSUFF, to: D_INS, row: I14}
+  # Roof: the Unknown Class branch is not encoded; class comes from the derivation map (I20).
+  - {page: "05", from: U_LO, to: OK_B, row: I20}
+  - {page: "05", from: U_MID_NC, to: U_MID_OK, row: I20}
+  - {page: "05", from: U_MID_C, to: U_MID_R, row: I20}
+  - {page: "05", from: U_HI_NC, to: U_HI_OK, row: I20}
+  - {page: "05", from: U_HI_C, to: U_HI_R, row: I20}
