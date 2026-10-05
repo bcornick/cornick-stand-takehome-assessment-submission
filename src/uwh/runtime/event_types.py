@@ -48,6 +48,8 @@ ProposalState = Literal["open", "applied", "dismissed"]
 IntentState = Literal["draft", "dispatching", "sent", "unknown", "closed_unsent"]
 RunStatus = Literal["processing", "settled"]
 SkillStatus = Literal["untested", "passing", "failing", "unavailable"]
+# A.10: the two codes a skill abstains with, and nothing else.
+AbstentionReason = Literal["invalid_tool_input", "refusal"]
 ReplyClassification = Literal["answers_all", "answers_some", "declines_to_answer", "off_topic"]
 RulingKind = Literal["choice", "suppression", "decline", "withdrawal", "reopened_choice"]
 

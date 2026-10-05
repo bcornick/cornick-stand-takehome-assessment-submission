@@ -21,6 +21,7 @@ from uwh.rules.models import (
 from uwh.api.views import BlockerOwner
 from uwh.providers.models import ProviderResult
 from uwh.runtime.event_types import (
+    AbstentionReason,
     BlockerDetail,
     Candidate,
     ConflictOpened,
@@ -30,9 +31,9 @@ from uwh.runtime.event_types import (
 
 
 class Abstention(StrictModel):
-    """What a skill returns in place of a result. `read_reply` uses the codes `refusal` and `invalid_tool_input` (A.10)."""
+    """What a skill returns in place of a result. The reason is one of the two codes of A.10."""
 
-    reason: str
+    reason: AbstentionReason
     message: str
 
 
@@ -177,9 +178,32 @@ class InternalCopy(StrictModel):
 
 
 class BuildQuotePacketInput(StrictModel):
+    """9.6: the packet is built only when the plan holds no decline, no graph is undecided, no
+    choice is open, no blocker is open and no ask remains. The skill refuses an input that breaks it."""
+
     plan: ActionPlan
     facts: dict[str, JsonValue]  # submitted values, for the coverages
     assumed: dict[str, JsonValue]  # facts tagged assumed
+    outstanding_asks: list[Ask]  # the asks still to be answered
+    open_blocker_kinds: list[str]  # the kind of each open blocker of the lead
+
+    @model_validator(mode="after")
+    def nothing_is_left_to_settle(self) -> Self:
+        broken = []
+        if self.plan.proposed_decline:
+            broken.append("the plan is a proposed decline")
+        if self.plan.undecided:
+            broken.append("the plan has an undecided page")
+        if self.plan.open_choices:
+            broken.append("the plan has an open choice")
+        if self.open_blocker_kinds:
+            broken.append(f"an open blocker remains: {', '.join(self.open_blocker_kinds)}")
+        if self.outstanding_asks:
+            ids = ", ".join(ask.ask_id for ask in self.outstanding_asks)
+            broken.append(f"an outstanding ask remains: {ids}")
+        if broken:
+            raise ValueError("a quote packet is not built when " + "; ".join(broken))
+        return self
 
 
 class BuildQuotePacketResult(StrictModel):

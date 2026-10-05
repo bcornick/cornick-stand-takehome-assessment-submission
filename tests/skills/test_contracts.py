@@ -12,6 +12,7 @@ from uwh.skills.contracts import (
     Abstention,
     AskField,
     BlockerRequest,
+    BuildQuotePacketInput,
     BuildQuotePacketResult,
     Candidate,
     EvaluatePlaybookInput,
@@ -182,6 +183,8 @@ INPUTS: dict[str, dict[str, Any]] = {
         "plan": {},
         "facts": {"coverage_a": 500000},
         "assumed": {"protection_class": "9"},
+        "outstanding_asks": [],
+        "open_blocker_kinds": [],
     },
 }
 RESULTS: dict[str, dict[str, Any]] = {
@@ -291,6 +294,9 @@ def test_the_abstention_holds_a_reason_code_and_a_plain_message() -> None:
         assert Abstention(reason=reason, message="m").reason == reason
     with pytest.raises(ValidationError):
         Abstention.model_validate({"reason": "refusal", "message": "m", "surprise": 1})
+    for reason in ("timeout", "invalid_input", ""):  # A.10: two codes and nothing else
+        with pytest.raises(ValidationError):
+            Abstention.model_validate({"reason": reason, "message": "m"})
 
 
 def test_inputs_carry_no_handles_or_clients() -> None:
@@ -588,6 +594,78 @@ def test_the_quote_packet_carries_the_obligations_and_the_not_evaluated_notes() 
     assert [n.ref for n in packet.notes] == ["plumbing", "electrical"]
     with pytest.raises(ValidationError):  # an obligation is not an advisory
         QuotePacket.model_validate({**PACKET, "obligations": PACKET["advisories"]})
+
+
+def test_the_quote_packet_lines_carry_the_deadline_of_a_surcharge_or_an_adjustment() -> None:
+    # 10.5: a surcharge or coverage adjustment that carries a deadline shows it on its line.
+    packet = QuotePacket.model_validate(
+        {
+            **PACKET,
+            "surcharges": [{**PACKET["surcharges"][0], "deadline": "duration_of_non_occupancy"}],
+            "coverage_adjustments": [
+                {**PACKET["coverage_adjustments"][0], "deadline": "within_30_days_of_bind"}
+            ],
+        }
+    )
+    assert packet.surcharges[0].deadline == "duration_of_non_occupancy"
+    assert packet.coverage_adjustments[0].deadline == "within_30_days_of_bind"
+    plain = QuotePacket.model_validate(PACKET)
+    assert plain.surcharges[0].deadline is None and plain.coverage_adjustments[0].deadline is None
+    with pytest.raises(ValidationError):
+        QuotePacket.model_validate(
+            {**PACKET, "surcharges": [{**PACKET["surcharges"][0], "deadline": "soon"}]}
+        )
+
+
+UNDECIDED_PLAN = {"undecided": [{"graph": "roof", "waits_on": ["roof_material"]}]}
+OPEN_CHOICE_PLAN = {
+    "open_choices": [
+        {
+            "choice_id": "I13.fire_fail",
+            "options": ["decline", "legacy_underwriting"],
+            "prompt": "p",
+            "show": [],
+        }
+    ]
+}
+DECLINE_PLAN = {"proposed_decline": True, "underwriter_decline": "Reputational damage"}
+
+
+def test_a_quote_packet_input_with_nothing_left_to_settle_is_accepted() -> None:
+    packet_input = BuildQuotePacketInput.model_validate(INPUTS["build_quote_packet"])
+    assert packet_input.outstanding_asks == [] and packet_input.open_blocker_kinds == []
+
+
+@pytest.mark.parametrize(
+    ("change", "named"),
+    [
+        ({"plan": DECLINE_PLAN}, "proposed decline"),
+        ({"plan": UNDECIDED_PLAN}, "undecided page"),
+        ({"plan": OPEN_CHOICE_PLAN}, "open choice"),
+        ({"open_blocker_kinds": ["producer_reply"]}, "open blocker.*producer_reply"),
+        ({"outstanding_asks": [ASK]}, "outstanding ask.*pool_security"),
+    ],
+)
+def test_the_quote_packet_skill_refuses_an_input_that_breaks_its_precondition(
+    change: dict[str, Any], named: str
+) -> None:
+    # 9.6: the skill runs only when the plan holds no decline, no graph is undecided, no blocker
+    # is open and no ask remains.
+    with pytest.raises(ValidationError, match=named):
+        BuildQuotePacketInput.model_validate({**INPUTS["build_quote_packet"], **change})
+
+
+def test_the_quote_packet_precondition_names_every_broken_part() -> None:
+    with pytest.raises(ValidationError) as error:
+        BuildQuotePacketInput.model_validate(
+            {
+                **INPUTS["build_quote_packet"],
+                "plan": {**UNDECIDED_PLAN, **OPEN_CHOICE_PLAN},
+                "open_blocker_kinds": ["data"],
+            }
+        )
+    message = str(error.value)
+    assert "undecided page" in message and "open choice" in message and "open blocker" in message
 
 
 PRICE_WORDS = ("price", "premium", "cost", "amount", "total", "fee", "rate")

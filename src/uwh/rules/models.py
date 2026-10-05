@@ -75,6 +75,7 @@ class SurchargeEffect(StrictModel):
     type: Literal["surcharge"]
     rule: str
     percent: Annotated[int, Field(strict=True)]  # a whole number, as A.6 writes it
+    deadline: Deadline | None = None  # how long the modification applies (I56)
 
 
 class ExclusionOrEndorsementEffect(StrictModel):
@@ -90,6 +91,7 @@ class CoverageAdjustmentEffect(StrictModel):
     rule: str
     field: str
     proposed_value: str | int | float | bool
+    deadline: Deadline | None = None  # how long the modification applies (I56)
 
 
 class AdvisoryEffect(StrictModel):
@@ -244,7 +246,7 @@ class ActionPlan(StrictModel):
 
     effects: list[
         PlannedEffect
-    ] = []  # deduplicated by rule id; advisories, ladder rungs and suppression notes included
+    ] = []  # one per effect type and rule id; advisories, ladder rungs and suppression notes included
     declines_on_every_branch: list[RuleTrace] = []  # each trace carries its alternatives
     # True exactly when the plan holds a committed decline effect, a decline on every branch, or
     # the underwriter's own decline.
@@ -269,6 +271,19 @@ class ActionPlan(StrictModel):
                 "proposed_decline is true exactly when the plan holds a committed decline, "
                 "a decline on every branch or the underwriter's decline"
             )
+        return self
+
+    @model_validator(mode="after")
+    def effects_are_unique_by_type_and_rule(self) -> Self:
+        seen: set[tuple[str, str]] = set()
+        for planned in self.effects:
+            key = (planned.effect.type, planned.effect.rule)
+            if key in seen:
+                raise ValueError(
+                    f"effects hold one {key[0]} effect for rule {key[1]}, "
+                    "deduplicated by effect type and rule id"
+                )
+            seen.add(key)
         return self
 
     @model_validator(mode="after")

@@ -581,6 +581,16 @@
         "additionalProperties": false,
         "description": "A proposed value for a coverage field; the submitted value stays with the facts.",
         "properties": {
+          "deadline": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Deadline"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "field": {
             "title": "Field",
             "type": "string"
@@ -616,7 +626,8 @@
           "type",
           "rule",
           "field",
-          "proposed_value"
+          "proposed_value",
+          "deadline"
         ],
         "title": "CoverageAdjustmentEffect",
         "type": "object"
@@ -2780,6 +2791,16 @@
       "SurchargeEffect": {
         "additionalProperties": false,
         "properties": {
+          "deadline": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Deadline"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "percent": {
             "title": "Percent",
             "type": "integer"
@@ -2797,7 +2818,8 @@
         "required": [
           "type",
           "rule",
-          "percent"
+          "percent",
+          "deadline"
         ],
         "title": "SurchargeEffect",
         "type": "object"

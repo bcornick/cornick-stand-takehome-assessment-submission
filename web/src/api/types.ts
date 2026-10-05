@@ -477,6 +477,7 @@ export interface components {
          * @description A proposed value for a coverage field; the submitted value stays with the facts.
          */
         CoverageAdjustmentEffect: {
+            deadline: components["schemas"]["Deadline"] | null;
             /** Field */
             field: string;
             /** Proposed Value */
@@ -1256,6 +1257,7 @@ export interface components {
         };
         /** SurchargeEffect */
         SurchargeEffect: {
+            deadline: components["schemas"]["Deadline"] | null;
             /** Percent */
             percent: number;
             /** Rule */

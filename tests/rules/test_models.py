@@ -153,7 +153,7 @@ EFFECT_SAMPLES: dict[str, dict[str, Any]] = {
         "text": "Replace the roof",
         "deadline": "within_60_days",
     },
-    "surcharge": {"type": "surcharge", "rule": "PP-3", "percent": 15},
+    "surcharge": {"type": "surcharge", "rule": "PP-3", "percent": 15, "deadline": None},
     "exclusion_or_endorsement": {
         "type": "exclusion_or_endorsement",
         "rule": "PR-1",
@@ -164,6 +164,7 @@ EFFECT_SAMPLES: dict[str, dict[str, Any]] = {
         "rule": "RC-1",
         "field": "coverage_a",
         "proposed_value": 500000,
+        "deadline": None,
     },
     "advisory": {"type": "advisory", "rule": "PR-2", "text": "Later rungs: ..."},
     "obligation": {
@@ -232,6 +233,18 @@ def test_a_requirement_deadline_must_be_a_deadline() -> None:
         EFFECT.validate_python(
             {"type": "requirement", "rule": "RF-2", "text": "x", "deadline": "in two weeks"}
         )
+
+
+@pytest.mark.parametrize("name", ["surcharge", "coverage_adjustment"])
+def test_a_surcharge_and_a_coverage_adjustment_may_carry_a_deadline(name: str) -> None:
+    # 9.6, I56: the deadline says how long the modification applies.
+    sample = {**EFFECT_SAMPLES[name], "deadline": "duration_of_non_occupancy"}
+    effect = EFFECT.validate_python(sample)
+    assert effect.deadline == Deadline.duration_of_non_occupancy  # type: ignore[union-attr]
+    assert EFFECT.dump_python(effect, mode="json") == sample
+    assert EFFECT.validate_python(EFFECT_SAMPLES[name]).deadline is None  # type: ignore[union-attr]
+    with pytest.raises(ValidationError):
+        EFFECT.validate_python({**EFFECT_SAMPLES[name], "deadline": "for a while"})
 
 
 def test_a_coverage_adjustment_has_no_field_for_the_submitted_value() -> None:
@@ -555,7 +568,7 @@ def plan_in_order(forward: bool) -> ActionPlan:
             [
                 surcharge("RF-1"),
                 surcharge("RF-2", committed=False),
-                surcharge("RF-2"),
+                surcharge("RF-3"),
                 surcharge("PR-1"),
             ]
         ),
@@ -603,7 +616,7 @@ def test_a_plan_puts_every_list_in_a_stable_order() -> None:
         ("PR-1", True),
         ("RF-1", True),
         ("RF-2", False),
-        ("RF-2", True),
+        ("RF-3", True),
     ]
     assert [t.alternatives[0].rule for t in plan.declines_on_every_branch] == ["PC-2", "PP-1"]
     assert [u.graph for u in plan.undecided] == ["fire_simulation", "roof"]
@@ -611,6 +624,27 @@ def test_a_plan_puts_every_list_in_a_stable_order() -> None:
     assert [c.choice_id for c in plan.open_choices] == ["I13.fire_fail", "I16.slope"]
     assert plan.catalogue_questions == ["kt_extent", "willing_to_mitigate"]
     assert [n.ref for n in plan.not_evaluated] == ["04:ACCESS", "I46"]
+
+
+def test_a_plan_holds_one_effect_for_each_effect_type_and_rule_id() -> None:
+    # 9.6: effects are deduplicated by effect type and rule id.
+    with pytest.raises(ValidationError, match="surcharge.*RF-1"):
+        ActionPlan(effects=[surcharge("RF-1"), surcharge("RF-1")])
+    with pytest.raises(ValidationError, match="surcharge.*RF-1"):
+        ActionPlan(effects=[surcharge("RF-1"), surcharge("RF-1", committed=False)])
+
+
+def test_a_plan_accepts_one_rule_id_under_two_effect_types() -> None:
+    advisory = PlannedEffect(
+        effect=AdvisoryEffect(type="advisory", rule="RF-1", text="Later rungs"),
+        trace=ROOF_TRACE,
+        committed=True,
+    )
+    plan = ActionPlan(effects=[surcharge("RF-1"), advisory])
+    assert {(p.effect.type, p.effect.rule) for p in plan.effects} == {
+        ("surcharge", "RF-1"),
+        ("advisory", "RF-1"),
+    }
 
 
 def test_an_open_choice_keeps_the_option_and_show_order_it_was_given() -> None:
