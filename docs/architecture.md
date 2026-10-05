@@ -488,7 +488,7 @@ Acceptance cases:
 5. Registry asks go out while an underwriter choice is open. Catalogue questions and document requests that sit under an unanswered choice are held until it is answered.
 6. All open underwriter choices on a lead are shown as one card.
 
-**Load-time checks.** Bands complete and non-overlapping (`one_of`). Every outcome reachable. No outcome holds two effects of one type under one rule id. Every field exists in the registry or the catalogue. Every fan-out declares its semantics. Every row in section 9.7 is referenced by a node, marked `not_evaluated`, carries `applied_in` (naming the validator, derivation, resolution rule or rendering step that applies it), or belongs to a page listed in `graphs/_not_encoded.yaml`. A lead that a not-encoded page applies to carries a `not_evaluated` note naming the page.
+**Load-time checks.** Bands complete and non-overlapping (`one_of`). Every outcome reachable. No outcome holds two effects of one type under one rule id. Every field exists in the registry or the catalogue. Every fan-out declares its semantics. Every row in section 9.7 is referenced by a node, marked `not_evaluated`, carries `applied_in` (naming the validator, derivation, resolution rule, rendering step, graph page or effect field that applies it), or belongs to a page listed in `graphs/_not_encoded.yaml`. A lead that a not-encoded page applies to carries a `not_evaluated` note naming the page.
 
 ### 9.7 Interpretation table
 
@@ -500,10 +500,10 @@ These rulings are this submission's reading, not Stand's. Brett reviews every ro
 |---|---|---|---|---|
 | I01 | Profile | KYC scale undefined; example payload shows 82 | Scale is 1 to 10; other values are unsupported | A |
 | I02 | Profile | KYC 5 or below | Page does not apply | A |
-| I03 | Profile | "In the spotlight" versus "private" for KYC 6 to 7 | Both branches begin with Exclude Liability, so the quote carries the exclusion; the distinction is recorded as an advisory for negotiation Traces use `02:SPOT`, `02:SPOT1` for KYC 6 to 7 (the generator's own note on these leads reads "in spotlight") and `02:HIGH`, `02:HIGH1` for KYC 8 to 10. | A |
+| I03 | Profile | "In the spotlight" versus "private" for KYC 6 to 7 | Both branches begin with Exclude Liability, so the quote carries the exclusion; the distinction is recorded as an advisory for negotiation. Traces use `02:SPOT`, `02:SPOT1` for KYC 6 to 7 (the generator's own note on these leads reads "in spotlight") and `02:HIGH`, `02:HIGH1` for KYC 8 to 10. | A |
 | I04 | Profile | "Reputational damage to Stand" | Not evaluated by the system; the underwriter can decline at packet approval | N |
 | I05 | Profile | "Deal killer" ladders | `ladder`: first rung in the packet, later rungs as an advisory | A |
-| I06 | Occupancy | Which branch applies | Rentals when `is_rental` is not "No"; Vacant/Unoccupied when `months_unoccupied` is 1 or more; For Sale when `listed_for_sale` is true Traces for the vacant or unoccupied branch use board box `03:UNOCC`, the box named after the registry field. | A |
+| I06 | Occupancy | Which branch applies | Rentals when `is_rental` is not "No"; Vacant/Unoccupied when `months_unoccupied` is 1 or more; For Sale when `listed_for_sale` is true. Traces for the vacant or unoccupied branch use board box `03:UNOCC`, the box named after the registry field. | A |
 | I07 | Occupancy | 60 days against a field in months | 1 month is under 60 days; 3 or more months is over 60 days; exactly 2 months is an underwriter choice | A, U |
 | I08 | Occupancy | "Primary w/ Stand" | `has_primary_policy_with_stand` | A |
 | I09 | Occupancy | Rental exceptions other than Tier 1 broker ("lead line", "well-managed in excess of $5m") | Underwriter choice between exception and decline | U |
@@ -511,7 +511,7 @@ These rulings are this submission's reading, not Stand's. Brett reviews every ro
 | I11 | Occupancy | "Unrelated NIs" on the overview | Not evaluated | N |
 | I12 | Fire Simulation | No field holds the simulation result | Fail when `p_f` is above 0.50; "Do Not Write" is never produced; at or below 0.50 the page does not apply. The threshold is this submission's invention and the first question for Stand. Generated values fall at or below 0.20 or at or above 0.55, so no generated lead distinguishes thresholds between them; hand cases at 0.21 and 0.54 record the dependence. | A |
 | I13 | Fire Simulation | Decline versus legacy underwriting after a fail | Underwriter choice, shown with the legacy checklist values | U |
-| I14 | Fire Simulation | Access wording against `road_access` options | Multiple Access Points continues; Limited / Dead-end / No Turnaround declines; Single Access Point and Unknown are an underwriter choice `road_access` drives the `04:INGRESS` branch; the separate `04:TURN` branch is not evaluated, since the registry's one value covers both. | A, U |
+| I14 | Fire Simulation | Access wording against `road_access` options | Multiple Access Points continues; Limited / Dead-end / No Turnaround declines; Single Access Point and Unknown are an underwriter choice (`I14.road_access`). `road_access` drives the `04:INGRESS` branch; the separate `04:TURN` branch is not evaluated, since the registry's one value covers both. | A, U |
 | I15 | Fire Simulation | Vegetation wording against `vegetation_clearance` | Too Close is Heavy; Adequate is Moderate/Light; Marginal and Unknown are an underwriter choice | A, U |
 | I16 | Fire Simulation | "Steep" slope and "too close" neighbour distance have no thresholds | No number is invented; underwriter choice showing the value | U |
 | I17 | Fire Simulation | Client willingness to mitigate | Producer catalogue question | P |
@@ -532,23 +532,23 @@ These rulings are this submission's reading, not Stand's. Brett reviews every ro
 | I32 | Pools | "Fenced" against "self-locking gate or safety cover" | Fenced satisfies the branch | A |
 | I33 | Pools | "Gated community or multi-acre property" | `is_gated_community` alone; the registry labels that field "in gated community or multi-acre property" | A |
 | I34 | Trusts | Questionnaire, screening and cancellation fall after binding | Recorded as obligations; coverage notes as an advisory | A |
-| I35 | Replacement Cost | "At RCE" tolerance | Within 10% either side The tolerance is the row's parameter `tolerance: 0.10`, read by the graph. | A |
+| I35 | Replacement Cost | "At RCE" tolerance | Within 10% either side. The tolerance is the row's parameter `tolerance: 0.10`, read by the graph. | A |
 | I36 | Replacement Cost | "Reason to suspect fraud" | Not evaluated; underwriter's option at packet approval | N |
 | I37 | Replacement Cost | Documentation above 150% | Document request in the message | P |
 | I38 | PC 9 & 10 | Staffing wording against `fire_department_type` | Career and Mostly Career are paid; Volunteer and Mostly Volunteer are volunteer; Unknown is an underwriter choice | A, U |
-| I39 | PC 9 & 10 | Exactly 4,000 and 7,500 square feet | Both fall in the middle band | A |
+| I39 | PC 9 & 10 | Exactly 4,000 and 7,500 square feet | A boundary value takes the stricter band: exactly 4,000 falls in the middle band, and exactly 7,500 is treated as larger than 7,500 in Branches B and C, as it is in Branch A (I50) | A |
 | I40 | PC 9 & 10 | Hydrant "within 1000'" | `dist_to_nearest_fire_hydrant` of 1,000 or less | A |
 | I41 | PC 9 & 10 | Tankers, source within 1,000 feet, year-round access, dry hydrant, fittings, paved roads | Producer catalogue questions | P |
 | I42 | PC 9 & 10 | "Central Station Fire Alarm" yes has no outcome | Central Alarm and Direct Alarm are yes with no requirement | A |
 | I43 | PC 9 & 10 | Gates step drawn on some branches only; dry hydrant and retrofit outcomes drawn as terminal | Gates step encoded as drawn. Dry hydrant and retrofit are requirements and evaluation continues to the paved-roads check, so a less-equipped home does not skip decline checks. | A |
-| I44 | PC 9 & 10 | `road_access` Single Access Point | Underwriter choice | U |
+| I44 | PC 9 & 10 | `road_access` Single Access Point | Underwriter choice, the one I14 defines (`I14.road_access`), so a lead on both pages is asked once | U |
 | I45 | All | "UWing period", "first term", "60 days" | Typed deadlines, not converted | A |
 | I46 | Overview | Animals; other attractive nuisances | Not evaluated; non-blocking note on the lead | N |
-| I47 | Pools, Post & Pier, Fire Simulation, Profile | Board notes and boxes calling for a map or listing check | Links for the underwriter; the registry's collection rule applies | A |
+| I47 | Pools, Post & Pier, Fire Simulation, Profile | Board notes and boxes calling for a map, listing or name-search check | Links for the underwriter; the registry's collection rule applies | A |
 | I57 | Occupancy | Board note: "You can provide the quote without this information but you must follow up after" | The registry's always-required occupancy fields are requested before the quote | A |
 | I48 | Pools | An unfenced pool matches both "Unfenced / Uncovered" and "Fenced = No" | `pool_security` Unfenced or None takes the "Unfenced / Uncovered" branch through the gated check; "Fenced = No" is unreachable from registry values | A |
-| I49 | PC 9 & 10 | `fire_dept_response_time` Unknown; `road_access` Unknown | Underwriter choice | U |
-| I50 | PC 9 & 10 | Branch A at exactly 7,500 square feet; `interior_sprinklers` without central monitoring | 7,500 is not under 7,500, so sprinklers are required; "Interior Sprinklers" does not satisfy "centrally monitored" | A |
+| I49 | PC 9 & 10 | `fire_dept_response_time` Unknown; `road_access` Unknown | Underwriter choice: `I49.response_time` for the response time, and `I14.road_access` for road access | U |
+| I50 | PC 9 & 10 | Branch A's box asks whether the home is under 7,500 square feet, so exactly 7,500 answers no; whether `interior_sprinklers` "Interior Sprinklers" meets "centrally monitored" | 7,500 is not under 7,500, so sprinklers are required; "Interior Sprinklers" does not satisfy "centrally monitored" | A |
 | I51 | Electrical | Knob-and-tube missing on a home built in 1950 or later | Ask the producer; the board's note covers the pre-1950 inference only | A |
 | I52 | Roof | Composition shingles older than 20 years sit in neither Unknown Class list; the branch is unreachable once the material is known (I20) | Advisory on the quote for roofs whose `roof_material` is "Asphalt Fiberglass Composite" or "Architecture Shingles" with `roof_replacement_year` more than 20 years before the reference year and `p_f` above 0.15. A question for Stand. | A |
 | I53 | Occupancy | `dwelling_use_type` Tenant or Mixed with `is_rental` "No" | Conflict validator (section 9.5); confirmed with the producer | A |
@@ -563,15 +563,13 @@ These rulings are this submission's reading, not Stand's. Brett reviews every ro
 | `I07.two_months` | `under_60_days`, `over_60_days` |
 | `I09.rental_exception` | `exception`, `decline` |
 | `I13.fire_fail` | `decline`, `legacy_underwriting` |
-| `I14.access` | `adequate`, `limited` |
+| `I14.road_access` (shared by I14, I44 and I49) | `multiple`, `limited` |
 | `I15.vegetation` | `heavy`, `moderate_or_light` |
 | `I16.slope` | `steep`, `gentle` |
 | `I16.distance` | `adequate`, `too_close` |
 | `I26.rounded_account` | `yes`, `no` |
 | `I38.staffing` | `paid`, `volunteer` |
-| `I44.road_access` | `multiple`, `limited` |
 | `I49.response_time` | `within_15`, `15_to_30`, `over_30` |
-| `I49.road_access` | `multiple`, `limited` |
 
 **Fan-outs on Fire Simulation.** `04:LEGACY`, `04:MAP` and `04:ACCESS` are `all_of`. `04:VEG`, `04:INGRESS`, `04:MIND` and `04:SLOPE` are `one_of`.
 
@@ -956,7 +954,7 @@ nodes:
 
 `catalogue.yaml` holds id, wording, answer type and the interpretation row for each: `kt_extent` (isolated or whole house), `kt_areas` (high or low draw areas), `kt_present_and_where`, `tankers_bring_water`, `water_source_within_1000ft`, `water_source_year_round`, `dry_hydrant`, `county_and_calfire_fittings`, `paved_roads_year_round`, `willing_to_mitigate`, `rce_documentation` (document request).
 
-`wording.yaml` holds one plain-language question per producer-editable registry field, one conditional preamble per `requiredWhen` form, and one neutral confirmation template per validator. Each validator has an id and lists the fields it covers. A test asserts every producer-editable field has an entry.
+`wording.yaml` holds one plain-language question per producer-editable registry field, one conditional preamble per `requiredWhen` form that a follow-on question can take, and one neutral confirmation template per validator whose confirmation goes to a producer. The `protection_class in (9, 10)` form has no preamble, since its dependents are `blocked` and never follow-ons (section 9.2); `is_gated_community` is asked with no preamble; and the `kyc_score` range validator has no template, since that case goes to the underwriter (section 9.5). Each validator has an id and lists the fields it covers. A test asserts every producer-editable field has an entry.
 
 ### A.8 Message text
 
