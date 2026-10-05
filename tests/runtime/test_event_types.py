@@ -10,6 +10,7 @@ from uwh.rules.models import ActionPlan, FieldTriage
 from uwh.runtime import event_types
 from uwh.runtime.event_types import (
     PAYLOAD_MODELS,
+    AbstentionReason,
     BlockerDetail,
     EventType,
     LocatedCandidate,
@@ -66,7 +67,15 @@ EXPECTED_BLOCKER_DETAIL_FIELDS = {
 EXPECTED_FIELDS: dict[str, set[str]] = {
     "run_started": {"seed", "lead_count"},
     "replay_miss": {"skill", "prompt_version", "input_hash"},
-    "draft_edited": {"intent_id", "subject", "body", "payload_hash", "reason", "lead_revision"},
+    "draft_edited": {
+        "intent_id",
+        "kind",
+        "subject",
+        "body",
+        "payload_hash",
+        "reason",
+        "lead_revision",
+    },
     "proposal_created": {"proposal_id", "kind", "diff_hash"},
     "lead_received": {"source", "received_at"},
     "fact_observed": {"observation_id", "key", "value", "source", "evidence", "status"},
@@ -99,7 +108,14 @@ EXPECTED_FIELDS: dict[str, set[str]] = {
     "message_sent": {"intent_id", "mailbox_id"},
     "delivery_unknown": {"intent_id"},
     "reply_received": {"intent_id", "body", "body_hash"},
-    "reply_read": {"intent_id", "body_hash", "classification", "candidates", "dropped"},
+    "reply_read": {
+        "intent_id",
+        "body_hash",
+        "classification",
+        "abstention",
+        "candidates",
+        "dropped",
+    },
     "approval_recorded": {
         "item_id",
         "item_kind",
@@ -146,6 +162,7 @@ SAMPLES: dict[str, dict[str, object]] = {
     "replay_miss": {"skill": "read_reply", "prompt_version": H, "input_hash": H},
     "draft_edited": {
         "intent_id": "i1",
+        "kind": "sensitive_request",
         "subject": "Re: café",
         "body": "Line one\nLine two",
         "payload_hash": H,
@@ -248,6 +265,7 @@ SAMPLES: dict[str, dict[str, object]] = {
         "intent_id": "i1",
         "body_hash": H,
         "classification": "answers_some",
+        "abstention": None,
         "candidates": [
             {
                 "ask_id": "year_built",
@@ -592,3 +610,53 @@ def test_reply_classification_is_the_four_a9_values() -> None:
     model = PAYLOAD_MODELS[EventType.reply_read]
     with pytest.raises(ValidationError):
         model.model_validate({**SAMPLES["reply_read"], "classification": "maybe"})
+
+
+def test_a_draft_edit_records_the_kind_the_intent_has_after_the_edit() -> None:
+    # 7.5: an edited routine request becomes a sensitive request; the event carries the result.
+    model = PAYLOAD_MODELS[EventType.draft_edited]
+    assert model.model_validate(SAMPLES["draft_edited"]).kind == "sensitive_request"  # type: ignore[attr-defined]
+    without_kind = {k: v for k, v in SAMPLES["draft_edited"].items() if k != "kind"}
+    with pytest.raises(ValidationError):
+        model.model_validate(without_kind)
+
+
+def test_the_abstention_codes_are_the_two_of_a10() -> None:
+    assert set(get_args(AbstentionReason)) == {"invalid_tool_input", "refusal"}
+
+
+ABSTAINED = {
+    **SAMPLES["reply_read"],
+    "classification": None,
+    "abstention": "refusal",
+    "candidates": [],
+    "dropped": [],
+}
+
+
+@pytest.mark.parametrize("code", ["invalid_tool_input", "refusal"])
+def test_a_reply_read_may_record_an_abstention_in_place_of_a_reading(code: str) -> None:
+    # 10.4: when read_reply abstains, the event records the abstention in place of a reading.
+    model = PAYLOAD_MODELS[EventType.reply_read]
+    event = model.model_validate({**ABSTAINED, "abstention": code})
+    assert event.abstention == code  # type: ignore[attr-defined]
+    assert event.classification is None  # type: ignore[attr-defined]
+    assert model.model_validate(SAMPLES["reply_read"]).abstention is None  # type: ignore[attr-defined]
+
+
+READ = SAMPLES["reply_read"]
+REFUSED_REPLY_READS = [
+    {**ABSTAINED, "abstention": None},  # neither a reading nor an abstention
+    {**READ, "abstention": "refusal"},  # both
+    {**ABSTAINED, "abstention": "timeout"},  # a code outside the two
+    {**ABSTAINED, "candidates": READ["candidates"]},  # an abstention with candidates
+    {**ABSTAINED, "dropped": READ["dropped"]},  # an abstention with dropped candidates
+]
+
+
+@pytest.mark.parametrize("payload", REFUSED_REPLY_READS)
+def test_a_reply_read_holds_a_reading_or_an_abstention_never_both_or_neither(
+    payload: dict[str, object],
+) -> None:
+    with pytest.raises(ValidationError):
+        PAYLOAD_MODELS[EventType.reply_read].model_validate(payload)

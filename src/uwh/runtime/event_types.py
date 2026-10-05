@@ -75,6 +75,7 @@ class ReplayMiss(Payload):
 
 class DraftEdited(Payload):
     intent_id: str
+    kind: str  # the intent's kind after the edit (section 7.5), one of `Registration.message_kinds`
     subject: str
     body: str
     payload_hash: str
@@ -234,11 +235,23 @@ class LocatedCandidate(Candidate):
 
 
 class ReplyRead(Payload):
+    """A reading, or the abstention that took its place (section 10.4): exactly one of
+    `classification` and `abstention` is set, and an abstention has no candidates."""
+
     intent_id: str  # the intent the reply answers
     body_hash: str  # the hash of the delivered reply body that was read
-    classification: ReplyClassification
+    classification: ReplyClassification | None
+    abstention: AbstentionReason | None
     candidates: list[LocatedCandidate]
     dropped: list[Candidate]  # candidates whose quote is not in the reply, as returned
+
+    @model_validator(mode="after")
+    def _a_reading_or_an_abstention(self) -> "ReplyRead":
+        if (self.classification is None) == (self.abstention is None):
+            raise ValueError("a reply read holds exactly one of classification and abstention")
+        if self.abstention is not None and (self.candidates or self.dropped):
+            raise ValueError("an abstention has no candidates and none dropped")
+        return self
 
 
 class ApprovalRecorded(Payload):
