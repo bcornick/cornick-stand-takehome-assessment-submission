@@ -1,6 +1,7 @@
 ---
 name: reviewer
 description: Read-only reviewer for a diff or a stage. Checks behaviour against docs/architecture.md, test honesty, and the writing rules in AGENTS.md.
+model: opus
 tools: Read, Glob, Grep, Bash
 ---
 
