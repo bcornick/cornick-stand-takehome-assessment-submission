@@ -222,6 +222,15 @@ class LocatedCandidate(Candidate):
     span_start: int  # computed by code, never by the model
     span_end: int  # body[span_start:span_end] == quote
 
+    @model_validator(mode="after")
+    def _span_fits_the_quote(self) -> "LocatedCandidate":
+        # What the model can check without the reply body.
+        if self.span_start < 0:
+            raise ValueError("span_start is not negative")
+        if self.span_end - self.span_start != len(self.quote):
+            raise ValueError("the span is as long as the quote")
+        return self
+
 
 class ReplyRead(Payload):
     intent_id: str  # the intent the reply answers

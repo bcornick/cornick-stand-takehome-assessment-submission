@@ -11,6 +11,7 @@ from uwh.runtime.event_types import (
     PAYLOAD_MODELS,
     BlockerDetail,
     EventType,
+    LocatedCandidate,
     ReplyClassification,
     RulingRecorded,
 )
@@ -369,6 +370,32 @@ def test_reply_read_candidates_carry_the_a9_fields() -> None:
         "value",
         "quote",
     }
+
+
+LOCATED_CANDIDATE = {
+    "ask_id": "year_built",
+    "field": "year_built",
+    "value": 1950,
+    "quote": "1950",
+    "span_start": 6,
+    "span_end": 10,
+}
+
+
+def test_a_located_candidate_span_is_as_long_as_its_quote() -> None:
+    located = LocatedCandidate.model_validate(LOCATED_CANDIDATE)
+    assert located.span_end - located.span_start == len(located.quote)
+    with pytest.raises(ValidationError):
+        LocatedCandidate.model_validate({**LOCATED_CANDIDATE, "span_end": 11})
+    with pytest.raises(ValidationError):
+        LocatedCandidate.model_validate({**LOCATED_CANDIDATE, "span_end": 9})
+
+
+def test_a_located_candidate_span_starts_inside_the_body() -> None:
+    at_start = {**LOCATED_CANDIDATE, "span_start": 0, "span_end": 4}
+    assert LocatedCandidate.model_validate(at_start).span_start == 0
+    with pytest.raises(ValidationError):
+        LocatedCandidate.model_validate({**LOCATED_CANDIDATE, "span_start": -2, "span_end": 2})
 
 
 def test_provider_status_and_observation_values_are_closed_sets() -> None:
