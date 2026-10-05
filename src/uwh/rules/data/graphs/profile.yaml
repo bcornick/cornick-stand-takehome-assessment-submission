@@ -1,4 +1,4 @@
-# ABOUTME: The Profile page: when it applies. Its decision graph is not encoded yet, so a lead it applies to is stopped with a reason.
+# ABOUTME: The Profile page: when it applies. The page has no decision graph, so a lead it applies to is stopped with a reason.
 # ABOUTME: A graph with no root holds only the page's `applies_when`.
 id: profile
 page: docs/playbook/02-profile/flowchart.md

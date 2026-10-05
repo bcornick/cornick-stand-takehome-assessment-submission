@@ -248,7 +248,8 @@ class OpenChoice(StrictModel):
 
 class NotEvaluatedNote(StrictModel):
     ref: str  # an interpretation row id or a page id
-    text: str
+    text: str  # for the underwriter
+    producer_text: str  # for the producer's quote packet
 
 
 class ActionPlan(StrictModel):

@@ -1,5 +1,5 @@
 # ABOUTME: The Replacement Cost page as a decision graph on the ratio of Coverage A to the replacement cost estimate, banded by the tolerance of I35.
-# ABOUTME: A ratio over 1.5 needs the documentation request, which has no case yet, so such a lead is stopped with a reason rather than passed.
+# ABOUTME: A ratio over 1.5 takes a requirement for documentation of the Coverage A amount, which the underwriter reads in the quote packet before it is sent.
 id: replacement_cost
 page: docs/playbook/12-replacement-cost/flowchart.md
 applies_when: {always: true}
@@ -14,13 +14,19 @@ nodes:
       - {when: {lt: {one_minus: I35.tolerance}}, then: below_estimate}
       - {when: {gte: {one_minus: I35.tolerance}, lte: {one_plus: I35.tolerance}}, then: at_estimate}
       - {when: {gt: {one_plus: I35.tolerance}, lte: 1.5}, then: above_within_150}
+      - {when: {gt: 1.5}, then: above_150}
   below_estimate:
     kind: outcome
     board_path: ["12:BELOW", "12:BELOW_R"]
     effects:
-      - {type: advisory, rule: RC-1, text: "Quote as submitted. Advise the broker that we will inspect after binding and adjust coverage to the determined replacement cost."}
+      - {type: advisory, rule: RC-1, text: "The quote is as submitted. We will inspect the property after binding and adjust coverage to the determined replacement cost."}
   at_estimate: {kind: outcome, board_path: ["12:AT", "12:AT_R"], effects: [{type: no_action, rule: RC-2}]}
   above_within_150:
     kind: outcome
     board_path: ["12:ABOVE", "12:WITHIN150", "12:WITHIN150_R"]
     effects: [{type: no_action, rule: RC-3}]
+  above_150:
+    kind: outcome
+    board_path: ["12:ABOVE", "12:OVER150", "12:DOCS"]
+    effects:
+      - {type: requirement, rule: RC-4, text: "Documentation supporting the Coverage A amount requested, for example the current declarations page. Without it the quote is made at the calculated replacement cost."}

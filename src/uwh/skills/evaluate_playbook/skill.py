@@ -42,7 +42,11 @@ def run(input: EvaluatePlaybookInput) -> ActionPlan:
             else:
                 effects += result
     notes = [
-        NotEvaluatedNote(ref=page.id, text=f"The {page.title} page is not evaluated.")
+        NotEvaluatedNote(
+            ref=page.id,
+            text=f"The {page.title} page is not evaluated.",
+            producer_text=page.producer_text,
+        )
         for page in load_not_encoded_pages()
         if applies(page.applies_when, facts)
     ]

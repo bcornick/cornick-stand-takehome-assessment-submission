@@ -1,4 +1,4 @@
-# ABOUTME: The Post & Pier page: when it applies (I23). Its decision graph is not encoded yet, so a lead it applies to is stopped with a reason.
+# ABOUTME: The Post & Pier page: when it applies (I23). The page has no decision graph, so a lead it applies to is stopped with a reason.
 # ABOUTME: A graph with no root holds only the page's `applies_when`.
 id: post_and_pier
 page: docs/playbook/07-post-and-pier-foundations/flowchart.md

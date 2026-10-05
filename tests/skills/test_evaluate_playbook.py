@@ -44,6 +44,10 @@ def test_lead_008_is_noted_as_not_evaluated_on_the_two_pages_that_apply_to_every
         ("electrical", "The Electrical page is not evaluated."),
         ("plumbing", "The Plumbing page is not evaluated."),
     ]
+    assert [n.producer_text for n in plan.not_evaluated] == [
+        "Electrical systems were not reviewed for this quote.",
+        "Plumbing was not reviewed for this quote.",
+    ]
 
 
 # A change to lead 008's values and the rule it reaches.
@@ -58,11 +62,17 @@ def test_lead_008_is_noted_as_not_evaluated_on_the_two_pages_that_apply_to_every
         ({"siding_classification": "D"}, ("no_action", "SD-3")),
         ({"siding_classification": "D", "p_f": 0.15}, ("no_action", "SD-3")),
         ({"siding_classification": "D", "p_f": 0.16}, ("requirement", "SD-4")),
+        (
+            {"siding_classification": "D", "p_f": 0.50},
+            ("requirement", "SD-4"),
+        ),  # the board's "<= .50"
         ({"replacement_cost": 1000000}, ("advisory", "RC-1")),
         ({"replacement_cost": 972222}, ("no_action", "RC-2")),  # 0.90 is at the estimate
         ({"replacement_cost": 972223}, ("advisory", "RC-1")),
         ({"replacement_cost": 795455}, ("no_action", "RC-2")),  # 1.10 is at the estimate
         ({"replacement_cost": 795454}, ("no_action", "RC-3")),  # above, within 150 percent
+        ({"replacement_cost": 583334}, ("no_action", "RC-3")),  # just within 150 percent
+        ({"replacement_cost": 583333}, ("requirement", "RC-4")),  # just over 150 percent
     ],
 )
 def test_a_page_takes_the_band_its_values_fall_in(
@@ -115,10 +125,3 @@ def test_a_cut_page_that_applies_is_noted_and_one_that_does_not_is_not() -> None
         "pools",
         "protection_class_9_10",
     ]
-
-
-def test_a_ratio_over_150_percent_stops_the_lead_because_its_documentation_branch_is_not_built() -> (
-    None
-):
-    with pytest.raises(ValueError, match="no case for coverage_to_rce_ratio"):
-        run(EvaluatePlaybookInput(facts=lead_008(replacement_cost=500000)))

@@ -1,10 +1,11 @@
 # ABOUTME: The decision graphs of 9.6 and A.6: the graph files, the three-valued test of when a page applies, and the walk of a graph over a lead's usable facts.
 # ABOUTME: Walking supports `test` and `outcome` nodes; a test on an unknown field leaves the page undecided, naming the field, and a graph with no root holds only `applies_when`.
+import math
 from collections.abc import Mapping
 from functools import cache
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import JsonValue
+from pydantic import JsonValue, model_validator
 
 from uwh.rules.data_files import DATA_DIR, read_yaml
 from uwh.rules.models import Effect, PlannedEffect, RuleTrace, StrictModel, UndecidedPage
@@ -31,10 +32,21 @@ class Graph(StrictModel):
     root: str | None = None
     nodes: dict[str, Node] = {}
 
+    @model_validator(mode="after")
+    def _bands_are_complete_and_disjoint(self) -> Self:
+        """A test whose cases are numeric bands covers every number exactly once (9.6). A test on
+        discrete values is not checked: the values a field can take are not known here."""
+        for name, node in self.nodes.items():
+            bands = [_band(case.when) for case in node.cases]
+            if node.kind == "test" and all(band is not None for band in bands):
+                _check_bands(f"{self.id}.{name}", [band for band in bands if band is not None])
+        return self
+
 
 class NotEncodedPage(StrictModel):
     id: str
     title: str
+    producer_text: str  # the packet's note that the page was not reviewed
     page: str
     applies_when: dict[str, JsonValue]
 
@@ -72,6 +84,37 @@ def _bound(bound: JsonValue) -> float:
         return 1 - parameter if form == "one_minus" else 1 + parameter
     assert isinstance(bound, int | float)
     return float(bound)
+
+
+# A numeric band: its lower and upper bound, each a value and whether the band includes it.
+type _Band = tuple[tuple[float, bool], tuple[float, bool]]
+
+
+def _band(when: Mapping[str, JsonValue]) -> _Band | None:
+    """The band a case selects, or None when the case is not made of numeric bounds."""
+    lower, upper = (-math.inf, False), (math.inf, False)
+    for clause, operand in when.items():
+        match clause:
+            case "gt" | "gte":
+                lower = (_bound(operand), clause == "gte")
+            case "lt" | "lte":
+                upper = (_bound(operand), clause == "lte")
+            case _:
+                return None
+    return lower, upper
+
+
+def _check_bands(where: str, bands: list[_Band]) -> None:
+    """Raise ValueError unless the bands cover the number line with no gap and no overlap."""
+    ordered = sorted(bands)
+    if ordered[0][0][0] != -math.inf or ordered[-1][1][0] != math.inf:
+        raise ValueError(f"the bands of {where} do not reach both ends of the number line")
+    for (_, (high, high_closed)), ((low, low_closed), _) in zip(ordered, ordered[1:], strict=False):
+        if high != low or high_closed == low_closed:
+            overlap = high > low or (high == low and high_closed and low_closed)
+            raise ValueError(
+                f"the bands of {where} {'overlap' if overlap else 'leave a gap'} at {low}"
+            )
 
 
 def _holds(clause: str, operand: JsonValue, value: JsonValue) -> bool:

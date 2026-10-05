@@ -28,7 +28,7 @@ nodes:
     board_path: ["06:NC", "06:NC_OK"]
     effects:
       - {type: no_action, rule: SD-2}
-      - {type: advisory, rule: SD-2, text: "The siding is vinyl, aluminum or steel, or another material of class C; no action is taken."}
+      - {type: advisory, rule: SD-2, text: "Siding of vinyl, aluminum, steel or another non-wood material needs no action."}
   wood_low: {kind: outcome, board_path: ["06:LO", "06:LO_OK"], effects: [{type: no_action, rule: SD-3}]}
   confirm_first_term:
     kind: outcome

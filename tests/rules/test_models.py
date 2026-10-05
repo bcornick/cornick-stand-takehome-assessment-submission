@@ -107,7 +107,10 @@ def plan_in_order(forward: bool) -> ActionPlan:
         ),
         catalogue_questions=order(["willing_to_mitigate", "kt_extent", "kt_extent"]),
         not_evaluated=order(
-            [NotEvaluatedNote(ref="I46", text="a"), NotEvaluatedNote(ref="04:ACCESS", text="b")]
+            [
+                NotEvaluatedNote(ref="I46", text="a", producer_text="a"),
+                NotEvaluatedNote(ref="04:ACCESS", text="b", producer_text="b"),
+            ]
         ),
     )
 

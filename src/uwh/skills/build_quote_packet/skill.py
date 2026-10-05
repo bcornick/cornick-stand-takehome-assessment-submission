@@ -19,11 +19,18 @@ from uwh.rules.models import (
 
 OPENING = "Thank you for your submission. Your quote is set out below."
 
-_DEADLINE_TEXT: dict[Deadline, str] = {
+# When a requirement is due.
+_DUE_TEXT: dict[Deadline, str] = {
     Deadline.within_60_days: "within 60 days",
+    Deadline.first_term: "within the first term",
+    Deadline.underwriting_period: "within the underwriting period",
+    Deadline.within_30_days_of_bind: "within 30 days of bind",
+    Deadline.duration_of_non_occupancy: "for the duration of non-occupancy",
+}
+# How long a surcharge or a coverage adjustment lasts.
+_DURATION_TEXT: dict[Deadline, str] = {
     Deadline.first_term: "for the first term",
     Deadline.underwriting_period: "for the underwriting period",
-    Deadline.within_30_days_of_bind: "within 30 days of bind",
     Deadline.duration_of_non_occupancy: "for the duration of non-occupancy",
 }
 
@@ -60,8 +67,8 @@ def _dollars(value: JsonValue) -> str:
     return f"${int(str(value)):,}"
 
 
-def _after(deadline: Deadline | None) -> str:
-    return "" if deadline is None else f" ({_DEADLINE_TEXT[deadline]})"
+def _after(deadline: Deadline | None, wording: dict[Deadline, str]) -> str:
+    return "" if deadline is None else f" ({wording[deadline]})"
 
 
 def _entry(effect: Effect, coverages: dict[str, Coverage]) -> tuple[str, str] | None:
@@ -69,17 +76,20 @@ def _entry(effect: Effect, coverages: dict[str, Coverage]) -> tuple[str, str] | 
     producer's packet. No rule id is shown: the rule trace is the internal view's."""
     match effect:
         case SurchargeEffect():
-            return "Surcharges", f"{effect.percent}% surcharge{_after(effect.deadline)}"
+            return (
+                "Surcharges",
+                f"{effect.percent}% surcharge{_after(effect.deadline, _DURATION_TEXT)}",
+            )
         case CoverageAdjustmentEffect():
             submitted = coverages.get(effect.field)
             label = effect.field if submitted is None else submitted.label
             shown = "" if submitted is None else f"submitted {_dollars(submitted.value)}, "
             return (
                 "Coverage adjustments",
-                f"{label}: {shown}proposed {_dollars(effect.proposed_value)}{_after(effect.deadline)}",
+                f"{label}: {shown}proposed {_dollars(effect.proposed_value)}{_after(effect.deadline, _DURATION_TEXT)}",
             )
         case RequirementEffect():
-            return "Requirements", f"{effect.text}{_after(effect.deadline)}"
+            return "Requirements", f"{effect.text}{_after(effect.deadline, _DUE_TEXT)}"
         case ExclusionOrEndorsementEffect():
             return "Exclusions and endorsements", effect.text
         case AdvisoryEffect():
@@ -129,7 +139,7 @@ def run(input: BuildQuotePacketInput) -> BuildQuotePacketOutput:
     ]
     if plan.not_evaluated:
         blocks.append(
-            "\n".join(["Not evaluated", *(f"- {note.text}" for note in plan.not_evaluated)])
+            "\n".join(["Not reviewed", *(f"- {note.producer_text}" for note in plan.not_evaluated)])
         )
     return BuildQuotePacketOutput(
         subject=f"Your quote: {input.lead_label}", body="\n\n".join(blocks)

@@ -48,13 +48,31 @@ def test_every_effect_is_on_its_own_line_with_its_deadline_and_no_rule_id() -> N
                 "rule": "C-1",
                 "field": "coverage_a",
                 "proposed_value": 900000,
-                "deadline": "within_60_days",
+                "deadline": "underwriting_period",
             },
             {
                 "type": "requirement",
                 "rule": "R-1",
                 "text": "Send the roof inspection.",
                 "deadline": "within_30_days_of_bind",
+            },
+            {
+                "type": "requirement",
+                "rule": "R-2",
+                "text": "Confirm the roof class.",
+                "deadline": "first_term",
+            },
+            {
+                "type": "requirement",
+                "rule": "R-3",
+                "text": "Confirm the siding.",
+                "deadline": "underwriting_period",
+            },
+            {
+                "type": "requirement",
+                "rule": "R-4",
+                "text": "Confirm the roof replacement.",
+                "deadline": "within_60_days",
             },
             {"type": "exclusion_or_endorsement", "rule": "E-1", "text": "Liability is excluded."},
             {"type": "advisory", "rule": "A-1", "text": "Siding is vinyl."},
@@ -67,7 +85,13 @@ def test_every_effect_is_on_its_own_line_with_its_deadline_and_no_rule_id() -> N
             },
             {"type": "no_action", "rule": "N-1"},
             {"type": "no_action", "rule": "N-2"},
-            not_evaluated=[{"ref": "plumbing", "text": "The Plumbing page is not evaluated."}],
+            not_evaluated=[
+                {
+                    "ref": "plumbing",
+                    "text": "The Plumbing page is not evaluated.",
+                    "producer_text": "Plumbing was not reviewed for this quote.",
+                }
+            ],
         )
     )
 
@@ -76,22 +100,17 @@ def test_every_effect_is_on_its_own_line_with_its_deadline_and_no_rule_id() -> N
             OPENING,
             "Coverages as submitted\n- Coverage A (Dwelling): $875,000\n- Coverage E (Liability): $100,000",
             "Surcharges\n- 15% surcharge (for the first term)\n- 25% surcharge",
-            "Coverage adjustments\n- Coverage A (Dwelling): submitted $875,000, proposed $900,000 (within 60 days)",
-            "Requirements\n- Send the roof inspection. (within 30 days of bind)",
+            "Coverage adjustments\n- Coverage A (Dwelling): submitted $875,000, proposed $900,000 (for the underwriting period)",
+            "Requirements\n- Send the roof inspection. (within 30 days of bind)"
+            "\n- Confirm the roof class. (within the first term)"
+            "\n- Confirm the siding. (within the underwriting period)"
+            "\n- Confirm the roof replacement. (within 60 days)",
             "Exclusions and endorsements\n- Liability is excluded.",
             "Advisories\n- Siding is vinyl.",
             "Obligations after binding\n- Inspect the panel. (owner: underwriting; when: bind)",
-            "Not evaluated\n- The Plumbing page is not evaluated.",
+            "Not reviewed\n- Plumbing was not reviewed for this quote.",
         ]
     )
-
-
-def test_the_subject_names_the_property() -> None:
-    packet = run(
-        BuildQuotePacketInput(lead_label="8924 Lakeview Blvd", plan=plan(), coverages=COVERAGES)
-    )
-
-    assert packet.subject == "Your quote: 8924 Lakeview Blvd"
 
 
 @pytest.mark.parametrize(

@@ -481,7 +481,7 @@ Acceptance cases:
 5. Registry asks go out while an underwriter choice is open. Catalogue questions and document requests that sit under an unanswered choice are held until it is answered.
 6. All open underwriter choices on a lead are shown as one card.
 
-**Load-time checks.** Bands complete and non-overlapping (`one_of`). Every outcome reachable. No outcome holds two effects of one type under one rule id. Every field exists in the registry or the catalogue. Every fan-out declares its semantics. Every row in section 9.7 is referenced by a node, marked `not_evaluated`, carries `applied_in` (naming the validator, derivation, resolution rule, rendering step, graph page or effect field that applies it).
+**Load-time checks.** Numeric bands complete and non-overlapping. Every outcome reachable. No outcome holds two effects of one type under one rule id. Every field exists in the registry or the catalogue. Every fan-out declares its semantics. Every row in section 9.7 is referenced by a node, marked `not_evaluated`, carries `applied_in` (naming the validator, derivation, resolution rule, rendering step, graph page or effect field that applies it).
 
 ### 9.7 Interpretation table
 
@@ -850,59 +850,44 @@ All hashes are SHA-256 over canonical JSON (sorted keys, UTF-8, no insignificant
 ### A.6 Graph file format
 
 ```yaml
-# src/uwh/rules/data/graphs/post_and_pier.yaml
-id: post_and_pier
-page: docs/playbook/07-post-and-pier-foundations/flowchart.md
-applies_when: {field: foundation_type, in: [Piers, Stilts, Pilings]}   # I23
-root: support
+# src/uwh/rules/data/graphs/roof.yaml
+id: roof
+page: docs/playbook/05-roof-class/flowchart.md
+applies_when: {always: true}
+root: roof_class
 nodes:
-  support:
+  roof_class:
     kind: test
-    field: post_pier_supports_living_area
-    board_path: ["07:ROOT"]
-    branch: one_of
+    field: roof_classification
+    board_path: ["05:ROOT"]
     cases:
-      - when: {equals: true}
-        then: decline_living_area
-      - when: {equals: false}
-        then: build_year
-  build_year:
+      - {when: {equals: Class A}, then: okay_class_a}
+      - {when: {in: [Class B, Class C]}, then: non_class_a_band}
+  non_class_a_band:
     kind: test
-    field: year_built
-    board_path: ["07:DECK"]
-    branch: one_of
+    field: p_f
+    interpretation: I18
+    board_path: ["05:NCA"]
     cases:
-      - when: {lt: 2000}
-        then: decline_pre_2000
-      - when: {gte: 2000}
-        then: deck_height
-  deck_height:
-    kind: test
-    field: deck_height_ft
-    board_path: ["07:POST2000"]
-    branch: one_of
-    cases:
-      - when: {lte: 8}
-        then: surcharge_15
-      - when: {gt: 8, lte: 12}
-        then: surcharge_25
-      - when: {gt: 12}
-        then: decline_deck_over_12
-  decline_living_area:  {kind: outcome, board_path: ["07:LIVING", "07:D1"], effects: [{type: decline, rule: PP-1}]}
-  decline_pre_2000:     {kind: outcome, board_path: ["07:PRE2000", "07:D1"], effects: [{type: decline, rule: PP-2}]}
-  decline_deck_over_12: {kind: outcome, board_path: ["07:HIGH", "07:D2"], effects: [{type: decline, rule: PP-5}]}
-  surcharge_15: {kind: outcome, board_path: ["07:LOW", "07:S15"], effects: [{type: surcharge, percent: 15, rule: PP-3}]}
-  surcharge_25: {kind: outcome, board_path: ["07:MID", "07:S25"], effects: [{type: surcharge, percent: 25, rule: PP-4}]}
+      - {when: {lte: 0.15}, then: okay_low}
+      - {when: {gt: 0.15, lt: 0.50}, then: confirm_first_term}
+      - {when: {gte: 0.50}, then: confirm_60_days}
+  okay_class_a: {kind: outcome, board_path: ["05:CA", "05:OK_A"], effects: [{type: no_action, rule: RF-1}]}
+  confirm_first_term:
+    kind: outcome
+    board_path: ["05:N_MID", "05:N_MID_R"]
+    effects:
+      - {type: requirement, rule: RF-3, text: "Confirmation of a Class A roof or its replacement", deadline: first_term}
 ```
 
+- A graph with no `root` holds only its `applies_when`; a lead it applies to is stopped with a reason.
 - `applies_when` may be `{any: [...]}`: true when any member is true, otherwise unknown when any member is unknown, otherwise false.
 - Conditions use `equals`, `in`, `lt`, `lte`, `gt`, `gte`. A bound may be a literal or `{one_minus: I35.tolerance}` or `{one_plus: I35.tolerance}`, which are one minus and one plus a parameter of the named interpretation row.
-- `all_of` and `ladder` nodes list `children` in place of `cases`.
-- A `test` may carry `interpretation: I18`.
-- `producer_question` nodes carry `question: <catalogue id>` and `cases` on the answer.
-- `underwriter_choice` nodes carry `choice_id` and `options` (each with `then`), both taken from the list of underwriter choices in section 9.7 (for example `I13.fire_fail` with options `decline` and `legacy_underwriting`), plus `prompt` and `show` (fields displayed with the choice). The ids are fixed in `interpretation.yaml`, so labels can script the underwriter's answers before any graph exists.
+- A node is a `test` (a field and `cases`, each a condition and the node it leads to) or an `outcome` (its effects). A `test` may carry `interpretation: I18`.
+- A `test` whose cases are numeric bands must cover every number once: the graph file is refused at load when the bands leave a gap or overlap. A test on discrete values is not checked.
 - A `test` may name a **derived input** in place of a registry field. `derivations.yaml` declares the two that exist: `coverage_to_rce_ratio` (`coverage_a / replacement_cost`) and `roof_age_years` (the reference year minus `roof_replacement_year`). A derived input is unknown when any input is unknown or the divisor is zero. No general expression language exists.
 - Interpretation rows may carry `params` (a map of named numbers). The Replacement Cost graph bands `coverage_to_rce_ratio` at `1 - I35.tolerance`, `1 + I35.tolerance` and 1.5.
+- A ratio over 1.5 takes the requirement RC-4: documentation of the Coverage A amount, with the quote at the calculated replacement cost without it. The catalogue's document request `rce_documentation` (I37) is not asked.
 
 ### A.7 Catalogue of producer questions
 

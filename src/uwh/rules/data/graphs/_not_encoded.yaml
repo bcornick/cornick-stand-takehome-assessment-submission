@@ -3,21 +3,26 @@
 pages:
   - id: plumbing
     title: Plumbing
+    producer_text: Plumbing was not reviewed for this quote.
     page: docs/playbook/08-plumbing/flowchart.md
     applies_when: {always: true}
   - id: electrical
     title: Electrical
+    producer_text: Electrical systems were not reviewed for this quote.
     page: docs/playbook/09-electrical-systems/flowchart.md
     applies_when: {always: true}
   - id: pools
     title: Pools
+    producer_text: Swimming pools were not reviewed for this quote.
     page: docs/playbook/10-swimming-pools/flowchart.md
     applies_when: {field: pool_type, in: [Above Ground, Inground]}
   - id: trusts
     title: Trusts & LLCs
+    producer_text: Ownership by a trust or an LLC was not reviewed for this quote.
     page: docs/playbook/11-trusts-and-llcs/flowchart.md
     applies_when: {field: residence_held_in_trust, equals: true}
   - id: protection_class_9_10
     title: Protection Class 9 & 10
+    producer_text: Protection class 9 and 10 requirements were not reviewed for this quote.
     page: docs/playbook/13-protection-class-9-and-10/flowchart.md
     applies_when: {field: protection_class, in: ["9", "10"]}

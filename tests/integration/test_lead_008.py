@@ -66,7 +66,7 @@ def test_lead_008_goes_from_the_queue_to_a_sent_quote_packet(
     assert sorted(m["metadata"]["kind"] for m in sent) == ["quote_packet", "routine_request"]
     (packet,) = [m for m in sent if m["metadata"]["kind"] == "quote_packet"]
     assert packet["metadata"]["payload_hash"] == packet_hash
-    assert "The Electrical page is not evaluated." in packet["body"]
+    assert "Electrical systems were not reviewed for this quote." in packet["body"]
     assert db.execute("SELECT status FROM leads WHERE lead_id = ?", (LEAD_008,)).fetchone() == (
         "quote_sent",
     )
