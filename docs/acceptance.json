@@ -60,14 +60,14 @@
     "stage": 1,
     "description": "Tier 0. `.env.example` documents the seven variables, the default model and its endpoint. Expect: `7`, then exit 0.",
     "command": "grep -cE '^(MODEL_API_KEY|MODEL_BASE_URL|MODEL_ID|TYPESAFE_API_KEY|RUN_MODE|SEED|DEBUG)=' .env.example && grep -q '^MODEL_ID=deepseek-flash$' .env.example && grep -q '^MODEL_BASE_URL=https://api.deepseek.com/anthropic$' .env.example",
-    "passes": false
+    "passes": true
   },
   {
     "id": "S01-A10",
     "stage": 1,
     "description": "Tier 0. The Anthropic SDK and `httpx2` versions are pinned, and the live forced-tool call, the sampling-parameter check for `MODEL_ID` and the `TestClient` check are recorded. Expect: `2`, then three numbers, each at least 1.",
     "command": "grep -A1 -E '^name = \"(anthropic|httpx2)\"$' uv.lock | grep -c '^version = ' && grep -cE 'Forced tool call on deepseek-flash: .+' docs/progress.md && grep -cE 'Sampling parameters accepted by deepseek-flash: .+' docs/progress.md && grep -c 'httpx2.Client' docs/progress.md",
-    "passes": false
+    "passes": true
   },
   {
     "id": "S01-A11",
