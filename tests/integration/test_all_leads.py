@@ -46,7 +46,13 @@ FIRST_PASS = {
         {"roof_material", "months_unoccupied_in_primary_home"},
         {"willing_to_mitigate", "fire_dept_response_time", "alternative_water_source"},
     ),
-    "004": FirstPass([REPLY_WAIT], {"routine_request": 1}, {"no_residents_in_primary_home"}, set()),
+    # The missing dwelling_use_type is asked beside the occupancy confirmation of the value that is present.
+    "004": FirstPass(
+        [REPLY_WAIT],
+        {"routine_request": 1},
+        {"dwelling_use_type", "no_residents_in_primary_home"},
+        set(),
+    ),
     # The missing pool fields and a confirmation; the diving-board answer on the lead is not asked again.
     "005": FirstPass(
         [REPLY_WAIT],

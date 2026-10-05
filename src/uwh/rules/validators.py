@@ -105,7 +105,7 @@ def _validator(validator_id: str, fields: list[str], question: str) -> Validator
         if not _TESTS[validator_id](values):
             return []
         reported = {field: values[field] for field in fields if field in values}
-        return [Conflict(validator_id, tuple(fields), reported, question.format_map(reported))]
+        return [Conflict(validator_id, tuple(reported), reported, question.format_map(reported))]
 
     return validate
 

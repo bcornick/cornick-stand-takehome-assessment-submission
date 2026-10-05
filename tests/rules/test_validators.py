@@ -80,3 +80,17 @@ def test_the_question_reports_the_values_it_asks_about() -> None:
         " Can you confirm both years?"
     )
     assert conflict.values == {"roof_replacement_year": 1990, "year_built": 1993}
+
+
+def test_a_conflict_covers_only_the_fields_that_are_present() -> None:
+    (conflict,) = [
+        c
+        for validate in conflict_validators()
+        for c in validate({"number_of_residents": 0, "dwelling_type": PRIMARY["dwelling_type"]})
+    ]
+
+    assert conflict.fields == ("number_of_residents", "dwelling_type")
+    assert "dwelling_use_type" not in conflict.values
+    assert conflict.question == (
+        "The number of people living in the home is listed as 0. Can you confirm that number?"
+    )

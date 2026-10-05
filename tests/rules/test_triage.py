@@ -10,6 +10,7 @@ from uwh.rules.derivations import derived_from
 from uwh.rules.models import Requirement, Resolution, ValueStatus
 from uwh.rules.registry import Registry, load_registry
 from uwh.rules.triage import triage_fields
+from uwh.rules.validators import conflict_validators
 
 ROOT = Path(__file__).resolve().parents[2]
 WORLD = ROOT / "src" / "uwh" / "providers" / "data" / "world-42.json"
@@ -91,6 +92,24 @@ def test_a_field_in_an_open_conflict_is_verified_not_asked(registry: Registry) -
 
     assert triage["roof_replacement_year"].value_status == ValueStatus.conflicting
     assert triage["roof_replacement_year"].resolution == Resolution.verify
+
+
+def test_a_missing_field_beside_a_conflict_over_a_present_value_is_asked(
+    registry: Registry,
+) -> None:
+    facts = {**lead_008_facts(), "number_of_residents": 0}
+    del facts["dwelling_use_type"]
+    (conflict,) = [
+        c
+        for validate in conflict_validators()
+        for c in validate({"number_of_residents": 0, "dwelling_type": "Owner Occupied Condo"})
+    ]
+
+    triage = triage_fields(registry, facts, set(conflict.fields), derived_from())
+
+    assert triage["number_of_residents"].resolution == Resolution.verify
+    assert triage["dwelling_use_type"].value_status == ValueStatus.missing
+    assert triage["dwelling_use_type"].resolution == Resolution.ask
 
 
 # 9.2: is_gated_community is inactive when pool_type is known and not Inground or pool_security is
