@@ -1,4 +1,4 @@
-# ABOUTME: Tests that the app's OpenAPI paths are the A.5 route table and that every route not yet served is declared and answers 501.
+# ABOUTME: Tests that the app's OpenAPI paths are the A.5 route table and that every route that answers 501 is declared.
 # ABOUTME: The expected paths and methods are written out from A.5; /mcp is mounted outside OpenAPI and is not among them.
 from typing import Any
 

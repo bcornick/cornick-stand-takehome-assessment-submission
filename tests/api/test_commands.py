@@ -92,6 +92,9 @@ def test_a_workflow_only_class_is_not_accepted_over_http(
     response = client.post("/api/commands", json={"type": command_type, "payload": {}})
 
     assert response.status_code == 422
+    (error,) = response.json()["detail"]
+    assert error["type"] == "union_tag_invalid"
+    assert (error["ctx"]["discriminator"], error["ctx"]["tag"]) == ("'type'", command_type)
 
 
 def test_a_command_whose_handler_is_not_built_answers_501(client: TestClient) -> None:

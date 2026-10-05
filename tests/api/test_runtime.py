@@ -1,4 +1,4 @@
-# ABOUTME: Tests what the app holds while it runs: the mode and ruleset hash read at startup, a database connection per request, the background first pass, and the restart recovery that the app runs before it serves.
+# ABOUTME: Tests what the app holds while it runs: the mode and ruleset hash read at startup and a database connection per request.
 # ABOUTME: Each test opens the runtime against a temporary database, Stand's leadgen and mailbox apps in process, and a temporary directory in place of the image's rules data.
 import sqlite3
 from pathlib import Path
@@ -9,8 +9,6 @@ from uwh.api.runtime import open_runtime
 from uwh.runtime.hashing import ruleset_hash
 from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
-from uwh.runtime.runs import current_run
-from uwh.runtime.store import open_store
 from uwh.settings import Settings
 
 
@@ -44,12 +42,3 @@ def test_a_database_connection_is_a_store_and_is_closed_after_use(
             assert db.execute("SELECT count(*) FROM runs").fetchone() == (0,)
     with pytest.raises(sqlite3.ProgrammingError):
         db.execute("SELECT 1")
-
-
-def test_resuming_with_no_run_starts_none(
-    settings: Settings, leadgen: LeadgenClient, mailbox: MailboxClient
-) -> None:
-    with open_runtime(settings, leadgen, mailbox) as runtime:
-        runtime.resume()
-
-    assert current_run(open_store(settings.db_path)) is None

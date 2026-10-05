@@ -1,5 +1,5 @@
 # ABOUTME: Fixtures for the API tests: settings that point at a temporary database, Stand's leadgen and mailbox apps in process, and a factory for apps whose lifespan has run.
-# ABOUTME: The image's rules data is replaced by a temporary directory, and the workflow steps are the ones a test passes, since no skill supplies a step yet.
+# ABOUTME: The image's rules data is replaced by a temporary directory, and the workflow steps are the ones a test passes.
 from collections.abc import Callable, Iterator, Sequence
 from contextlib import AbstractContextManager, contextmanager
 from pathlib import Path
