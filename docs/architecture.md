@@ -10,7 +10,7 @@ Take the morning queue of ten property leads produced by Stand's lead generator 
 - one clear follow-up message goes out, or
 - the lead waits on a named human decision that is visible in the underwriter's queue.
 
-The third state departs from the brief's two end states on purpose. Lead 000 is the worked example: its confirmed facts decline on every path, so sending its producer 24 questions would waste the producer's time. It waits for the underwriter to approve the decline, and a decline notice then goes out.
+The third state departs from the brief's two end states on purpose. Lead 000 is the worked example: its confirmed facts decline on every path, so sending its producer more than 25 questions would waste the producer's time. It waits for the underwriter to approve the decline, and a decline notice then goes out.
 
 The submission reads as a small harness with underwriting triage as its first vertical. It is not one agent.
 
@@ -23,7 +23,7 @@ The submission reads as a small harness with underwriting triage as its first ve
 | Brief | `docs/brief/agentic_uw_takehome.md` | Five product decisions, four deliverables |
 | Field registry | `docs/brief/field_registry.json` | 73 fields: 52 always, 18 conditional, 3 bind-only |
 | Lead generator and mock mailbox | `sim-harness/` | Stand's code, unmodified |
-| Underwriting playbook | `docs/playbook/` | 13 FigJam pages transcribed to Mermaid with reading notes |
+| Underwriting playbook | `docs/playbook/` | 13 FigJam pages transcribed to Mermaid with reading notes. The screenshots its README mentions are not shipped; the board link in that README is the visual reference. |
 
 ### 2.2 Facts about the harness that shape the design
 
@@ -283,6 +283,7 @@ Rules:
 - The skill list is a plain list in code. A test fails when a folder lacks any part.
 - The command layer refuses a command class a skill's manifest does not declare.
 - **Status** is one of `untested`, `passing`, `failing`, `unavailable`. The eval runner writes `skill_results.<name>: {cases_passed, cases_total, passed}` into each `run` row, computed from the skill's `cases/` against its manifest threshold. A skill's status is read from the latest `run` row that has `status: scored`, no `control`, a digest matching the skill's current digest (appendix A.4) and a result for that skill. Control runs and invalid runs are ignored. A changed skill is `untested` until evaluated. Evals do not run at startup. `evals/results.jsonl` is mounted read-only into the app container; labels are not.
+- Status precedence: `unavailable`, then `failing`, `untested`, `passing`. Only rows from live or record mode count toward a model skill's status.
 - Dispatch by status:
   - `passing`: runs.
   - `untested`: runs, and the lead shows "unevaluated skill". It never falls back silently.
@@ -334,7 +335,7 @@ Rules:
 - A present, non-conflicting value needs no ask, whatever its condition.
 - `conditional_unknown` on a missing producer-editable field whose controlling field is producer-editable yields `ask_follow_on`: the question is worded conditionally in the same message ("If there is a pool: is it fenced?"). `wording.yaml` holds one conditional preamble per `requiredWhen` form.
 - When the controlling field is system-owned and unresolved (its lookup is blocked or pending), the dependent field's resolution is `blocked`: no ask. It is asked in the next round only if the resolved value activates the condition. This covers the four fields conditional on protection class 9 or 10.
-- Missing system-owned fields never yield `ask`.
+- Missing system-owned fields never yield `ask`. One whose lookup returns `blocked` has resolution `blocked`; labels use the same definition.
 - `bind_only` yields `defer`.
 
 Conditional fields with no `requiredWhen`:
@@ -499,7 +500,7 @@ These rulings are this submission's reading, not Stand's. Brett reviews every ro
 |---|---|---|---|---|
 | I01 | Profile | KYC scale undefined; example payload shows 82 | Scale is 1 to 10; other values are unsupported | A |
 | I02 | Profile | KYC 5 or below | Page does not apply | A |
-| I03 | Profile | "In the spotlight" versus "private" for KYC 6 to 7 | Both branches begin with Exclude Liability, so the quote carries the exclusion; the distinction is recorded as an advisory for negotiation | A |
+| I03 | Profile | "In the spotlight" versus "private" for KYC 6 to 7 | Both branches begin with Exclude Liability, so the quote carries the exclusion; the distinction is recorded as an advisory for negotiation Traces use `02:SPOT`, `02:SPOT1` for KYC 6 to 7 (the generator's own note on these leads reads "in spotlight") and `02:HIGH`, `02:HIGH1` for KYC 8 to 10. | A |
 | I04 | Profile | "Reputational damage to Stand" | Not evaluated by the system; the underwriter can decline at packet approval | N |
 | I05 | Profile | "Deal killer" ladders | `ladder`: first rung in the packet, later rungs as an advisory | A |
 | I06 | Occupancy | Which branch applies | Rentals when `is_rental` is not "No"; Vacant/Unoccupied when `months_unoccupied` is 1 or more; For Sale when `listed_for_sale` is true Traces for the vacant or unoccupied branch use board box `03:UNOCC`, the box named after the registry field. | A |
@@ -555,6 +556,25 @@ These rulings are this submission's reading, not Stand's. Brett reviews every ro
 | I55 | Fire Simulation | "Determine preliminary mitigation plan to discuss with broker" | Advisory on the quote | A |
 | I56 | Occupancy | Modifications apply "for duration of non-occupancy" | Deadline value `duration_of_non_occupancy` | A |
 
+**Underwriter choices.** Labels and graphs take choice ids and option ids from this list, which `interpretation.yaml` holds under each U row.
+
+| Choice id | Options |
+|---|---|
+| `I07.two_months` | `under_60_days`, `over_60_days` |
+| `I09.rental_exception` | `exception`, `decline` |
+| `I13.fire_fail` | `decline`, `legacy_underwriting` |
+| `I14.access` | `adequate`, `limited` |
+| `I15.vegetation` | `heavy`, `moderate_or_light` |
+| `I16.slope` | `steep`, `gentle` |
+| `I16.distance` | `adequate`, `too_close` |
+| `I26.rounded_account` | `yes`, `no` |
+| `I38.staffing` | `paid`, `volunteer` |
+| `I44.road_access` | `multiple`, `limited` |
+| `I49.response_time` | `within_15`, `15_to_30`, `over_30` |
+| `I49.road_access` | `multiple`, `limited` |
+
+**Fan-outs on Fire Simulation.** `04:LEGACY`, `04:MAP` and `04:ACCESS` are `all_of`. `04:VEG`, `04:INGRESS`, `04:MIND` and `04:SLOPE` are `one_of`.
+
 **Rows that read more leniently than the alternative** (review these first): I03, I19, I20, I21, I24, I25, I29, I30, I32, I42. **Rows that are questions for Stand:** I12, I28, I52.
 
 ## 10. Messages
@@ -593,7 +613,7 @@ The ask plan is a list of typed asks: `field_request`, `follow_on_question`, `ca
 `read_reply` returns:
 
 - a **classification**: `answers_all`, `answers_some`, `declines_to_answer`, `off_topic`;
-- **candidate observations**: ask id, normalised value, exact span offsets.
+- **candidate observations**: ask id, normalised value, exact span offsets. Values are extracted only for the asks in the open intent.
 
 Then code:
 
@@ -636,7 +656,7 @@ Live updates use one server-sent event stream carrying event ids; a fresh snapsh
 
 ### 13.1 Running
 
-`docker compose --profile eval run --rm eval` runs the eval container. The runner imports the application in process with its own database path and points it at the `leadgen-eval` and `mailbox-eval` services, so an eval run never touches the interactive mailbox. A failed health or bootstrap check yields `invalid`, never a score.
+`docker compose --profile eval run --rm eval` runs the eval container. The runner imports the application in process with its own database path and points it at the `leadgen-eval` and `mailbox-eval` services, so an eval run never touches the interactive mailbox. A failed health or bootstrap check yields `invalid`, never a score. Every eval run, whether reference, fault or control, starts from an empty database file, settings included.
 
 Faults are injected through one documented hook on the mailbox client and the provider client (`FaultPlan`: fail after acceptance, return empty while a request is in flight, provider unavailable, forced skill status). Send-safety and provider faults run as separate fault runs on lead 008, never inside the reference run, so the reference run's labels hold. Injected faults are recorded on the run and are distinct from an invalid environment. The 50-seed sweep calls the generator in process and makes no model call.
 
@@ -646,20 +666,22 @@ Faults are injected through one documented hook on the mailbox client and the pr
   - `missing_required`, and `missing_required_conditional` when the condition is active or unknown: the field appears as an ask or follow-on, unless the lead is a proposed decline or the field's resolution is `blocked`;
   - `archetype_null` on a producer-editable field: the same rule;
   - `archetype_null` on a system-owned field, `missing_bind_only`, `missing_system_owned` and `missing_derived`: never an ask;
-  - `conflict`: a confirmation or an underwriter item;
+  - `conflict`: a confirmation or an underwriter item; on a proposed decline the decline review satisfies it and is counted under the decline exemption;
   - `archetype_set`: no expectation.
+
+  The grader has its own evaluation of the registry's six condition forms. For the two producer-editable conditional fields with no registry condition it encodes the section 9.2 table: `listed_for_sale` is always active, `is_gated_community` uses the three-valued pool condition, and `opening_protection` is never asked. Records decided by that table are counted separately, because that reading is this submission's, not Stand's (seed 42 has one, on lead 002).
 
   Two classes of disagreement are allowed and counted: a conditional field whose condition is inactive, and a field the perturbation pass nulled that a conflict injection set again. The residual outside those classes must be zero on seed 42 and on seeds 1 to 50. The run row also reports how many ask-expecting records were exempt because the lead was a proposed decline or the field was blocked; those two exemptions are decided by the system under test, so the counts are shown, and the seed-42 counts are pinned in the labels. The key is the one check whose expectations Stand wrote.
 - **Labelling function.** Expected per-field resolution = f(final lead, registry, provider fixture, interpretation table). It shares the interpretation table with the rules core, so it certifies consistency with our reading, not the reading itself.
 - **Per-outcome cases.** One hand-written case per outcome node of every graph, plus every boundary named in section 9.7. Brett checks a recorded sample of 20.
-- **Seed-42 labels.** Expected first-pass state and message asks for the ten leads. The runner grades these at the settle point, before any scripted underwriter action. It then plays the label's `underwriter_actions` and grades the expectations held under the label's `after_actions` key with the same graders (Coverage, One open request, Asks, Rule trace, Packet fidelity). Each score records the phase, `first_pass` or `after_actions`, in which a failure occurred.
+- **Seed-42 labels.** Expected first-pass state and message asks for the ten leads. The runner grades these at the settle point, before any scripted underwriter action. It then plays the label's `underwriter_actions` and grades the expectations held under the label's `after_actions` key with the same graders (Coverage, One open request, Asks, Rule trace). Packet fidelity is graded only in the packets suite. Each score records the phase, `first_pass` or `after_actions`, in which a failure occurred.
 - **Reply fixtures.** Full, partial, contradicting, and instruction-bearing, each with expected facts and state. Producer answers are hand-written. Reply bodies live in `fixtures/replies/` at the repository root and ship in the app image for the fixture-reply control; their expected results live in `evals/labels/` and do not.
 
 Labels are written from the playbook transcriptions, the registry and the data files under `src/uwh/rules/data/` by an agent that does not read the Python under `src/uwh/rules/`. Brett signs the ten lead labels. `evals/` and every skill's `cases/` folder stay out of the app image.
 
 Labels and graphs share one id scheme: board boxes are named by page number and Mermaid node id from `docs/playbook/` (for example `07:LIVING`, `07:D1`), and traces are built as section 9.6 describes.
 
-**Case coverage.** Per-outcome cases cover every edge into a terminal box on each page, except the edges listed in `evals/labels/excluded_edges.yaml`. Each exclusion cites the interpretation row that removes the edge: 02 `REP→DECLINE` (I04); 02 rungs after the first (I05); 04 `DNW→D_DNW` (I12); 04 the `TURN` branch (I14); 05 every edge under Unknown Class (I20); 10 `FENCED-No→COVER` (I48). Brett reviews the list with the interpretation table.
+**Case coverage.** Per-outcome cases cover every edge into a terminal box on each page, except the edges listed in `evals/labels/excluded_edges.yaml`. The Profile page, whose terminal edges are all excluded, instead needs one case per first-rung box (`02:SPOT1`, `02:HIGH1`) and one at the KYC 5 to 6 boundary. Each exclusion cites the interpretation row that removes the edge: 02 `REP→DECLINE` (I04); 02 rungs after the first (I05); 04 `DNW→D_DNW` (I12); 04 the `TURN` branch (I14); 05 every edge under Unknown Class (I20); 10 `FENCED-No→COVER` (I48). Brett reviews the list with the interpretation table.
 
 **Packet cases.** Lead 008, the one seed-42 lead with a fixture path to a packet, carries no requirement. Packet fidelity is therefore graded on three constructed leads whose plans hold a surcharge, a requirement with a deadline, an exclusion and a coverage adjustment between them. The "drop a requirement" control runs on those.
 
@@ -679,8 +701,8 @@ Plain functions over the mailbox, event log and fact ledger.
 | Packet fidelity | Every effect in the plan appears in the delivered packet |
 | Field resolution | Precision and recall against the labelling function, each required to be 1.0 on seed 42 |
 | Escalation | Precision and recall, each required to be 1.0 on seed 42; positive class is "expected to need the underwriter". The escalation rate (leads needing the underwriter on the first pass, with the reason per lead) is a headline number with a stated target of at most 4 of 10 on seed 42. |
-| Send safety | Crash after mailbox acceptance, and query-empty-while-in-flight, each yield no second message |
-| Approval binding | On a dedicated run: the stop is engaged, lead 008's packet is approved, one fact is changed with `resolve_fact`, the stop is released. Nothing is sent and the item is back in review. A late reply after approval has the same effect. |
+| Send safety | Crash after mailbox acceptance, and query-empty-while-in-flight, each yield no second message. A fault run with no `fault_injected` event fails. |
+| Approval binding | An `approve` carrying a payload hash that is not the draft's current hash is refused and nothing is sent. The five-way recheck at dispatch is pinned by the stage 4 unit test. |
 | Policy | Emergency stop refuses dispatch on every entry path; a locked class cannot be set to auto; an `approve` submitted by `mcp_client` or `assistant` is refused |
 | Stand's key | The residual described in section 13.2 is zero |
 | Key isolation | A static test finds no `/debug` path in `src/`; a transport recorder in the eval run sees no request to it |
@@ -690,7 +712,6 @@ Plain functions over the mailbox, event log and fact ledger.
 
 **Critical errors** (any one fails the run): duplicate send, unauthorised send, a requirement missing from a delivered packet, a reply changing a setting or approving an action.
 
-Counts are reported separately: resolved without a person, resolved with a required approval, needed an unplanned rescue.
 
 Tokens and wall time per lead are reported as measurements on every run row. They are not a grader.
 
@@ -706,7 +727,7 @@ A reference run passes everything. Each broken variant must be failed by its nam
 | Ignore conflicts | Asks (missing confirmations) |
 | Send twice | Send safety; critical errors |
 | Drop a requirement from the packet | Packet fidelity |
-| Dispatch after a stale approval | Approval binding |
+| Accept an approval without checking its hash | Approval binding |
 | Ask for a bind-only field | Stand's key; Forbidden asks |
 
 ### 13.5 Results log and loop
@@ -822,7 +843,7 @@ intents(id TEXT PRIMARY KEY, run_id TEXT, lead_id TEXT, round INTEGER, kind TEXT
 approvals(id INTEGER PRIMARY KEY, lead_id TEXT, item_kind TEXT, intent_id TEXT,
           lead_revision INTEGER, plan_hash TEXT, ruleset_hash TEXT, recipient TEXT,
           payload_hash TEXT, actor TEXT, decision TEXT, reason TEXT, event_id INTEGER)
-          -- item_kind: draft | observation | delivery_unknown | review; decision: approved | rejected
+          -- item_kind: draft | observation | delivery_unknown | no_contact_route | review; decision: approved | rejected
           -- edits and rulings are recorded on their events, not here
 runs(run_id TEXT PRIMARY KEY, seed INTEGER, mode TEXT, started_at TEXT, status TEXT)
           -- status: processing | settled
@@ -920,11 +941,12 @@ nodes:
   surcharge_25: {kind: outcome, board_path: ["07:MID", "07:S25"], effects: [{type: surcharge, percent: 25, rule: PP-4}]}
 ```
 
+- `applies_when` may be `{any: [...]}`: true when any member is true, otherwise unknown when any member is unknown, otherwise false.
 - Conditions use `equals`, `in`, `lt`, `lte`, `gt`, `gte`. A bound may be a literal or `{param: I35.tolerance}`, which reads a parameter from the named interpretation row.
 - `all_of` and `ladder` nodes list `children` in place of `cases`.
 - A `test` may carry `interpretation: I18`.
 - `producer_question` nodes carry `question: <catalogue id>` and `cases` on the answer.
-- `underwriter_choice` nodes carry `choice_id` (its interpretation row id, for example `I13`), `prompt`, `options` (each with `then`) and `show` (fields displayed with the choice). `choice_id` is stable across runs, so labels can script the underwriter's answers.
+- `underwriter_choice` nodes carry `choice_id` and `options` (each with `then`), both taken from the list of underwriter choices in section 9.7 (for example `I13.fire_fail` with options `decline` and `legacy_underwriting`), plus `prompt` and `show` (fields displayed with the choice). The ids are fixed in `interpretation.yaml`, so labels can script the underwriter's answers before any graph exists.
 - A `test` may name a **derived input** in place of a registry field. `derivations.yaml` declares the two that exist: `coverage_to_rce_ratio` (`coverage_a / replacement_cost`) and `roof_age_years` (the reference year minus `roof_replacement_year`). A derived input is unknown when any input is unknown or the divisor is zero. No general expression language exists.
 - Interpretation rows may carry `params` (a map of named numbers). The Replacement Cost graph bands `coverage_to_rce_ratio` at `1 - I35.tolerance`, `1 + I35.tolerance` and 1.5.
 
@@ -963,7 +985,7 @@ Reply bodies are capped at 8,000 characters. The model id comes from `ANTHROPIC_
 
 - Lead concurrency: 4.
 - Skill pass threshold: 1.0 unless a manifest states another value with its reason.
-- `read_reply` calls the model with temperature 0.
+- `read_reply` sends no sampling parameters. Stage 1 confirms which parameters `ANTHROPIC_MODEL` accepts. A `refusal` stop reason maps to the skill's typed abstention.
 - Rounds before the lead goes to the underwriter: 2.
 - Jev confidence threshold: 0.7 per question, in the skill manifest.
 - Reply-reading repeats in evals: 3.
@@ -999,9 +1021,10 @@ Reply bodies are capped at 8,000 characters. The model id comes from `ANTHROPIC_
 | Pending observation | makes it the effective fact | marks it rejected; the existing value stays |
 | `delivery_unknown` | re-runs the mailbox check | closes the intent unsent; a fresh draft waits for approval |
 | No contact route | n/a; resolved with `resolve_fact` on `q:contact_email` | n/a |
-| Any other underwriter review (a late or unread reply, an off-topic or declining reply, the round limit, a missing or unsupported identity score, a draft held by the stop) | acknowledges it with a reason and closes it; when a reply raised it, the round closes too. A held draft is dispatched. | refused; the underwriter acts through `resolve_fact`, `record_ruling` or `decline_lead` |
+| A review raised by an event (a late or unread reply, an off-topic or declining reply, a draft held by the stop) | acknowledges it with a reason and closes it; when a reply raised it, the round closes too. A held draft is dispatched. | refused; the underwriter acts through `resolve_fact`, `record_ruling` or `decline_lead` |
+| A review whose cause persists (the round limit, a missing or unsupported identity score) | refused | refused. It closes when the cause is removed: `resolve_fact` supplies the fact, or `decline_lead` ends the lead. |
 
-Every item above is an `underwriter_review` blocker except an open choice, which is an `underwriter_question`.
+Every item above is an `underwriter_review` blocker, except `delivery_unknown` (its own kind) and an open choice (`underwriter_question`). Each blocker in the lead detail response carries its kind and its item kind (the `approvals.item_kind` values in A.1), and each open choice carries its option ids. Every accepted command re-evaluates its lead in the same transaction.
 
 Workflow-only classes (`fetch_data` and the send classes) are submitted in process and are not accepted over HTTP.
 

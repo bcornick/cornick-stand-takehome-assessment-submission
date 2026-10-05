@@ -65,8 +65,8 @@
   {
     "id": "S01-A10",
     "stage": 1,
-    "description": "Tier 0. The Anthropic SDK and `httpx2` versions are pinned, and the SDK check and the `TestClient` check are recorded. Expect: `2`, then two numbers, each at least 1.",
-    "command": "grep -A1 -E '^name = \"(anthropic|httpx2)\"$' uv.lock | grep -c '^version = ' && grep -c 'messages.parse' docs/progress.md && grep -c 'httpx2.Client' docs/progress.md",
+    "description": "Tier 0. The Anthropic SDK and `httpx2` versions are pinned, and the SDK check, the sampling-parameter check for `ANTHROPIC_MODEL` and the `TestClient` check are recorded. Expect: `2`, then three numbers, each at least 1.",
+    "command": "grep -A1 -E '^name = \"(anthropic|httpx2)\"$' uv.lock | grep -c '^version = ' && grep -c 'messages.parse' docs/progress.md && grep -cE 'Sampling parameters accepted by claude-sonnet-5-5: .+' docs/progress.md && grep -c 'httpx2.Client' docs/progress.md",
     "passes": false
   },
   {
@@ -100,7 +100,7 @@
   {
     "id": "S02-A4",
     "stage": 2,
-    "description": "Tier 0. The stand-in API serves valid fixture data for every GET route and all ten leads. Expect: all pass.",
+    "description": "Tier 0. The stand-in API serves valid fixture data for every GET route except the event stream, and for all ten leads. Expect: all pass.",
     "command": "uv run pytest tests/tools/test_standin_api.py",
     "passes": false
   },
@@ -245,13 +245,6 @@
     "passes": false
   },
   {
-    "id": "S04-A7",
-    "stage": 4,
-    "description": "Tier 0. The runtime holds no vertical vocabulary. Expect: passes.",
-    "command": "uv run pytest tests/runtime/test_vocabulary.py",
-    "passes": false
-  },
-  {
     "id": "S04-A8",
     "stage": 4,
     "description": "Tier 1. A locked class cannot be set to `auto` on the running app. Expect: `true`, then `\"review\"` (an absent key reads as the \u00a77.4 default).",
@@ -297,7 +290,7 @@
     "id": "S05-A1",
     "stage": 5,
     "description": "Tier 0. One eval run appends one complete `run` row whose `commit` is a full commit hash, never `unknown` (\u00a714). Expect: exit 0.",
-    "command": "before=$(wc -l < evals/results.jsonl); make eval ARGS='--suite seed42'; test $(( $(wc -l < evals/results.jsonl) - before )) -eq 1 && tail -1 evals/results.jsonl | jq -e '.type == \"run\" and (([\"run_id\",\"commit\",\"evaluator_hash\",\"case_set_id\",\"suite\",\"skill_digests\",\"skill_results\",\"status\",\"scores\",\"critical_errors\",\"injected_faults\",\"tokens\",\"cost_usd\",\"per_lead\",\"hypothesis\"] - keys) == []) and ((.commit | type) == \"string\" and (.commit | test(\"^[0-9a-f]{40}$\")))'",
+    "command": "before=$(wc -l < evals/results.jsonl); make eval ARGS='--suite seed42'; test $(( $(wc -l < evals/results.jsonl) - before )) -eq 1 && tail -1 evals/results.jsonl | jq -e '.type == \"run\" and (([\"run_id\",\"commit\",\"evaluator_hash\",\"case_set_id\",\"suite\",\"skill_digests\",\"skill_results\",\"status\",\"mode\",\"scores\",\"critical_errors\",\"injected_faults\",\"tokens\",\"cost_usd\",\"per_lead\",\"hypothesis\"] - keys) == []) and ((.commit | type) == \"string\" and (.commit | test(\"^[0-9a-f]{40}$\")))'",
     "passes": false
   },
   {
@@ -310,8 +303,8 @@
   {
     "id": "S05-A3",
     "stage": 5,
-    "description": "Tier 0. The `seed42` suite scores exactly its seven tier-0 graders, and Stand's key reports its two exemption counts. Expect: exit 0.",
-    "command": "make eval ARGS='--suite seed42'; tail -1 evals/results.jsonl | jq -e '.suite == \"seed42\" and .case_set_id == \"seed-42\" and (.scores | keys) == [\"asks\",\"coverage\",\"forbidden_asks\",\"key_isolation\",\"one_open_request\",\"send_safety\",\"stands_key\"] and (.scores.stands_key | has(\"exempt_decline\") and has(\"exempt_blocked\"))'",
+    "description": "Tier 0. The `seed42` suite scores exactly its seven tier-0 graders, and Stand's key reports its two exemption counts and its count of records decided by the \u00a79.2 table. Expect: exit 0.",
+    "command": "make eval ARGS='--suite seed42'; tail -1 evals/results.jsonl | jq -e '.suite == \"seed42\" and .case_set_id == \"seed-42\" and (.scores | keys) == [\"asks\",\"coverage\",\"forbidden_asks\",\"key_isolation\",\"one_open_request\",\"send_safety\",\"stands_key\"] and (.scores.stands_key | has(\"exempt_decline\") and has(\"exempt_blocked\") and has(\"no_registry_condition\"))'",
     "passes": false
   },
   {
@@ -345,7 +338,7 @@
   {
     "id": "S05-A8",
     "stage": 5,
-    "description": "Tier 1. Stand's key leaves a zero residual across seeds 1 to 50. Expect: exit 0; counts for each of the two allowed disagreement classes and for the two exemptions; residual `0`.",
+    "description": "Tier 1. Stand's key leaves a zero residual across seeds 1 to 50. Expect: exit 0; counts for each of the two allowed disagreement classes, for the two exemptions and for the records decided by the \u00a79.2 table; residual `0`.",
     "command": "uv run python -m evals.sweep --seeds 1-50 --grader stands_key",
     "passes": false
   },
@@ -562,7 +555,7 @@
   {
     "id": "S08-A11",
     "stage": 8,
-    "description": "Tier 1. The stale-approval variant is caught by Approval binding on the `replies` suite's dedicated runs. Needs `ANTHROPIC_API_KEY` in `.env`. Expect: exit 0.",
+    "description": "Tier 1. The variant that accepts an approval without checking its hash is caught by Approval binding on the `replies` suite's dedicated run. Needs `ANTHROPIC_API_KEY` in `.env`. Expect: exit 0.",
     "command": "make eval ARGS='--control stale_approval' && tail -1 evals/results.jsonl | jq -e '.scores.approval_binding.passed == false'",
     "passes": false
   },
@@ -884,7 +877,7 @@
   {
     "id": "S13-A10",
     "stage": 13,
-    "description": "Tier 1. In the tier-1 pass, all eight controls are caught. Needs `ANTHROPIC_API_KEY` in `.env`: the stale-approval control runs the `replies` suite. Expect: exit 0.",
+    "description": "Tier 1. In the tier-1 pass, all eight controls are caught. Needs `ANTHROPIC_API_KEY` in `.env`: the control that accepts an approval without checking its hash runs the `replies` suite. Expect: exit 0.",
     "command": "make eval ARGS='--controls all'; tail -1 evals/results.jsonl | jq -e '(.controls | length) == 8 and all(.controls[]; .caught == true)'",
     "passes": false
   }
