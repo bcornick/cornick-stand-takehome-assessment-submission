@@ -139,6 +139,7 @@ WORKFLOW_STEP_ORDER: tuple[str, ...] = (
     "resolve_data",
     "evaluate_playbook",
     "ask_producer",
+    "build_quote_packet",
 )
 
 # The generator's reference morning, the start of simulated time.

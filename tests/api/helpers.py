@@ -7,8 +7,12 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 WAIT_SECONDS = 10.0
+ROOT = Path(__file__).resolve().parents[2]
 # Stand's registry, which the app reads at startup.
-REGISTRY = Path(__file__).resolve().parents[2] / "docs" / "brief" / "field_registry.json"
+REGISTRY = ROOT / "docs" / "brief" / "field_registry.json"
+# The committed model recordings and reply fixtures.
+RECORDINGS = ROOT / "recordings"
+FIXTURE_REPLIES = ROOT / "fixtures" / "replies"
 
 
 def wait_for(condition: Callable[[], bool]) -> None:

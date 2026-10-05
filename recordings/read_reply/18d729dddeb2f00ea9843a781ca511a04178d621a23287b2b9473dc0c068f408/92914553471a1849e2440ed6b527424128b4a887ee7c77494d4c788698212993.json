@@ -1,0 +1,58 @@
+{
+  "input": {
+    "asks": [
+      {
+        "answer_type": "date",
+        "ask_id": "property_purchase_date",
+        "field": "property_purchase_date",
+        "options": [],
+        "wording": "When was the property purchased?"
+      },
+      {
+        "answer_type": "select",
+        "ask_id": "electrical_panel_brand",
+        "field": "electrical_panel_brand",
+        "options": [
+          "Federal Pacific",
+          "Stab-Lok",
+          "Zinsco",
+          "Challenger",
+          "Sylvania",
+          "Square D",
+          "Eaton",
+          "Siemens",
+          "GE",
+          "Other",
+          "Unknown"
+        ],
+        "wording": "What brand is the electrical panel?"
+      }
+    ],
+    "body": "Hi,\n\nThanks for sending this over. I checked with the owner on the Lakeview Blvd property: they closed on the purchase on July 12, 2019, and the electrical panel in the house is a Square D unit. Let me know if you need anything else to move this forward.\n\nBest regards,\nDana Whitfield\nHarbor Point Insurance Brokers\n"
+  },
+  "input_hash": "92914553471a1849e2440ed6b527424128b4a887ee7c77494d4c788698212993",
+  "model_id": "deepseek-flash",
+  "prompt_version": "18d729dddeb2f00ea9843a781ca511a04178d621a23287b2b9473dc0c068f408",
+  "request_id": "",
+  "skill": "read_reply",
+  "stop_reason": "tool_use",
+  "tokens_in": 1165,
+  "tokens_out": 148,
+  "tool_input": {
+    "candidates": [
+      {
+        "ask_id": "property_purchase_date",
+        "field": "property_purchase_date",
+        "quote": "they closed on the purchase on July 12, 2019",
+        "value": "2019-07-12"
+      },
+      {
+        "ask_id": "electrical_panel_brand",
+        "field": "electrical_panel_brand",
+        "quote": "the electrical panel in the house is a Square D unit",
+        "value": "Square D"
+      }
+    ],
+    "classification": "answers_all"
+  }
+}

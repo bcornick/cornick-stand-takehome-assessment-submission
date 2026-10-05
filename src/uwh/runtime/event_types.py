@@ -248,7 +248,9 @@ class ReplyRead(StrictModel):
     classification: ReplyClassification | None
     abstention: AbstentionReason | None
     candidates: list[LocatedCandidate]
-    dropped: list[Candidate]  # candidates whose quote is not in the reply, as returned
+    dropped: list[
+        Candidate
+    ]  # candidates code dropped, as returned: quote not in the reply, field not asked, or a value that does not fit the field
 
     @model_validator(mode="after")
     def _a_reading_or_an_abstention(self) -> "ReplyRead":

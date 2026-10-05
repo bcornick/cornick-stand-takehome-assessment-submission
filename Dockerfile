@@ -40,6 +40,9 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 COPY docs/brief/field_registry.json /app/registry/field_registry.json
 
+# The reply bodies of the fixture-reply control; the default of UWH_FIXTURE_REPLIES.
+COPY fixtures/replies /app/fixtures/replies
+
 # The built frontend; the default of UWH_STATIC_DIR.
 COPY --from=frontend /app/web/dist /app/static
 

@@ -11,7 +11,7 @@ from pydantic import JsonValue
 import uwh.skills
 from uwh.providers.stand_in import StandInProviders
 from uwh.rules.data_files import read_yaml
-from uwh.rules.models import FieldTriage, NotBuilt
+from uwh.rules.models import ActionPlan, FieldTriage, NotBuilt
 from uwh.rules.registry import Registry
 from uwh.runtime.event_types import (
     ConflictOpened,
@@ -33,6 +33,7 @@ from uwh.runtime.hashing import hash_json, plan_hash
 from uwh.runtime.send import create_draft, replace_stale_drafts
 from uwh.runtime.waits import open_blockers
 from uwh.runtime.workflow import Step
+from uwh.skills.build_quote_packet import skill as build_quote_packet
 from uwh.skills.evaluate_playbook import skill as evaluate_playbook
 from uwh.skills.plan_asks import skill as plan_asks
 from uwh.skills.render_message import skill as render_message
@@ -136,15 +137,38 @@ def _recipient(db: sqlite3.Connection, lead_id: str, facts: dict[str, JsonValue]
     return address
 
 
+def _unsettled_intent(db: sqlite3.Connection, lead_id: str) -> bool:
+    """A message of the lead that is a draft, being sent, or sent with the result in doubt."""
+    return (
+        db.execute(
+            "SELECT 1 FROM intents WHERE lead_id = ? AND state IN ('draft', 'dispatching', 'unknown')",
+            (lead_id,),
+        ).fetchone()
+        is not None
+    )
+
+
 def _request_in_flight(db: sqlite3.Connection, lead_id: str) -> bool:
-    """One request per lead at a time (10.1): a draft, a send in progress or in doubt, or a sent
-    request still waiting for its reply."""
-    unsettled = db.execute(
-        "SELECT 1 FROM intents WHERE lead_id = ? AND state IN ('draft', 'dispatching', 'unknown')",
-        (lead_id,),
-    ).fetchone()
-    return unsettled is not None or any(
+    """One request per lead at a time (10.1): an unsettled message, or a sent request still waiting
+    for its reply."""
+    return _unsettled_intent(db, lead_id) or any(
         blocker.kind == "producer_reply" for blocker in open_blockers(db, lead_id)
+    )
+
+
+def _planned_asks(
+    registry: Registry, db: sqlite3.Connection, lead_id: str
+) -> plan_asks.PlanAsksOutput:
+    conflicts = [
+        ConflictOpened(
+            validator=c.validator, fields=list(c.fields), values=c.values, question=c.question
+        )
+        for c in open_conflicts(db, lead_id)
+    ]
+    return plan_asks.run(
+        plan_asks.PlanAsksInput(
+            registry=registry, triage=_triage(db, lead_id, registry), conflicts=conflicts
+        )
     )
 
 
@@ -153,17 +177,7 @@ def _ask_producer_step(
 ) -> None:
     """Plan the asks, render them and draft the request. A draft built at an older revision is replaced;
     a lead with a request in flight, or nothing to ask, gets no new draft."""
-    conflicts = [
-        ConflictOpened(
-            validator=c.validator, fields=list(c.fields), values=c.values, question=c.question
-        )
-        for c in open_conflicts(db, lead_id)
-    ]
-    planned = plan_asks.run(
-        plan_asks.PlanAsksInput(
-            registry=registry, triage=_triage(db, lead_id, registry), conflicts=conflicts
-        )
-    )
+    planned = _planned_asks(registry, db, lead_id)
     replace_stale_drafts(db, context, lead_id)
     if not planned.asks or _request_in_flight(db, lead_id):
         return
@@ -189,6 +203,54 @@ def _ask_producer_step(
     )
 
 
+# The coverages a quote packet shows as submitted.
+_COVERAGE_FIELDS = ("coverage_a", "coverage_e", "coverage_f")
+
+
+def _quote_packet_step(
+    registry: Registry, db: sqlite3.Connection, context: EventContext, lead_id: str
+) -> None:
+    """Draft the quote packet when the plan holds no decline and nothing open, no ask remains, and the
+    lead holds no blocker and no unsettled message (8). The draft waits for the underwriter."""
+    (plan_json,) = db.execute(
+        "SELECT plan_json FROM leads WHERE lead_id = ?", (lead_id,)
+    ).fetchone()
+    plan = ActionPlan.model_validate_json(plan_json)
+    if (
+        not build_quote_packet.is_ready(plan)
+        or _planned_asks(registry, db, lead_id).asks
+        or open_blockers(db, lead_id)
+        or _unsettled_intent(db, lead_id)
+    ):
+        return
+    facts = effective_facts(db, lead_id)
+    address = facts["street_address"].value if "street_address" in facts else None
+    packet = build_quote_packet.run(
+        build_quote_packet.BuildQuotePacketInput(
+            lead_label=address if isinstance(address, str) else lead_id,
+            plan=plan,
+            coverages={
+                name: build_quote_packet.Coverage(
+                    label=registry[name].label, value=facts[name].value
+                )
+                for name in _COVERAGE_FIELDS
+                if name in facts
+            },
+        )
+    )
+    create_draft(
+        db,
+        context,
+        load_manifest(_SKILLS_ROOT / "build_quote_packet"),
+        lead_id,
+        "quote_packet",
+        _recipient(db, lead_id, {key: fact.value for key, fact in facts.items()}),
+        packet.subject,
+        packet.body,
+        [],
+    )
+
+
 def build_steps(
     registry: Registry, providers: StandInProviders, rules: LedgerRules
 ) -> tuple[Step, ...]:
@@ -198,5 +260,6 @@ def build_steps(
         "resolve_data": partial(_resolve_step, registry, providers, rules),
         "evaluate_playbook": _evaluate_step,
         "ask_producer": partial(_ask_producer_step, registry),
+        "build_quote_packet": partial(_quote_packet_step, registry),
     }
     return tuple(Step(name, runners[name]) for name in WORKFLOW_STEP_ORDER)

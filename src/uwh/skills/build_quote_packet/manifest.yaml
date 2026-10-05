@@ -1,0 +1,7 @@
+name: build_quote_packet
+version: "1"
+purpose: Builds the quote packet in code from the action plan, with the coverages as submitted, every effect of the plan on its own line with its rule, and a note for each page not evaluated, and issues its draft.
+trigger: no open blockers and no asks remain
+command_classes: [send_quote_packet]
+fallback: none
+pass_threshold: 1.0

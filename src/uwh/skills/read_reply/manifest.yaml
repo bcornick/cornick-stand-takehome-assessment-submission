@@ -1,0 +1,8 @@
+name: read_reply
+version: "1"
+purpose: Reads a producer's reply against the asks of the open request, returning a classification and the answers it states, each with the exact words they were read from.
+trigger: a reply is delivered
+command_classes: []
+fallback: the reply goes to the underwriter unread
+pass_threshold: 1.0
+model_skill: true

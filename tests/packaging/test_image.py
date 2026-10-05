@@ -39,6 +39,7 @@ def context(tmp_path_factory: pytest.TempPathFactory) -> Path:
             target.write_bytes(source.read_bytes())
     (ctx / "docs/brief").mkdir(parents=True)
     (ctx / REGISTRY).write_bytes((ROOT / REGISTRY).read_bytes())
+    (ctx / "fixtures/replies").mkdir(parents=True)
     for source in (ROOT / "web").rglob("*"):
         if source.is_file() and not {"node_modules", "dist"} & set(source.relative_to(ROOT).parts):
             target = ctx / source.relative_to(ROOT)

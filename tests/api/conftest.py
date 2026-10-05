@@ -8,7 +8,7 @@ import httpx2
 import pytest
 from fastapi.testclient import TestClient
 
-from tests.api.helpers import REGISTRY
+from tests.api.helpers import FIXTURE_REPLIES, RECORDINGS, REGISTRY
 from uwh.api import runtime
 from uwh.api.app import create_app
 from uwh.runtime.leadgen_client import LeadgenClient
@@ -36,6 +36,8 @@ def settings(tmp_path: Path) -> Settings:
             "RUN_MODE": "replay",
             "SEED": "7",
             "UWH_REGISTRY": str(REGISTRY),
+            "UWH_RECORDINGS": str(RECORDINGS),
+            "UWH_FIXTURE_REPLIES": str(FIXTURE_REPLIES),
         }
     )
 
