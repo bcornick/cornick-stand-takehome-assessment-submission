@@ -1,0 +1,118 @@
+# ABOUTME: Stored plain wording for asks: one question per producer-editable registry field, one conditional preamble per requiredWhen form, one confirmation per conflict check.
+# ABOUTME: Sections 9.2, 9.5, 10.2 and A.7 define the three groups; fields are in registry order.
+
+# One question for every field the producer can edit (`editableByProducer` true in the registry).
+fields:
+  street_address: "What is the property address?"
+  city: "What city is the property in?"
+  county: "What county is the property in?"
+  state: "What state is the property in?"
+  zip: "What is the property's zip code?"
+  listed_for_sale: "Is the property currently listed for sale?"
+  first_name: "What is the insured's first name?"
+  last_name: "What is the insured's last name?"
+  residence_held_in_trust: "Is the property owned by a trust?"
+  trust_name: "What is the name of the trust?"
+  owner_email: "What is the insured's email address?"
+  owner_phone_number: "What is the insured's phone number?"
+  insured_dob: "What is the insured's date of birth?"
+  occupation: "What is the insured's occupation?"
+  number_of_residents: "How many people live in the home?"
+  effective_date: "What date should the policy start?"
+  coverage_a: "What Coverage A (dwelling) amount is requested?"
+  coverage_e: "What Coverage E (liability) limit is requested: 100,000, 300,000 or 500,000?"
+  coverage_f: "What Coverage F (medical payments) limit is requested: 1,000, 3,000 or 5,000?"
+  dwelling_type: "How is the dwelling used: owner occupied single family, owner occupied multi family, secondary residence or seasonal residence?"
+  dwelling_use_type: "What is the occupancy type: primary, secondary, seasonal, tenant, or mixed (secondary or seasonal and tenant)?"
+  is_rental: "Is the home rented out, and if so, is it short-term or long-term?"
+  months_unoccupied: "How many consecutive months has the home been unoccupied?"
+  year_built: "What year was the home built?"
+  property_purchase_date: "When was the property purchased?"
+  pool_type: "Does the property have a pool, and if so, is it above ground or inground?"
+  pool_security: "How is the pool secured: none, unfenced or fenced?"
+  pool_has_diving_board_or_slide: "Does the pool have a diving board or slide?"
+  above_ground_pool_ladder: "Does the above-ground pool have a pull-up locking ladder?"
+  is_gated_community: "Is the property in a gated community or on a multi-acre property?"
+  acreage: "How many acres is the lot?"
+  has_animals: "Are there any animals on the property?"
+  structure_type: "What type of structure is it: single family, duplex, townhouse, rowhome or other?"
+  construction_type: "What is the construction type: concrete, frame, masonry, log, modular, mobile or manufactured, or steel?"
+  siding_material: "What is the siding material?"
+  foundation_type: "What type of foundation does the home have?"
+  post_pier_supports_living_area: "Does the post and pier foundation support the living area, and not just decking?"
+  deck_height_ft: "How high is the deck above grade, in feet?"
+  square_feet: "What is the total living square footage?"
+  num_stories: "How many stories does the home have?"
+  roof_replacement_year: "In what year was the roof last replaced?"
+  roof_material: "What is the roof surface material?"
+  roof_shape: "What is the roof shape?"
+  heating_source: "What is the primary heating system?"
+  has_knob_and_tube_wiring: "Does the home have knob-and-tube wiring?"
+  electrical_panel_brand: "What brand is the electrical panel?"
+  electrical_panel_size_amps: "What is the size of the electrical panel, in amps?"
+  plumbing_age_years: "How old is the plumbing, in years?"
+  water_heater_type: "Is the water heater a tank or a tankless unit?"
+  water_heater_age_years: "How old is the water heater, in years?"
+  water_heater_location: "Where is the water heater: in or above finished space, or in unfinished space?"
+  fire_alarm: "What fire protective devices does the home have: none, local alarm, central alarm or direct alarm?"
+  distance_to_fire_department: "How many miles is it to the fire department?"
+  fire_department_type: "Is the fire department career, mostly career, mostly volunteer or volunteer?"
+  dist_to_nearest_fire_hydrant: "How many feet is it to the nearest fire hydrant?"
+  opening_protection: "What opening protection does the home have?"
+  fire_dept_response_time: "How long does the fire department take to respond: within 15 minutes, between 15 and 30 minutes, or more than 30 minutes?"
+  alternative_water_source: "Is there an alternative water source available, such as a lake, pond, river, cistern, tank or pool?"
+  interior_sprinklers: "Does the home have interior sprinklers, and if so, are they centrally monitored?"
+  physical_barriers: "Does the property have gates or other physical barriers?"
+  is_7a_compliant: "Is the home Chapter 7A compliant?"
+
+# One preamble per distinct `requiredWhen` string in the registry, keyed by that exact string.
+# A follow-on question reads "<preamble>: <question>", for example "If the property has a pool: is the pool fenced?".
+preambles:
+  "residence_held_in_trust = true": "If the property is held in a trust"
+  "pool_type != None": "If the property has a pool"
+  "pool_type = Above Ground": "If the pool is above ground"
+  "foundation_type in (Piers, Stilts, Pilings)": "If the home is on piers, stilts or pilings"
+  "water_heater_type = Tank": "If the water heater is a tank"
+  "protection_class in (9, 10)": "If the property's fire protection class is 9 or 10"
+
+# One confirmation per conflict check of section 9.5, in that table's order. `fields` lists the registry
+# fields the check covers; `{field}` in a question is replaced by that field's reported value.
+# The `kyc_score_out_of_range` check goes to the underwriter, not to the producer; its template is the
+# neutral wording of the same confirmation.
+confirmations:
+  roof_year_in_future:
+    fields: [roof_replacement_year]
+    question: "The roof is listed as replaced in {roof_replacement_year}. Can you confirm that year?"
+  roof_year_before_year_built:
+    fields: [roof_replacement_year, year_built]
+    question: "The home is listed as built in {year_built} and the roof as replaced in {roof_replacement_year}. Can you confirm both years?"
+  effective_date_in_past:
+    fields: [effective_date]
+    question: "The policy start date is listed as {effective_date}. Can you confirm that date?"
+  panel_size_below_60:
+    fields: [electrical_panel_size_amps]
+    question: "The electrical panel size is listed as {electrical_panel_size_amps} amps. Can you confirm that size?"
+  no_residents_in_primary_home:
+    fields: [number_of_residents, dwelling_use_type, dwelling_type]
+    question: "The number of people living in the home is listed as {number_of_residents}. Can you confirm that number?"
+  acreage_zero:
+    fields: [acreage]
+    question: "The lot is listed as {acreage} acres. Can you confirm the acreage?"
+  months_unoccupied_in_primary_home:
+    fields: [months_unoccupied, dwelling_use_type, dwelling_type]
+    question: "The home is listed as unoccupied for {months_unoccupied} consecutive months. Can you confirm that?"
+  primary_use_with_rental:
+    fields: [dwelling_use_type, is_rental]
+    question: "The occupancy type is listed as {dwelling_use_type} and the rental exposure as {is_rental}. Can you confirm both?"
+  owner_occupied_with_other_use:
+    fields: [dwelling_type, dwelling_use_type]
+    question: "The dwelling use is listed as {dwelling_type} and the occupancy type as {dwelling_use_type}. Can you confirm both?"
+  tenant_use_without_rental:
+    fields: [dwelling_use_type, is_rental]
+    question: "The occupancy type is listed as {dwelling_use_type} and the rental exposure as {is_rental}. Can you confirm both?"
+  tankless_with_tank_fields:
+    fields: [water_heater_type, water_heater_age_years, water_heater_location]
+    question: "The water heater is listed as {water_heater_type} and also has an age or a location listed. Can you confirm the water heater type?"
+  kyc_score_out_of_range:
+    fields: [kyc_score]
+    question: "The KYC score on file is {kyc_score}. Can you confirm that score?"
