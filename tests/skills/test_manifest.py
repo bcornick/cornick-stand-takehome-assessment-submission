@@ -151,6 +151,6 @@ def test_every_skill_folder_is_registered() -> None:
     assert folders == set(SKILLS)
 
 
-@pytest.mark.parametrize("name", SKILLS)
-def test_every_registered_skill_folder_is_complete(name: str) -> None:
-    assert check_skill_folder(SKILLS_DIR / name).name == name
+def test_every_registered_skill_folder_is_complete() -> None:
+    for name in SKILLS:
+        assert check_skill_folder(SKILLS_DIR / name).name == name
