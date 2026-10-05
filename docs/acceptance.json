@@ -137,21 +137,21 @@
     "stage": 3,
     "description": "Tier 0. The committed world fixtures for seeds 42, 11 and 15 match a fresh capture. Expect: exit 0.",
     "command": "uv run python tools/capture_world.py --seed 42 --check && uv run python tools/capture_world.py --seed 11 --check && uv run python tools/capture_world.py --seed 15 --check",
-    "passes": false
+    "passes": true
   },
   {
     "id": "S03-A2",
     "stage": 3,
     "description": "Tier 0. The captured leads for seeds 42, 11 and 15 equal the leadgen container's leads. Expect: all pass.",
     "command": "uv run pytest -m integration tests/integration/test_world_matches_leadgen.py",
-    "passes": false
+    "passes": true
   },
   {
     "id": "S03-A3",
     "stage": 3,
     "description": "Tier 0. Capture and rules-data tests pass. Expect: all pass.",
     "command": "uv run pytest tests/tools/test_capture_world.py tests/rules/test_rules_data.py",
-    "passes": false
+    "passes": true
   },
   {
     "id": "S03-A4",
