@@ -202,3 +202,15 @@ Known and left: `web/components.json` still names an icon library and a utils al
 **Friction:** three review rounds in a row were blocked on the docs being out of step with the code after a shape change, not on the code. A grep of the architecture, plan and acceptance file for every name, field and file a round changed now runs before the reviewer does; it found one more stale passage (which message kinds are requests) that would have blocked a fourth round.
 
 Process, from Brett on 2026-10-05: the lead fixes a reviewer's blocker itself and sends the fix back to the reviewer when it needs no escalation and no decision from Brett, and stops only when a blocker needs his ruling. Under that, the review at bc543ce blocked on two items and both were fixed without a further round with Brett: a blocker that is not a review accepted a cause (the refusal went with `BlockerView.review_cause`; restored on `detail.cause` with its test), and §7 and plan stage 2 task 3 said every value set lives in `event_types.py` while `AutonomyLevel` sat in `vertical.py` and the run mode in `settings.py`. The lead offered Brett two options on the second and he did not pick; the lead took the one it had recommended: `AutonomyLevel` moves to `event_types.py`, and the docs name the run mode as the one set defined elsewhere.
+
+## Stage 02: contracts approved (stage-02-contracts-t0, 0e8ccc5)
+
+Contracts approved by Brett at 0e8ccc5.
+
+Brett's condition for the approval was that his rulings be made in the docs and the shapes, that the last fix rounds and those changes go to the reviewer, and that the approval be recorded at that commit if the reviewer found no blocker. The reviewer's pass over the delta to 36ca932 opened with `NO BLOCKER`; its fix-now items, which it said need no further review, are in e352606 and 0e8ccc5. From this commit the event payloads (`src/uwh/runtime/event_types.py`), the route shapes (`src/uwh/api/views.py`, `web/src/api/openapi.json`), the skill contracts (`src/uwh/skills/contracts.py`) and the domain models (`src/uwh/rules/models.py`, `src/uwh/providers/models.py`) are frozen; a change needs Brett's approval (Appendix A).
+
+**Checks:** run by the lead at 0e8ccc5. `make check` clean: 758 fast Python tests, both drift checks, `tsc -b`, 51 web tests. `make test-slow`: 21 pass. Acceptance ids passed: S02-A1 to S02-A8. The stage 1 checks still pass; all three containers healthy.
+
+Open with Brett, not blocking: the `blocker_opened` payload accepts what the API view refuses (a cause on a blocker that is not a review; an item kind that does not fit the blocker kind). Either stage 4's command layer gets a test that it cannot write one, which is the lead's proposal, or the check goes onto the payload, which is a change to a frozen shape.
+
+**Next:** stage 3 task 1 (capture_world) on `stage-03-labels-t0`, branched from this branch; stage 3 stops at its gate for Brett's review of the interpretation rows. Stage 4 on `stage-04-runtime-t0`, branched from this branch.

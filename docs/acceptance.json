@@ -130,7 +130,7 @@
     "stage": 2,
     "description": "Tier 0. Brett's approval of the contracts is recorded with the commit it covers. Expect: a number of at least 1.",
     "command": "grep -cE 'Contracts approved by Brett at [0-9a-f]{7,40}' docs/progress.md",
-    "passes": false
+    "passes": true
   },
   {
     "id": "S03-A1",
