@@ -15,7 +15,7 @@ pytestmark = pytest.mark.integration
 
 
 @pytest.fixture(autouse=True)
-def database_path(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def bootstrap_environment(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("UWH_DB", str(tmp_path / "app.db"))
     monkeypatch.setenv("SEED", "42")
 
@@ -32,6 +32,7 @@ def test_run_reads_the_queue_and_round_trips_a_probe(host_urls: dict[str, str]) 
 
     expected = [f"LEAD-00000042-{i:03d}" for i in range(10)]
     assert summary["lead_ids"] == expected
+    assert summary["leads_read"] == 10
     bootstrap_id = summary["bootstrap_id"]
     probe_lead = f"BOOTSTRAP-{bootstrap_id}"
     assert summary["probe"]["lead_id"] == probe_lead
@@ -41,6 +42,14 @@ def test_run_reads_the_queue_and_round_trips_a_probe(host_urls: dict[str, str]) 
         messages = MailboxClient(http).list_for_lead(probe_lead)
     assert len(messages) == 1
     assert messages[0]["metadata"] == {"probe": True, "run_id": bootstrap_id}
+
+
+def test_run_queues_the_configured_seed(
+    host_urls: dict[str, str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("SEED", "11")
+    summary = bootstrap.run()
+    assert summary["lead_ids"] == [f"LEAD-00000011-{i:03d}" for i in range(10)]
 
 
 def test_each_run_has_its_own_id(host_urls: dict[str, str]) -> None:
