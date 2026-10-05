@@ -47,7 +47,9 @@ services:
       LEADGEN_URL: "http://leadgen:8080"
       MAILBOX_URL: "http://mailbox:8080"
       UWH_DB: "/data/app-${RUN_MODE:-live}.db"
-    volumes: ["app-data:/data"]
+    volumes:
+      - "app-data:/data"
+      - "./recordings:/app/recordings:${RECORDINGS_ACCESS:-ro}"
     depends_on:
       leadgen:
         condition: service_healthy
