@@ -179,7 +179,7 @@ rows:
     ruling: "Read as non-combustible siding"
     kind: [A]
     rationale: "The siding page's branches are \"Non-combustible\" and \"Wood Shake or Shingle\"; the words \"Class A\" appear only inside the requirement boxes (\"Require confirnation of Class A or replacement\"), and the board does not define them (section 9.7 gap)."
-    applied_in: "graph page: `06-siding` (the words \"Class A\" are in the page's outcome text; the material test cites I21)"
+    applied_in: "graph page: `06-siding` (the requirement text in the two wood-branch outcomes reads \"Class A\" as non-combustible siding)"
   - id: I23
     source: "Post & Pier"
     gap: "When the page applies"
@@ -230,7 +230,7 @@ rows:
     kind: [A]
     rationale: "The registry offers Unknown and Other as `electrical_panel_brand` options, and the board does not say whether a panel whose brand is not identified counts as an ineligible panel (section 9.7 gap)."
     lenient: true
-    applied_in: "graph page: `09-electrical-systems` (the advisory is the page's outcome; the panel-brand test cites I28)"
+    applied_in: "graph page: `09-electrical-systems` (Unknown and Other are a case of the panel-brand test, which cites I28, leading to an advisory outcome the graph adds; the board draws none)"
   - id: I30
     source: "Electrical"
     gap: "Exactly 120 amps"
@@ -324,7 +324,7 @@ rows:
     ruling: "Gates step encoded as drawn. Dry hydrant and retrofit are requirements and evaluation continues to the paved-roads check, so a less-equipped home does not skip decline checks."
     kind: [A]
     rationale: "The board draws the Gates step on some branches only and draws the dry hydrant and retrofit outcomes as terminal (page 13 reading notes)."
-    applied_in: "graph page: `13-protection-class-9-and-10` (the Gates step and the evaluation that continues after the requirements are the page's structure)"
+    applied_in: "graph page: `13-protection-class-9-and-10` (the Gates test sits only where the board draws it; the dry-hydrant and fittings \"No\" answers lead to their requirement and on to the paved-roads question, where the board draws the requirements as terminal)"
   - id: I44
     source: "PC 9 & 10"
     gap: "`road_access` Single Access Point"
