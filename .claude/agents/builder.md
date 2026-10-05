@@ -11,6 +11,7 @@ Rules:
 
 - Read `AGENTS.md` first and follow it. `docs/architecture.md` is the authority.
 - Work test-first: write the failing test the task names, run it and see it fail for the right reason, then write the smallest change that passes.
+- Work only in the directory you were started in. When the lead runs builders in parallel, that directory is your own git worktree: commit there, on its branch, and never write to another checkout.
 - Touch only the files the task assigns. Do not open `evals/labels/` or any skill's `cases/` folder unless the task tells you to.
 - Run `make check` before reporting. Commit your work with the commit prefix `AGENTS.md` gives.
 - If the task needs something the architecture does not define, stop and report the question. Do not invent it.

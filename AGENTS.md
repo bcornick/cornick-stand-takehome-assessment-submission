@@ -113,7 +113,7 @@ After three failed fixes for one problem, stop and write up what was tried. Do n
 - Check `git status` before starting. If the tree is dirty, stop and ask Brett.
 - Work on a branch per stage and tier pass: `stage-NN-short-name-tN` (for example `stage-04-runtime-t0`). Brett merges.
 - Branch from `main` when the previous stage is merged, otherwise from the previous stage's branch. Do not wait for a merge unless the stage has a human gate.
-- Stages run one at a time in this checkout by default. Where the plan marks work as safe in parallel and Brett asks for it, each track runs in its own git worktree under `.worktrees/`, branches from the same base, touches only the files the plan assigns it, and runs `make check` in its own worktree.
+- Stages run one at a time in this checkout by default. Where the plan marks work as safe in parallel and Brett asks for it, each track, and each builder working in parallel with another, runs in its own git worktree (under `.worktrees/`, or one the tool creates for an isolated subagent), branches from the same base, touches only the files the plan assigns it, and runs `make check` in its own worktree. Two agents never write to the same checkout at once.
 - Commit often. Claude-authored commit subjects start with `CLAUDE-<model-name>: `; other agents use their own model name the same way. If the model name is unknown, ask before committing.
 - Never `git add -A` without a fresh `git status`. Never `git add -f` an ignored file. Never skip, evade or disable a hook.
 
