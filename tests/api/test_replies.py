@@ -157,11 +157,22 @@ def test_a_reply_with_no_recording_fails_closed_and_leaves_the_round_open(
     ]
 
 
-def test_a_reply_with_no_key_in_live_mode_is_recorded_unread_for_the_underwriter(
-    settings: Settings, leadgen: LeadgenClient, mailbox: MailboxClient
+@pytest.mark.parametrize(
+    "unavailable",
+    [
+        {"model_api_key": None},
+        {"model_api_key": "not-used", "model_base_url": "http://127.0.0.1:1"},  # a refused port
+    ],
+    ids=["no key", "provider unreachable"],
+)
+def test_a_reply_the_model_cannot_read_is_recorded_unread_for_the_underwriter(
+    settings: Settings,
+    leadgen: LeadgenClient,
+    mailbox: MailboxClient,
+    unavailable: dict[str, str | None],
 ) -> None:
-    unkeyed = replace(settings, run_mode="live", model_api_key=None)
-    with first_pass(unkeyed, leadgen, mailbox) as client:
+    live = replace(settings, run_mode="live", **unavailable)  # type: ignore[arg-type]
+    with first_pass(live, leadgen, mailbox) as client:
         db = open_store(settings.db_path)
         answer = deliver(client, request_intent_id(db))
 

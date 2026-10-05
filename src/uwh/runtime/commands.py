@@ -5,6 +5,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from functools import partial
 
+import anthropic
 from pydantic import JsonValue
 
 from uwh.runtime.event_types import (
@@ -338,7 +339,8 @@ def _read_reply_first(
     payload: Mapping[str, JsonValue],
 ) -> Handler:
     """Read the reply with the model, outside any transaction, and return the handler that records it.
-    A replay with no recording for the reply records the miss and refuses (7.7)."""
+    A replay with no recording for the reply records the miss and refuses (7.7); a provider error leaves
+    the reply unread."""
     intent = _reply_target(db, payload)
     reading: _ReplyReading = None
     if env.model.available:
@@ -361,6 +363,8 @@ def _read_reply_first(
                     lead_id=intent.lead_id,
                 )
             raise _Refusal(str(miss)) from miss
+        except anthropic.APIError:
+            reading = None  # the provider is unavailable: the reply is recorded unread, as with no key
     return partial(_record_reply, reading=reading)
 
 
