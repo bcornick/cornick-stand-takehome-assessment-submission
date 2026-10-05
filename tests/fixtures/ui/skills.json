@@ -49,11 +49,11 @@
   },
   {
     "name": "render_message",
-    "status": "failing",
+    "status": "passing",
     "last_result": {
-      "cases_passed": 9,
+      "cases_passed": 10,
       "cases_total": 10,
-      "passed": false
+      "passed": true
     },
     "threshold": 1.0,
     "fallback": "none",
@@ -63,7 +63,7 @@
     "name": "read_reply",
     "status": "untested",
     "last_result": null,
-    "threshold": 0.9,
+    "threshold": 1.0,
     "fallback": "reply goes to the underwriter unread",
     "rules_changed_since_eval": false
   },
@@ -83,7 +83,7 @@
     "name": "chat",
     "status": "unavailable",
     "last_result": null,
-    "threshold": 0.8,
+    "threshold": 1.0,
     "fallback": "read tools answer without a model",
     "rules_changed_since_eval": false
   }

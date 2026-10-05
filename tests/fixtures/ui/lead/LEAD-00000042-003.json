@@ -13,7 +13,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 120,
+      "observation_id": 125,
       "is_stub": false
     },
     {
@@ -25,7 +25,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 121,
+      "observation_id": 126,
       "is_stub": false
     },
     {
@@ -37,7 +37,31 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 122,
+      "observation_id": 127,
+      "is_stub": false
+    },
+    {
+      "key": "broker_tier",
+      "value": "Tier 3",
+      "source": "fetched",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "provider": "account_directory"
+      },
+      "observation_id": 128,
+      "is_stub": false
+    },
+    {
+      "key": "has_primary_policy_with_stand",
+      "value": false,
+      "source": "fetched",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "provider": "account_directory"
+      },
+      "observation_id": 129,
       "is_stub": false
     },
     {
@@ -49,7 +73,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 123,
+      "observation_id": 130,
       "is_stub": false
     },
     {
@@ -61,7 +85,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 124,
+      "observation_id": 131,
       "is_stub": false
     },
     {
@@ -73,7 +97,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 125,
+      "observation_id": 132,
       "is_stub": false
     },
     {
@@ -85,7 +109,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 126,
+      "observation_id": 133,
       "is_stub": false
     },
     {
@@ -97,7 +121,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 127,
+      "observation_id": 134,
       "is_stub": false
     },
     {
@@ -109,7 +133,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 128,
+      "observation_id": 135,
       "is_stub": false
     },
     {
@@ -121,7 +145,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 129,
+      "observation_id": 136,
       "is_stub": false
     },
     {
@@ -133,7 +157,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 130,
+      "observation_id": 137,
       "is_stub": false
     },
     {
@@ -145,7 +169,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 131,
+      "observation_id": 138,
       "is_stub": false
     },
     {
@@ -157,7 +181,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 132,
+      "observation_id": 139,
       "is_stub": false
     },
     {
@@ -169,7 +193,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 133,
+      "observation_id": 140,
       "is_stub": false
     },
     {
@@ -181,7 +205,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 134,
+      "observation_id": 141,
       "is_stub": false
     },
     {
@@ -193,7 +217,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 135,
+      "observation_id": 142,
       "is_stub": false
     },
     {
@@ -205,7 +229,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 136,
+      "observation_id": 143,
       "is_stub": false
     },
     {
@@ -217,7 +241,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 137,
+      "observation_id": 144,
       "is_stub": false
     },
     {
@@ -229,7 +253,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 138,
+      "observation_id": 145,
       "is_stub": false
     },
     {
@@ -241,7 +265,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 139,
+      "observation_id": 146,
       "is_stub": false
     },
     {
@@ -253,7 +277,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 140,
+      "observation_id": 147,
       "is_stub": false
     },
     {
@@ -265,7 +289,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 141,
+      "observation_id": 148,
       "is_stub": false
     },
     {
@@ -277,7 +301,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 142,
+      "observation_id": 149,
       "is_stub": false
     },
     {
@@ -289,7 +313,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 143,
+      "observation_id": 150,
       "is_stub": false
     },
     {
@@ -301,7 +325,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 144,
+      "observation_id": 151,
       "is_stub": false
     },
     {
@@ -313,7 +337,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 145,
+      "observation_id": 152,
       "is_stub": false
     },
     {
@@ -325,7 +349,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 146,
+      "observation_id": 153,
       "is_stub": false
     },
     {
@@ -337,7 +361,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 147,
+      "observation_id": 154,
       "is_stub": false
     },
     {
@@ -349,7 +373,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 148,
+      "observation_id": 155,
       "is_stub": false
     },
     {
@@ -361,7 +385,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 149,
+      "observation_id": 156,
       "is_stub": false
     },
     {
@@ -373,7 +397,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 150,
+      "observation_id": 157,
       "is_stub": false
     },
     {
@@ -385,7 +409,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 151,
+      "observation_id": 158,
       "is_stub": false
     },
     {
@@ -397,7 +421,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 152,
+      "observation_id": 159,
       "is_stub": false
     },
     {
@@ -409,19 +433,19 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 153,
+      "observation_id": 160,
       "is_stub": false
     },
     {
       "key": "min_distance_to_neighbor_ft",
       "value": 14,
-      "source": "fetched",
+      "source": "submitted",
       "status": "accepted",
       "confirmed": false,
       "evidence": {
-        "provider": "parcel_geometry"
+        "lead_source": "direct_web"
       },
-      "observation_id": 154,
+      "observation_id": 161,
       "is_stub": false
     },
     {
@@ -433,31 +457,31 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 155,
+      "observation_id": 162,
       "is_stub": false
     },
     {
       "key": "slope_angle_deg",
       "value": 30.0,
-      "source": "fetched",
+      "source": "submitted",
       "status": "accepted",
       "confirmed": false,
       "evidence": {
-        "provider": "terrain"
+        "lead_source": "direct_web"
       },
-      "observation_id": 156,
+      "observation_id": 163,
       "is_stub": false
     },
     {
       "key": "p_f",
       "value": 0.79,
-      "source": "fetched",
+      "source": "submitted",
       "status": "accepted",
       "confirmed": false,
       "evidence": {
-        "provider": "fire_simulation"
+        "lead_source": "direct_web"
       },
-      "observation_id": 157,
+      "observation_id": 164,
       "is_stub": false
     },
     {
@@ -472,19 +496,19 @@
           "siding_material"
         ]
       },
-      "observation_id": 158,
+      "observation_id": 165,
       "is_stub": false
     },
     {
       "key": "vegetation_clearance",
       "value": "Too Close",
-      "source": "fetched",
+      "source": "submitted",
       "status": "accepted",
       "confirmed": false,
       "evidence": {
-        "provider": "vegetation_imagery"
+        "lead_source": "direct_web"
       },
-      "observation_id": 159,
+      "observation_id": 166,
       "is_stub": false
     }
   ],
@@ -822,7 +846,7 @@
         "intent_id": "INT-00000042-003-R1",
         "observation_id": null,
         "choice_ids": [],
-        "text": "Waiting on the reply to request round 1 (13 asks)."
+        "text": "Waiting on the reply to request round 1 (14 asks)."
       },
       "observation": null,
       "review_cause": null,
@@ -832,11 +856,11 @@
   "drafts": [
     {
       "intent_id": "INT-00000042-003-R1",
-      "payload_hash": "625d81073fa232f189bb3e4e24ec28e42bf6394a029c48feade31c5fdf8ace8f",
+      "payload_hash": "b7aba800764941e550074dec3480b634aacb517c91928411344d9b4128e2e583",
       "kind": "routine_request",
       "recipient": "owner@example.com",
-      "subject": "Information needed to quote LEAD-00000042-003",
-      "body": "Hello,\n\nThank you for the application. To continue, we need the answers below.\n\nLocation\n1. Please provide: City\n2. Please provide: Zip Code\n\nInsured\n3. Is the property owned by a trust?\n4. Please provide: Date of Birth\n\nPrimary Coverages\n5. Please provide: Coverage F (Medical Payments) (one of: 1000, 3000, 5000)\n\nProperty\n6. Do you have any animals on the property?\n\nConstruction\n7. Please provide: Foundation Type (one of: Slab, Basement - Finished, Crawlspace, Stilts, Piers, Pilings, Other)\n8. Please provide: Number of Stories\n9. Please provide: Roof Surface Material (one of: Architecture Shingles, Asphalt Fiberglass Composite, Clay Tile, Concrete Tile, Metal Shingles / Sheets, Slate, Standing Seam Metal, Wood Shake, Wood Shingle, Other)\n10. Please provide: Roof Shape (one of: Hip, Flat, Gable, Other)\n11. Please provide: Electrical Panel Size (amps)\n\nPlumbing\n12. Please provide: General Plumbing Age (years)\n\nAdditional questions\n13. The application lists the home as a primary residence that has been unoccupied for 3 consecutive months. Please confirm both.\n\nThank you.",
+      "subject": "Information needed for your quote: 9273 Hillside Ct",
+      "body": "Thank you for your submission. To complete the quote we need the items below. One reply covering all of them is ideal.\n\nLocation\n1. Please provide: City\n2. Please provide: Zip Code\n\nInsured\n3. Is the property owned by a trust?\n4. Please provide: Date of Birth\n\nPrimary Coverages\n5. Please provide: Coverage F (Medical Payments) (one of: 1000, 3000, 5000)\n\nProperty\n6. Do you have any animals on the property?\n\nConstruction\n7. Please provide: Foundation Type (one of: Slab, Basement - Finished, Crawlspace, Stilts, Piers, Pilings, Other)\n8. Please provide: Number of Stories\n9. Please provide: Roof Surface Material (one of: Architecture Shingles, Asphalt Fiberglass Composite, Clay Tile, Concrete Tile, Metal Shingles / Sheets, Slate, Standing Seam Metal, Wood Shake, Wood Shingle, Other)\n10. Please provide: Roof Shape (one of: Hip, Flat, Gable, Other)\n11. Please provide: Electrical Panel Size (amps)\n\nPlumbing\n12. Please provide: General Plumbing Age (years)\n\nProtection\n13. Please provide: Miles to Fire Department\n\nAdditional questions\n14. The application lists the home as a primary residence that has been unoccupied for 3 consecutive months. Please confirm both.",
       "state": "sent",
       "round": 1
     }
@@ -878,6 +902,11 @@
       "kind": "search",
       "label": "Listing search",
       "url": "https://www.zillow.com/homes/9273+Hillside+Ct%2C+CO_rb/"
+    },
+    {
+      "kind": "search",
+      "label": "Search the insured's name",
+      "url": "https://www.google.com/search?q=%22Priya+Okafor%22+lawsuit"
     }
   ]
 }

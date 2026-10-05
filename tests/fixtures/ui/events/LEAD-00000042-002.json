@@ -2,7 +2,7 @@
   "lead_id": "LEAD-00000042-002",
   "events": [
     {
-      "id": 194,
+      "id": 201,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
@@ -20,15 +20,15 @@
       "sim_ts": "2026-06-29T07:50:00Z"
     },
     {
-      "id": 195,
+      "id": 202,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "provider_called",
       "payload": {
-        "key": "broker_tier",
+        "key": "has_primary_policy_with_stand",
         "status": "found",
-        "value": "Tier 2",
+        "value": false,
         "source": "account_directory",
         "fetched_at": "2026-06-29T08:00:00Z",
         "is_stub": false,
@@ -43,122 +43,7 @@
       "sim_ts": "2026-06-29T08:00:01Z"
     },
     {
-      "id": 196,
-      "run_id": "RUN-42-0001",
-      "mode": "replay",
-      "lead_id": "LEAD-00000042-002",
-      "type": "provider_called",
-      "payload": {
-        "key": "kyc_score",
-        "status": "found",
-        "value": 8,
-        "source": "identity_screening",
-        "fetched_at": "2026-06-29T08:00:00Z",
-        "is_stub": false,
-        "missing_inputs": []
-      },
-      "actor": "workflow",
-      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
-      "prompt_versions": null,
-      "model_id": null,
-      "request_id": null,
-      "real_ts": "2026-10-05T10:00:02Z",
-      "sim_ts": "2026-06-29T08:00:02Z"
-    },
-    {
-      "id": 197,
-      "run_id": "RUN-42-0001",
-      "mode": "replay",
-      "lead_id": "LEAD-00000042-002",
-      "type": "provider_called",
-      "payload": {
-        "key": "replacement_cost",
-        "status": "found",
-        "value": 489881,
-        "source": "rebuild_cost_estimator",
-        "fetched_at": "2026-06-29T08:00:00Z",
-        "is_stub": false,
-        "missing_inputs": []
-      },
-      "actor": "workflow",
-      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
-      "prompt_versions": null,
-      "model_id": null,
-      "request_id": null,
-      "real_ts": "2026-10-05T10:00:03Z",
-      "sim_ts": "2026-06-29T08:00:03Z"
-    },
-    {
-      "id": 198,
-      "run_id": "RUN-42-0001",
-      "mode": "replay",
-      "lead_id": "LEAD-00000042-002",
-      "type": "provider_called",
-      "payload": {
-        "key": "protection_class",
-        "status": "found",
-        "value": "5",
-        "source": "iso_protection_class",
-        "fetched_at": "2026-06-29T08:00:00Z",
-        "is_stub": false,
-        "missing_inputs": []
-      },
-      "actor": "workflow",
-      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
-      "prompt_versions": null,
-      "model_id": null,
-      "request_id": null,
-      "real_ts": "2026-10-05T10:00:04Z",
-      "sim_ts": "2026-06-29T08:00:04Z"
-    },
-    {
-      "id": 199,
-      "run_id": "RUN-42-0001",
-      "mode": "replay",
-      "lead_id": "LEAD-00000042-002",
-      "type": "provider_called",
-      "payload": {
-        "key": "min_distance_to_neighbor_ft",
-        "status": "found",
-        "value": 30,
-        "source": "parcel_geometry",
-        "fetched_at": "2026-06-29T08:00:00Z",
-        "is_stub": false,
-        "missing_inputs": []
-      },
-      "actor": "workflow",
-      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
-      "prompt_versions": null,
-      "model_id": null,
-      "request_id": null,
-      "real_ts": "2026-10-05T10:00:05Z",
-      "sim_ts": "2026-06-29T08:00:05Z"
-    },
-    {
-      "id": 200,
-      "run_id": "RUN-42-0001",
-      "mode": "replay",
-      "lead_id": "LEAD-00000042-002",
-      "type": "provider_called",
-      "payload": {
-        "key": "slope_angle_deg",
-        "status": "found",
-        "value": 5.6,
-        "source": "terrain",
-        "fetched_at": "2026-06-29T08:00:00Z",
-        "is_stub": false,
-        "missing_inputs": []
-      },
-      "actor": "workflow",
-      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
-      "prompt_versions": null,
-      "model_id": null,
-      "request_id": null,
-      "real_ts": "2026-10-05T10:00:06Z",
-      "sim_ts": "2026-06-29T08:00:06Z"
-    },
-    {
-      "id": 201,
+      "id": 203,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
@@ -177,19 +62,137 @@
       "prompt_versions": null,
       "model_id": null,
       "request_id": null,
-      "real_ts": "2026-10-05T10:00:07Z",
-      "sim_ts": "2026-06-29T08:00:07Z"
+      "real_ts": "2026-10-05T10:00:02Z",
+      "sim_ts": "2026-06-29T08:00:02Z"
     },
     {
-      "id": 202,
+      "id": 204,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-002",
+      "type": "provider_called",
+      "payload": {
+        "key": "vegetation_clearance",
+        "status": "found",
+        "value": "Adequate",
+        "source": "vegetation_imagery",
+        "fetched_at": "2026-06-29T08:00:00Z",
+        "is_stub": false,
+        "missing_inputs": []
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:03Z",
+      "sim_ts": "2026-06-29T08:00:03Z"
+    },
+    {
+      "id": 205,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-002",
+      "type": "provider_called",
+      "payload": {
+        "key": "road_access",
+        "status": "found",
+        "value": "Multiple Access Points",
+        "source": "road_network",
+        "fetched_at": "2026-06-29T08:00:00Z",
+        "is_stub": false,
+        "missing_inputs": []
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:04Z",
+      "sim_ts": "2026-06-29T08:00:04Z"
+    },
+    {
+      "id": 206,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 72,
+        "observation_id": 74,
         "key": "street_address",
         "value": "6496 Old Mill Rd",
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:05Z",
+      "sim_ts": "2026-06-29T08:00:05Z"
+    },
+    {
+      "id": 207,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-002",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 75,
+        "key": "city",
+        "value": "Bend",
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:06Z",
+      "sim_ts": "2026-06-29T08:00:06Z"
+    },
+    {
+      "id": 208,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-002",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 76,
+        "key": "county",
+        "value": "Deschutes",
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:07Z",
+      "sim_ts": "2026-06-29T08:00:07Z"
+    },
+    {
+      "id": 209,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-002",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 77,
+        "key": "state",
+        "value": "OR",
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -205,15 +208,15 @@
       "sim_ts": "2026-06-29T08:00:08Z"
     },
     {
-      "id": 203,
+      "id": 210,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 73,
-        "key": "city",
-        "value": "Bend",
+        "observation_id": 78,
+        "key": "zip",
+        "value": "97701",
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -229,15 +232,15 @@
       "sim_ts": "2026-06-29T08:00:09Z"
     },
     {
-      "id": 204,
+      "id": 211,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 74,
-        "key": "county",
-        "value": "Deschutes",
+        "observation_id": 79,
+        "key": "broker_tier",
+        "value": "Tier 2",
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -253,18 +256,18 @@
       "sim_ts": "2026-06-29T08:00:10Z"
     },
     {
-      "id": 205,
+      "id": 212,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 75,
-        "key": "state",
-        "value": "OR",
-        "source": "submitted",
+        "observation_id": 80,
+        "key": "has_primary_policy_with_stand",
+        "value": false,
+        "source": "fetched",
         "evidence": {
-          "lead_source": "broker_email"
+          "provider": "account_directory"
         },
         "status": "accepted"
       },
@@ -277,15 +280,15 @@
       "sim_ts": "2026-06-29T08:00:11Z"
     },
     {
-      "id": 206,
+      "id": 213,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 76,
-        "key": "zip",
-        "value": "97701",
+        "observation_id": 81,
+        "key": "listed_for_sale",
+        "value": false,
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -301,18 +304,18 @@
       "sim_ts": "2026-06-29T08:00:12Z"
     },
     {
-      "id": 207,
+      "id": 214,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 77,
-        "key": "broker_tier",
-        "value": "Tier 2",
-        "source": "fetched",
+        "observation_id": 82,
+        "key": "first_name",
+        "value": "Aaron",
+        "source": "submitted",
         "evidence": {
-          "provider": "account_directory"
+          "lead_source": "broker_email"
         },
         "status": "accepted"
       },
@@ -325,15 +328,15 @@
       "sim_ts": "2026-06-29T08:00:13Z"
     },
     {
-      "id": 208,
+      "id": 215,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 78,
-        "key": "listed_for_sale",
-        "value": false,
+        "observation_id": 83,
+        "key": "last_name",
+        "value": "Ahn",
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -349,15 +352,15 @@
       "sim_ts": "2026-06-29T08:00:14Z"
     },
     {
-      "id": 209,
+      "id": 216,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 79,
-        "key": "first_name",
-        "value": "Aaron",
+        "observation_id": 84,
+        "key": "owner_phone_number",
+        "value": "+1-555-0189",
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -373,15 +376,15 @@
       "sim_ts": "2026-06-29T08:00:15Z"
     },
     {
-      "id": 210,
+      "id": 217,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 80,
-        "key": "last_name",
-        "value": "Ahn",
+        "observation_id": 85,
+        "key": "insured_dob",
+        "value": "1990-08-14",
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -397,15 +400,15 @@
       "sim_ts": "2026-06-29T08:00:16Z"
     },
     {
-      "id": 211,
+      "id": 218,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 81,
-        "key": "owner_phone_number",
-        "value": "+1-555-0189",
+        "observation_id": 86,
+        "key": "occupation",
+        "value": "Teacher",
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -421,15 +424,15 @@
       "sim_ts": "2026-06-29T08:00:17Z"
     },
     {
-      "id": 212,
+      "id": 219,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 82,
-        "key": "insured_dob",
-        "value": "1990-08-14",
+        "observation_id": 87,
+        "key": "number_of_residents",
+        "value": 3,
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -445,15 +448,15 @@
       "sim_ts": "2026-06-29T08:00:18Z"
     },
     {
-      "id": 213,
+      "id": 220,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 83,
-        "key": "occupation",
-        "value": "Teacher",
+        "observation_id": 88,
+        "key": "kyc_score",
+        "value": 8,
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -469,15 +472,15 @@
       "sim_ts": "2026-06-29T08:00:19Z"
     },
     {
-      "id": 214,
+      "id": 221,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 84,
-        "key": "number_of_residents",
-        "value": 3,
+        "observation_id": 89,
+        "key": "effective_date",
+        "value": "2026-07-09",
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -493,18 +496,18 @@
       "sim_ts": "2026-06-29T08:00:20Z"
     },
     {
-      "id": 215,
+      "id": 222,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 85,
-        "key": "kyc_score",
-        "value": 8,
-        "source": "fetched",
+        "observation_id": 90,
+        "key": "coverage_e",
+        "value": "500000",
+        "source": "submitted",
         "evidence": {
-          "provider": "identity_screening"
+          "lead_source": "broker_email"
         },
         "status": "accepted"
       },
@@ -517,15 +520,15 @@
       "sim_ts": "2026-06-29T08:00:21Z"
     },
     {
-      "id": 216,
+      "id": 223,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 86,
-        "key": "effective_date",
-        "value": "2026-07-09",
+        "observation_id": 91,
+        "key": "coverage_f",
+        "value": "5000",
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -541,15 +544,15 @@
       "sim_ts": "2026-06-29T08:00:22Z"
     },
     {
-      "id": 217,
+      "id": 224,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 87,
-        "key": "coverage_e",
-        "value": "500000",
+        "observation_id": 92,
+        "key": "replacement_cost",
+        "value": 489881,
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -565,15 +568,15 @@
       "sim_ts": "2026-06-29T08:00:23Z"
     },
     {
-      "id": 218,
+      "id": 225,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 88,
-        "key": "coverage_f",
-        "value": "5000",
+        "observation_id": 93,
+        "key": "dwelling_type",
+        "value": "Owner Occupied Single Family Residence",
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -589,18 +592,18 @@
       "sim_ts": "2026-06-29T08:00:24Z"
     },
     {
-      "id": 219,
+      "id": 226,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 89,
-        "key": "replacement_cost",
-        "value": 489881,
-        "source": "fetched",
+        "observation_id": 94,
+        "key": "dwelling_use_type",
+        "value": "Primary",
+        "source": "submitted",
         "evidence": {
-          "provider": "rebuild_cost_estimator"
+          "lead_source": "broker_email"
         },
         "status": "accepted"
       },
@@ -613,15 +616,15 @@
       "sim_ts": "2026-06-29T08:00:25Z"
     },
     {
-      "id": 220,
+      "id": 227,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 90,
-        "key": "dwelling_type",
-        "value": "Owner Occupied Single Family Residence",
+        "observation_id": 95,
+        "key": "months_unoccupied",
+        "value": 0,
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -637,15 +640,15 @@
       "sim_ts": "2026-06-29T08:00:26Z"
     },
     {
-      "id": 221,
+      "id": 228,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 91,
-        "key": "dwelling_use_type",
-        "value": "Primary",
+        "observation_id": 96,
+        "key": "year_built",
+        "value": 1965,
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -661,15 +664,15 @@
       "sim_ts": "2026-06-29T08:00:27Z"
     },
     {
-      "id": 222,
+      "id": 229,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 92,
-        "key": "months_unoccupied",
-        "value": 0,
+        "observation_id": 97,
+        "key": "property_purchase_date",
+        "value": "2015-01-15",
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -685,15 +688,15 @@
       "sim_ts": "2026-06-29T08:00:28Z"
     },
     {
-      "id": 223,
+      "id": 230,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 93,
-        "key": "year_built",
-        "value": 1965,
+        "observation_id": 98,
+        "key": "pool_type",
+        "value": "None",
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -709,15 +712,15 @@
       "sim_ts": "2026-06-29T08:00:29Z"
     },
     {
-      "id": 224,
+      "id": 231,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 94,
-        "key": "property_purchase_date",
-        "value": "2015-01-15",
+        "observation_id": 99,
+        "key": "acreage",
+        "value": 0.22,
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -733,15 +736,15 @@
       "sim_ts": "2026-06-29T08:00:30Z"
     },
     {
-      "id": 225,
+      "id": 232,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 95,
-        "key": "pool_type",
-        "value": "None",
+        "observation_id": 100,
+        "key": "has_animals",
+        "value": false,
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -757,15 +760,15 @@
       "sim_ts": "2026-06-29T08:00:31Z"
     },
     {
-      "id": 226,
+      "id": 233,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 96,
-        "key": "acreage",
-        "value": 0.22,
+        "observation_id": 101,
+        "key": "structure_type",
+        "value": "Single Family",
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -781,15 +784,15 @@
       "sim_ts": "2026-06-29T08:00:32Z"
     },
     {
-      "id": 227,
+      "id": 234,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 97,
-        "key": "has_animals",
-        "value": false,
+        "observation_id": 102,
+        "key": "construction_type",
+        "value": "Frame",
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -805,15 +808,15 @@
       "sim_ts": "2026-06-29T08:00:33Z"
     },
     {
-      "id": 228,
+      "id": 235,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 98,
-        "key": "structure_type",
-        "value": "Single Family",
+        "observation_id": 103,
+        "key": "siding_material",
+        "value": "Cement Fiber",
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -829,15 +832,15 @@
       "sim_ts": "2026-06-29T08:00:34Z"
     },
     {
-      "id": 229,
+      "id": 236,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 99,
-        "key": "construction_type",
-        "value": "Frame",
+        "observation_id": 104,
+        "key": "foundation_type",
+        "value": "Slab",
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -853,15 +856,15 @@
       "sim_ts": "2026-06-29T08:00:35Z"
     },
     {
-      "id": 230,
+      "id": 237,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 100,
-        "key": "siding_material",
-        "value": "Cement Fiber",
+        "observation_id": 105,
+        "key": "square_feet",
+        "value": 4100,
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -877,15 +880,15 @@
       "sim_ts": "2026-06-29T08:00:36Z"
     },
     {
-      "id": 231,
+      "id": 238,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 101,
-        "key": "foundation_type",
-        "value": "Slab",
+        "observation_id": 106,
+        "key": "num_stories",
+        "value": 1,
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -901,15 +904,15 @@
       "sim_ts": "2026-06-29T08:00:37Z"
     },
     {
-      "id": 232,
+      "id": 239,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 102,
-        "key": "square_feet",
-        "value": 4100,
+        "observation_id": 107,
+        "key": "roof_replacement_year",
+        "value": 2010,
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -925,15 +928,15 @@
       "sim_ts": "2026-06-29T08:00:38Z"
     },
     {
-      "id": 233,
+      "id": 240,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 103,
-        "key": "num_stories",
-        "value": 1,
+        "observation_id": 108,
+        "key": "roof_material",
+        "value": "Asphalt Fiberglass Composite",
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -949,15 +952,15 @@
       "sim_ts": "2026-06-29T08:00:39Z"
     },
     {
-      "id": 234,
+      "id": 241,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 104,
-        "key": "roof_replacement_year",
-        "value": 2010,
+        "observation_id": 109,
+        "key": "heating_source",
+        "value": "Central Gas",
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -973,15 +976,15 @@
       "sim_ts": "2026-06-29T08:00:40Z"
     },
     {
-      "id": 235,
+      "id": 242,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 105,
-        "key": "roof_material",
-        "value": "Asphalt Fiberglass Composite",
+        "observation_id": 110,
+        "key": "has_knob_and_tube_wiring",
+        "value": false,
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -997,15 +1000,15 @@
       "sim_ts": "2026-06-29T08:00:41Z"
     },
     {
-      "id": 236,
+      "id": 243,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 106,
-        "key": "heating_source",
-        "value": "Central Gas",
+        "observation_id": 111,
+        "key": "electrical_panel_size_amps",
+        "value": 150,
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -1021,15 +1024,15 @@
       "sim_ts": "2026-06-29T08:00:42Z"
     },
     {
-      "id": 237,
+      "id": 244,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 107,
-        "key": "has_knob_and_tube_wiring",
-        "value": false,
+        "observation_id": 112,
+        "key": "plumbing_age_years",
+        "value": 5,
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -1045,15 +1048,15 @@
       "sim_ts": "2026-06-29T08:00:43Z"
     },
     {
-      "id": 238,
+      "id": 245,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 108,
-        "key": "electrical_panel_size_amps",
-        "value": 150,
+        "observation_id": 113,
+        "key": "water_heater_type",
+        "value": "Tankless",
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -1069,15 +1072,15 @@
       "sim_ts": "2026-06-29T08:00:44Z"
     },
     {
-      "id": 239,
+      "id": 246,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 109,
-        "key": "plumbing_age_years",
-        "value": 5,
+        "observation_id": 114,
+        "key": "fire_alarm",
+        "value": "Local Alarm",
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -1093,15 +1096,15 @@
       "sim_ts": "2026-06-29T08:00:45Z"
     },
     {
-      "id": 240,
+      "id": 247,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 110,
-        "key": "water_heater_type",
-        "value": "Tankless",
+        "observation_id": 115,
+        "key": "distance_to_fire_department",
+        "value": 2.3,
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -1117,15 +1120,15 @@
       "sim_ts": "2026-06-29T08:00:46Z"
     },
     {
-      "id": 241,
+      "id": 248,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 111,
-        "key": "fire_alarm",
-        "value": "Local Alarm",
+        "observation_id": 116,
+        "key": "fire_department_type",
+        "value": "Career",
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -1141,18 +1144,18 @@
       "sim_ts": "2026-06-29T08:00:47Z"
     },
     {
-      "id": 242,
+      "id": 249,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 112,
-        "key": "distance_to_fire_department",
-        "value": 2.3,
-        "source": "submitted",
+        "observation_id": 117,
+        "key": "road_access",
+        "value": "Multiple Access Points",
+        "source": "fetched",
         "evidence": {
-          "lead_source": "broker_email"
+          "provider": "road_network"
         },
         "status": "accepted"
       },
@@ -1165,15 +1168,15 @@
       "sim_ts": "2026-06-29T08:00:48Z"
     },
     {
-      "id": 243,
+      "id": 250,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 113,
-        "key": "fire_department_type",
-        "value": "Career",
+        "observation_id": 118,
+        "key": "protection_class",
+        "value": "5",
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -1189,18 +1192,18 @@
       "sim_ts": "2026-06-29T08:00:49Z"
     },
     {
-      "id": 244,
+      "id": 251,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 114,
-        "key": "protection_class",
-        "value": "5",
-        "source": "fetched",
+        "observation_id": 119,
+        "key": "min_distance_to_neighbor_ft",
+        "value": 30,
+        "source": "submitted",
         "evidence": {
-          "provider": "iso_protection_class"
+          "lead_source": "broker_email"
         },
         "status": "accepted"
       },
@@ -1213,18 +1216,18 @@
       "sim_ts": "2026-06-29T08:00:50Z"
     },
     {
-      "id": 245,
+      "id": 252,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 115,
-        "key": "min_distance_to_neighbor_ft",
-        "value": 30,
-        "source": "fetched",
+        "observation_id": 120,
+        "key": "is_7a_compliant",
+        "value": true,
+        "source": "submitted",
         "evidence": {
-          "provider": "parcel_geometry"
+          "lead_source": "broker_email"
         },
         "status": "accepted"
       },
@@ -1237,15 +1240,15 @@
       "sim_ts": "2026-06-29T08:00:51Z"
     },
     {
-      "id": 246,
+      "id": 253,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 116,
-        "key": "is_7a_compliant",
-        "value": true,
+        "observation_id": 121,
+        "key": "slope_angle_deg",
+        "value": 5.6,
         "source": "submitted",
         "evidence": {
           "lead_source": "broker_email"
@@ -1261,37 +1264,13 @@
       "sim_ts": "2026-06-29T08:00:52Z"
     },
     {
-      "id": 247,
+      "id": 254,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 117,
-        "key": "slope_angle_deg",
-        "value": 5.6,
-        "source": "fetched",
-        "evidence": {
-          "provider": "terrain"
-        },
-        "status": "accepted"
-      },
-      "actor": "workflow",
-      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
-      "prompt_versions": null,
-      "model_id": null,
-      "request_id": null,
-      "real_ts": "2026-10-05T10:00:53Z",
-      "sim_ts": "2026-06-29T08:00:53Z"
-    },
-    {
-      "id": 248,
-      "run_id": "RUN-42-0001",
-      "mode": "replay",
-      "lead_id": "LEAD-00000042-002",
-      "type": "fact_observed",
-      "payload": {
-        "observation_id": 118,
+        "observation_id": 122,
         "key": "p_f",
         "value": 0.07,
         "source": "fetched",
@@ -1305,17 +1284,17 @@
       "prompt_versions": null,
       "model_id": null,
       "request_id": null,
-      "real_ts": "2026-10-05T10:00:54Z",
-      "sim_ts": "2026-06-29T08:00:54Z"
+      "real_ts": "2026-10-05T10:00:53Z",
+      "sim_ts": "2026-06-29T08:00:53Z"
     },
     {
-      "id": 249,
+      "id": 255,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "fact_observed",
       "payload": {
-        "observation_id": 119,
+        "observation_id": 123,
         "key": "siding_classification",
         "value": "B",
         "source": "derived",
@@ -1332,17 +1311,47 @@
       "prompt_versions": null,
       "model_id": null,
       "request_id": null,
+      "real_ts": "2026-10-05T10:00:54Z",
+      "sim_ts": "2026-06-29T08:00:54Z"
+    },
+    {
+      "id": 256,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-002",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 124,
+        "key": "vegetation_clearance",
+        "value": "Adequate",
+        "source": "fetched",
+        "evidence": {
+          "provider": "vegetation_imagery"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
       "real_ts": "2026-10-05T10:00:55Z",
       "sim_ts": "2026-06-29T08:00:55Z"
     },
     {
-      "id": 250,
+      "id": 257,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
       "type": "triage_completed",
       "payload": {
         "fields": {
+          "residence_held_in_trust": {
+            "value_status": "missing",
+            "requirement": "required",
+            "resolution": "ask",
+            "depends_on": []
+          },
           "coverage_a": {
             "value_status": "missing",
             "requirement": "required",
@@ -1350,12 +1359,6 @@
             "depends_on": []
           },
           "is_rental": {
-            "value_status": "missing",
-            "requirement": "required",
-            "resolution": "ask",
-            "depends_on": []
-          },
-          "residence_held_in_trust": {
             "value_status": "missing",
             "requirement": "required",
             "resolution": "ask",
@@ -1378,7 +1381,7 @@
       "sim_ts": "2026-06-29T08:00:56Z"
     },
     {
-      "id": 251,
+      "id": 258,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
@@ -1478,7 +1481,7 @@
       "sim_ts": "2026-06-29T08:00:57Z"
     },
     {
-      "id": 252,
+      "id": 259,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
@@ -1488,15 +1491,15 @@
         "round": 1,
         "kind": "routine_request",
         "recipient": "quotes@broker-desk.example",
-        "subject": "Information needed to quote LEAD-00000042-002",
-        "body": "Hello,\n\nThank you for the application. To continue, we need the answers below.\n\nInsured\n1. Is the property owned by a trust?\n\nPrimary Coverages\n2. Please provide: Coverage A (Dwelling)\n\nProperty\n3. Please provide: Rental Exposure (one of: No, Short-Term Rentals, Long-Term Rentals)\n\nProtection\n4. Please provide: Distance to Nearest Fire Hydrant (Feet)\n\nThank you.",
+        "subject": "Information needed for your quote: 6496 Old Mill Rd",
+        "body": "Thank you for your submission. To complete the quote we need the items below. One reply covering all of them is ideal.\n\nInsured\n1. Is the property owned by a trust?\n\nPrimary Coverages\n2. Please provide: Coverage A (Dwelling)\n\nProperty\n3. Please provide: Rental Exposure (one of: No, Short-Term Rentals, Long-Term Rentals)\n\nProtection\n4. Please provide: Distance to Nearest Fire Hydrant (Feet)",
         "ask_ids": [
+          "residence_held_in_trust",
           "coverage_a",
           "is_rental",
-          "residence_held_in_trust",
           "dist_to_nearest_fire_hydrant"
         ],
-        "payload_hash": "e3135b41966d76c7d4b60f56798d311efad049519f002ffe60281173a5637e3a"
+        "payload_hash": "6d1892ff2c1a6b8b625be336a5c0afe9c688c3908ed025f06f74621f7e5aaee7"
       },
       "actor": "workflow",
       "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
@@ -1507,7 +1510,7 @@
       "sim_ts": "2026-06-29T08:00:58Z"
     },
     {
-      "id": 253,
+      "id": 260,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",
@@ -1536,7 +1539,7 @@
       "sim_ts": "2026-06-29T08:00:59Z"
     },
     {
-      "id": 254,
+      "id": 261,
       "run_id": "RUN-42-0001",
       "mode": "replay",
       "lead_id": "LEAD-00000042-002",

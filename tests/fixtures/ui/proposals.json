@@ -6,15 +6,15 @@
       "type": "approve",
       "payload": {
         "item_id": 1,
-        "artifact_hash": "2d33eed7701329e9a6d8b5be98c9d26f1a96f9adcac63102ce6de1f34d74e274",
-        "reason": "The decline rests on the Post & Pier and Occupancy pages."
+        "artifact_hash": "9e1ff6a9f3efae7f499fc10f66de4410aa017c369412dcf2127b536aa6f16159",
+        "reason": "The decline rests on the Post & Pier page."
       },
-      "rationale": "Every branch declines this lead, so no request goes to the producer."
+      "rationale": "A pier foundation supports the living area, so no request goes to the producer."
     },
     "diff_hash": null,
     "state": "open",
     "actor": "assistant",
-    "event_id": 139
+    "event_id": 146
   },
   {
     "proposal_id": 2,

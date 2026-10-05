@@ -7,7 +7,7 @@
     "age_business_days": 1.97,
     "service_level_breached": false,
     "effective_date": "2026-07-21",
-    "ask_count": 13,
+    "ask_count": 14,
     "group": "blocked_on_underwriter"
   },
   {
@@ -29,7 +29,7 @@
     "age_business_days": 1.97,
     "service_level_breached": false,
     "effective_date": "2026-07-28",
-    "ask_count": 17,
+    "ask_count": 19,
     "group": "blocked_on_underwriter"
   },
   {
@@ -95,7 +95,7 @@
     "age_business_days": 1.96,
     "service_level_breached": false,
     "effective_date": "2026-08-01",
-    "ask_count": 5,
+    "ask_count": 6,
     "group": "waiting_on_data_or_producer"
   },
   {

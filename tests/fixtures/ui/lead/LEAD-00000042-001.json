@@ -13,7 +13,7 @@
       "evidence": {
         "lead_source": "agent_portal"
       },
-      "observation_id": 31,
+      "observation_id": 32,
       "is_stub": false
     },
     {
@@ -25,7 +25,7 @@
       "evidence": {
         "lead_source": "agent_portal"
       },
-      "observation_id": 32,
+      "observation_id": 33,
       "is_stub": false
     },
     {
@@ -37,7 +37,7 @@
       "evidence": {
         "lead_source": "agent_portal"
       },
-      "observation_id": 33,
+      "observation_id": 34,
       "is_stub": false
     },
     {
@@ -49,35 +49,23 @@
       "evidence": {
         "lead_source": "agent_portal"
       },
-      "observation_id": 34,
+      "observation_id": 35,
       "is_stub": false
     },
     {
       "key": "broker_tier",
       "value": "Tier 1",
-      "source": "fetched",
+      "source": "submitted",
       "status": "accepted",
       "confirmed": false,
       "evidence": {
-        "provider": "account_directory"
-      },
-      "observation_id": 35,
-      "is_stub": false
-    },
-    {
-      "key": "has_primary_policy_with_stand",
-      "value": false,
-      "source": "fetched",
-      "status": "accepted",
-      "confirmed": false,
-      "evidence": {
-        "provider": "account_directory"
+        "lead_source": "agent_portal"
       },
       "observation_id": 36,
       "is_stub": false
     },
     {
-      "key": "listed_for_sale",
+      "key": "has_primary_policy_with_stand",
       "value": false,
       "source": "submitted",
       "status": "accepted",
@@ -89,6 +77,18 @@
       "is_stub": false
     },
     {
+      "key": "listed_for_sale",
+      "value": false,
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 38,
+      "is_stub": false
+    },
+    {
       "key": "first_name",
       "value": "Aaron",
       "source": "submitted",
@@ -97,7 +97,7 @@
       "evidence": {
         "lead_source": "agent_portal"
       },
-      "observation_id": 38,
+      "observation_id": 39,
       "is_stub": false
     },
     {
@@ -109,7 +109,7 @@
       "evidence": {
         "lead_source": "agent_portal"
       },
-      "observation_id": 39,
+      "observation_id": 40,
       "is_stub": false
     },
     {
@@ -121,7 +121,7 @@
       "evidence": {
         "lead_source": "agent_portal"
       },
-      "observation_id": 40,
+      "observation_id": 41,
       "is_stub": false
     },
     {
@@ -133,7 +133,7 @@
       "evidence": {
         "lead_source": "agent_portal"
       },
-      "observation_id": 41,
+      "observation_id": 42,
       "is_stub": false
     },
     {
@@ -145,7 +145,7 @@
       "evidence": {
         "lead_source": "agent_portal"
       },
-      "observation_id": 42,
+      "observation_id": 43,
       "is_stub": false
     },
     {
@@ -157,7 +157,19 @@
       "evidence": {
         "lead_source": "agent_portal"
       },
-      "observation_id": 43,
+      "observation_id": 44,
+      "is_stub": false
+    },
+    {
+      "key": "kyc_score",
+      "value": 3,
+      "source": "fetched",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "provider": "identity_screening"
+      },
+      "observation_id": 45,
       "is_stub": false
     },
     {
@@ -169,7 +181,7 @@
       "evidence": {
         "lead_source": "agent_portal"
       },
-      "observation_id": 44,
+      "observation_id": 46,
       "is_stub": false
     },
     {
@@ -181,7 +193,7 @@
       "evidence": {
         "lead_source": "agent_portal"
       },
-      "observation_id": 45,
+      "observation_id": 47,
       "is_stub": false
     },
     {
@@ -193,7 +205,7 @@
       "evidence": {
         "lead_source": "agent_portal"
       },
-      "observation_id": 46,
+      "observation_id": 48,
       "is_stub": false
     },
     {
@@ -205,7 +217,7 @@
       "evidence": {
         "lead_source": "agent_portal"
       },
-      "observation_id": 47,
+      "observation_id": 49,
       "is_stub": false
     },
     {
@@ -217,7 +229,7 @@
       "evidence": {
         "lead_source": "agent_portal"
       },
-      "observation_id": 48,
+      "observation_id": 50,
       "is_stub": false
     },
     {
@@ -229,7 +241,7 @@
       "evidence": {
         "lead_source": "agent_portal"
       },
-      "observation_id": 49,
+      "observation_id": 51,
       "is_stub": false
     },
     {
@@ -241,7 +253,7 @@
       "evidence": {
         "lead_source": "agent_portal"
       },
-      "observation_id": 50,
+      "observation_id": 52,
       "is_stub": false
     },
     {
@@ -253,7 +265,7 @@
       "evidence": {
         "lead_source": "agent_portal"
       },
-      "observation_id": 51,
+      "observation_id": 53,
       "is_stub": false
     },
     {
@@ -265,7 +277,7 @@
       "evidence": {
         "lead_source": "agent_portal"
       },
-      "observation_id": 52,
+      "observation_id": 54,
       "is_stub": false
     },
     {
@@ -277,7 +289,7 @@
       "evidence": {
         "lead_source": "agent_portal"
       },
-      "observation_id": 53,
+      "observation_id": 55,
       "is_stub": false
     },
     {
@@ -289,7 +301,7 @@
       "evidence": {
         "lead_source": "agent_portal"
       },
-      "observation_id": 54,
+      "observation_id": 56,
       "is_stub": false
     },
     {
@@ -301,7 +313,7 @@
       "evidence": {
         "lead_source": "agent_portal"
       },
-      "observation_id": 55,
+      "observation_id": 57,
       "is_stub": false
     },
     {
@@ -313,7 +325,7 @@
       "evidence": {
         "lead_source": "agent_portal"
       },
-      "observation_id": 56,
+      "observation_id": 58,
       "is_stub": false
     },
     {
@@ -325,7 +337,7 @@
       "evidence": {
         "lead_source": "agent_portal"
       },
-      "observation_id": 57,
+      "observation_id": 59,
       "is_stub": false
     },
     {
@@ -337,7 +349,7 @@
       "evidence": {
         "lead_source": "agent_portal"
       },
-      "observation_id": 58,
+      "observation_id": 60,
       "is_stub": false
     },
     {
@@ -349,7 +361,7 @@
       "evidence": {
         "lead_source": "agent_portal"
       },
-      "observation_id": 59,
+      "observation_id": 61,
       "is_stub": false
     },
     {
@@ -361,7 +373,7 @@
       "evidence": {
         "lead_source": "agent_portal"
       },
-      "observation_id": 60,
+      "observation_id": 62,
       "is_stub": false
     },
     {
@@ -373,7 +385,7 @@
       "evidence": {
         "lead_source": "agent_portal"
       },
-      "observation_id": 61,
+      "observation_id": 63,
       "is_stub": false
     },
     {
@@ -385,7 +397,7 @@
       "evidence": {
         "lead_source": "agent_portal"
       },
-      "observation_id": 62,
+      "observation_id": 64,
       "is_stub": false
     },
     {
@@ -397,7 +409,7 @@
       "evidence": {
         "lead_source": "agent_portal"
       },
-      "observation_id": 63,
+      "observation_id": 65,
       "is_stub": false
     },
     {
@@ -409,7 +421,7 @@
       "evidence": {
         "lead_source": "agent_portal"
       },
-      "observation_id": 64,
+      "observation_id": 66,
       "is_stub": false
     },
     {
@@ -421,7 +433,7 @@
       "evidence": {
         "lead_source": "agent_portal"
       },
-      "observation_id": 65,
+      "observation_id": 67,
       "is_stub": false
     },
     {
@@ -433,7 +445,7 @@
       "evidence": {
         "lead_source": "agent_portal"
       },
-      "observation_id": 66,
+      "observation_id": 68,
       "is_stub": false
     },
     {
@@ -445,31 +457,31 @@
       "evidence": {
         "lead_source": "agent_portal"
       },
-      "observation_id": 67,
+      "observation_id": 69,
       "is_stub": false
     },
     {
       "key": "road_access",
       "value": "Multiple Access Points",
-      "source": "fetched",
+      "source": "submitted",
       "status": "accepted",
       "confirmed": false,
       "evidence": {
-        "provider": "road_network"
+        "lead_source": "agent_portal"
       },
-      "observation_id": 68,
+      "observation_id": 70,
       "is_stub": false
     },
     {
       "key": "protection_class",
       "value": "5",
-      "source": "fetched",
+      "source": "submitted",
       "status": "accepted",
       "confirmed": false,
       "evidence": {
-        "provider": "iso_protection_class"
+        "lead_source": "agent_portal"
       },
-      "observation_id": 69,
+      "observation_id": 71,
       "is_stub": false
     },
     {
@@ -481,7 +493,7 @@
       "evidence": {
         "lead_source": "agent_portal"
       },
-      "observation_id": 70,
+      "observation_id": 72,
       "is_stub": false
     },
     {
@@ -496,7 +508,7 @@
           "siding_material"
         ]
       },
-      "observation_id": 71,
+      "observation_id": 73,
       "is_stub": false
     }
   ],
@@ -544,12 +556,6 @@
         ]
       },
       {
-        "graph": "profile",
-        "waits_on": [
-          "kyc_score"
-        ]
-      },
-      {
         "graph": "replacement_cost",
         "waits_on": [
           "coverage_a",
@@ -570,18 +576,16 @@
       }
     ]
   },
-  "plan_hash": "3a8c25c997e92c865a0a7e81c286dac3ef8688d07d921bf64b0a6e0d7701b508",
+  "plan_hash": "3bc96efb75d604fb6ca908a93a833e7397982dbcf22e17223a5ec7caee16e519",
   "playbook": [
     {
       "graph": "profile",
-      "applies": "unknown",
-      "result": "undecided",
-      "waits_on": [
-        "kyc_score"
-      ],
+      "applies": "no",
+      "result": null,
+      "waits_on": [],
       "effects": [],
       "declines_on_every_branch": null,
-      "exception": true
+      "exception": false
     },
     {
       "graph": "occupancy",
@@ -756,22 +760,16 @@
   "drafts": [
     {
       "intent_id": "INT-00000042-001-R1",
-      "payload_hash": "368dd14cb541b04b8481e1539046916c29588b6bb3f867c1931860a70d510b1e",
+      "payload_hash": "c3970468735963f11bf5669d4690a3b0dd5b53af352031a92542e4a7367edc52",
       "kind": "routine_request",
       "recipient": "submissions@agent-portal.example",
-      "subject": "Information needed to quote LEAD-00000042-001",
-      "body": "Hello,\n\nThank you for the application. To continue, we need the answers below.\n\nLocation\n1. Please provide: Property Address\n\nInsured\n2. How many people live in the home?\n\nPrimary Coverages\n3. Please provide: Coverage A (Dwelling)\n4. Please provide: Coverage F (Medical Payments) (one of: 1000, 3000, 5000)\n\nProperty\n5. Please provide: Dwelling Use (one of: Owner Occupied Single Family Residence, Owner Occupied Multi Family Residence, Secondary Residence, Seasonal Residence)\n\nConstruction\n6. Please provide: Structure Type (one of: Single Family, Duplex, Townhouse, Rowhome, Other)\n7. Please provide: Number of Stories\n8. Please provide: Roof Shape (one of: Hip, Flat, Gable, Other)\n9. Please provide: Electrical Panel Brand (one of: Federal Pacific, Stab-Lok, Zinsco, Challenger, Sylvania, Square D, Eaton, Siemens, GE, Other, Unknown)\n10. Please provide: Electrical Panel Size (amps)\n\nPlumbing\n11. Please provide: Water Heater Type (one of: Tank, Tankless)\n\nProtection\n12. Please provide: Fire Protective Devices (one of: None, Local Alarm, Central Alarm, Direct Alarm)\n13. Please provide: Distance to Nearest Fire Hydrant (Feet)\n\nThank you.",
+      "subject": "Information needed for your quote: LEAD-00000042-001",
+      "body": "Thank you for your submission. To complete the quote we need the items below. One reply covering all of them is ideal.\n\nLocation\n1. Please provide: Property Address\n\nInsured\n2. How many people live in the home?\n\nPrimary Coverages\n3. Please provide: Coverage A (Dwelling)\n4. Please provide: Coverage F (Medical Payments) (one of: 1000, 3000, 5000)\n\nProperty\n5. Please provide: Dwelling Use (one of: Owner Occupied Single Family Residence, Owner Occupied Multi Family Residence, Secondary Residence, Seasonal Residence)\n\nConstruction\n6. Please provide: Structure Type (one of: Single Family, Duplex, Townhouse, Rowhome, Other)\n7. Please provide: Number of Stories\n8. Please provide: Roof Shape (one of: Hip, Flat, Gable, Other)\n9. Please provide: Electrical Panel Brand (one of: Federal Pacific, Stab-Lok, Zinsco, Challenger, Sylvania, Square D, Eaton, Siemens, GE, Other, Unknown)\n10. Please provide: Electrical Panel Size (amps)\n\nPlumbing\n11. Please provide: Water Heater Type (one of: Tank, Tankless)\n\nProtection\n12. Please provide: Fire Protective Devices (one of: None, Local Alarm, Central Alarm, Direct Alarm)\n13. Please provide: Distance to Nearest Fire Hydrant (Feet)",
       "state": "sent",
       "round": 1
     }
   ],
   "open_choices": [],
   "next_action": "Wait for the producer's reply to request round 1 (13 asks).",
-  "links": [
-    {
-      "kind": "search",
-      "label": "Search the insured's name",
-      "url": "https://www.google.com/search?q=%22Aaron+Okafor%22+lawsuit"
-    }
-  ]
+  "links": []
 }

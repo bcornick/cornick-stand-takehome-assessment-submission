@@ -5,7 +5,7 @@ import importlib.util
 import json
 import shutil
 from collections.abc import Callable
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -184,6 +184,19 @@ def parse_time(text: str) -> datetime:
     return datetime.fromisoformat(text.replace("Z", "+00:00"))
 
 
+def business_days_between(start: datetime, end: datetime) -> float:
+    """Days from `start` to `end` that fall on a Monday to Friday in UTC (7.6), as a fraction."""
+    total = 0.0
+    cursor = start
+    while cursor < end:
+        midnight = (cursor + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        stop = min(midnight, end)
+        if cursor.weekday() < 5:
+            total += (stop - cursor).total_seconds() / 86400
+        cursor = stop
+    return total
+
+
 def lead_problems(
     row: QueueRow, detail: LeadDetail, events: LeadEvents, sim_now: datetime
 ) -> list[str]:
@@ -220,9 +233,11 @@ def lead_problems(
     if row.effective_date != effective:
         problems.append(f"{lead}: effective_date {row.effective_date} != fact {effective}")
     received = next(e for e in events.events if e.type.value == "lead_received")
-    age = (sim_now - parse_time(str(received.payload["received_at"]))).total_seconds() / 86400
+    age = business_days_between(parse_time(str(received.payload["received_at"])), sim_now)
     if abs(row.age_business_days - age) > 0.01:
-        problems.append(f"{lead}: age {row.age_business_days} != {age:.2f} days since receipt")
+        problems.append(
+            f"{lead}: age {row.age_business_days} != {age:.2f} business days since receipt"
+        )
     if row.service_level_breached != (row.age_business_days > SERVICE_LEVEL_DAYS):
         problems.append(f"{lead}: service_level_breached does not follow the age")
     return problems
@@ -481,19 +496,16 @@ def test_the_fixtures_show_every_kind_the_detail_pane_renders(
     every = list(details.values())
     facts = [f for d in every for f in d.facts]
     pages = [p for d in every for p in d.playbook]
-    assert {f.source for f in facts} >= {"submitted", "fetched", "derived", "assumed"}
+    # No seed-42 lead has a not_found lookup or a year_built below 1950 with the wiring question
+    # missing, so no fact is `assumed` (9.3 rule 4).
+    assert {f.source for f in facts} == {"submitted", "fetched", "derived"}
     assert any(f.is_stub for f in facts)
     assert any(f.key == "p_f" and not f.is_stub for f in facts)
     assert {n.kind for d in every for n in d.notes} >= {"not_evaluated", "unevaluated_skill"}
     assert {d.state for dd in every for d in dd.drafts} >= {"sent", "draft"}
     assert {link.kind for d in every for link in d.links} == {"search", "map"}
-    assert {p.result for p in pages} == {
-        None,
-        "decided",
-        "undecided",
-        "declines_on_every_branch",
-        "not_evaluated",
-    }
+    # An open conflict makes a page undecided (9.6), so no seed-42 page declines on every branch.
+    assert {p.result for p in pages} == {None, "decided", "undecided", "not_evaluated"}
     assert {p.applies for p in pages} == {"yes", "no", "unknown"}
     assert any(p.exception for p in pages) and any(not p.exception for p in pages)
     assert all(
@@ -508,3 +520,410 @@ def test_the_proposed_commands_fit_their_command_payloads(client: TestClient) ->
     assert commands
     for proposal in commands:
         ProposeCommandPayload.model_validate(proposal.payload)
+
+
+# ---- the fixtures follow the architecture's rules ---------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def histories(client: TestClient) -> dict[str, LeadEvents]:
+    return {
+        lead_id: LeadEvents.model_validate(get_json(client, f"/api/leads/{lead_id}/events"))
+        for lead_id in LEAD_IDS
+    }
+
+
+def lead_events(histories: dict[str, LeadEvents], lead: int, event_type: str) -> list[Any]:
+    return [e for e in histories[LEAD_IDS[lead]].events if e.type.value == event_type]
+
+
+def test_lead_000_declines_on_post_and_pier_alone(
+    details: dict[str, LeadDetail], histories: dict[str, LeadEvents]
+) -> None:
+    # Section 2.2: leads 000 (8 months) and 003 (3 months) hold the occupancy conflict, a primary
+    # home with months unoccupied. Section 9.6: a fact in an open conflict is unknown to the
+    # graphs, so the Occupancy page is undecided and contributes nothing. Section 5: lead 000
+    # declines on the pier foundation that supports living area, rule trace 07:LIVING, 07:D1.
+    detail = details[LEAD_IDS[0]]
+    assert detail.plan is not None
+    declines = [p for p in detail.plan.effects if p.effect.type == "decline"]
+    assert [p.trace.board_path for p in declines] == [["07:LIVING", "07:D1"]]
+    assert detail.plan.declines_on_every_branch == []
+    assert detail.plan.proposed_decline
+    occupancy = next(p for p in detail.playbook if p.graph == "occupancy")
+    assert (occupancy.applies, occupancy.result) == ("unknown", "undecided")
+    assert occupancy.waits_on == ["dwelling_use_type", "months_unoccupied"]
+    assert occupancy.effects == [] and not occupancy.declines_on_every_branch
+    post_and_pier = next(p for p in detail.playbook if p.graph == "post_and_pier")
+    assert [e.effect.type for e in post_and_pier.effects] == ["decline"]
+    assert all(p.result != "declines_on_every_branch" for p in detail.playbook)
+    for lead in (0, 3):
+        opened = lead_events(histories, lead, "conflict_opened")
+        assert [e.payload["validator"] for e in opened] == [
+            "conf_primary_use_and_months_unoccupied"
+        ]
+
+
+def test_lead_000_sends_only_a_decline_notice_of_round_0(
+    details: dict[str, LeadDetail], histories: dict[str, LeadEvents], client: TestClient
+) -> None:
+    # Section 7.5: a decline notice carries round 0 when the lead has had no request. Section 9.6
+    # precedence 1: a decline suppresses every request, a confirmation included.
+    detail = details[LEAD_IDS[0]]
+    intents = lead_events(histories, 0, "intent_created")
+    assert [(e.payload["kind"], e.payload["round"]) for e in intents] == [("decline_notice", 0)]
+    assert [(d.kind, d.round) for d in detail.drafts] == [("decline_notice", 0)]
+    assert not detail.drafts[0].intent_id.endswith("R1")
+    assert intents[0].payload["ask_ids"] == []
+    rows = get_json(client, "/api/leads")
+    assert next(r for r in rows if r["lead_id"] == LEAD_IDS[0])["ask_count"] == 0
+
+
+# The section 9.4 table: each provider field and the lead fields its lookup needs.
+FULL_ADDRESS = ("street_address", "city", "state", "zip")
+LOOKUP_INPUTS: dict[str, tuple[str, ...]] = {
+    "broker_tier": (),
+    "has_primary_policy_with_stand": (),
+    "replacement_cost": FULL_ADDRESS,
+    "protection_class": FULL_ADDRESS,
+    "kyc_score": ("first_name", "last_name", "insured_dob"),
+    "p_f": FULL_ADDRESS,
+    "slope_angle_deg": FULL_ADDRESS,
+    "min_distance_to_neighbor_ft": FULL_ADDRESS,
+    "vegetation_clearance": FULL_ADDRESS,
+    "road_access": FULL_ADDRESS,
+}
+
+# The provider fields each seed-42 payload carries as a value, as the leadgen container serves
+# them. Section 9.4: a value an archetype set stays on the lead and is never replaced.
+PAYLOAD_PROVIDER_VALUES: dict[int, dict[str, Any]] = {
+    0: {"p_f": 0.13, "slope_angle_deg": 10.1},
+    1: {
+        "broker_tier": "Tier 1",
+        "has_primary_policy_with_stand": False,
+        "protection_class": "5",
+        "road_access": "Multiple Access Points",
+    },
+    2: {
+        "broker_tier": "Tier 2",
+        "replacement_cost": 489881,
+        "protection_class": "5",
+        "kyc_score": 8,
+        "slope_angle_deg": 5.6,
+        "min_distance_to_neighbor_ft": 30,
+    },
+    3: {
+        "p_f": 0.79,
+        "slope_angle_deg": 30.0,
+        "min_distance_to_neighbor_ft": 14,
+        "vegetation_clearance": "Too Close",
+    },
+    4: {
+        "has_primary_policy_with_stand": False,
+        "kyc_score": 4,
+        "road_access": "Multiple Access Points",
+    },
+    5: {"protection_class": "5", "kyc_score": 6},
+    6: {
+        "p_f": 0.89,
+        "slope_angle_deg": 29.4,
+        "min_distance_to_neighbor_ft": 14,
+        "vegetation_clearance": "Too Close",
+    },
+    7: {"kyc_score": 9, "p_f": 0.1},
+    8: {
+        "broker_tier": "Tier 2",
+        "has_primary_policy_with_stand": False,
+        "protection_class": "5",
+        "kyc_score": 2,
+        "p_f": 0.14,
+        "road_access": "Multiple Access Points",
+        "vegetation_clearance": "Adequate",
+    },
+    9: {
+        "broker_tier": "Tier 2",
+        "has_primary_policy_with_stand": False,
+        "replacement_cost": 978879,
+        "protection_class": "4",
+        "kyc_score": 1,
+        "min_distance_to_neighbor_ft": 115,
+        "slope_angle_deg": 10.6,
+        "vegetation_clearance": "Adequate",
+    },
+}
+
+
+def lookup_problems(
+    lead: int, detail: LeadDetail, events: LeadEvents, payload: dict[str, Any]
+) -> list[str]:
+    """Each provider field follows 9.4: a payload value is a submitted fact with no lookup; the
+    input check runs first, so a missing input gives `blocked` and no fact; otherwise the value is
+    fetched."""
+    problems: list[str] = []
+    facts = {f.key: f for f in detail.facts}
+    calls: dict[str, list[Any]] = {}
+    for event in events.events:
+        if event.type.value == "provider_called":
+            calls.setdefault(str(event.payload["key"]), []).append(event.payload)
+    for field, inputs in LOOKUP_INPUTS.items():
+        fact, field_calls = facts.get(field), calls.get(field, [])
+        if field in payload:
+            if fact is None or fact.source != "submitted" or fact.value != payload[field]:
+                problems.append(f"{lead}: {field} is not the submitted payload value")
+            if field_calls:
+                problems.append(f"{lead}: {field} is on the payload and was looked up")
+            continue
+        missing = [name for name in inputs if name not in facts]
+        if len(field_calls) != 1:
+            problems.append(f"{lead}: {field} has {len(field_calls)} provider_called events")
+            continue
+        call = field_calls[0]
+        if missing:
+            if fact is not None:
+                problems.append(f"{lead}: {field} has a fact though {missing} are missing")
+            if (call["status"], call["missing_inputs"]) != ("blocked", missing):
+                problems.append(f"{lead}: {field} lookup is not blocked on {missing}")
+        else:
+            if fact is None or fact.source != "fetched" or fact.value != call["value"]:
+                problems.append(f"{lead}: {field} is not the fetched value")
+            if call["status"] != "found" or call["missing_inputs"]:
+                problems.append(f"{lead}: {field} lookup has all its inputs and is not found")
+    return problems
+
+
+def test_the_lookups_follow_section_9_4(
+    details: dict[str, LeadDetail], histories: dict[str, LeadEvents]
+) -> None:
+    problems: list[str] = []
+    for lead, payload in PAYLOAD_PROVIDER_VALUES.items():
+        lead_id = LEAD_IDS[lead]
+        problems += lookup_problems(lead, details[lead_id], histories[lead_id], payload)
+    assert problems == []
+
+
+def test_a_blocked_lookup_leaves_no_fact_and_a_blocked_triage_resolution(
+    details: dict[str, LeadDetail], histories: dict[str, LeadEvents]
+) -> None:
+    # Lead 000 has no address, so every address lookup is blocked on the four address fields.
+    # Section 9.2: a blocked lookup gives resolution `blocked`, and the four fields conditional on
+    # protection class 9 or 10 are blocked on `protection_class`, not asked.
+    detail = details[LEAD_IDS[0]]
+    keys = {f.key for f in detail.facts}
+    assert not keys & {"protection_class", "replacement_cost", "kyc_score", "road_access"}
+    triage = lead_events(histories, 0, "triage_completed")[0].payload["fields"]
+    for field in ("protection_class", "replacement_cost", "kyc_score", "road_access"):
+        assert triage[field]["resolution"] == "blocked", field  # type: ignore[index]
+    assert triage["kyc_score"]["depends_on"] == ["first_name", "last_name", "insured_dob"]  # type: ignore[index]
+    assert triage["road_access"]["depends_on"] == list(FULL_ADDRESS)  # type: ignore[index]
+    conditional = ("fire_dept_response_time", "alternative_water_source")
+    conditional += ("interior_sprinklers", "physical_barriers")
+    for lead in (0, 3, 6, 7):
+        triage = lead_events(histories, lead, "triage_completed")[0].payload["fields"]
+        for field in conditional:
+            assert triage[field]["resolution"] == "blocked", (lead, field)  # type: ignore[index]
+            assert triage[field]["depends_on"] == ["protection_class"]  # type: ignore[index]
+        page = next(p for p in details[LEAD_IDS[lead]].playbook if p.graph == "pc_9_and_10")
+        assert (page.applies, page.result, page.waits_on) == (
+            "unknown",
+            "undecided",
+            ["protection_class"],
+        )
+    # Where the lookup is found, the field is not blocked and there is no assumed value.
+    triage = lead_events(histories, 4, "triage_completed")[0].payload["fields"]
+    assert all(entry["resolution"] != "blocked" for entry in triage.values())  # type: ignore[attr-defined]
+    assert all(f.source != "assumed" for d in details.values() for f in d.facts)
+
+
+def test_a_payload_value_is_never_a_fetched_fact(details: dict[str, LeadDetail]) -> None:
+    def source(lead: int, key: str) -> str | None:
+        fact = next((f for f in details[LEAD_IDS[lead]].facts if f.key == key), None)
+        return None if fact is None else fact.source
+
+    assert [source(lead, "p_f") for lead in (3, 6)] == ["submitted", "submitted"]
+    assert [source(lead, "kyc_score") for lead in (2, 5, 7)] == ["submitted"] * 3
+    # The one fetched `p_f` that stays: lead 009's payload has none and its address is complete.
+    assert source(9, "p_f") == "fetched"
+
+
+REGISTRY = json.loads((ROOT / "docs" / "brief" / "field_registry.json").read_text("utf-8"))[
+    "fields"
+]
+OPENING = (
+    "Thank you for your submission. To complete the quote we need the items below. "
+    "One reply covering all of them is ideal."
+)
+
+
+def address_or_id(detail: LeadDetail) -> str:
+    street = next((f.value for f in detail.facts if f.key == "street_address"), None)
+    return str(street) if street else detail.lead_id
+
+
+def message_problems(detail: LeadDetail, events: LeadEvents) -> list[str]:
+    """A.8 and 10.2: the subject and opening, and the asks grouped by registry section in registry
+    order, numbered, with catalogue questions and confirmations in a last group."""
+    problems: list[str] = []
+    intents = {
+        e.payload["intent_id"]: e.payload for e in events.events if e.type.value == "intent_created"
+    }
+    for draft in detail.drafts:
+        lead = detail.lead_id
+        subject = {
+            "routine_request": "Information needed for your quote: ",
+            "sensitive_request": "Information needed for your quote: ",
+            "quote_packet": "Your quote: ",
+            "decline_notice": "Regarding your submission: ",
+        }[draft.kind] + address_or_id(detail)
+        if draft.subject != subject:
+            problems.append(f"{lead}: subject {draft.subject!r} is not {subject!r}")
+        if draft.kind not in REQUEST_KINDS:
+            continue
+        if not draft.body.startswith(OPENING + "\n\n"):
+            problems.append(f"{lead}: the body does not open with A.8's sentence")
+        ask_ids = intents[draft.intent_id]["ask_ids"]
+        heading, numbers, groups = "", [], []
+        for line in draft.body.removeprefix(OPENING).strip().splitlines():
+            if not line.strip():
+                continue
+            number, dot, _ = line.partition(". ")
+            if dot and number.isdigit():
+                numbers.append(int(number))
+                groups.append(heading)
+            else:
+                heading = line
+        if numbers != list(range(1, len(ask_ids) + 1)):
+            problems.append(f"{lead}: the asks are not numbered 1 to {len(ask_ids)}")
+        if len(groups) == len(ask_ids):
+            for ask, group in zip(ask_ids, groups, strict=True):
+                expected = REGISTRY[ask]["section"] if ask in REGISTRY else "Additional questions"
+                if group != expected:
+                    problems.append(f"{lead}: {ask} sits under {group!r}, not {expected!r}")
+        registry_asks = [a for a in ask_ids if a in REGISTRY]
+        if registry_asks != sorted(registry_asks, key=list(REGISTRY).index):
+            problems.append(f"{lead}: the asks are not in registry order")
+        if ask_ids[: len(registry_asks)] != registry_asks:
+            problems.append(f"{lead}: a confirmation comes before a registry ask")
+    return problems
+
+
+def test_the_messages_follow_appendix_a8(
+    details: dict[str, LeadDetail], histories: dict[str, LeadEvents]
+) -> None:
+    problems: list[str] = []
+    for lead_id in LEAD_IDS:
+        problems += message_problems(details[lead_id], histories[lead_id])
+    assert problems == []
+    requests = [d for detail in details.values() for d in detail.drafts if d.kind in REQUEST_KINDS]
+    assert len(requests) == 9
+    assert all(d.subject.startswith("Information needed for your quote: ") for d in requests)
+    assert all(d.body.startswith(OPENING) for d in requests)
+    # Lead 001 has no street address, so its subject names the lead id (A.8).
+    assert requests[0].subject.endswith(LEAD_IDS[1])
+
+
+def test_the_decline_notice_states_no_decline_reason(details: dict[str, LeadDetail]) -> None:
+    # Section 10.2: no message contains a decline reason, pricing or internal notes.
+    notice = details[LEAD_IDS[0]].drafts[0]
+    assert notice.subject == f"Regarding your submission: {LEAD_IDS[0]}"
+    for reason in ("pier", "foundation", "living", "occupan", "unoccupied", "fire", "rule"):
+        assert reason not in notice.body.lower(), reason
+    for pricing in ("$", "premium", "price"):
+        assert pricing not in notice.body.lower(), pricing
+
+
+def test_a_lookup_check_reports_a_wrong_source_and_a_wrong_status(
+    details: dict[str, LeadDetail], histories: dict[str, LeadEvents]
+) -> None:
+    # Lead 003's p_f is on its payload: a fetched copy and a lookup event are both reported.
+    lead_id = LEAD_IDS[3]
+    detail = details[lead_id].model_copy(deep=True)
+    next(f for f in detail.facts if f.key == "p_f").source = "fetched"
+    reported = lookup_problems(3, detail, histories[lead_id], PAYLOAD_PROVIDER_VALUES[3])
+    assert any("p_f is not the submitted payload value" in p for p in reported)
+    # Lead 000's kyc_score lookup is blocked: a found status is reported.
+    lead_id = LEAD_IDS[0]
+    history = histories[lead_id].model_copy(deep=True)
+    call = next(
+        e
+        for e in history.events
+        if e.type.value == "provider_called" and e.payload["key"] == "kyc_score"
+    )
+    call.payload = {**call.payload, "status": "found", "missing_inputs": []}
+    reported = lookup_problems(0, details[lead_id], history, PAYLOAD_PROVIDER_VALUES[0])
+    assert any("kyc_score lookup is not blocked" in p for p in reported)
+
+
+def test_a_wrong_message_is_reported(
+    details: dict[str, LeadDetail], histories: dict[str, LeadEvents]
+) -> None:
+    lead_id = LEAD_IDS[8]
+    detail = details[lead_id].model_copy(deep=True)
+    detail.drafts[0].subject = f"Information needed to quote {lead_id}"
+    detail.drafts[0].body = detail.drafts[0].body.replace(OPENING, "Hello,")
+    reported = message_problems(detail, histories[lead_id])
+    assert any("subject" in p for p in reported)
+    assert any("does not open" in p for p in reported)
+
+
+def test_every_skill_is_passing_or_untested_with_a_threshold_of_1(client: TestClient) -> None:
+    # Section 8: a failing deterministic skill stops its lead with a `data` blocker, and every
+    # lead here has run to a rendered message. A.10: the pass threshold is 1.0.
+    skills = TypeAdapter(list[SkillView]).validate_python(get_json(client, "/api/skills"))
+    assert all(skill.status != "failing" for skill in skills)
+    assert all(skill.threshold == 1.0 for skill in skills)
+    by_name = {skill.name: skill for skill in skills}
+    assert by_name["render_message"].status == "passing"
+    assert by_name["read_reply"].status == "untested"
+
+
+def test_the_age_counts_business_days_not_calendar_days() -> None:
+    # Friday 17:00 to Monday 08:00 UTC spans a weekend: 7 hours on Friday and 8 on Monday.
+    friday, monday = parse_time("2026-06-26T17:00:00Z"), parse_time("2026-06-29T08:00:00Z")
+    assert business_days_between(friday, monday) == pytest.approx(15 / 24)
+    assert (monday - friday).total_seconds() / 86400 == pytest.approx(2 + 15 / 24)
+    assert business_days_between(parse_time("2026-06-29T05:00:00Z"), monday) == pytest.approx(
+        3 / 24
+    )
+
+
+def set_clock_and_ages(
+    directory: Path, sim_now: str, age: Callable[[datetime, datetime], float]
+) -> None:
+    """Move the run's clock and rewrite each queue row's age as `age` computes it."""
+    edit_json(directory / "run.json", lambda run: run.update(sim_now=sim_now))
+
+    def reage(rows: Any) -> None:
+        for row in rows:
+            history = json.loads(
+                (directory / "events" / f"{row['lead_id']}.json").read_text("utf-8")
+            )
+            received = next(e for e in history["events"] if e["type"] == "lead_received")
+            row["age_business_days"] = round(
+                age(parse_time(received["payload"]["received_at"]), parse_time(sim_now)), 2
+            )
+            row["service_level_breached"] = row["age_business_days"] > SERVICE_LEVEL_DAYS
+
+    edit_json(directory / "leads.json", reage)
+
+
+def calendar_days_between(start: datetime, end: datetime) -> float:
+    return (end - start).total_seconds() / 86400
+
+
+def age_problems(directory: Path) -> list[str]:
+    return [p for p in all_problems(standin_client(directory)) if " age " in p]
+
+
+def test_a_clock_across_a_weekend_ages_a_lead_in_business_days(tmp_path: Path) -> None:
+    # The first pass ran on Monday 2026-06-29; a clock on Monday 2026-07-06 spans one weekend.
+    sim_now = "2026-07-06T06:30:00Z"
+    received = parse_time("2026-06-29T05:06:00Z")
+    assert calendar_days_between(received, parse_time(sim_now)) - business_days_between(
+        received, parse_time(sim_now)
+    ) == pytest.approx(2.0)
+    business = copy_fixtures(tmp_path / "business")
+    set_clock_and_ages(business, sim_now, business_days_between)
+    assert age_problems(business) == []
+    calendar = copy_fixtures(tmp_path / "calendar")
+    set_clock_and_ages(calendar, sim_now, calendar_days_between)
+    assert len(age_problems(calendar)) == len(LEAD_IDS)

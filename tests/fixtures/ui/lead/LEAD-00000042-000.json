@@ -5,6 +5,30 @@
   "revision": 1,
   "facts": [
     {
+      "key": "broker_tier",
+      "value": "Tier 2",
+      "source": "fetched",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "provider": "account_directory"
+      },
+      "observation_id": 1,
+      "is_stub": false
+    },
+    {
+      "key": "has_primary_policy_with_stand",
+      "value": false,
+      "source": "fetched",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "provider": "account_directory"
+      },
+      "observation_id": 2,
+      "is_stub": false
+    },
+    {
       "key": "listed_for_sale",
       "value": false,
       "source": "submitted",
@@ -13,7 +37,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 1,
+      "observation_id": 3,
       "is_stub": false
     },
     {
@@ -25,7 +49,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 2,
+      "observation_id": 4,
       "is_stub": false
     },
     {
@@ -37,7 +61,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 3,
+      "observation_id": 5,
       "is_stub": false
     },
     {
@@ -49,7 +73,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 4,
+      "observation_id": 6,
       "is_stub": false
     },
     {
@@ -61,7 +85,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 5,
+      "observation_id": 7,
       "is_stub": false
     },
     {
@@ -73,7 +97,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 6,
+      "observation_id": 8,
       "is_stub": false
     },
     {
@@ -85,7 +109,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 7,
+      "observation_id": 9,
       "is_stub": false
     },
     {
@@ -97,7 +121,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 8,
+      "observation_id": 10,
       "is_stub": false
     },
     {
@@ -109,7 +133,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 9,
+      "observation_id": 11,
       "is_stub": false
     },
     {
@@ -121,7 +145,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 10,
+      "observation_id": 12,
       "is_stub": false
     },
     {
@@ -133,7 +157,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 11,
+      "observation_id": 13,
       "is_stub": false
     },
     {
@@ -145,7 +169,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 12,
+      "observation_id": 14,
       "is_stub": false
     },
     {
@@ -157,7 +181,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 13,
+      "observation_id": 15,
       "is_stub": false
     },
     {
@@ -169,7 +193,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 14,
+      "observation_id": 16,
       "is_stub": false
     },
     {
@@ -181,7 +205,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 15,
+      "observation_id": 17,
       "is_stub": false
     },
     {
@@ -193,7 +217,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 16,
+      "observation_id": 18,
       "is_stub": false
     },
     {
@@ -205,7 +229,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 17,
+      "observation_id": 19,
       "is_stub": false
     },
     {
@@ -217,7 +241,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 18,
+      "observation_id": 20,
       "is_stub": false
     },
     {
@@ -229,7 +253,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 19,
+      "observation_id": 21,
       "is_stub": false
     },
     {
@@ -241,7 +265,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 20,
+      "observation_id": 22,
       "is_stub": false
     },
     {
@@ -253,7 +277,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 21,
+      "observation_id": 23,
       "is_stub": false
     },
     {
@@ -265,7 +289,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 22,
+      "observation_id": 24,
       "is_stub": false
     },
     {
@@ -277,7 +301,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 23,
+      "observation_id": 25,
       "is_stub": false
     },
     {
@@ -289,7 +313,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 24,
+      "observation_id": 26,
       "is_stub": false
     },
     {
@@ -301,7 +325,7 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 25,
+      "observation_id": 27,
       "is_stub": false
     },
     {
@@ -313,43 +337,31 @@
       "evidence": {
         "lead_source": "direct_web"
       },
-      "observation_id": 26,
-      "is_stub": false
-    },
-    {
-      "key": "protection_class",
-      "value": "9",
-      "source": "assumed",
-      "status": "accepted",
-      "confirmed": false,
-      "evidence": {
-        "registry_missing_default": "9"
-      },
-      "observation_id": 27,
+      "observation_id": 28,
       "is_stub": false
     },
     {
       "key": "slope_angle_deg",
       "value": 10.1,
-      "source": "fetched",
+      "source": "submitted",
       "status": "accepted",
       "confirmed": false,
       "evidence": {
-        "provider": "terrain"
+        "lead_source": "direct_web"
       },
-      "observation_id": 28,
+      "observation_id": 29,
       "is_stub": false
     },
     {
       "key": "p_f",
       "value": 0.13,
-      "source": "fetched",
+      "source": "submitted",
       "status": "accepted",
       "confirmed": false,
       "evidence": {
-        "provider": "fire_simulation"
+        "lead_source": "direct_web"
       },
-      "observation_id": 29,
+      "observation_id": 30,
       "is_stub": false
     },
     {
@@ -364,7 +376,7 @@
           "siding_material"
         ]
       },
-      "observation_id": 30,
+      "observation_id": 31,
       "is_stub": false
     }
   ],
@@ -416,55 +428,21 @@
         "committed": true
       }
     ],
-    "declines_on_every_branch": [
-      {
-        "board_path": [],
-        "alternatives": [
-          {
-            "assumed": [
-              {
-                "field": "has_primary_policy_with_stand",
-                "when": {
-                  "equals": false
-                }
-              }
-            ],
-            "board_path": [
-              "03:UNOCC",
-              "03:V_NP",
-              "03:DECLINE"
-            ],
-            "rule": "03:V_NP1"
-          },
-          {
-            "assumed": [
-              {
-                "field": "has_primary_policy_with_stand",
-                "when": {
-                  "equals": true
-                }
-              }
-            ],
-            "board_path": [
-              "03:UNOCC",
-              "03:V_P",
-              "03:GT60",
-              "03:DECLINE"
-            ],
-            "rule": "03:GT60D"
-          }
-        ],
-        "choice_ids": []
-      }
-    ],
+    "declines_on_every_branch": [],
     "proposed_decline": true,
     "underwriter_decline": null,
     "undecided": [
       {
+        "graph": "occupancy",
+        "waits_on": [
+          "dwelling_use_type",
+          "months_unoccupied"
+        ]
+      },
+      {
         "graph": "pc_9_and_10",
         "waits_on": [
-          "fire_department_type",
-          "road_access"
+          "protection_class"
         ]
       },
       {
@@ -499,7 +477,7 @@
       }
     ]
   },
-  "plan_hash": "720b69bc47fd71a7c14088fef28cc7f9914f4b44b97f3329e1359ecfd3327c6a",
+  "plan_hash": "f20aff7e9f25fe4f198288cdbe531e9ed3e842603503f53e5b8735df8fd6d8f6",
   "playbook": [
     {
       "graph": "profile",
@@ -514,49 +492,14 @@
     },
     {
       "graph": "occupancy",
-      "applies": "yes",
-      "result": "declines_on_every_branch",
-      "waits_on": [],
+      "applies": "unknown",
+      "result": "undecided",
+      "waits_on": [
+        "dwelling_use_type",
+        "months_unoccupied"
+      ],
       "effects": [],
-      "declines_on_every_branch": {
-        "board_path": [],
-        "alternatives": [
-          {
-            "assumed": [
-              {
-                "field": "has_primary_policy_with_stand",
-                "when": {
-                  "equals": false
-                }
-              }
-            ],
-            "board_path": [
-              "03:UNOCC",
-              "03:V_NP",
-              "03:DECLINE"
-            ],
-            "rule": "03:V_NP1"
-          },
-          {
-            "assumed": [
-              {
-                "field": "has_primary_policy_with_stand",
-                "when": {
-                  "equals": true
-                }
-              }
-            ],
-            "board_path": [
-              "03:UNOCC",
-              "03:V_P",
-              "03:GT60",
-              "03:DECLINE"
-            ],
-            "rule": "03:GT60D"
-          }
-        ],
-        "choice_ids": []
-      },
+      "declines_on_every_branch": null,
       "exception": true
     },
     {
@@ -683,11 +626,10 @@
     },
     {
       "graph": "pc_9_and_10",
-      "applies": "yes",
+      "applies": "unknown",
       "result": "undecided",
       "waits_on": [
-        "fire_department_type",
-        "road_access"
+        "protection_class"
       ],
       "effects": [],
       "declines_on_every_branch": null,
@@ -728,7 +670,7 @@
         "cause": null,
         "cause_persists": false,
         "resume_trigger": "approval_recorded",
-        "intent_id": "INT-00000042-000-R1",
+        "intent_id": "INT-00000042-000-R0",
         "observation_id": null,
         "choice_ids": [],
         "text": "Review the decline notice before it is sent."
@@ -740,17 +682,17 @@
   ],
   "drafts": [
     {
-      "intent_id": "INT-00000042-000-R1",
-      "payload_hash": "2d33eed7701329e9a6d8b5be98c9d26f1a96f9adcac63102ce6de1f34d74e274",
+      "intent_id": "INT-00000042-000-R0",
+      "payload_hash": "9e1ff6a9f3efae7f499fc10f66de4410aa017c369412dcf2127b536aa6f16159",
       "kind": "decline_notice",
       "recipient": "owner@example.com",
-      "subject": "Your homeowners insurance application",
-      "body": "Hello,\n\nThank you for your application. After review, we are unable to offer coverage for this property.\n\nThank you.",
+      "subject": "Regarding your submission: LEAD-00000042-000",
+      "body": "Thank you for your submission. After review, we are unable to offer coverage for this property.",
       "state": "draft",
-      "round": 1
+      "round": 0
     }
   ],
   "open_choices": [],
-  "next_action": "Review the decline notice draft: Post & Pier and Occupancy decline this lead.",
+  "next_action": "Review the decline notice draft: Post & Pier declines this lead.",
   "links": []
 }

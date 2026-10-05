@@ -13,7 +13,7 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 72,
+      "observation_id": 74,
       "is_stub": false
     },
     {
@@ -25,7 +25,7 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 73,
+      "observation_id": 75,
       "is_stub": false
     },
     {
@@ -37,7 +37,7 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 74,
+      "observation_id": 76,
       "is_stub": false
     },
     {
@@ -49,7 +49,7 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 75,
+      "observation_id": 77,
       "is_stub": false
     },
     {
@@ -61,19 +61,31 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 76,
+      "observation_id": 78,
       "is_stub": false
     },
     {
       "key": "broker_tier",
       "value": "Tier 2",
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "broker_email"
+      },
+      "observation_id": 79,
+      "is_stub": false
+    },
+    {
+      "key": "has_primary_policy_with_stand",
+      "value": false,
       "source": "fetched",
       "status": "accepted",
       "confirmed": false,
       "evidence": {
         "provider": "account_directory"
       },
-      "observation_id": 77,
+      "observation_id": 80,
       "is_stub": false
     },
     {
@@ -85,7 +97,7 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 78,
+      "observation_id": 81,
       "is_stub": false
     },
     {
@@ -97,7 +109,7 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 79,
+      "observation_id": 82,
       "is_stub": false
     },
     {
@@ -109,7 +121,7 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 80,
+      "observation_id": 83,
       "is_stub": false
     },
     {
@@ -121,7 +133,7 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 81,
+      "observation_id": 84,
       "is_stub": false
     },
     {
@@ -133,7 +145,7 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 82,
+      "observation_id": 85,
       "is_stub": false
     },
     {
@@ -145,7 +157,7 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 83,
+      "observation_id": 86,
       "is_stub": false
     },
     {
@@ -157,19 +169,19 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 84,
+      "observation_id": 87,
       "is_stub": false
     },
     {
       "key": "kyc_score",
       "value": 8,
-      "source": "fetched",
+      "source": "submitted",
       "status": "accepted",
       "confirmed": false,
       "evidence": {
-        "provider": "identity_screening"
+        "lead_source": "broker_email"
       },
-      "observation_id": 85,
+      "observation_id": 88,
       "is_stub": false
     },
     {
@@ -181,7 +193,7 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 86,
+      "observation_id": 89,
       "is_stub": false
     },
     {
@@ -193,7 +205,7 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 87,
+      "observation_id": 90,
       "is_stub": false
     },
     {
@@ -205,19 +217,19 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 88,
+      "observation_id": 91,
       "is_stub": false
     },
     {
       "key": "replacement_cost",
       "value": 489881,
-      "source": "fetched",
+      "source": "submitted",
       "status": "accepted",
       "confirmed": false,
       "evidence": {
-        "provider": "rebuild_cost_estimator"
+        "lead_source": "broker_email"
       },
-      "observation_id": 89,
+      "observation_id": 92,
       "is_stub": false
     },
     {
@@ -229,7 +241,7 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 90,
+      "observation_id": 93,
       "is_stub": false
     },
     {
@@ -241,7 +253,7 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 91,
+      "observation_id": 94,
       "is_stub": false
     },
     {
@@ -253,7 +265,7 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 92,
+      "observation_id": 95,
       "is_stub": false
     },
     {
@@ -265,7 +277,7 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 93,
+      "observation_id": 96,
       "is_stub": false
     },
     {
@@ -277,7 +289,7 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 94,
+      "observation_id": 97,
       "is_stub": false
     },
     {
@@ -289,7 +301,7 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 95,
+      "observation_id": 98,
       "is_stub": false
     },
     {
@@ -301,7 +313,7 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 96,
+      "observation_id": 99,
       "is_stub": false
     },
     {
@@ -313,7 +325,7 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 97,
+      "observation_id": 100,
       "is_stub": false
     },
     {
@@ -325,7 +337,7 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 98,
+      "observation_id": 101,
       "is_stub": false
     },
     {
@@ -337,7 +349,7 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 99,
+      "observation_id": 102,
       "is_stub": false
     },
     {
@@ -349,7 +361,7 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 100,
+      "observation_id": 103,
       "is_stub": false
     },
     {
@@ -361,7 +373,7 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 101,
+      "observation_id": 104,
       "is_stub": false
     },
     {
@@ -373,7 +385,7 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 102,
+      "observation_id": 105,
       "is_stub": false
     },
     {
@@ -385,7 +397,7 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 103,
+      "observation_id": 106,
       "is_stub": false
     },
     {
@@ -397,7 +409,7 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 104,
+      "observation_id": 107,
       "is_stub": false
     },
     {
@@ -409,7 +421,7 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 105,
+      "observation_id": 108,
       "is_stub": false
     },
     {
@@ -421,7 +433,7 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 106,
+      "observation_id": 109,
       "is_stub": false
     },
     {
@@ -433,7 +445,7 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 107,
+      "observation_id": 110,
       "is_stub": false
     },
     {
@@ -445,7 +457,7 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 108,
+      "observation_id": 111,
       "is_stub": false
     },
     {
@@ -457,7 +469,7 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 109,
+      "observation_id": 112,
       "is_stub": false
     },
     {
@@ -469,7 +481,7 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 110,
+      "observation_id": 113,
       "is_stub": false
     },
     {
@@ -481,7 +493,7 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 111,
+      "observation_id": 114,
       "is_stub": false
     },
     {
@@ -493,7 +505,7 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 112,
+      "observation_id": 115,
       "is_stub": false
     },
     {
@@ -505,31 +517,43 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 113,
+      "observation_id": 116,
+      "is_stub": false
+    },
+    {
+      "key": "road_access",
+      "value": "Multiple Access Points",
+      "source": "fetched",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "provider": "road_network"
+      },
+      "observation_id": 117,
       "is_stub": false
     },
     {
       "key": "protection_class",
       "value": "5",
-      "source": "fetched",
+      "source": "submitted",
       "status": "accepted",
       "confirmed": false,
       "evidence": {
-        "provider": "iso_protection_class"
+        "lead_source": "broker_email"
       },
-      "observation_id": 114,
+      "observation_id": 118,
       "is_stub": false
     },
     {
       "key": "min_distance_to_neighbor_ft",
       "value": 30,
-      "source": "fetched",
+      "source": "submitted",
       "status": "accepted",
       "confirmed": false,
       "evidence": {
-        "provider": "parcel_geometry"
+        "lead_source": "broker_email"
       },
-      "observation_id": 115,
+      "observation_id": 119,
       "is_stub": false
     },
     {
@@ -541,19 +565,19 @@
       "evidence": {
         "lead_source": "broker_email"
       },
-      "observation_id": 116,
+      "observation_id": 120,
       "is_stub": false
     },
     {
       "key": "slope_angle_deg",
       "value": 5.6,
-      "source": "fetched",
+      "source": "submitted",
       "status": "accepted",
       "confirmed": false,
       "evidence": {
-        "provider": "terrain"
+        "lead_source": "broker_email"
       },
-      "observation_id": 117,
+      "observation_id": 121,
       "is_stub": false
     },
     {
@@ -565,7 +589,7 @@
       "evidence": {
         "provider": "fire_simulation"
       },
-      "observation_id": 118,
+      "observation_id": 122,
       "is_stub": false
     },
     {
@@ -580,7 +604,19 @@
           "siding_material"
         ]
       },
-      "observation_id": 119,
+      "observation_id": 123,
+      "is_stub": false
+    },
+    {
+      "key": "vegetation_clearance",
+      "value": "Adequate",
+      "source": "fetched",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "provider": "vegetation_imagery"
+      },
+      "observation_id": 124,
       "is_stub": false
     }
   ],
@@ -872,11 +908,11 @@
   "drafts": [
     {
       "intent_id": "INT-00000042-002-R1",
-      "payload_hash": "e3135b41966d76c7d4b60f56798d311efad049519f002ffe60281173a5637e3a",
+      "payload_hash": "6d1892ff2c1a6b8b625be336a5c0afe9c688c3908ed025f06f74621f7e5aaee7",
       "kind": "routine_request",
       "recipient": "quotes@broker-desk.example",
-      "subject": "Information needed to quote LEAD-00000042-002",
-      "body": "Hello,\n\nThank you for the application. To continue, we need the answers below.\n\nInsured\n1. Is the property owned by a trust?\n\nPrimary Coverages\n2. Please provide: Coverage A (Dwelling)\n\nProperty\n3. Please provide: Rental Exposure (one of: No, Short-Term Rentals, Long-Term Rentals)\n\nProtection\n4. Please provide: Distance to Nearest Fire Hydrant (Feet)\n\nThank you.",
+      "subject": "Information needed for your quote: 6496 Old Mill Rd",
+      "body": "Thank you for your submission. To complete the quote we need the items below. One reply covering all of them is ideal.\n\nInsured\n1. Is the property owned by a trust?\n\nPrimary Coverages\n2. Please provide: Coverage A (Dwelling)\n\nProperty\n3. Please provide: Rental Exposure (one of: No, Short-Term Rentals, Long-Term Rentals)\n\nProtection\n4. Please provide: Distance to Nearest Fire Hydrant (Feet)",
       "state": "sent",
       "round": 1
     }
