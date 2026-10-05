@@ -16,6 +16,7 @@ from uwh.skills.contracts import (
     Candidate,
     EvaluatePlaybookInput,
     LocatedCandidate,
+    PlanAsksInput,
     PlanAsksResult,
     QuotePacket,
     ReadReplyInput,
@@ -167,6 +168,8 @@ INPUTS: dict[str, dict[str, Any]] = {
         },
         "plan": {},
         "conflicts": [CONFLICT],
+        "requests_sent": 0,
+        "open_request": False,
     },
     "render_message": {
         "kind": "request",
@@ -205,7 +208,12 @@ RESULTS: dict[str, dict[str, Any]] = {
         ],
     },
     "evaluate_playbook": {"proposed_decline": False},
-    "plan_asks": {"asks": [ASK], "message_class": "routine_request"},
+    "plan_asks": {
+        "asks": [ASK],
+        "message_class": "routine_request",
+        "round": 1,
+        "round_limit_reached": False,
+    },
     "render_message": {
         "subject": "Information needed for your quote: LEAD-00000042-001",
         "body": "Thank you for your submission.",
@@ -353,8 +361,51 @@ def test_render_message_names_the_audience_of_the_wording() -> None:
         RenderMessageInput.model_validate(without)
 
 
+# No request to send: no class, no round.
+NO_REQUEST = {"asks": [], "message_class": None, "round": None, "round_limit_reached": False}
+
+
+def test_plan_asks_input_counts_the_requests_the_lead_has_had_and_whether_one_is_open() -> None:
+    # 10.1 "one open request per lead" and 7.5 "rounds number requests only".
+    assert {"requests_sent", "open_request"} <= set(PlanAsksInput.model_fields)
+    parsed = PlanAsksInput.model_validate(
+        {**INPUTS["plan_asks"], "requests_sent": 1, "open_request": True}
+    )
+    assert (parsed.requests_sent, parsed.open_request) == (1, True)
+    for missing in ("requests_sent", "open_request"):
+        without = {k: v for k, v in INPUTS["plan_asks"].items() if k != missing}
+        with pytest.raises(ValidationError, match=missing):
+            PlanAsksInput.model_validate(without)
+
+
+def test_the_round_a_request_takes_is_set_exactly_when_there_is_a_request() -> None:
+    # 7.5: the first request is round 1, so a request after one sent is round 2.
+    second = PlanAsksResult.model_validate({**RESULTS["plan_asks"], "round": 2})
+    assert (second.message_class, second.round) == ("routine_request", 2)
+    with pytest.raises(ValidationError, match="round"):
+        PlanAsksResult.model_validate({**RESULTS["plan_asks"], "round": None})
+    with pytest.raises(ValidationError, match="round"):
+        PlanAsksResult.model_validate({**NO_REQUEST, "round": 1})
+
+
+def test_a_lead_at_the_round_limit_plans_no_request_and_says_so() -> None:
+    # 10.1 "After two rounds the lead goes to the underwriter": no class and no round; the limit
+    # itself is the skill's behaviour, not part of the contract.
+    at_limit = PlanAsksResult.model_validate({**NO_REQUEST, "round_limit_reached": True})
+    assert (
+        at_limit.round_limit_reached and at_limit.message_class is None and at_limit.round is None
+    )
+    with pytest.raises(ValidationError, match="round_limit_reached"):
+        PlanAsksResult.model_validate({**RESULTS["plan_asks"], "round_limit_reached": True})
+
+
 def test_plan_asks_names_the_message_class_of_its_asks() -> None:
-    assert list(PlanAsksResult.model_fields) == ["asks", "message_class"]
+    assert list(PlanAsksResult.model_fields) == [
+        "asks",
+        "message_class",
+        "round",
+        "round_limit_reached",
+    ]
     classes = [
         arg
         for arg in get_args(PlanAsksResult.model_fields["message_class"].annotation)
@@ -365,17 +416,21 @@ def test_plan_asks_names_the_message_class_of_its_asks() -> None:
         {**RESULTS["plan_asks"], "message_class": "sensitive_request"}
     )
     assert sensitive.message_class == "sensitive_request"
-    nothing = PlanAsksResult.model_validate({"asks": [], "message_class": None})
+    nothing = PlanAsksResult.model_validate({**NO_REQUEST, "asks": []})
     assert nothing.message_class is None
 
 
 def test_the_message_class_is_none_exactly_when_there_is_nothing_to_ask() -> None:
     with pytest.raises(ValidationError):
-        PlanAsksResult.model_validate({"asks": [ASK], "message_class": None})
+        PlanAsksResult.model_validate(
+            {**RESULTS["plan_asks"], "message_class": None, "round": None}
+        )
     with pytest.raises(ValidationError):
-        PlanAsksResult.model_validate({"asks": [], "message_class": "routine_request"})
+        PlanAsksResult.model_validate(
+            {**NO_REQUEST, "message_class": "routine_request", "round": 1}
+        )
     with pytest.raises(ValidationError):
-        PlanAsksResult.model_validate({"asks": [ASK], "message_class": "quote_packet"})
+        PlanAsksResult.model_validate({**RESULTS["plan_asks"], "message_class": "quote_packet"})
 
 
 def test_a_rendered_message_has_no_recipient_field() -> None:

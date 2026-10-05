@@ -103,20 +103,40 @@ EvaluatePlaybookOutput = ActionPlan | Abstention
 
 # plan_asks (10.2).
 class PlanAsksInput(StrictModel):
+    """`requests_sent` and `open_request` serve 10.1 and 7.5: one open request per lead, a second
+    only after a reply, and rounds that number requests only."""
+
     triage: dict[str, FieldTriage]
     resolved: ResolveDataResult
     plan: ActionPlan
     conflicts: list[ConflictOpened]  # open conflicts, each to be confirmed
+    requests_sent: (
+        int  # requests this lead has had, each a round (7.5); packets and notices do not count
+    )
+    open_request: bool  # a request is unanswered (10.1: one open request per lead)
 
 
 class PlanAsksResult(StrictModel):
+    """`asks` is the asks of the request to send; it is empty when no request is sent: nothing is
+    asked, a request is open, or the round limit is reached. `round` serves 7.5 ("the first request
+    is round 1") and `round_limit_reached` serves 10.1 ("after two rounds the lead goes to the
+    underwriter"); the limit is the skill's behaviour, not part of this contract."""
+
     asks: list[Ask]
     message_class: Literal["routine_request", "sensitive_request"] | None  # 10.1; None with no asks
+    round: int | None  # `requests_sent + 1`; None when there is no request to send
+    round_limit_reached: (
+        bool  # the plan still asks and `requests_sent` is at the limit: no request is planned
+    )
 
     @model_validator(mode="after")
     def has_a_class_exactly_when_it_asks(self) -> Self:
         if (self.message_class is None) != (not self.asks):
             raise ValueError("message_class is None exactly when asks is empty")
+        if (self.round is None) != (self.message_class is None):
+            raise ValueError("round is None exactly when message_class is None")
+        if self.round_limit_reached and self.message_class is not None:
+            raise ValueError("round_limit_reached plans no request: message_class is None")
         return self
 
 
