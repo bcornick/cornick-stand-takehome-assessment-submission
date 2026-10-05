@@ -13,6 +13,7 @@ check:
 	uv run mypy
 	python3 scripts/check_discipline.py
 	uv run pytest -m "$(FAST)"
+	pnpm --dir web exec tsc -b
 
 test-slow:
 	uv run pytest -m "slow or integration"
