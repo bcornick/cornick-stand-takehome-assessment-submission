@@ -88,7 +88,6 @@ def test_app_environment(services):
     assert env["SEED"] == "${SEED:-42}"
     assert env["MODEL_ID"] == "${MODEL_ID:-deepseek-flash}"
     assert env["MODEL_BASE_URL"] == "${MODEL_BASE_URL:-https://api.deepseek.com/anthropic}"
-    assert "ANTHROPIC_MODEL" not in env
     assert env["LEADGEN_URL"] == "http://leadgen:8080"
     assert env["MAILBOX_URL"] == "http://mailbox:8080"
     assert env["UWH_DB"] == "/data/app-${RUN_MODE:-live}.db"

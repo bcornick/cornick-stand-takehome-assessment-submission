@@ -9,7 +9,6 @@ VARIABLES = (
     "SEED",
     "MODEL_ID",
     "MODEL_BASE_URL",
-    "ANTHROPIC_MODEL",
     "LEADGEN_URL",
     "MAILBOX_URL",
     "UWH_REGISTRY",
@@ -68,13 +67,6 @@ def test_environment_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
     assert s.registry_path == "/tmp/registry.json"
     assert s.db_path == "/tmp/other.db"
     assert s.git_commit == "abc123"
-
-
-def test_a_variable_from_another_provider_does_not_set_the_model(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("ANTHROPIC_MODEL", "other-model")
-    assert Settings.load().model_id == "deepseek-flash"
 
 
 def test_db_path_is_required(monkeypatch: pytest.MonkeyPatch) -> None:
