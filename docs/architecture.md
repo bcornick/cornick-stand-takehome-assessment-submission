@@ -607,7 +607,7 @@ Reply text is untrusted. It is length-capped, passed to the model as data, and c
 
 ### 10.5 Quote packet and decline notice
 
-The packet is built in code: coverages as submitted, coverage adjustments shown beside the submitted value, each surcharge on its own line with its rule, requirements with deadlines, exclusions and endorsements, advisories, obligations, and a note for each page that is not evaluated. A surcharge or coverage adjustment that carries a deadline shows it on its line. No price. An internal copy lists assumptions, the rule trace and the approver. Every packet and every decline notice waits for underwriter approval.
+The packet is built in code: coverages as submitted, coverage adjustments shown beside the submitted value, each surcharge on its own line, requirements with deadlines, exclusions and endorsements, advisories, obligations, and a note for each page that is not evaluated. A surcharge or coverage adjustment that carries a deadline shows it on its line. Money reads as dollars with thousands separators. No price, and no rule id: a rule that changes nothing adds nothing to the packet. An internal copy lists assumptions, the rule trace and the approver. Every packet and every decline notice waits for underwriter approval.
 
 ## 11. Underwriter surface
 

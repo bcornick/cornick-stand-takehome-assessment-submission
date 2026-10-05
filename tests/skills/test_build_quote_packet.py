@@ -1,4 +1,4 @@
-# ABOUTME: Tests the build_quote_packet skill (10.5): every effect type of a plan lands on its own line with its rule and deadline in its section, the not-evaluated notes follow, and a plan that holds a decline or anything open is refused.
+# ABOUTME: Tests the build_quote_packet skill (10.5): every effect of a plan lands on its own line with its deadline in its section, money reads as dollars, no rule id reaches the producer, the not-evaluated notes follow, and a plan that holds a decline or anything open is refused.
 # ABOUTME: The packet body is compared whole for a plan that holds one effect of each type, so a missing, merged or misplaced line fails.
 from typing import Any
 
@@ -38,7 +38,7 @@ def build(the_plan: ActionPlan) -> str:
     ).body
 
 
-def test_every_effect_is_on_its_own_line_with_its_rule_and_deadline() -> None:
+def test_every_effect_is_on_its_own_line_with_its_deadline_and_no_rule_id() -> None:
     body = build(
         plan(
             {"type": "surcharge", "rule": "S-1", "percent": 15, "deadline": "first_term"},
@@ -74,14 +74,13 @@ def test_every_effect_is_on_its_own_line_with_its_rule_and_deadline() -> None:
     assert body == "\n\n".join(
         [
             OPENING,
-            "Coverages as submitted\n- Coverage A (Dwelling): 875000\n- Coverage E (Liability): 100000",
-            "Surcharges\n- 15% surcharge (S-1), for the first term\n- 25% surcharge (S-2)",
-            "Coverage adjustments\n- Coverage A (Dwelling): submitted 875000, proposed 900000 (C-1), within 60 days",
-            "Requirements\n- Send the roof inspection. (R-1), within 30 days of bind",
-            "Exclusions and endorsements\n- Liability is excluded. (E-1)",
-            "Advisories\n- Siding is vinyl. (A-1)",
-            "Obligations after binding\n- Inspect the panel. (O-1; owner: underwriting; when: bind)",
-            "Reviewed, no change to the quote\n- N-1\n- N-2",
+            "Coverages as submitted\n- Coverage A (Dwelling): $875,000\n- Coverage E (Liability): $100,000",
+            "Surcharges\n- 15% surcharge (for the first term)\n- 25% surcharge",
+            "Coverage adjustments\n- Coverage A (Dwelling): submitted $875,000, proposed $900,000 (within 60 days)",
+            "Requirements\n- Send the roof inspection. (within 30 days of bind)",
+            "Exclusions and endorsements\n- Liability is excluded.",
+            "Advisories\n- Siding is vinyl.",
+            "Obligations after binding\n- Inspect the panel. (owner: underwriting; when: bind)",
             "Not evaluated\n- The Plumbing page is not evaluated.",
         ]
     )
