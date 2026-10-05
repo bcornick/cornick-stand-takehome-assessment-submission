@@ -19,7 +19,7 @@ from uwh.runtime.event_types import (
     ReviewCause,
     RulingRecorded,
 )
-from uwh.runtime.events import EventContext, append_event
+from uwh.runtime.events import EventContext, StaleRun, append_event
 from uwh.runtime.facts import (
     LATE_REPLY_CAUSES,
     LedgerRules,
@@ -31,7 +31,7 @@ from uwh.runtime.facts import (
 from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
 from uwh.runtime.policy import manifest_refusal
-from uwh.runtime.runs import begin_run, command_context, current_run
+from uwh.runtime.runs import begin_run, command_context, current_run, pass_context
 from uwh.runtime.send import (
     Intent,
     close_unsent,
@@ -115,7 +115,8 @@ def submit_command(
     issuing skill of a `workflow` command.
 
     An accepted command and the re-evaluation of its lead commit together; after that commit the
-    lead's drafts that can go are dispatched (A.11). A refusal rolls back whatever the handler wrote
+    lead's drafts that can go are dispatched, as the run the command ran in; when a start has replaced
+    that run, nothing is sent and the command is still accepted (A.11, 14). A refusal rolls back whatever the handler wrote
     and commits one `command_refused` event. A command type whose handler is not built raises
     NotImplementedError after the checks, writing nothing.
     """
@@ -134,8 +135,16 @@ def submit_command(
                 outcome = handler(db, context, env, payload)
                 if outcome.lead_id is not None:
                     _reevaluate(db, env, outcome.lead_id)
+                run = current_run(db)
             if outcome.lead_id is not None:
-                _send_after_commit(db, env, outcome.lead_id, outcome.recheck_intent_id)
+                assert run is not None  # a command about a lead runs inside a run
+                make_context = pass_context(run, env.mode, env.ruleset_hash, env.now)
+                try:
+                    _send_after_commit(
+                        db, env, make_context, outcome.lead_id, outcome.recheck_intent_id
+                    )
+                except StaleRun:
+                    pass  # a start replaced the run; its drafts are gone, so there is nothing to send
             return CommandResult(True, outcome.event_id, None)
         except _Refusal as refusal:
             reason = str(refusal)
@@ -157,14 +166,17 @@ def _context(db: sqlite3.Connection, env: CommandEnvironment, actor: Actor) -> E
 
 
 def _send_after_commit(
-    db: sqlite3.Connection, env: CommandEnvironment, lead_id: str, recheck_intent_id: str | None
+    db: sqlite3.Connection,
+    env: CommandEnvironment,
+    make_context: Callable[[], EventContext],
+    lead_id: str,
+    recheck_intent_id: str | None,
 ) -> None:
     """Re-check the delivery an approval asked about, unless another command has settled it since, then
     dispatch every draft of the lead that can go. The command has committed, so what the mailbox or a
     draft's state makes impossible is recorded on the intent or the draft and never raised; only
-    StaleRun, the emergency stop and a class set to `off` raise. The sender builds each event's
-    context when it writes the event, after its own post."""
-    make_context = partial(_context, db, env, "workflow")
+    StaleRun, the emergency stop and a class set to `off` raise. `make_context` carries the command's
+    run and builds each event's context when the event is written, after its own post."""
     if recheck_intent_id is not None:
         rechecked = read_intent(db, recheck_intent_id)
         if rechecked is not None and rechecked.state == "unknown":

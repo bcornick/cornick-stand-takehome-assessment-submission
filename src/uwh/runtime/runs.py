@@ -90,10 +90,11 @@ def begin_run(
     """Start a run and return the id of its `run_started` event. The caller commits.
 
     Recreates every table but `settings`, writes the `runs` row as `processing` with the real time
-    of `context` as its start, writes `run_started`, resets the mailbox, posts the queue for `seed`
-    and ingests its leads as `received`, each with `lead_received`. `context` names who started the
-    run; the leads are received by the workflow. A failure raises and the caller's rollback
-    restores every table.
+    of `context` as its start, writes `run_started`, posts the queue for `seed`, ingests its leads as
+    `received`, each with `lead_received`, and resets the mailbox last, after everything that can
+    fail has succeeded. `context` names who started the run; the leads are received by the workflow.
+    A failure raises and the caller's rollback restores every table; it restores neither the mailbox
+    nor the leadgen queue.
     """
     for name in _RUN_TABLES:
         db.execute(f"DROP TABLE IF EXISTS {name}")
@@ -111,11 +112,11 @@ def begin_run(
         RunStarted(seed=seed, lead_count=LEAD_COUNT),
         lead_id=None,
     )
-    mailbox.reset()
     leadgen.post_queue(seed, count=LEAD_COUNT)
     received = replace(started, actor="workflow")
     for lead in leadgen.list_leads():
         create_lead(db, received, lead["lead_id"], lead["source"], lead["received_at"])
+    mailbox.reset()
     return event_id
 
 

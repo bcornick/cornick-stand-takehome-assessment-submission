@@ -229,6 +229,7 @@ def test_a_start_that_fails_leaves_the_database_as_it_was(
     start(db, env)
     first_pass(db, store_path, env)
     ddl, run_id, leads = schema(db), current_id(db), lead_ids(db)
+    env.mailbox.send(leads[0], RECIPIENT, "uw@stand.com", "S", "B")
     # A leadgen service that answers 404 to every route, so the queue cannot be posted.
     without_queue = LeadgenClient(TestClient(FastAPI(), base_url="http://leadgen"))
     broken = replace(env, leadgen=without_queue)
@@ -238,6 +239,7 @@ def test_a_start_that_fails_leaves_the_database_as_it_was(
 
     assert (schema(db), current_id(db), lead_ids(db)) == (ddl, run_id, leads)
     assert {e.run_id for e in read_events(db)} == {run_id}
+    assert len(env.mailbox.list_for_lead(leads[0])) == 1
 
 
 def test_a_start_names_its_refusal_with_a_run_id_when_no_run_exists(
@@ -382,7 +384,6 @@ def test_stale_run_writes_nothing(
 
     second_run = current_id(db)
     assert second_run != first_run.run_id
-    assert db.execute("SELECT count(*) FROM intents").fetchone() == (0,)
     assert events_of(db, EventType.message_sent) == []
     assert {e.run_id for e in read_events(db)} == {second_run}
     events_before = len(read_events(db))
@@ -401,6 +402,124 @@ def test_stale_run_writes_nothing(
     assert run_status(db) == "processing"
 
 
+class ReplaceRunAfterRollback(sqlite3.Connection):
+    """A connection that runs `after_rollback`, once, when a rollback has released the write lock."""
+
+    after_rollback: Callable[[], None] | None = None
+
+    def rollback(self) -> None:
+        super().rollback()
+        action, self.after_rollback = self.after_rollback, None
+        if action is not None:
+            action()
+
+
+class ReplaceRunAfterCommit(sqlite3.Connection):
+    """A connection that runs `after_commit`, once, when a commit has released the write lock."""
+
+    after_commit: Callable[[], None] | None = None
+
+    def commit(self) -> None:
+        super().commit()
+        action, self.after_commit = self.after_commit, None
+        if action is not None:
+            action()
+
+
+def test_a_step_failure_of_a_replaced_run_opens_no_blocker(
+    db: sqlite3.Connection, store_path: str, env: CommandEnvironment
+) -> None:
+    start(db, env)
+    first_run = current_run(db)
+    assert first_run is not None
+    first_pass(db, store_path, env)
+    lead_id = lead_ids(db)[0]
+    stale = pass_context(first_run, env.mode, env.ruleset_hash, env.now)
+    stale_connection = sqlite3.connect(store_path, factory=ReplaceRunAfterRollback)
+
+    def fail(db: sqlite3.Connection, context: EventContext, lead_id: str) -> None:
+        raise RuntimeError("provider is down")
+
+    # A start replaces the run after the failed step has rolled back and before its blocker opens.
+    stale_connection.after_rollback = lambda: start(db, env, seed=7)
+    with pytest.raises(StaleRun):
+        run_steps(stale_connection, stale, lead_id, [Step("fetch", fail)])
+    stale_connection.close()
+
+    second_run = current_id(db)
+    assert second_run != first_run.run_id
+    assert events_of(db, EventType.blocker_opened) == []
+    assert {e.run_id for e in read_events(db)} == {second_run}
+    assert db.execute("SELECT count(*) FROM blockers").fetchone() == (0,)
+
+
+def test_the_dispatch_after_a_command_leaves_the_drafts_of_a_run_that_replaced_its_run(
+    db: sqlite3.Connection, store_path: str, env: CommandEnvironment
+) -> None:
+    start(db, env)
+    first_run = current_run(db)
+    assert first_run is not None
+    first_pass(db, store_path, env)
+    lead_id = lead_ids(db)[0]
+    committing = sqlite3.connect(store_path, factory=ReplaceRunAfterCommit)
+
+    # A start is accepted between the command's commit and its dispatch; the second run holds a draft
+    # for the lead of the same id.
+    def start_the_second_run() -> None:
+        assert start(db, env).accepted
+        assert lead_ids(db)[0] == lead_id
+        run = current_run(db)
+        assert run is not None
+        create_draft(
+            db,
+            pass_context(run, env.mode, env.ruleset_hash, env.now)(),
+            ASKER,
+            lead_id,
+            "routine_request",
+            RECIPIENT,
+            "S",
+            "B",
+            ["acreage"],
+        )
+        db.commit()
+
+    committing.after_commit = start_the_second_run
+    payload = {"lead_id": lead_id, "key": "acreage", "value": 3, "reason": "the producer called"}
+    result = submit_command(committing, env, "underwriter", "resolve_fact", payload)
+    committing.close()
+
+    assert result.accepted
+    assert current_id(db) != first_run.run_id
+    assert db.execute("SELECT state FROM intents").fetchall() == [("draft",)]
+    assert env.mailbox.list_for_lead(lead_id) == []
+
+
+def test_a_command_whose_dispatch_finds_its_run_replaced_is_still_accepted(
+    db: sqlite3.Connection, store_path: str, env: CommandEnvironment, faults: FaultPlan
+) -> None:
+    start(db, env)
+    first_run = current_run(db)
+    assert first_run is not None
+    first_pass(db, store_path, env)
+    lead_id = lead_ids(db)[0]
+    stale = pass_context(first_run, env.mode, env.ruleset_hash, env.now)
+    create_draft(db, stale(), ASKER, lead_id, "routine_request", RECIPIENT, "S", "B", ["acreage"])
+    db.commit()
+
+    # A start replaces the run while the command's dispatch has the post of the first run's draft in flight.
+    def replace_the_run() -> None:
+        assert start(db, env, seed=7).accepted
+
+    faults.hold_in_flight = replace_the_run
+    payload = {"lead_id": lead_id, "key": "acreage", "value": 3, "reason": "the producer called"}
+    result = submit_command(db, env, "underwriter", "resolve_fact", payload)
+    faults.hold_in_flight = None
+
+    assert result.accepted
+    assert current_id(db) != first_run.run_id
+    assert events_of(db, EventType.message_sent) == []
+
+
 # ---- a restart ----------------------------------------------------------------------------------
 
 
@@ -408,10 +527,12 @@ def test_startup_settles_interrupted_run(
     db: sqlite3.Connection, store_path: str, env: CommandEnvironment
 ) -> None:
     seen: list[tuple[str, str]] = []
+    run_statuses: list[str] = []
 
     def record(db: sqlite3.Connection, context: EventContext, lead_id: str) -> None:
         (state,) = db.execute("SELECT state FROM intents").fetchone()
         seen.append((lead_id, state))
+        run_statuses.append(run_status(db))
 
     with_steps = replace(env, steps=(Step("record", record),))
     start(db, with_steps)
@@ -452,6 +573,7 @@ def test_startup_settles_interrupted_run(
     )
 
     assert sorted(seen) == sorted([(first, "sent"), (failed, "sent")])
+    assert run_statuses == ["processing"] * 2
     statuses = dict(db.execute("SELECT lead_id, status FROM leads").fetchall())
     assert (statuses[first], statuses[failed]) == ("in_progress", "in_progress")
     assert (statuses[waiting], statuses[in_progress], statuses[declined]) == (

@@ -84,6 +84,13 @@ def intent_in_state(db: sqlite3.Connection, intent_id: str, *states: IntentState
     return intent
 
 
+def _require_current_run(db: sqlite3.Connection, context: EventContext, intent: Intent) -> None:
+    """Raise StaleRun unless both the run of the context and the run of the intent are current: the
+    sender acts for the run that built its context, on the intents of that run."""
+    require_current_run(db, context.run_id)
+    require_current_run(db, intent.run_id)
+
+
 def _class_of(kind: MessageKind) -> str:
     return f"send_{kind}"
 
@@ -349,7 +356,7 @@ def _begin_dispatch(
         intent = read_intent(db, intent_id)
         if intent is None or intent.state != "draft":
             return None
-        require_current_run(db, intent.run_id)
+        _require_current_run(db, context, intent)
         _refuse_held_dispatch(db, intent)
         item = _draft_item(db, intent)
         if autonomy_level(db, _class_of(intent.kind)) == "review" or item is not None:
@@ -406,8 +413,8 @@ def dispatch(
     status does not allow, returns to review and loses the approval; another intent of the lead in
     flight leaves the draft for a later pass. `make_context` builds the context of each event when it
     is written. Raises RuntimeError inside a transaction and NotImplementedError for a held dispatch.
-    Raises StaleRun when the draft's run has been replaced, before the post or after it; nothing is
-    written then (14).
+    Raises StaleRun when the run of the draft or the run of the context has been replaced, before the
+    post or after it; nothing is written then (14).
     """
     if db.in_transaction:
         raise RuntimeError(
@@ -467,8 +474,8 @@ def _record_sent(
     `dispatching` or `unknown`, because another command settled it first, is left as it is.
     """
     with unit_of_work(db):
-        require_current_run(db, intent.run_id)
         context = make_context()
+        _require_current_run(db, context, intent)
         _record_faults(db, context, mailbox, intent.lead_id)
         settled = db.execute(
             "UPDATE intents SET state = 'sent', mailbox_id = ?"
@@ -511,8 +518,8 @@ def _record_unknown(
     `dispatching`, because it is `unknown` with both already or another command settled it, is left
     as it is."""
     with unit_of_work(db):
-        require_current_run(db, intent.run_id)
         context = make_context()
+        _require_current_run(db, context, intent)
         _record_faults(db, context, mailbox, intent.lead_id)
         settled = db.execute(
             "UPDATE intents SET state = 'unknown' WHERE id = ? AND state = 'dispatching'",

@@ -23,7 +23,7 @@ from uwh.skills.vertical import TERMINAL_STATUSES, TRANSITIONS
 MAX_LEADS_IN_FLIGHT = 4
 
 # The statuses of a lead whose first pass has not completed: `in_progress` means a pass has run
-# every step (A.3), so a lead still `received` or `triaged` has a step to run.
+# every step (A.3), so a lead still `received` or `triaged` has not.
 _FIRST_PASS_STATUSES: tuple[Status, ...] = ("received", "triaged")
 
 
@@ -191,7 +191,8 @@ def run_steps(
     back every step of the pass and its status moves, the blocker opens and `run_steps` returns, so
     the caller's own writes commit (A.11).
 
-    A pass of a run that a start has replaced raises StaleRun, writes nothing and opens no blocker (14).
+    A pass of a run that a start has replaced raises StaleRun, from a step or from the blocker's unit,
+    writes nothing and opens no blocker (14).
     """
     step: Step | None = None
     try:
@@ -209,7 +210,9 @@ def run_steps(
         if step is None:
             raise
         with unit_of_work(db):
-            _open_step_failure_blocker(db, make_context(), lead_id, step, error)
+            context = make_context()
+            require_current_run(db, context.run_id)
+            _open_step_failure_blocker(db, context, lead_id, step, error)
 
 
 def reevaluate(

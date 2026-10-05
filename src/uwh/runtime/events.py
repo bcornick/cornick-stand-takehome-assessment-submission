@@ -42,7 +42,7 @@ class EventContext:
 
 
 class StaleRun(Exception):
-    """Work carries the id of a run that a start has since replaced (14)."""
+    """Work carries the id of a run that a start has replaced (14)."""
 
 
 def require_current_run(db: sqlite3.Connection, run_id: str) -> None:

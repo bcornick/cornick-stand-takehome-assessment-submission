@@ -1076,7 +1076,7 @@ def test_a_recheck_of_an_intent_another_command_closed_unsent_changes_nothing(
         store, env, "underwriter", "reject", {"item_id": item.id, "reason": "not there"}
     ).accepted
 
-    _send_after_commit(store, env, LEAD, intent_id)
+    _send_after_commit(store, env, make_context, LEAD, intent_id)
 
     assert state_of(store, intent_id) == "closed_unsent"
     assert events_of(store, EventType.message_sent) == []
