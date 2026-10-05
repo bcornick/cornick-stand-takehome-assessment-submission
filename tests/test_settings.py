@@ -7,6 +7,8 @@ from uwh.settings import Settings
 VARIABLES = (
     "RUN_MODE",
     "SEED",
+    "MODEL_ID",
+    "MODEL_BASE_URL",
     "ANTHROPIC_MODEL",
     "LEADGEN_URL",
     "MAILBOX_URL",
@@ -40,7 +42,8 @@ def test_defaults() -> None:
     s = Settings.load()
     assert s.run_mode == "live"
     assert s.seed == 42
-    assert s.anthropic_model == "claude-sonnet-5-5"
+    assert s.model_id == "deepseek-flash"
+    assert s.model_base_url == "https://api.deepseek.com/anthropic"
     assert s.leadgen_url == "http://leadgen:8080"
     assert s.mailbox_url == "http://mailbox:8080"
     assert s.registry_path == "/app/registry/field_registry.json"
@@ -49,7 +52,8 @@ def test_defaults() -> None:
 
 def test_environment_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SEED", "7")
-    monkeypatch.setenv("ANTHROPIC_MODEL", "other-model")
+    monkeypatch.setenv("MODEL_ID", "other-model")
+    monkeypatch.setenv("MODEL_BASE_URL", "http://localhost:9000/anthropic")
     monkeypatch.setenv("LEADGEN_URL", "http://localhost:8081")
     monkeypatch.setenv("MAILBOX_URL", "http://localhost:8025")
     monkeypatch.setenv("UWH_REGISTRY", "/tmp/registry.json")
@@ -57,12 +61,20 @@ def test_environment_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("GIT_COMMIT", "abc123")
     s = Settings.load()
     assert s.seed == 7
-    assert s.anthropic_model == "other-model"
+    assert s.model_id == "other-model"
+    assert s.model_base_url == "http://localhost:9000/anthropic"
     assert s.leadgen_url == "http://localhost:8081"
     assert s.mailbox_url == "http://localhost:8025"
     assert s.registry_path == "/tmp/registry.json"
     assert s.db_path == "/tmp/other.db"
     assert s.git_commit == "abc123"
+
+
+def test_a_variable_from_another_provider_does_not_set_the_model(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("ANTHROPIC_MODEL", "other-model")
+    assert Settings.load().model_id == "deepseek-flash"
 
 
 def test_db_path_is_required(monkeypatch: pytest.MonkeyPatch) -> None:

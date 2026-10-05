@@ -13,7 +13,8 @@ RUN_MODES = ("live", "replay", "record")
 class Settings:
     run_mode: str
     seed: int
-    anthropic_model: str
+    model_id: str
+    model_base_url: str
     leadgen_url: str
     mailbox_url: str
     registry_path: str
@@ -35,7 +36,8 @@ class Settings:
         return cls(
             run_mode=run_mode,
             seed=seed,
-            anthropic_model=env.get("ANTHROPIC_MODEL", "claude-sonnet-5-5"),
+            model_id=env.get("MODEL_ID", "deepseek-flash"),
+            model_base_url=env.get("MODEL_BASE_URL", "https://api.deepseek.com/anthropic"),
             leadgen_url=env.get("LEADGEN_URL", "http://leadgen:8080"),
             mailbox_url=env.get("MAILBOX_URL", "http://mailbox:8080"),
             registry_path=env.get("UWH_REGISTRY", "/app/registry/field_registry.json"),
