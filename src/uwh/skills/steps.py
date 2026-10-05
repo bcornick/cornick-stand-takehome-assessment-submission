@@ -79,6 +79,18 @@ def _triage_step(
     )
 
 
+def _pass_triage(db: sqlite3.Connection, lead_id: str) -> dict[str, FieldTriage]:
+    """The triage the pass's first step recorded, which says what to fetch."""
+    (payload,) = db.execute(
+        "SELECT payload_json FROM events WHERE lead_id = ? AND type = ? ORDER BY id DESC LIMIT 1",
+        (lead_id, EventType.triage_completed.value),
+    ).fetchone()
+    return {
+        name: FieldTriage.model_validate(triage)
+        for name, triage in TriageCompleted.model_validate_json(payload).fields.items()
+    }
+
+
 def _resolve_step(
     registry: Registry,
     providers: StandInProviders,
@@ -87,7 +99,7 @@ def _resolve_step(
     context: EventContext,
     lead_id: str,
 ) -> None:
-    """Look up each field triage says to fetch, record the lookup, and observe what the skill resolves.
+    """Look up each field the pass's triage says to fetch, record the lookup, and observe what the skill resolves.
     Raises ValueError when the manifest of resolve_data does not declare `fetch_data` (7.4)."""
     refusal = manifest_refusal(load_manifest(_SKILLS_ROOT / "resolve_data"), "fetch_data")
     if refusal is not None:
@@ -96,7 +108,7 @@ def _resolve_step(
     submitted = submitted_values(db, lead_id)
     fingerprint = hash_json({name: submitted.get(name) for name in registry})
     results = {}
-    for field, triage in _triage(db, lead_id, registry).items():
+    for field, triage in _pass_triage(db, lead_id).items():
         if triage.resolution == "fetch":
             result = providers.lookup(
                 field, lead_id, fingerprint, facts, format_timestamp(context.real_ts)
@@ -220,15 +232,15 @@ _COVERAGE_FIELDS = ("coverage_a", "coverage_e", "coverage_f")
 def _quote_packet_step(
     registry: Registry, db: sqlite3.Connection, context: EventContext, lead_id: str
 ) -> None:
-    """Draft the quote packet when the plan holds no decline and nothing open, no ask remains, and the
-    lead holds no blocker and no unsettled message (8). The draft waits for the underwriter."""
+    """Draft the quote packet when the plan holds no decline and nothing open, and the lead holds no
+    blocker and no unsettled message (8). An ask that remains is held by an unsettled request or a
+    blocker, so the last two checks cover it. The draft waits for the underwriter."""
     (plan_json,) = db.execute(
         "SELECT plan_json FROM leads WHERE lead_id = ?", (lead_id,)
     ).fetchone()
     plan = ActionPlan.model_validate_json(plan_json)
     if (
         not build_quote_packet.is_ready(plan)
-        or _planned_asks(registry, db, lead_id).asks
         or open_blockers(db, lead_id)
         or _unsettled_intent(db, lead_id)
     ):
