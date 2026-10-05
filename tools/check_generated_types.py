@@ -23,7 +23,7 @@ def generate(openapi: Path, output: Path) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser()
     parser.add_argument("--types", type=Path, default=TYPES, help="the file to compare")
     args = parser.parse_args(argv)
     if not args.types.is_file():

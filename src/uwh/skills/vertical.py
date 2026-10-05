@@ -1,10 +1,17 @@
 # ABOUTME: The tables built on the underwriting names: terminal statuses, status transitions, blocker priority, command classes, persisting review causes, the confirmation-only class and the reference morning.
-# ABOUTME: Each table is typed with a Literal value set, those of uwh.runtime.event_types and AutonomyLevel defined here, so a name outside a set fails type checking.
+# ABOUTME: Each table is typed with a Literal value set, those of uwh.runtime.event_types, so a name outside a set fails type checking.
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Literal, get_args
+from typing import get_args
 
-from uwh.runtime.event_types import Actor, BlockerKind, RequestKind, ReviewCause, Status
+from uwh.runtime.event_types import (
+    Actor,
+    AutonomyLevel,
+    BlockerKind,
+    RequestKind,
+    ReviewCause,
+    Status,
+)
 
 TERMINAL_STATUSES: tuple[Status, ...] = ("quote_sent", "declined")
 
@@ -20,8 +27,6 @@ TRANSITIONS: tuple[tuple[Status, Status], ...] = (
     ("in_progress", "quote_sent"),
     ("in_progress", "declined"),
 )
-
-AutonomyLevel = Literal["auto", "review", "off"]
 
 
 @dataclass(frozen=True)

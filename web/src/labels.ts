@@ -1,4 +1,4 @@
-// ABOUTME: Human-readable labels for the API's vocabularies: statuses, blocker kinds, owners, sources, groups, pages and more.
+// ABOUTME: Human-readable labels for the API's value sets: statuses, blocker kinds, owners, sources, groups, pages and more.
 // ABOUTME: One mapping module, so no screen carries its own string literals for these.
 import type { components } from '@/api/types'
 

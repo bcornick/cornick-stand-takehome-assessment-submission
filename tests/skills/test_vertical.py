@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from typing import get_args
 
-from uwh.runtime.event_types import Actor
+from uwh.runtime.event_types import Actor, AutonomyLevel
 from uwh.skills import vertical
 
 # Section 7.4 table: class -> (default level, locked, who may submit). A class with no default level is human only.
@@ -53,10 +53,6 @@ def test_transitions() -> None:
     }
 
 
-def test_autonomy_levels() -> None:
-    assert get_args(vertical.AutonomyLevel) == ("auto", "review", "off")
-
-
 def test_command_classes() -> None:
     actual = {c.name: (c.default_level, c.locked, c.actors) for c in vertical.COMMAND_CLASSES}
     assert actual == EXPECTED_COMMAND_CLASSES
@@ -66,7 +62,7 @@ def test_command_classes() -> None:
 def test_each_command_class_is_submitted_by_actors_and_has_a_level_of_their_sets() -> None:
     for command_class in vertical.COMMAND_CLASSES:
         assert set(command_class.actors) <= set(get_args(Actor))
-        assert command_class.default_level in (*get_args(vertical.AutonomyLevel), None)
+        assert command_class.default_level in (*get_args(AutonomyLevel), None)
 
 
 # A.11's two review rows: an event raised the other causes and `approve` closes them; these three

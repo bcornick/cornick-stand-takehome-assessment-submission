@@ -82,6 +82,7 @@ SkillStatus = Literal["untested", "passing", "failing", "unavailable"]
 AbstentionReason = Literal["invalid_tool_input", "refusal"]
 ReplyClassification = Literal["answers_all", "answers_some", "declines_to_answer", "off_topic"]
 RulingKind = Literal["choice", "suppression", "decline", "withdrawal", "reopened_choice"]
+AutonomyLevel = Literal["auto", "review", "off"]
 
 
 class RunStarted(StrictModel):

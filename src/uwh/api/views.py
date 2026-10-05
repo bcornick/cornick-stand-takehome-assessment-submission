@@ -15,6 +15,7 @@ from uwh.runtime.event_types import (
     PAYLOAD_MODELS,
     Actor,
     ApprovalItemKind,
+    AutonomyLevel,
     BlockerDetail,
     BlockerKind,
     BlockerOwner,
@@ -31,7 +32,7 @@ from uwh.runtime.event_types import (
     Status,
 )
 from uwh.settings import RunMode
-from uwh.skills.vertical import PERSISTING_REVIEW_CAUSES, AutonomyLevel
+from uwh.skills.vertical import PERSISTING_REVIEW_CAUSES
 
 
 # Autonomy applies to a class that has a default level (7.4); the human-only classes have none.
@@ -263,8 +264,8 @@ class BlockerView(StrictModel):
             persists = cause in PERSISTING_REVIEW_CAUSES
             if self.detail.cause_persists != persists:
                 raise ValueError(f"detail.cause_persists is {persists} for {cause}")
-        else:
-            cause = None
+        elif cause is not None:
+            raise ValueError("only a review has a cause: detail.cause")
         held = cause in _HELD_DRAFT_CAUSES
         if held and self.detail.intent_id is None:
             raise ValueError("a held draft's review names its draft: detail.intent_id")

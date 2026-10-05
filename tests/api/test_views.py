@@ -329,11 +329,13 @@ def test_a_review_whose_cause_persists_differs_from_one_an_event_raised() -> Non
 
 def test_a_draft_review_names_its_draft() -> None:
     view = views.BlockerView.model_validate(
-        blocker(detail={"item_kind": "draft", "intent_id": "intent-1"})
+        blocker(detail={"item_kind": "draft", "cause": None, "intent_id": "intent-1"})
     )
     assert view.detail.intent_id == "intent-1"
     with pytest.raises(ValidationError, match="intent_id"):
-        views.BlockerView.model_validate(blocker(detail={"item_kind": "draft", "intent_id": None}))
+        views.BlockerView.model_validate(
+            blocker(detail={"item_kind": "draft", "cause": None, "intent_id": None})
+        )
 
 
 @pytest.mark.parametrize(
@@ -356,6 +358,20 @@ def test_a_draft_review_names_its_draft() -> None:
             },
             observation=fact(),
         ),
+        # only a review has a cause
+        blocker(
+            kind="delivery_unknown",
+            detail={
+                "item_kind": "delivery_unknown",
+                "cause": "late_reply",
+                "cause_persists": False,
+            },
+        ),
+        blocker(
+            kind="data",
+            detail={"item_kind": None, "cause": "draft_held_by_stop", "intent_id": "intent-1"},
+        ),
+        blocker(detail={"item_kind": "draft", "intent_id": "intent-1"}),
         # delivery_unknown is its own blocker kind
         blocker(kind="underwriter_review", detail={"item_kind": "delivery_unknown"}),
         # a question card is not an approvals item
