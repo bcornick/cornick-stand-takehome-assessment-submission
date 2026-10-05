@@ -79,7 +79,7 @@ The brief sets a 5 to 6 hour box and says the choice of what to cut is evaluated
 |---|---|
 | **0: must demo** | Compose and harness integration; queue ingest; field triage; derive, fetch, assume; the seven graphs with a non-trivial outcome on seed 42 (Profile, Occupancy, Fire Simulation, Roof, Siding, Post & Pier, Replacement Cost); ask plan; rendered request; send with intent and reconcile; reply paste, the fixture-reply control and `read_reply`; quote packet and decline notice with approval; queue and detail panes; seed-42 labels and reply fixtures; graders for coverage, one open request, asks, forbidden asks, send safety, key isolation, and Stand's key on seed 42; three controls (do nothing, email everything, send twice); results log; the reply-reading improvement cycle |
 | **1: full design** | Remaining graphs (Plumbing, Electrical, Pools, Trusts, PC 9 & 10); the 50-seed sweep, including Stand's key on seeds 1 to 50; emergency stop and settings view; skills view; MCP tools; chat panel; replay mode; remaining graders and controls; server-sent events |
-| **2: cut first, in this order** | Jev adapter; the rule-change flow; the model-driven triage comparison (section 13.6) |
+| **2: built last** | The Jev adapter, which is built first in this tier and is not cut; then the model-driven triage comparison (section 13.6); then the rule-change flow. If anything is cut, the rule-change flow goes first, then the comparison. |
 
 If a tier is cut, the README's "cut and hand-waved" section says so and the affected graphs return an explicit `not_evaluated` note on the lead, never a silent pass.
 
@@ -171,7 +171,7 @@ docs/                     this file, critique, plan, progress, brief, playbook
 
 - **Backend:** Python 3.12, `uv` with a lockfile, FastAPI (server-sent events built in), Pydantic, SQLite, pytest, ruff, mypy.
 - **Frontend:** pnpm, Vite, React, TypeScript, shadcn/ui, built inside the container to static files that FastAPI serves.
-- **Models:** Claude through the Anthropic SDK with structured outputs (`messages.parse()`). Forced `tool_choice` is not used; current Claude models reject it. Jev (`jev-1.13.0`, TypeSafe SDK) is an optional adapter.
+- **Models:** Claude through the Anthropic SDK with structured outputs (`messages.parse()`). Forced `tool_choice` is not used; current Claude models reject it. Jev (`jev-1.13.0`, TypeSafe SDK) answers reply classification first when its key is set, with Claude as the fallback.
 - **Stand's harness** keeps its own Python 3.11 images.
 
 ## 7. Runtime
@@ -301,7 +301,7 @@ Rules:
 | `evaluate_playbook` | no | after resolution | none |
 | `plan_asks` | no | after evaluation | none |
 | `render_message` | no | an ask plan, quote or decline needs a message | none |
-| `read_reply` | Claude; Jev optional for classification | a reply is delivered | reply goes to the underwriter unread |
+| `read_reply` | Claude for extraction; Jev first for classification when its key is set, Claude as fallback | a reply is delivered | reply goes to the underwriter unread |
 | `build_quote_packet` | no | no open blockers and no asks remain | none |
 
 The chat panel is governed the same way: its tool list, prompt and eval cases live in `src/uwh/chat/` with a manifest.
@@ -773,7 +773,7 @@ Dispositions of `docs/critique.md` findings.
 
 | Finding | Disposition | Where |
 |---|---|---|
-| C01 no cut line | Accepted. Build tiers added. The time box is read as human time, so nothing is cut in advance; tier 2 is cut first. | 4.1 |
+| C01 no cut line | Accepted. Build tiers added. The time box is read as human time, so nothing is cut in advance; within tier 2 the rule-change flow and the comparison are cut first, and Jev is not cut. | 4.1 |
 | C02 missing contracts | Accepted. | Appendix A |
 | C03 underwriter question versus producer request | Accepted. | 9.6 rules 5 and 6; section 5 rows 003, 006 |
 | C04 eval grades its own reading | Accepted. Stand's key is a hard grader with enumerated allowed disagreements; Brett samples 20 outcome cases. | 13.2, 13.3 |
@@ -791,7 +791,7 @@ Dispositions of `docs/critique.md` findings.
 | C16 reply confirming a conflict | Accepted. | 7.3 rule 6 |
 | C17 roof age unreachable | Accepted as an advisory row and a question for Stand. | 9.7 I52 |
 | C18 SDK claims, model id | Accepted. | 14 |
-| C19 cut Jev | Declined by Brett's decision. Jev is optional, off without a key, and first in the cut order. | 4.1 |
+| C19 cut Jev | Declined by Brett's decision. Jev is built in tier 2 and is not cut. Brett and Stand's reviewers run with a Jev key; Claude alone is the fallback. | 4.1, 10.4 |
 | C20 small inaccuracies | Accepted. | 1, 2.2, 14 |
 | C21 service-level source | Accepted. Labelled as an assumed service level with its source. | 11 |
 | C22 knob-and-tube question | Accepted. | 9.3, 9.7 I51 |

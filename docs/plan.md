@@ -20,7 +20,7 @@ flowchart TD
     S9 -->|live data as stages 4 to 9 land| S10
     S9 --> S11["11 MCP and chat, tier 1"]
     S10 --> S11
-    S6 --> S12["12 Rule change, Jev, comparison, tier 2"]
+    S6 --> S12["12 Jev, comparison, rule change, tier 2"]
     S9 --> S12
     S10 --> S12
     S9 --> S13["13 Submission"]
@@ -39,9 +39,9 @@ Stage 2 ends at a human gate where Brett approves the event payloads, route resp
 
 1. **Tier-0 pass.** Stages 1 to 13 in order, tier-0 tasks only. Stage 13 closes the pass, so a submittable build exists at its end.
 2. **Tier-1 pass.** Stages 1 to 13 in order, tier-1 tasks only. Stage 13 updates the README for what the pass added.
-3. **Tier-2 pass.** Stage 12's tier-2 tasks, built in the reverse of the cut order so the first item cut is the last item built: the model-driven triage comparison (§13.6), then the rule-change flow (§12), then the Jev adapter (§10.4). Stage 13 closes the pass.
+3. **Tier-2 pass.** Stage 12's tier-2 tasks: the Jev adapter (§10.4) first, because it is not cut; then the model-driven triage comparison (§13.6); then the rule-change flow (§12), so the first item cut is the last item built. Stage 13 closes the pass.
 
-**Cut order.** If time runs short, cut from the top of tier 2: the Jev adapter first, then the rule-change flow, then the triage comparison. Chat, MCP and replay mode are tier 1 and are cut only after all of tier 2. Whatever is cut, stage 13 writes it into the README's "Cut and hand-waved" section, and a graph that is not built returns an explicit `not_evaluated` note on the lead, never a silent pass (§4.1).
+**Cut order.** The Jev adapter is not cut. If time runs short, cut within tier 2: the rule-change flow first, then the triage comparison. Chat, MCP and replay mode are tier 1 and are cut only after all of tier 2. Whatever is cut, stage 13 writes it into the README's "Cut and hand-waved" section, and a graph that is not built returns an explicit `not_evaluated` note on the lead, never a silent pass (§4.1).
 
 **Reading of §4.1 applied here.** An item the §4.1 table names is in that tier. An item it does not name is tier 0 when a named tier-0 item cannot work without it, and tier 1 otherwise. Examples: the event log, fact ledger, command layer, approval binding and the A.11 item actions sit under "quote packet and decline notice with approval"; recordings and record mode sit under `read_reply`, whose tests replay recordings (`AGENTS.md`); the Reply reading grader and the held-back replies sit under the improvement cycle; the runner's per-skill case results sit under the tier-0 graphs, whose per-outcome cases they score.
 
@@ -58,7 +58,7 @@ Stage 2 ends at a human gate where Brett approves the event payloads, route resp
 | 9 | reply endpoint, paste box, `read_reply` with `make record`, the no-key review, code checks, lead 008 to a sent packet, reply safety, fixture-reply control, reply suite, improvement cycle | fallback and skill gating, replay of the reply suite | |
 | 10 | queue, detail pane with the actions of every open item, approval by payload hash and the underwriter card, waited start and fixture-reply buttons | items with batch approval, settings, skills, live updates, mode label | |
 | 11 | | all | |
-| 12 | | candidate export | triage comparison, rule change, Jev |
+| 12 | | candidate export | Jev, triage comparison, rule change |
 | 13 | README, images, final eval, platform rehearsal | replay recording with `make test-replay`, release check, all eight controls caught | |
 
 ## Conventions
@@ -1184,7 +1184,7 @@ Expect: all pass.
 
 ## Stage 12: Rule change and Jev adapter
 
-**Goal.** Export underwriter inputs as candidate eval cases (tier 1), then the three tier-2 items in reverse cut order: the model-driven triage comparison, the I35 rule change end to end, and the optional Jev classification adapter.
+**Goal.** Export underwriter inputs as candidate eval cases (tier 1), then the three tier-2 items: the Jev classification adapter, which is not cut, then the model-driven triage comparison and the I35 rule change end to end.
 
 **Depends on.** 6, 9, 10.
 
@@ -1197,7 +1197,7 @@ Expect: all pass.
 3. **Rule proposals** (tier 2). Test: `tests/rules/test_proposals.py` asserts `propose_rule_change {row_id, param, value, reason}` on `I35.tolerance` stores a `proposals` row with kind `rule_change` and state `open` and writes `proposal_created`, after running, in order: the §9.6 load-time checks on the candidate ruleset; a dry run against stored lead snapshots as they were at decision time, rebuilt from `fact_selected` events; and a diff of changed plans with its diff hash. `apply_rule_change {proposal_id, diff_hash}` applies only the exact diff hash shown, writes the approved ruleset to the app volume under `rulesets/<hash>/`, sets the settings key `ruleset.active` to that hash, sets the proposal to `applied`, and writes `rule_change_applied`. In-flight leads re-evaluate under the next ruleset version and their open drafts return to review; a dry run sends no mail; both commands are human-only, and no model drafts a proposal (§12). Every evaluation, the next run start included, loads the active ruleset, or the image's `src/uwh/rules/data/` when `ruleset.active` is null, and events carry that ruleset's hash; `tests/rules/test_loader.py` gains the named test `test_run_start_loads_active_ruleset`. `tests/api/test_proposals.py` gains rule proposals in `GET /api/proposals`. `tests/api/test_skills.py` gains: with `ruleset.active` set, the skills view shows "rules changed since the last eval" beside each status, and the statuses themselves do not change, since the skill digest covers the image's rules data (A.4) -> red. Build: `src/uwh/rules/proposals.py`, the active-ruleset lookup in `src/uwh/rules/loader.py`, and the marker in `src/uwh/api/skills.py` -> green.
 4. **Proposal form** (tier 2). Test: `web/src/settings/RuleProposalForm.test.tsx` asserts the form targets one interpretation-row parameter, shows the diff, and applies only the exact diff shown -> red. Build: the form -> green.
 5. **Rule change end to end** (tier 2). Test: `tests/integration/test_rule_change.py` (through the REST API) starts a run, proposes an I35 tolerance Brett chooses at the gate, asserts each lead in the diff has a changed Replacement Cost outcome and no other lead changed, asserts the mailbox count is equal before and after the dry run, applies the diff, and asserts that events after the applied change carry a different ruleset hash -> red. Build: the wiring -> green.
-6. **Jev adapter** (tier 2, built last). Only with `TYPESAFE_API_KEY`. Jev is part of `read_reply`: with no Jev key it is inactive and `read_reply` runs its Claude path (§8). `jev.py` sits in the `read_reply` folder, so it changes `read_reply`'s digest, and `read_reply` is `untested` until the `cases` suite runs again (A.4). First read the `jev-1.13.0` TypeSafe SDK documentation and record the live response shape in `docs/progress.md` (§15 item 2). Test: `tests/skills/read_reply/test_jev.py` asserts, on recorded Jev responses, confidence from the returned probabilities, Claude answering below the manifest threshold of 0.7 (A.10), and Claude answering every time without a key -> red. Build: `src/uwh/skills/read_reply/jev.py`; run the reply suite with Jev and a hypothesis naming it -> green, with Jev rows in the results log.
+6. **Jev adapter** (tier 2, built first in the tier; not cut). Brett supplies `TYPESAFE_API_KEY` when this task starts; ask him for it. Jev is part of `read_reply`: with no Jev key it is inactive and `read_reply` runs its Claude path (§8). `jev.py` sits in the `read_reply` folder, so it changes `read_reply`'s digest, and `read_reply` is `untested` until the `cases` suite runs again (A.4). First read the `jev-1.13.0` TypeSafe SDK documentation and record the live response shape in `docs/progress.md` (§15 item 2). Test: `tests/skills/read_reply/test_jev.py` asserts, on recorded Jev responses, confidence from the returned probabilities, Claude answering below the manifest threshold of 0.7 (A.10), and Claude answering every time without a key -> red. Build: `src/uwh/skills/read_reply/jev.py`; run the reply suite with Jev and a hypothesis naming it -> green, with Jev rows in the results log.
 
 **Acceptance checks.**
 
@@ -1231,7 +1231,7 @@ echo "SELECT count(DISTINCT ruleset_hash) >= 2, sum(type = 'rule_change_applied'
 ```
 Expect: `1|1`.
 
-**S12-A6.** Tier 2. Jev classification rows are in the results log. Run only with a `TYPESAFE_API_KEY`; without one, report the check as not run and state it in the README's cut section.
+**S12-A6.** Tier 2. Jev classification rows are in the results log. Needs `TYPESAFE_API_KEY`, which Brett supplies.
 ```sh
 uv run pytest tests/skills/read_reply/test_jev.py && jq -s -e '[.[] | select(.type == "run" and ((.hypothesis // "") | test("jev"; "i")))] | length >= 1' evals/results.jsonl
 ```
@@ -1255,7 +1255,7 @@ Expect: `1`.
 
 **Human gate.** Brett chooses the I35 tolerance and, as underwriter, applies the exact diff in task 5. He also decides whether `ruleset.active` stays set for the submission; `change_setting` with the value null returns evaluation to the image's data (A.11).
 
-**Parallel work.** Task 1, task 2 and tasks 3 to 5 touch separate files, but tier-2 tasks start only in reverse cut order (task 2, then 3 to 5, then 6). `src/uwh/rules/data/interpretation.yaml` changes only through a reviewed commit (§12); the proposal flow writes rulesets to the app volume.
+**Parallel work.** Task 1, task 2 and tasks 3 to 5 touch separate files, but tier-2 tasks start in this order: task 6 (Jev), then task 2, then tasks 3 to 5. `src/uwh/rules/data/interpretation.yaml` changes only through a reviewed commit (§12); the proposal flow writes rulesets to the app volume.
 
 ---
 

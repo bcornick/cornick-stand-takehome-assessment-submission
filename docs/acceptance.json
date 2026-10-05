@@ -793,7 +793,7 @@
   {
     "id": "S12-A6",
     "stage": 12,
-    "description": "Tier 2. Jev classification rows are in the results log. Run only with a `TYPESAFE_API_KEY`; without one, report the check as not run and state it in the README's cut section. Expect: exit 0.",
+    "description": "Tier 2. Jev classification rows are in the results log. Needs `TYPESAFE_API_KEY`, which Brett supplies. Expect: exit 0.",
     "command": "uv run pytest tests/skills/read_reply/test_jev.py && jq -s -e '[.[] | select(.type == \"run\" and ((.hypothesis // \"\") | test(\"jev\"; \"i\")))] | length >= 1' evals/results.jsonl",
     "passes": false
   },
