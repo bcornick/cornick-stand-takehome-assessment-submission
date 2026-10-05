@@ -21,8 +21,10 @@ os.environ["LEADGEN_DB"] = str(_DB_DIR / "leadgen.db")
 os.environ["MAILBOX_DB"] = str(_DB_DIR / "mailbox.db")
 
 sys.path.insert(0, str(ROOT / "sim-harness"))
-# A standard-library `mailbox` imported earlier would shadow Stand's package.
-sys.modules.pop("mailbox", None)
+# A standard-library `mailbox` already imported would shadow Stand's package.
+assert "mailbox" not in sys.modules, (
+    "Stand's package must be imported before the standard-library module of the same name"
+)
 import mailbox.main as stand_mailbox  # noqa: E402
 
 assert Path(stand_mailbox.__file__).is_relative_to(ROOT / "sim-harness")

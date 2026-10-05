@@ -9,8 +9,7 @@ from uwh.runtime.mailbox_client import MailboxClient
 
 
 def test_public_methods_are_exactly_the_five_endpoints() -> None:
-    client = MailboxClient(httpx2.Client(base_url="http://mailbox"))
-    public = {n for n in dir(client) if not n.startswith("_") and callable(getattr(client, n))}
+    public = {n for n, v in vars(MailboxClient).items() if not n.startswith("_") and callable(v)}
     assert public == {"send", "list_for_lead", "get", "reset", "healthz"}
 
 
