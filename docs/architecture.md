@@ -333,7 +333,7 @@ Rules:
 - JSON null means missing. `"None"`, `false`, `0` and `"Unknown"` are present values.
 - Conditions are parsed by a small parser covering the registry's six forms, comparing against option strings, with three results: active, inactive, unknown.
 - A present, non-conflicting value needs no ask, whatever its condition.
-- `conditional_unknown` on a missing producer-editable field whose controlling field is producer-editable yields `ask_follow_on`: the question is worded conditionally in the same message ("If there is a pool: is it fenced?"). `wording.yaml` holds one conditional preamble per `requiredWhen` form.
+- `conditional_unknown` on a missing producer-editable field whose controlling field is producer-editable yields `ask_follow_on`: the question is worded conditionally in the same message ("If there is a pool: is it fenced?"). `wording.yaml` holds one conditional preamble per `requiredWhen` form that a follow-on question can take (A.7); `is_gated_community`, which has no `requiredWhen`, is asked with no preamble.
 - When the controlling field is system-owned and unresolved (its lookup is blocked or pending), the dependent field's resolution is `blocked`: no ask. It is asked in the next round only if the resolved value activates the condition. This covers the four fields conditional on protection class 9 or 10.
 - Missing system-owned fields never yield `ask`. One whose lookup returns `blocked` has resolution `blocked`; labels use the same definition.
 - `bind_only` yields `defer`.
@@ -387,7 +387,7 @@ Provider result: `{status, value, source, fetched_at, is_stub}` with status `fou
 
 ### 9.5 Conflict validators
 
-Code only. Each returns the fields involved and a neutral confirmation question. A validator fires only on present values, except where its row names missing fields.
+Code only. Each returns the fields involved and a neutral confirmation question, except the `kyc_score` range validator, whose case goes to the underwriter and has no question. A validator fires only on present values, except where its row names missing fields.
 
 | Validator | Threshold source |
 |---|---|
