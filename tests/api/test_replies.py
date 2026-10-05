@@ -189,7 +189,7 @@ def test_a_reply_the_model_cannot_read_is_recorded_unread_for_the_underwriter(
 
 def record_reading(directory: Path, body: str, tool_input: dict[str, Any] | None) -> None:
     """A hand-made model output for `body`, stored where replay finds it."""
-    asks = skill.open_asks(ASKED, load_registry(str(REGISTRY)))
+    asks = skill.open_asks(ASKED, load_registry(str(REGISTRY)), [])
     call = skill.forced_call(skill.ReadReplyInput(body=body, asks=asks))
     key = call.recording_key
     write_recording(

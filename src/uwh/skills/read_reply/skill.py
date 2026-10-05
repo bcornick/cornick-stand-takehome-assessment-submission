@@ -6,12 +6,14 @@ from typing import Any
 
 from pydantic import Field, ValidationError
 
+from uwh.rules.confirmations import confirmation_asks, reported_fields
 from uwh.rules.data_files import read_yaml
 from uwh.rules.models import StrictModel
 from uwh.rules.registry import Registry
 from uwh.runtime.event_types import (
     AbstentionReason,
     Candidate,
+    ConflictOpened,
     LocatedCandidate,
     ReplyClassification,
 )
@@ -59,28 +61,46 @@ class Abstention(StrictModel):
     reason: AbstentionReason
 
 
-def open_asks(ask_ids: list[str], registry: Registry) -> list[OpenAsk]:
-    """The open asks of a request from its ask ids, each with its stored wording and answer type.
-
-    Raises NotImplementedError for an ask that is not a registry field: reading a reply to a
-    confirmation or a catalogue question is not built.
-    """
+def open_asks(
+    ask_ids: list[str], registry: Registry, conflicts: list[ConflictOpened]
+) -> list[OpenAsk]:
+    """The open asks of a request from its ask ids, each with its stored wording and answer type. A
+    field request or a follow-on question is for its field. A confirmation, which `conflicts` (the lead's
+    open ones) rebuild with their values, is for each field its question reports. A catalogue question
+    is a yes or no for its `q:` key. An ask whose conflict has closed is not open and is left out."""
     wording = read_yaml("wording.yaml")["fields"]
-    asks = []
+    catalogue = read_yaml("catalogue.yaml")["questions"]
+    confirmations = {ask.ask_id: ask for ask in confirmation_asks(conflicts)}
+    asks: list[OpenAsk] = []
     for ask_id in ask_ids:
-        if ask_id not in registry:
-            raise NotImplementedError(f"reading a reply to the ask {ask_id} is not built")
-        field = registry[ask_id]
-        asks.append(
-            OpenAsk(
-                ask_id=ask_id,
-                field=ask_id,
-                wording=wording[ask_id],
-                answer_type=field.kind,
-                options=field.options,
+        if ask_id in registry:
+            asks.append(_registry_ask(ask_id, ask_id, wording[ask_id], registry))
+        elif ask_id in confirmations:
+            asks += [
+                _registry_ask(ask_id, field, confirmations[ask_id].wording, registry)
+                for field in reported_fields(ask_id)
+            ]
+        elif ask_id in catalogue:
+            asks.append(
+                OpenAsk(
+                    ask_id=ask_id,
+                    field=f"q:{ask_id}",
+                    wording=catalogue[ask_id]["wording"],
+                    answer_type="toggle",
+                    options=[],
+                )
             )
-        )
     return asks
+
+
+def _registry_ask(ask_id: str, field: str, question: str, registry: Registry) -> OpenAsk:
+    return OpenAsk(
+        ask_id=ask_id,
+        field=field,
+        wording=question,
+        answer_type=registry[field].kind,
+        options=registry[field].options,
+    )
 
 
 def _coerce(ask: OpenAsk, value: str | int | float | bool) -> str | int | float | bool | None:
@@ -114,15 +134,13 @@ def interpret(reading: ReplyReading, input: ReadReplyInput) -> Reading:
     """Locate each candidate's quote in the reply at its first occurrence and check its value against
     the ask. A candidate whose quote is not in the reply, whose field was not asked or whose value does
     not fit the field is dropped (10.4)."""
-    asked = {ask.ask_id: ask for ask in input.asks}
+    asked = {(ask.ask_id, ask.field): ask for ask in input.asks}
     located: list[LocatedCandidate] = []
     dropped: list[Candidate] = []
     for candidate in reading.candidates:
-        ask = asked.get(candidate.ask_id)
+        ask = asked.get((candidate.ask_id, candidate.field))
         start = input.body.find(candidate.quote)
-        value = (
-            None if ask is None or ask.field != candidate.field else _coerce(ask, candidate.value)
-        )
+        value = None if ask is None else _coerce(ask, candidate.value)
         if start < 0 or value is None:
             dropped.append(candidate)
             continue

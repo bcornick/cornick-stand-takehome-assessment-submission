@@ -15,7 +15,6 @@ from uwh.rules.models import ActionPlan, FieldTriage
 from uwh.rules.registry import Registry
 from uwh.runtime.event_types import (
     BlockerDetail,
-    ConflictOpened,
     EventType,
     PlanBuilt,
     ProviderCalled,
@@ -223,17 +222,11 @@ def _request_in_flight(db: sqlite3.Connection, lead_id: str) -> bool:
 def _planned_asks(
     registry: Registry, db: sqlite3.Connection, lead_id: str, plan: ActionPlan
 ) -> plan_asks.PlanAsksOutput:
-    conflicts = [
-        ConflictOpened(
-            validator=c.validator, fields=list(c.fields), values=c.values, question=c.question
-        )
-        for c in open_conflicts(db, lead_id)
-    ]
     return plan_asks.run(
         plan_asks.PlanAsksInput(
             registry=registry,
             triage=_triage(db, lead_id, registry),
-            conflicts=conflicts,
+            conflicts=[c.opened for c in open_conflicts(db, lead_id)],
             catalogue_questions=plan.catalogue_questions,
         )
     )

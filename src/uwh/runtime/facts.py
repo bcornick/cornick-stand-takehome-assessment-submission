@@ -32,6 +32,16 @@ class Conflict:
     question: str
 
     @property
+    def opened(self) -> ConflictOpened:
+        """The conflict as its `conflict_opened` event holds it."""
+        return ConflictOpened(
+            validator=self.validator,
+            fields=list(self.fields),
+            values=self.values,
+            question=self.question,
+        )
+
+    @property
     def identity(self) -> tuple[str, tuple[str, ...], str]:
         """The validator on these values: a conflict closed by the reply or underwriter observation that confirmed its values is not opened again on them (9.6)."""
         return (self.validator, self.fields, _canonical(self.values))
@@ -214,12 +224,7 @@ class _Pass:
                     self.db,
                     self.context,
                     EventType.conflict_opened,
-                    ConflictOpened(
-                        validator=conflict.validator,
-                        fields=list(conflict.fields),
-                        values=conflict.values,
-                        question=conflict.question,
-                    ),
+                    conflict.opened,
                     lead_id=self.lead_id,
                 )
 

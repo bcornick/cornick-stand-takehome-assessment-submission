@@ -8,7 +8,7 @@ import pytest
 
 from tests.api.helpers import FIXTURE_REPLIES, RECORDINGS, REGISTRY
 from uwh.rules.registry import load_registry
-from uwh.runtime.event_types import Candidate
+from uwh.runtime.event_types import Candidate, ConflictOpened
 from uwh.runtime.model import ModelAccess
 from uwh.runtime.recordings import (
     Exchange,
@@ -25,7 +25,7 @@ from uwh.skills.read_reply.skill import (
 
 
 def asks_for(*fields: str) -> list[OpenAsk]:
-    return skill.open_asks(list(fields), load_registry(str(REGISTRY)))
+    return skill.open_asks(list(fields), load_registry(str(REGISTRY)), [])
 
 
 BODY = "We closed in July 2019 on 2019-07-12. The panel is a Square D. Panel again: Square D."
@@ -170,3 +170,92 @@ def test_the_tool_schema_sent_to_the_model_carries_no_docstring() -> None:
 
     for internal in (ReplyReading.__doc__, Candidate.__doc__):
         assert internal is not None and internal not in sent
+
+
+NO_RESIDENTS = ConflictOpened(
+    validator="no_residents_in_primary_home",
+    fields=["number_of_residents", "dwelling_use_type", "dwelling_type"],
+    values={
+        "number_of_residents": 0,
+        "dwelling_use_type": "Primary",
+        "dwelling_type": "Owner Occupied Single Family Residence",
+    },
+    question="The number of people living in the home is listed as 0. Can you confirm that number?",
+)
+
+
+def test_a_confirmation_is_an_ask_for_each_field_its_question_reports() -> None:
+    registry = load_registry(str(REGISTRY))
+
+    (ask,) = skill.open_asks(["no_residents_in_primary_home"], registry, [NO_RESIDENTS])
+
+    # The check reads three fields; only the number of residents is put to the producer.
+    assert (ask.ask_id, ask.field, ask.answer_type) == (
+        "no_residents_in_primary_home",
+        "number_of_residents",
+        "integer",
+    )
+    assert "listed as 0" in ask.wording
+
+
+def test_the_combined_dwelling_use_confirmation_is_an_ask_for_each_of_its_three_fields() -> None:
+    registry = load_registry(str(REGISTRY))
+    owner_occupied_tenant = [
+        ConflictOpened(
+            validator=validator,
+            fields=["dwelling_type", "dwelling_use_type", "is_rental"],
+            values={
+                "dwelling_type": "Owner Occupied Single Family Residence",
+                "dwelling_use_type": "Tenant",
+                "is_rental": "No",
+            },
+            question="q",
+        )
+        for validator in ("owner_occupied_with_other_use", "tenant_use_without_rental")
+    ]
+
+    asks = skill.open_asks(["dwelling_use_conflict"], registry, owner_occupied_tenant)
+
+    assert [(a.ask_id, a.field) for a in asks] == [
+        ("dwelling_use_conflict", "dwelling_type"),
+        ("dwelling_use_conflict", "dwelling_use_type"),
+        ("dwelling_use_conflict", "is_rental"),
+    ]
+    assert asks[2].options == ["No", "Short-Term Rentals", "Long-Term Rentals"]
+
+
+def test_a_catalogue_question_is_a_yes_or_no_for_its_catalogue_key() -> None:
+    (ask,) = skill.open_asks(["willing_to_mitigate"], load_registry(str(REGISTRY)), [])
+
+    assert (ask.field, ask.answer_type) == ("q:willing_to_mitigate", "toggle")
+
+
+def test_a_confirmation_whose_conflict_has_closed_is_not_an_open_ask() -> None:
+    assert skill.open_asks(["no_residents_in_primary_home"], load_registry(str(REGISTRY)), []) == []
+
+
+def test_a_candidate_is_kept_only_for_a_field_the_confirmation_reports() -> None:
+    asks = skill.open_asks(
+        ["no_residents_in_primary_home"], load_registry(str(REGISTRY)), [NO_RESIDENTS]
+    )
+    body = "Nobody lives there, 0 people. It is a Primary home."
+    reported = Candidate(
+        ask_id="no_residents_in_primary_home",
+        field="number_of_residents",
+        value=0,
+        quote="0 people",
+    )
+    unreported = Candidate(
+        ask_id="no_residents_in_primary_home",
+        field="dwelling_use_type",
+        value="Primary",
+        quote="Primary",
+    )
+
+    result = skill.interpret(
+        ReplyReading(classification="answers_all", candidates=[reported, unreported]),
+        ReadReplyInput(body=body, asks=asks),
+    )
+
+    assert [(c.field, c.value) for c in result.candidates] == [("number_of_residents", 0)]
+    assert result.dropped == [unreported]

@@ -2,14 +2,12 @@
 # ABOUTME: Deterministic. Field requests and follow-on questions come from the triage, confirmations from the conflicts; the combined dwelling-use confirmation replaces the two that both name `dwelling_use_type`.
 from typing import Any
 
+from uwh.rules.confirmations import confirmation_asks
 from uwh.rules.data_files import read_yaml
 from uwh.rules.models import Ask, AskKind, FieldTriage, Resolution, StrictModel
 from uwh.rules.registry import Registry
 from uwh.runtime.event_types import ConflictOpened, RequestKind
 from uwh.skills.vertical import CONFIRMATION_ONLY_CLASS
-
-# The ask id of the combined dwelling-use confirmation, which stands for two validators.
-COMBINED_DWELLING_USE_ID = "dwelling_use_conflict"
 
 
 class PlanAsksInput(StrictModel):
@@ -56,35 +54,6 @@ def _field_asks(input: PlanAsksInput, wording: dict[str, Any]) -> list[Ask]:
     return asks
 
 
-def _confirmations(conflicts: list[ConflictOpened], wording: dict[str, Any]) -> list[Ask]:
-    combined = wording["combined_confirmation"]
-    merged = [c for c in conflicts if c.validator in combined["replaces"]]
-    combine = len(merged) == len(combined["replaces"])
-    asks = [
-        Ask(
-            ask_id=conflict.validator,
-            kind=AskKind.confirmation,
-            fields=conflict.fields,
-            reason="Values reported for these fields conflict.",
-            wording=conflict.question,
-        )
-        for conflict in conflicts
-        if not (combine and conflict in merged)
-    ]
-    if combine:
-        values = {name: value for conflict in merged for name, value in conflict.values.items()}
-        asks.append(
-            Ask(
-                ask_id=COMBINED_DWELLING_USE_ID,
-                kind=AskKind.confirmation,
-                fields=combined["fields"],
-                reason="Values reported for these fields conflict.",
-                wording=combined["question"].format_map(values),
-            )
-        )
-    return asks
-
-
 def _catalogue_asks(catalogue_ids: list[str]) -> list[Ask]:
     questions = read_yaml("catalogue.yaml")["questions"]
     return [
@@ -113,7 +82,7 @@ def run(input: PlanAsksInput) -> PlanAsksOutput:
     wording = read_yaml("wording.yaml")
     asks = (
         _field_asks(input, wording)
-        + _confirmations(input.conflicts, wording)
+        + confirmation_asks(input.conflicts)
         + _catalogue_asks(input.catalogue_questions)
     )
     return PlanAsksOutput(asks=asks, message_class=_message_class(asks))

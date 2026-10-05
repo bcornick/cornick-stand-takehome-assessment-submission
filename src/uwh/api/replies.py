@@ -1,9 +1,9 @@
 # ABOUTME: POST /api/replies and POST /api/replies/fixtures (A.5, 10.4): deliver a reply as the inbound actor the transport binds, and deliver every stored fixture reply of the run.
-# ABOUTME: Each returns after the reply has been read and its lead re-evaluated; a refused delivery is a response with its reason, as for a command, and a reply to a confirmation or catalogue question answers 501.
+# ABOUTME: Each returns after the reply has been read and its lead re-evaluated; a refused delivery is a response with its reason, as for a command.
 import sqlite3
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
 from uwh.api.runtime import Runtime, RuntimeDependency
 from uwh.api.views import FixtureRepliesResponse, ReplyRequest, ReplyResponse
@@ -14,10 +14,7 @@ router = APIRouter()
 
 
 def _deliver(runtime: Runtime, db: sqlite3.Connection, reply: ReplyRequest) -> ReplyResponse:
-    try:
-        result = runtime.submit_as_inbound(db, "deliver_reply", reply.model_dump(mode="json"))
-    except NotImplementedError as error:
-        raise HTTPException(status_code=501, detail=str(error)) from error
+    result = runtime.submit_as_inbound(db, "deliver_reply", reply.model_dump(mode="json"))
     return ReplyResponse(
         accepted=result.accepted,
         event_id=result.event_id if result.accepted else None,

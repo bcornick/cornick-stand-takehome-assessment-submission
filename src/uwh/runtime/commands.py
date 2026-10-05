@@ -28,6 +28,7 @@ from uwh.runtime.facts import (
     LATE_REPLY_CAUSES,
     ReplyValue,
     approve_observation,
+    open_conflicts,
     reject_late_reply_values,
     reject_observation,
     resolve_fact,
@@ -327,7 +328,11 @@ def _read_reply_first(
     intent = _reply_target(db, payload)
     reading: _ReplyReading = None
     if env.model.available:
-        asks = read_reply.open_asks(intent.ask_ids, env.registry)
+        asks = read_reply.open_asks(
+            intent.ask_ids,
+            env.registry,
+            [conflict.opened for conflict in open_conflicts(db, intent.lead_id)],
+        )
         try:
             reading = read_reply.run(
                 read_reply.ReadReplyInput(body=_text(payload, "body"), asks=asks), env.model
