@@ -1,0 +1,69 @@
+# ABOUTME: Default-profile services: Stand's leadgen and mailbox, and the app. Requires Docker Compose 2.20 or later.
+# ABOUTME: Each service has its own named volume; the app reads .env and interpolates the run settings.
+services:
+  leadgen:
+    build:
+      context: ./sim-harness
+      dockerfile: leadgen/Dockerfile
+    ports: ["8081:8080"]
+    environment:
+      DEBUG: "${DEBUG:-false}"
+      LEADGEN_DB: "/data/leadgen.db"
+    volumes: ["leadgen-data:/data"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  mailbox:
+    build:
+      context: ./sim-harness
+      dockerfile: mailbox/Dockerfile
+    ports: ["8025:8080"]
+    environment:
+      MAILBOX_DB: "/data/mailbox.db"
+    volumes: ["mailbox-data:/data"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: app
+      args:
+        GIT_COMMIT: "${GIT_COMMIT:-unknown}"
+    ports: ["8000:8000"]
+    env_file: .env
+    environment:
+      RUN_MODE: "${RUN_MODE:-live}"
+      SEED: "${SEED:-42}"
+      ANTHROPIC_MODEL: "${ANTHROPIC_MODEL:-claude-sonnet-5-5}"
+      LEADGEN_URL: "http://leadgen:8080"
+      MAILBOX_URL: "http://mailbox:8080"
+      UWH_DB: "/data/app-${RUN_MODE:-live}.db"
+    volumes: ["app-data:/data"]
+    depends_on:
+      leadgen:
+        condition: service_healthy
+      mailbox:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - "CMD"
+        - "python"
+        - "-c"
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/run', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  leadgen-data:
+  mailbox-data:
+  app-data:

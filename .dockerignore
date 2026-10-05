@@ -1,0 +1,8 @@
+.env
+.git
+.venv
+web/node_modules
+web/dist
+.worktrees
+scratchpads
+**/__pycache__
