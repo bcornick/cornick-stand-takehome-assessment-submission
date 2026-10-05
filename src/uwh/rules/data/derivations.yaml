@@ -1,0 +1,49 @@
+# ABOUTME: Derivation data: the roof and siding class maps copied from Stand's generator, and the two derived inputs a graph test may name.
+# ABOUTME: Sections 9.1, 9.3 and A.6 define the precedence, the resolution order and the derived-input rule.
+
+# Roof class and siding class are derived only, never fetched (section 9.3).
+maps:
+  roof_classification:
+    source:
+      file: sim-harness/leadgen/generator.py
+      symbol: ROOF_CLASS
+    from: roof_material
+    map:
+      Architecture Shingles: Class A
+      Asphalt Fiberglass Composite: Class A
+      Clay Tile: Class A
+      Concrete Tile: Class A
+      Metal Shingles / Sheets: Class A
+      Slate: Class A
+      Standing Seam Metal: Class A
+      Wood Shake: Class C
+      Wood Shingle: Class C
+      Other: Class B
+  siding_classification:
+    source:
+      file: sim-harness/leadgen/generator.py
+      symbol: SIDING_CLASS
+    from: siding_material
+    map:
+      Brick / Masonry Veneer: A
+      Fire Resistive: A
+      Cement Fiber: B
+      Stucco: B
+      Aluminum / Steel: C
+      Vinyl: C
+      Wood: D
+      Wood Shake / Shingle: D
+      Other: C
+
+# A derived input is unknown when any input is unknown or the divisor is zero (A.6).
+# `operation` names a fixed operation of the interpreter; there is no expression language.
+derived_inputs:
+  coverage_to_rce_ratio:
+    operation: ratio
+    inputs: [coverage_a, replacement_cost]
+    divisor: replacement_cost
+    statement: coverage_a divided by replacement_cost
+  roof_age_years:
+    operation: years_before_reference
+    inputs: [roof_replacement_year]
+    statement: the reference year minus roof_replacement_year
