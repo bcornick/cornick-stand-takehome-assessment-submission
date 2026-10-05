@@ -176,7 +176,7 @@ docs/                     this file, critique, plan, progress, brief, playbook
 
 ## 7. Runtime
 
-This is an underwriting tool, and the runtime uses underwriting names directly: its statuses, blocker kinds, blocker owners, item kinds, observation sources and ruling kinds are the ones this section and Appendix A give. `src/uwh/skills/vertical.py` holds the tables built on those names: the status transitions, the blocker priority order, the command classes, the review causes, `confirmation_only_class`, the reference morning and the order of the workflow's steps.
+This is an underwriting tool, and the runtime uses underwriting names directly: its statuses, blocker kinds, blocker owners, message kinds, item kinds, observation sources and actors are the ones this section and Appendix A give, and the ruling kinds and review causes are the ones the stage 2 contracts fix. Each value set is defined once, in `src/uwh/runtime/event_types.py`. `src/uwh/skills/vertical.py` holds what is built on those names: the status transitions and terminal statuses, the blocker priority order, the command classes, which message kinds are requests, the review causes that persist, `confirmation_only_class`, the reference morning, the order of the workflow's steps and the effect of `approve` and `reject` on each item (A.11).
 
 ### 7.1 Lead workflow
 
@@ -466,7 +466,7 @@ When `applies_when` rests on an unknown fact, the graph is undecided and contrib
 
 **Collecting catalogue questions.** A catalogue question is collected when the branch selections leading to its node are settled by usable facts and answered choices. Unfinished sibling branches do not hold it back. Nothing is collected beneath an unknown `test` or an unanswered choice.
 
-**Action plan.** Effects from all applicable graphs are collected, deduplicated by effect type and rule id, and kept with their rule trace. When any applicable graph's root is a decline, the plan is a proposed decline: no request goes out and the underwriter gets the decline notice draft to approve. If the underwriter rejects it, a ruling suppresses every rule id in the decline's trace, or in all its alternatives, for that lead. A suppressed decline outcome evaluates as decided with an advisory naming the overridden rule, and the registry asks go out. Rejecting a notice that came from `decline_lead` withdraws that ruling; rejecting one that followed an underwriter choice reopens the choice.
+**Action plan.** Effects from all applicable graphs are collected, deduplicated by effect type and rule id, and kept with their rule trace. When one effect is both committed and possible, the interpreter keeps the committed copy. When any applicable graph's root is a decline, the plan is a proposed decline: no request goes out and the underwriter gets the decline notice draft to approve. If the underwriter rejects it, a ruling suppresses every rule id in the decline's trace, or in all its alternatives, for that lead. A suppressed decline outcome evaluates as decided with an advisory naming the overridden rule, and the registry asks go out. Rejecting a notice that came from `decline_lead` withdraws that ruling; rejecting one that followed an underwriter choice reopens the choice.
 
 `build_quote_packet` runs only when the plan holds no decline, no graph is undecided, no blocker is open and no ask remains. The workflow checks this before it calls the skill, and the skill refuses an input that breaks it.
 
@@ -488,7 +488,7 @@ Acceptance cases:
 5. Registry asks go out while an underwriter choice is open. Catalogue questions and document requests that sit under an unanswered choice are held until it is answered.
 6. All open underwriter choices on a lead are shown as one card.
 
-**Load-time checks.** Bands complete and non-overlapping (`one_of`). Every outcome reachable. Every field exists in the registry or the catalogue. Every fan-out declares its semantics. Every row in section 9.7 is referenced by a node, marked `not_evaluated`, carries `applied_in` (naming the validator, derivation, resolution rule or rendering step that applies it), or belongs to a page listed in `graphs/_not_encoded.yaml`. A lead that a not-encoded page applies to carries a `not_evaluated` note naming the page.
+**Load-time checks.** Bands complete and non-overlapping (`one_of`). Every outcome reachable. No outcome holds two effects of one type under one rule id. Every field exists in the registry or the catalogue. Every fan-out declares its semantics. Every row in section 9.7 is referenced by a node, marked `not_evaluated`, carries `applied_in` (naming the validator, derivation, resolution rule or rendering step that applies it), or belongs to a page listed in `graphs/_not_encoded.yaml`. A lead that a not-encoded page applies to carries a `not_evaluated` note naming the page.
 
 ### 9.7 Interpretation table
 
@@ -588,7 +588,7 @@ These rulings are this submission's reading, not Stand's. Brett reviews every ro
 | Quote packet | producer or applicant | the action plan |
 | Decline notice | producer or applicant | a fixed template, sent after the underwriter approves the decline |
 
-A confirmation is rendered from a fixed neutral template and states no consequence, so it carries no more risk than a field request. The class a confirmation-only request takes is one registration value (`confirmation_only_class`, which takes `routine_request` or `sensitive_request` and is set to `routine_request`), so an underwriter who wants to see confirmations first changes one value.
+A confirmation is rendered from a fixed neutral template and states no consequence, so it carries no more risk than a field request. The class a confirmation-only request takes is one value in `src/uwh/skills/vertical.py` (`confirmation_only_class`, which takes `routine_request` or `sensitive_request` and is set to `routine_request`), so an underwriter who wants to see confirmations first changes one value.
 
 One open request per lead. A second request is allowed only after a reply. A quote packet or decline notice may follow an open request and closes it. After two rounds the lead goes to the underwriter.
 
@@ -861,7 +861,7 @@ settings(key TEXT PRIMARY KEY, value_json TEXT)   -- autonomy levels, emergency_
 
 `run_started`, `replay_miss`, `draft_edited`, `proposal_created`, `lead_received`, `fact_observed`, `fact_selected`, `conflict_opened`, `conflict_closed`, `triage_completed`, `provider_called`, `plan_built`, `blocker_opened`, `blocker_closed`, `intent_created`, `message_sent`, `delivery_unknown`, `reply_received`, `reply_read`, `approval_recorded`, `ruling_recorded`, `command_refused`, `setting_changed`, `class_demoted`, `rule_change_applied`, `skill_fallback_used`, `model_called`, `fault_injected`.
 
-Each payload is a Pydantic model named after the type. Graders import those models. `draft_edited` carries the intent's kind after the edit (section 7.5). No event records the move to `dispatching` or the closing of a round. The move to `dispatching` is held in `intents.state`. Round state is held in the reply-wait blocker: a round is open while that `producer_reply` blocker is open, and it closes with `blocker_closed`.
+Each payload is a Pydantic model named after the type. Graders import those models. `draft_edited` carries the intent's kind after the edit (section 7.5). `provider_called` carries the field looked up and the section 9.4 provider result as one nested object, the same model the providers return. No event records the move to `dispatching` or the closing of a round. The move to `dispatching` is held in `intents.state`. Round state is held in the reply-wait blocker: a round is open while that `producer_reply` blocker is open, and it closes with `blocker_closed`.
 
 ### A.3 Status transitions
 
@@ -1035,7 +1035,7 @@ Reply bodies are capped at 8,000 characters. The model id comes from `MODEL_ID`.
 | A review raised by an event (a late or unread reply, an off-topic or declining reply, a draft held by the stop) | acknowledges it with a reason and closes it; when a reply raised it, the round closes too. A held draft is dispatched, and its approval carries the draft's payload hash; one whose hash is missing or not current is refused. | refused; the underwriter acts through `resolve_fact`, `record_ruling` or `decline_lead` |
 | A review whose cause persists (the round limit, a missing or unsupported identity score) | refused | refused. It closes when the cause is removed: `resolve_fact` supplies the fact, or `decline_lead` ends the lead. |
 
-Every item above is an `underwriter_review` blocker, except `delivery_unknown` (its own kind) and an open choice (`underwriter_question`). Each blocker in the lead detail response carries its kind and its item kind (the `approvals.item_kind` values in A.1), and each open choice carries its option ids. Every accepted command re-evaluates its lead in the same transaction.
+Every item above is an `underwriter_review` blocker, except `delivery_unknown` (its own kind) and an open choice (`underwriter_question`). Each blocker in the lead detail response carries its kind and, in its `detail`, its item kind (the `approvals.item_kind` values in A.1) and, for a review, its cause; each open choice carries its option ids. Every accepted command re-evaluates its lead in the same transaction.
 
 Workflow-only classes (`fetch_data` and the send classes) are submitted in process and are not accepted over HTTP.
 
