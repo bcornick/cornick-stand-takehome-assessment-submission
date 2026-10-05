@@ -1,5 +1,8 @@
 # ABOUTME: Tests of the app skeleton: GET /api/run reports the mode, the seed and no run id before a run starts.
-# ABOUTME: The app is built in process, from explicit settings or from the environment.
+# ABOUTME: The app is built in process, from explicit settings or from the environment; importing it reads no environment.
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -8,13 +11,30 @@ from fastapi.testclient import TestClient
 from uwh.api.app import create_app
 from uwh.settings import Settings
 
+# Section 11: the summary's six counts are zero before a run starts.
+NO_RUN_SUMMARY = {
+    "quotes_sent": 0,
+    "follow_ups_sent": 0,
+    "declines_approved": 0,
+    "waiting_on_underwriter": 0,
+    "waiting_on_data": 0,
+    "delivery_unknown": 0,
+}
+
 
 def test_run_endpoint_reports_mode_seed_and_null_run_id() -> None:
     settings = Settings.load({"UWH_DB": "unused.db", "RUN_MODE": "replay", "SEED": "7"})
     with TestClient(create_app(settings)) as client:
         response = client.get("/api/run")
     assert response.status_code == 200
-    assert response.json() == {"mode": "replay", "seed": 7, "run_id": None}
+    assert response.json() == {
+        "run_id": None,
+        "mode": "replay",
+        "seed": 7,
+        "sim_now": None,
+        "first_pass_complete": False,
+        "summary": NO_RUN_SUMMARY,
+    }
 
 
 def test_app_without_settings_reads_the_environment(
@@ -25,4 +45,20 @@ def test_app_without_settings_reads_the_environment(
     monkeypatch.setenv("UWH_DB", str(tmp_path / "app.db"))
     with TestClient(create_app()) as client:
         response = client.get("/api/run")
-    assert response.json() == {"mode": "record", "seed": 11, "run_id": None}
+    body = response.json()
+    assert (body["mode"], body["seed"], body["run_id"]) == ("record", 11, None)
+    assert body["first_pass_complete"] is False
+    assert body["summary"] == NO_RUN_SUMMARY
+
+
+def test_importing_the_api_modules_reads_no_environment() -> None:
+    # A bad RUN_MODE and no UWH_DB would fail Settings.load; an import must not call it.
+    env = {k: v for k, v in os.environ.items() if k not in ("UWH_DB", "SEED")}
+    env["RUN_MODE"] = "not-a-mode"
+    done = subprocess.run(
+        [sys.executable, "-c", "import uwh.api.app, uwh.api.routes, uwh.api.views"],
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    assert done.returncode == 0, done.stderr

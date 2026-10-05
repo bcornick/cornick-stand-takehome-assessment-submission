@@ -42,7 +42,7 @@ select = ["E4", "E7", "E9", "F"]
 
 [tool.mypy]
 strict = true
-files = ["src"]
+files = ["src", "tools"]
 
 [[tool.mypy.overrides]]
 module = ["leadgen", "leadgen.*", "shared", "shared.*", "mailbox", "mailbox.*"]

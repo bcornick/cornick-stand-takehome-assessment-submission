@@ -1,0 +1,3202 @@
+{
+  "components": {
+    "schemas": {
+      "ActionPlan": {
+        "additionalProperties": false,
+        "description": "The plan of section 9.6. The plan hash (A.4) is taken over `model_dump(mode=\"json\")`, so\nequal plans hold every list in one stable order.",
+        "properties": {
+          "catalogue_questions": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Catalogue Questions",
+            "type": "array"
+          },
+          "declines_on_every_branch": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/RuleTrace"
+            },
+            "title": "Declines On Every Branch",
+            "type": "array"
+          },
+          "effects": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/PlannedEffect"
+            },
+            "title": "Effects",
+            "type": "array"
+          },
+          "not_evaluated": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/NotEvaluatedNote"
+            },
+            "title": "Not Evaluated",
+            "type": "array"
+          },
+          "open_choices": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/OpenChoice"
+            },
+            "title": "Open Choices",
+            "type": "array"
+          },
+          "proposed_decline": {
+            "default": false,
+            "title": "Proposed Decline",
+            "type": "boolean"
+          },
+          "undecided": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/UndecidedPage"
+            },
+            "title": "Undecided",
+            "type": "array"
+          },
+          "underwriter_decline": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Underwriter Decline"
+          }
+        },
+        "title": "ActionPlan",
+        "type": "object"
+      },
+      "AdvisoryEffect": {
+        "additionalProperties": false,
+        "properties": {
+          "rule": {
+            "title": "Rule",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "type": {
+            "const": "advisory",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "rule",
+          "text"
+        ],
+        "title": "AdvisoryEffect",
+        "type": "object"
+      },
+      "ApplyRuleChangeCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "payload": {
+            "$ref": "#/components/schemas/ApplyRuleChangePayload"
+          },
+          "type": {
+            "const": "apply_rule_change",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "payload"
+        ],
+        "title": "ApplyRuleChangeCommand",
+        "type": "object"
+      },
+      "ApplyRuleChangePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "diff_hash": {
+            "title": "Diff Hash",
+            "type": "string"
+          },
+          "proposal_id": {
+            "title": "Proposal Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "proposal_id",
+          "diff_hash"
+        ],
+        "title": "ApplyRuleChangePayload",
+        "type": "object"
+      },
+      "ApproveCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "payload": {
+            "$ref": "#/components/schemas/ApprovePayload"
+          },
+          "type": {
+            "const": "approve",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "payload"
+        ],
+        "title": "ApproveCommand",
+        "type": "object"
+      },
+      "ApprovePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "artifact_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Hash"
+          },
+          "item_id": {
+            "title": "Item Id",
+            "type": "integer"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "item_id",
+          "reason"
+        ],
+        "title": "ApprovePayload",
+        "type": "object"
+      },
+      "Assumption": {
+        "additionalProperties": false,
+        "description": "One unknown input and the case taken for it, in A.6's condition form.",
+        "properties": {
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "when": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "title": "When",
+            "type": "object"
+          }
+        },
+        "required": [
+          "field",
+          "when"
+        ],
+        "title": "Assumption",
+        "type": "object"
+      },
+      "AutonomySetting": {
+        "additionalProperties": false,
+        "description": "The `autonomy.<command_class>` setting of a class autonomy applies to (7.4).",
+        "properties": {
+          "command_class": {
+            "enum": [
+              "fetch_data",
+              "send_routine_request",
+              "send_sensitive_request",
+              "send_quote_packet",
+              "send_decline_notice",
+              "deliver_reply",
+              "approve",
+              "reject",
+              "edit_draft",
+              "resolve_fact",
+              "decline_lead",
+              "record_ruling",
+              "propose_rule_change",
+              "apply_rule_change",
+              "change_setting",
+              "emergency_stop",
+              "start_run",
+              "propose_command"
+            ],
+            "title": "Command Class",
+            "type": "string"
+          },
+          "default_level": {
+            "enum": [
+              "auto",
+              "review",
+              "off"
+            ],
+            "title": "Default Level",
+            "type": "string"
+          },
+          "level": {
+            "enum": [
+              "auto",
+              "review",
+              "off"
+            ],
+            "title": "Level",
+            "type": "string"
+          },
+          "locked": {
+            "title": "Locked",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "command_class",
+          "level",
+          "default_level",
+          "locked"
+        ],
+        "title": "AutonomySetting",
+        "type": "object"
+      },
+      "BlockerDetail": {
+        "additionalProperties": false,
+        "description": "What a blocker carries beyond its kind and owner; also the shape of `blockers.detail_json`.",
+        "properties": {
+          "cause": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cause"
+          },
+          "cause_persists": {
+            "default": false,
+            "title": "Cause Persists",
+            "type": "boolean"
+          },
+          "choice_ids": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Choice Ids",
+            "type": "array"
+          },
+          "intent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intent Id"
+          },
+          "item_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "draft",
+                  "observation",
+                  "delivery_unknown",
+                  "no_contact_route",
+                  "review"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Kind"
+          },
+          "missing_inputs": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing Inputs",
+            "type": "array"
+          },
+          "observation_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observation Id"
+          },
+          "resume_trigger": {
+            "title": "Resume Trigger",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "resume_trigger",
+          "text"
+        ],
+        "title": "BlockerDetail",
+        "type": "object"
+      },
+      "BlockerView": {
+        "additionalProperties": false,
+        "description": "An open blocker. `item_id` is `blockers.id`, the id an `approve` or `reject` names.",
+        "properties": {
+          "detail": {
+            "$ref": "#/components/schemas/BlockerDetail"
+          },
+          "item_id": {
+            "title": "Item Id",
+            "type": "integer"
+          },
+          "item_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "draft",
+                  "observation",
+                  "delivery_unknown",
+                  "no_contact_route",
+                  "review"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Kind"
+          },
+          "kind": {
+            "enum": [
+              "delivery_unknown",
+              "underwriter_question",
+              "underwriter_review",
+              "data",
+              "producer_reply"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "owner": {
+            "enum": [
+              "underwriter",
+              "producer",
+              "data_team"
+            ],
+            "title": "Owner",
+            "type": "string"
+          }
+        },
+        "required": [
+          "item_id",
+          "kind",
+          "item_kind",
+          "owner",
+          "detail"
+        ],
+        "title": "BlockerView",
+        "type": "object"
+      },
+      "ChangeSettingCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "payload": {
+            "$ref": "#/components/schemas/ChangeSettingPayload"
+          },
+          "type": {
+            "const": "change_setting",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "payload"
+        ],
+        "title": "ChangeSettingCommand",
+        "type": "object"
+      },
+      "ChangeSettingPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "value": {
+            "$ref": "#/components/schemas/JsonValue"
+          }
+        },
+        "required": [
+          "key",
+          "value"
+        ],
+        "title": "ChangeSettingPayload",
+        "type": "object"
+      },
+      "ChatRequest": {
+        "additionalProperties": false,
+        "description": "One chat turn; the server holds the conversation.",
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "ChatRequest",
+        "type": "object"
+      },
+      "ChatResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "answer": {
+            "title": "Answer",
+            "type": "string"
+          },
+          "cited_event_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Cited Event Ids",
+            "type": "array"
+          },
+          "proposals": {
+            "items": {
+              "$ref": "#/components/schemas/ProposalView"
+            },
+            "title": "Proposals",
+            "type": "array"
+          }
+        },
+        "required": [
+          "answer",
+          "cited_event_ids",
+          "proposals"
+        ],
+        "title": "ChatResponse",
+        "type": "object"
+      },
+      "CommandResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "accepted": {
+            "title": "Accepted",
+            "type": "boolean"
+          },
+          "event_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Id"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "accepted",
+          "event_id",
+          "reason"
+        ],
+        "title": "CommandResponse",
+        "type": "object"
+      },
+      "CoverageAdjustmentEffect": {
+        "additionalProperties": false,
+        "description": "A proposed value for a coverage field; the submitted value stays with the facts.",
+        "properties": {
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "proposed_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              }
+            ],
+            "title": "Proposed Value"
+          },
+          "rule": {
+            "title": "Rule",
+            "type": "string"
+          },
+          "type": {
+            "const": "coverage_adjustment",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "rule",
+          "field",
+          "proposed_value"
+        ],
+        "title": "CoverageAdjustmentEffect",
+        "type": "object"
+      },
+      "Deadline": {
+        "enum": [
+          "within_60_days",
+          "first_term",
+          "underwriting_period",
+          "within_30_days_of_bind",
+          "duration_of_non_occupancy"
+        ],
+        "title": "Deadline",
+        "type": "string"
+      },
+      "DeclineEffect": {
+        "additionalProperties": false,
+        "properties": {
+          "rule": {
+            "title": "Rule",
+            "type": "string"
+          },
+          "type": {
+            "const": "decline",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "rule"
+        ],
+        "title": "DeclineEffect",
+        "type": "object"
+      },
+      "DeclineLeadCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "payload": {
+            "$ref": "#/components/schemas/DeclineLeadPayload"
+          },
+          "type": {
+            "const": "decline_lead",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "payload"
+        ],
+        "title": "DeclineLeadCommand",
+        "type": "object"
+      },
+      "DeclineLeadPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "lead_id": {
+            "title": "Lead Id",
+            "type": "string"
+          },
+          "reason": {
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "lead_id",
+          "reason"
+        ],
+        "title": "DeclineLeadPayload",
+        "type": "object"
+      },
+      "DeliverReplyCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "payload": {
+            "$ref": "#/components/schemas/ReplyRequest"
+          },
+          "type": {
+            "const": "deliver_reply",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "payload"
+        ],
+        "title": "DeliverReplyCommand",
+        "type": "object"
+      },
+      "DraftView": {
+        "additionalProperties": false,
+        "description": "One of the lead's intents (A.1). A reply is accepted only for one in state `sent`.",
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "intent_id": {
+            "title": "Intent Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "routine_request",
+              "sensitive_request",
+              "quote_packet",
+              "decline_notice"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "payload_hash": {
+            "title": "Payload Hash",
+            "type": "string"
+          },
+          "recipient": {
+            "title": "Recipient",
+            "type": "string"
+          },
+          "round": {
+            "title": "Round",
+            "type": "integer"
+          },
+          "state": {
+            "enum": [
+              "draft",
+              "dispatching",
+              "sent",
+              "unknown",
+              "closed_unsent"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "subject": {
+            "title": "Subject",
+            "type": "string"
+          }
+        },
+        "required": [
+          "intent_id",
+          "payload_hash",
+          "kind",
+          "recipient",
+          "subject",
+          "body",
+          "state",
+          "round"
+        ],
+        "title": "DraftView",
+        "type": "object"
+      },
+      "EditDraftCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "payload": {
+            "$ref": "#/components/schemas/EditDraftPayload"
+          },
+          "type": {
+            "const": "edit_draft",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "payload"
+        ],
+        "title": "EditDraftCommand",
+        "type": "object"
+      },
+      "EditDraftPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "intent_id": {
+            "title": "Intent Id",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "subject": {
+            "title": "Subject",
+            "type": "string"
+          }
+        },
+        "required": [
+          "intent_id",
+          "subject",
+          "body",
+          "reason"
+        ],
+        "title": "EditDraftPayload",
+        "type": "object"
+      },
+      "EmergencyStopCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "payload": {
+            "$ref": "#/components/schemas/EmergencyStopPayload"
+          },
+          "type": {
+            "const": "emergency_stop",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "payload"
+        ],
+        "title": "EmergencyStopCommand",
+        "type": "object"
+      },
+      "EmergencyStopPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "engaged": {
+            "title": "Engaged",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "engaged"
+        ],
+        "title": "EmergencyStopPayload",
+        "type": "object"
+      },
+      "EventRow": {
+        "additionalProperties": false,
+        "description": "An `events` row. `payload` is an object that follows `PAYLOAD_MODELS[type]`; the row checks\nit, so the schema stays one object type rather than 28 row variants.",
+        "properties": {
+          "actor": {
+            "title": "Actor",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "lead_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Id"
+          },
+          "mode": {
+            "enum": [
+              "live",
+              "replay",
+              "record"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "model_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Id"
+          },
+          "payload": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "title": "Payload",
+            "type": "object"
+          },
+          "prompt_versions": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt Versions"
+          },
+          "real_ts": {
+            "title": "Real Ts",
+            "type": "string"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          },
+          "ruleset_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ruleset Hash"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "sim_ts": {
+            "title": "Sim Ts",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/EventType"
+          }
+        },
+        "required": [
+          "id",
+          "run_id",
+          "mode",
+          "lead_id",
+          "type",
+          "payload",
+          "actor",
+          "ruleset_hash",
+          "prompt_versions",
+          "model_id",
+          "request_id",
+          "real_ts",
+          "sim_ts"
+        ],
+        "title": "EventRow",
+        "type": "object"
+      },
+      "EventType": {
+        "enum": [
+          "run_started",
+          "replay_miss",
+          "draft_edited",
+          "proposal_created",
+          "lead_received",
+          "fact_observed",
+          "fact_selected",
+          "conflict_opened",
+          "conflict_closed",
+          "triage_completed",
+          "provider_called",
+          "plan_built",
+          "blocker_opened",
+          "blocker_closed",
+          "intent_created",
+          "message_sent",
+          "delivery_unknown",
+          "reply_received",
+          "reply_read",
+          "approval_recorded",
+          "ruling_recorded",
+          "command_refused",
+          "setting_changed",
+          "class_demoted",
+          "rule_change_applied",
+          "skill_fallback_used",
+          "model_called",
+          "fault_injected"
+        ],
+        "title": "EventType",
+        "type": "string"
+      },
+      "ExclusionOrEndorsementEffect": {
+        "additionalProperties": false,
+        "properties": {
+          "rule": {
+            "title": "Rule",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "type": {
+            "const": "exclusion_or_endorsement",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "rule",
+          "text"
+        ],
+        "title": "ExclusionOrEndorsementEffect",
+        "type": "object"
+      },
+      "ExternalLink": {
+        "additionalProperties": false,
+        "description": "A search or map link where the board calls for a human look (section 11).",
+        "properties": {
+          "kind": {
+            "enum": [
+              "search",
+              "map"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "label",
+          "url"
+        ],
+        "title": "ExternalLink",
+        "type": "object"
+      },
+      "FactView": {
+        "additionalProperties": false,
+        "description": "An effective fact with its source tag. `p_f` is a fact like any other.",
+        "properties": {
+          "confirmed": {
+            "title": "Confirmed",
+            "type": "boolean"
+          },
+          "evidence": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "title": "Evidence",
+            "type": "object"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "submitted",
+              "fetched",
+              "derived",
+              "assumed",
+              "reply",
+              "underwriter"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "accepted",
+              "pending_review",
+              "rejected"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "value": {
+            "$ref": "#/components/schemas/JsonValue"
+          }
+        },
+        "required": [
+          "key",
+          "value",
+          "source",
+          "status",
+          "confirmed",
+          "evidence"
+        ],
+        "title": "FactView",
+        "type": "object"
+      },
+      "FixtureRepliesResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "replies": {
+            "items": {
+              "$ref": "#/components/schemas/ReplyResponse"
+            },
+            "title": "Replies",
+            "type": "array"
+          }
+        },
+        "required": [
+          "replies"
+        ],
+        "title": "FixtureRepliesResponse",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "JsonValue": {},
+      "LeadDetail": {
+        "additionalProperties": false,
+        "description": "`GET /api/leads/{id}`. The rule traces are the plan's (`effects[].trace`,\n`declines_on_every_branch`) and the playbook pages'.",
+        "properties": {
+          "blockers": {
+            "items": {
+              "$ref": "#/components/schemas/BlockerView"
+            },
+            "title": "Blockers",
+            "type": "array"
+          },
+          "drafts": {
+            "items": {
+              "$ref": "#/components/schemas/DraftView"
+            },
+            "title": "Drafts",
+            "type": "array"
+          },
+          "facts": {
+            "items": {
+              "$ref": "#/components/schemas/FactView"
+            },
+            "title": "Facts",
+            "type": "array"
+          },
+          "lead_id": {
+            "title": "Lead Id",
+            "type": "string"
+          },
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/ExternalLink"
+            },
+            "title": "Links",
+            "type": "array"
+          },
+          "mode": {
+            "enum": [
+              "live",
+              "replay",
+              "record"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "next_action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Action"
+          },
+          "notes": {
+            "items": {
+              "$ref": "#/components/schemas/LeadNote"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "open_choices": {
+            "items": {
+              "$ref": "#/components/schemas/OpenChoiceView"
+            },
+            "title": "Open Choices",
+            "type": "array"
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ActionPlan"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "plan_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Hash"
+          },
+          "playbook": {
+            "items": {
+              "$ref": "#/components/schemas/PlaybookPage"
+            },
+            "title": "Playbook",
+            "type": "array"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "received",
+              "triaged",
+              "in_progress",
+              "quote_sent",
+              "declined"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "lead_id",
+          "mode",
+          "status",
+          "revision",
+          "facts",
+          "plan",
+          "plan_hash",
+          "playbook",
+          "notes",
+          "blockers",
+          "drafts",
+          "open_choices",
+          "next_action",
+          "links"
+        ],
+        "title": "LeadDetail",
+        "type": "object"
+      },
+      "LeadEvents": {
+        "additionalProperties": false,
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/EventRow"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "lead_id": {
+            "title": "Lead Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "lead_id",
+          "events"
+        ],
+        "title": "LeadEvents",
+        "type": "object"
+      },
+      "LeadNote": {
+        "additionalProperties": false,
+        "description": "A non-blocking note (section 11): a page or row not evaluated (4.1), or a skill that is\nunevaluated or on its fallback (section 8). `ref` is a row, page or skill id.",
+        "properties": {
+          "kind": {
+            "enum": [
+              "not_evaluated",
+              "unevaluated_skill",
+              "skill_fallback"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "ref",
+          "text"
+        ],
+        "title": "LeadNote",
+        "type": "object"
+      },
+      "NoActionEffect": {
+        "additionalProperties": false,
+        "properties": {
+          "rule": {
+            "title": "Rule",
+            "type": "string"
+          },
+          "type": {
+            "const": "no_action",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "rule"
+        ],
+        "title": "NoActionEffect",
+        "type": "object"
+      },
+      "NotEvaluatedNote": {
+        "additionalProperties": false,
+        "properties": {
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ref",
+          "text"
+        ],
+        "title": "NotEvaluatedNote",
+        "type": "object"
+      },
+      "ObligationEffect": {
+        "additionalProperties": false,
+        "description": "A post-bind obligation; recorded and never executed.",
+        "properties": {
+          "owner": {
+            "title": "Owner",
+            "type": "string"
+          },
+          "rule": {
+            "title": "Rule",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "trigger": {
+            "title": "Trigger",
+            "type": "string"
+          },
+          "type": {
+            "const": "obligation",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "rule",
+          "text",
+          "owner",
+          "trigger"
+        ],
+        "title": "ObligationEffect",
+        "type": "object"
+      },
+      "OpenChoice": {
+        "additionalProperties": false,
+        "properties": {
+          "choice_id": {
+            "title": "Choice Id",
+            "type": "string"
+          },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Options",
+            "type": "array"
+          },
+          "prompt": {
+            "title": "Prompt",
+            "type": "string"
+          },
+          "show": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Show",
+            "type": "array"
+          }
+        },
+        "required": [
+          "choice_id",
+          "options",
+          "prompt",
+          "show"
+        ],
+        "title": "OpenChoice",
+        "type": "object"
+      },
+      "OpenChoiceView": {
+        "additionalProperties": false,
+        "description": "An open underwriter choice with the values of the fields it shows (section 11).",
+        "properties": {
+          "choice_id": {
+            "title": "Choice Id",
+            "type": "string"
+          },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Options",
+            "type": "array"
+          },
+          "prompt": {
+            "title": "Prompt",
+            "type": "string"
+          },
+          "show": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Show",
+            "type": "array"
+          },
+          "shown_values": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "title": "Shown Values",
+            "type": "object"
+          }
+        },
+        "required": [
+          "choice_id",
+          "options",
+          "prompt",
+          "show",
+          "shown_values"
+        ],
+        "title": "OpenChoiceView",
+        "type": "object"
+      },
+      "PlannedEffect": {
+        "additionalProperties": false,
+        "properties": {
+          "committed": {
+            "title": "Committed",
+            "type": "boolean"
+          },
+          "effect": {
+            "discriminator": {
+              "mapping": {
+                "advisory": "#/components/schemas/AdvisoryEffect",
+                "coverage_adjustment": "#/components/schemas/CoverageAdjustmentEffect",
+                "decline": "#/components/schemas/DeclineEffect",
+                "exclusion_or_endorsement": "#/components/schemas/ExclusionOrEndorsementEffect",
+                "no_action": "#/components/schemas/NoActionEffect",
+                "obligation": "#/components/schemas/ObligationEffect",
+                "requirement": "#/components/schemas/RequirementEffect",
+                "surcharge": "#/components/schemas/SurchargeEffect"
+              },
+              "propertyName": "type"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/DeclineEffect"
+              },
+              {
+                "$ref": "#/components/schemas/RequirementEffect"
+              },
+              {
+                "$ref": "#/components/schemas/SurchargeEffect"
+              },
+              {
+                "$ref": "#/components/schemas/ExclusionOrEndorsementEffect"
+              },
+              {
+                "$ref": "#/components/schemas/CoverageAdjustmentEffect"
+              },
+              {
+                "$ref": "#/components/schemas/AdvisoryEffect"
+              },
+              {
+                "$ref": "#/components/schemas/ObligationEffect"
+              },
+              {
+                "$ref": "#/components/schemas/NoActionEffect"
+              }
+            ],
+            "title": "Effect"
+          },
+          "trace": {
+            "$ref": "#/components/schemas/RuleTrace"
+          }
+        },
+        "required": [
+          "effect",
+          "trace",
+          "committed"
+        ],
+        "title": "PlannedEffect",
+        "type": "object"
+      },
+      "PlaybookPage": {
+        "additionalProperties": false,
+        "description": "One line of the playbook path checklist (section 11). A page that does not apply has no result.",
+        "properties": {
+          "applies": {
+            "title": "Applies",
+            "type": "boolean"
+          },
+          "page": {
+            "title": "Page",
+            "type": "string"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "enum": [
+                  "decided",
+                  "undecided",
+                  "not_evaluated"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "trace": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RuleTrace"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "waits_on": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Waits On",
+            "type": "array"
+          }
+        },
+        "required": [
+          "page",
+          "applies",
+          "result",
+          "waits_on",
+          "trace"
+        ],
+        "title": "PlaybookPage",
+        "type": "object"
+      },
+      "ProposalView": {
+        "additionalProperties": false,
+        "description": "A `proposals` row (A.1). A command proposal's payload is `{type, payload, rationale}`.",
+        "properties": {
+          "actor": {
+            "title": "Actor",
+            "type": "string"
+          },
+          "diff_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diff Hash"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "rule_change",
+              "command"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "title": "Payload",
+            "type": "object"
+          },
+          "proposal_id": {
+            "title": "Proposal Id",
+            "type": "integer"
+          },
+          "state": {
+            "enum": [
+              "open",
+              "applied",
+              "dismissed"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "proposal_id",
+          "kind",
+          "payload",
+          "diff_hash",
+          "state",
+          "actor",
+          "event_id"
+        ],
+        "title": "ProposalView",
+        "type": "object"
+      },
+      "ProposeCommandCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "payload": {
+            "$ref": "#/components/schemas/ProposeCommandPayload"
+          },
+          "type": {
+            "const": "propose_command",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "payload"
+        ],
+        "title": "ProposeCommandCommand",
+        "type": "object"
+      },
+      "ProposeCommandPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "payload": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "title": "Payload",
+            "type": "object"
+          },
+          "rationale": {
+            "title": "Rationale",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "deliver_reply",
+              "approve",
+              "reject",
+              "edit_draft",
+              "resolve_fact",
+              "decline_lead",
+              "record_ruling",
+              "propose_rule_change",
+              "apply_rule_change",
+              "change_setting",
+              "emergency_stop",
+              "start_run",
+              "propose_command"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "payload",
+          "rationale"
+        ],
+        "title": "ProposeCommandPayload",
+        "type": "object"
+      },
+      "ProposeRuleChangeCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "payload": {
+            "$ref": "#/components/schemas/ProposeRuleChangePayload"
+          },
+          "type": {
+            "const": "propose_rule_change",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "payload"
+        ],
+        "title": "ProposeRuleChangeCommand",
+        "type": "object"
+      },
+      "ProposeRuleChangePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "param": {
+            "title": "Param",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "row_id": {
+            "title": "Row Id",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "row_id",
+          "param",
+          "value",
+          "reason"
+        ],
+        "title": "ProposeRuleChangePayload",
+        "type": "object"
+      },
+      "QuestionItem": {
+        "additionalProperties": false,
+        "description": "The lead's open choices as one card (section 11). `item_id` is the question blocker's id.",
+        "properties": {
+          "choices": {
+            "items": {
+              "$ref": "#/components/schemas/OpenChoiceView"
+            },
+            "minItems": 1,
+            "title": "Choices",
+            "type": "array"
+          },
+          "detail": {
+            "$ref": "#/components/schemas/BlockerDetail"
+          },
+          "item_id": {
+            "title": "Item Id",
+            "type": "integer"
+          },
+          "item_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "draft",
+                  "observation",
+                  "delivery_unknown",
+                  "no_contact_route",
+                  "review"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Kind"
+          },
+          "kind": {
+            "enum": [
+              "delivery_unknown",
+              "underwriter_question",
+              "underwriter_review",
+              "data",
+              "producer_reply"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "lead_id": {
+            "title": "Lead Id",
+            "type": "string"
+          },
+          "owner": {
+            "enum": [
+              "underwriter",
+              "producer",
+              "data_team"
+            ],
+            "title": "Owner",
+            "type": "string"
+          },
+          "type": {
+            "const": "question",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "item_id",
+          "kind",
+          "item_kind",
+          "owner",
+          "detail",
+          "type",
+          "lead_id",
+          "choices"
+        ],
+        "title": "QuestionItem",
+        "type": "object"
+      },
+      "QueueRow": {
+        "additionalProperties": false,
+        "description": "One row per lead, in the order the response lists them. The one-sentence summary is\n`GET /api/run`'s `summary`, not part of this response.",
+        "properties": {
+          "age_business_days": {
+            "title": "Age Business Days",
+            "type": "number"
+          },
+          "ask_count": {
+            "title": "Ask Count",
+            "type": "integer"
+          },
+          "effective_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective Date"
+          },
+          "group": {
+            "enum": [
+              "blocked_on_underwriter",
+              "waiting_on_data_or_producer",
+              "finished"
+            ],
+            "title": "Group",
+            "type": "string"
+          },
+          "lead_id": {
+            "title": "Lead Id",
+            "type": "string"
+          },
+          "primary_next_action": {
+            "anyOf": [
+              {
+                "enum": [
+                  "delivery_unknown",
+                  "underwriter_question",
+                  "underwriter_review",
+                  "data",
+                  "producer_reply"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Primary Next Action"
+          },
+          "service_level_breached": {
+            "title": "Service Level Breached",
+            "type": "boolean"
+          },
+          "status": {
+            "enum": [
+              "received",
+              "triaged",
+              "in_progress",
+              "quote_sent",
+              "declined"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "waits_on": {
+            "anyOf": [
+              {
+                "enum": [
+                  "underwriter",
+                  "producer",
+                  "data_team"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Waits On"
+          }
+        },
+        "required": [
+          "lead_id",
+          "status",
+          "primary_next_action",
+          "waits_on",
+          "age_business_days",
+          "service_level_breached",
+          "effective_date",
+          "ask_count",
+          "group"
+        ],
+        "title": "QueueRow",
+        "type": "object"
+      },
+      "RecordRulingCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "payload": {
+            "$ref": "#/components/schemas/RecordRulingPayload"
+          },
+          "type": {
+            "const": "record_ruling",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "payload"
+        ],
+        "title": "RecordRulingCommand",
+        "type": "object"
+      },
+      "RecordRulingPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "choice_id": {
+            "title": "Choice Id",
+            "type": "string"
+          },
+          "lead_id": {
+            "title": "Lead Id",
+            "type": "string"
+          },
+          "option": {
+            "title": "Option",
+            "type": "string"
+          },
+          "reason": {
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "lead_id",
+          "choice_id",
+          "option",
+          "reason"
+        ],
+        "title": "RecordRulingPayload",
+        "type": "object"
+      },
+      "RejectCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "payload": {
+            "$ref": "#/components/schemas/RejectPayload"
+          },
+          "type": {
+            "const": "reject",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "payload"
+        ],
+        "title": "RejectCommand",
+        "type": "object"
+      },
+      "RejectPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "item_id": {
+            "title": "Item Id",
+            "type": "integer"
+          },
+          "reason": {
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "item_id",
+          "reason"
+        ],
+        "title": "RejectPayload",
+        "type": "object"
+      },
+      "ReplyRequest": {
+        "additionalProperties": false,
+        "description": "`POST /api/replies` and the `deliver_reply` payload; the body is capped at 8,000 characters (A.9).",
+        "properties": {
+          "body": {
+            "maxLength": 8000,
+            "title": "Body",
+            "type": "string"
+          },
+          "intent_id": {
+            "title": "Intent Id",
+            "type": "string"
+          },
+          "lead_id": {
+            "title": "Lead Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "lead_id",
+          "intent_id",
+          "body"
+        ],
+        "title": "ReplyRequest",
+        "type": "object"
+      },
+      "ReplyResponse": {
+        "additionalProperties": false,
+        "description": "Returned after the reply has been read and the lead re-evaluated, or refused.",
+        "properties": {
+          "accepted": {
+            "title": "Accepted",
+            "type": "boolean"
+          },
+          "event_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Id"
+          },
+          "lead_id": {
+            "title": "Lead Id",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "accepted",
+          "event_id",
+          "reason",
+          "lead_id"
+        ],
+        "title": "ReplyResponse",
+        "type": "object"
+      },
+      "RequirementEffect": {
+        "additionalProperties": false,
+        "properties": {
+          "deadline": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Deadline"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rule": {
+            "title": "Rule",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "type": {
+            "const": "requirement",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "rule",
+          "text"
+        ],
+        "title": "RequirementEffect",
+        "type": "object"
+      },
+      "ResolveFactCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "payload": {
+            "$ref": "#/components/schemas/ResolveFactPayload"
+          },
+          "type": {
+            "const": "resolve_fact",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "payload"
+        ],
+        "title": "ResolveFactCommand",
+        "type": "object"
+      },
+      "ResolveFactPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "lead_id": {
+            "title": "Lead Id",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "lead_id",
+          "key",
+          "value",
+          "reason"
+        ],
+        "title": "ResolveFactPayload",
+        "type": "object"
+      },
+      "ReviewItem": {
+        "additionalProperties": false,
+        "description": "An open review: `item` says which A.11 row it is, so the client knows what `approve` and\n`reject` do. A draft row carries the draft whose `payload_hash` an `approve` echoes.",
+        "properties": {
+          "detail": {
+            "$ref": "#/components/schemas/BlockerDetail"
+          },
+          "draft": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DraftView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "item": {
+            "enum": [
+              "draft_request",
+              "draft_quote_packet",
+              "draft_decline_notice",
+              "pending_observation",
+              "delivery_unknown",
+              "no_contact_route",
+              "review_raised_by_event",
+              "review_cause_persists"
+            ],
+            "title": "Item",
+            "type": "string"
+          },
+          "item_id": {
+            "title": "Item Id",
+            "type": "integer"
+          },
+          "item_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "draft",
+                  "observation",
+                  "delivery_unknown",
+                  "no_contact_route",
+                  "review"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Kind"
+          },
+          "kind": {
+            "enum": [
+              "delivery_unknown",
+              "underwriter_question",
+              "underwriter_review",
+              "data",
+              "producer_reply"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "lead_id": {
+            "title": "Lead Id",
+            "type": "string"
+          },
+          "observation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FactView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "owner": {
+            "enum": [
+              "underwriter",
+              "producer",
+              "data_team"
+            ],
+            "title": "Owner",
+            "type": "string"
+          },
+          "type": {
+            "const": "review",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "item_id",
+          "kind",
+          "item_kind",
+          "owner",
+          "detail",
+          "type",
+          "lead_id",
+          "item"
+        ],
+        "title": "ReviewItem",
+        "type": "object"
+      },
+      "RuleTrace": {
+        "additionalProperties": false,
+        "description": "Either one path or a set of alternatives, never both.",
+        "properties": {
+          "alternatives": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/TraceBranch"
+            },
+            "title": "Alternatives",
+            "type": "array"
+          },
+          "board_path": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Board Path",
+            "type": "array"
+          },
+          "choice_ids": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Choice Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "board_path"
+        ],
+        "title": "RuleTrace",
+        "type": "object"
+      },
+      "RunSummary": {
+        "additionalProperties": false,
+        "description": "The one-sentence summary's six counts (section 11).",
+        "properties": {
+          "declines_approved": {
+            "title": "Declines Approved",
+            "type": "integer"
+          },
+          "delivery_unknown": {
+            "title": "Delivery Unknown",
+            "type": "integer"
+          },
+          "follow_ups_sent": {
+            "title": "Follow Ups Sent",
+            "type": "integer"
+          },
+          "quotes_sent": {
+            "title": "Quotes Sent",
+            "type": "integer"
+          },
+          "waiting_on_data": {
+            "title": "Waiting On Data",
+            "type": "integer"
+          },
+          "waiting_on_underwriter": {
+            "title": "Waiting On Underwriter",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "quotes_sent",
+          "follow_ups_sent",
+          "declines_approved",
+          "waiting_on_underwriter",
+          "waiting_on_data",
+          "delivery_unknown"
+        ],
+        "title": "RunSummary",
+        "type": "object"
+      },
+      "RunView": {
+        "additionalProperties": false,
+        "description": "`GET /api/run`; also the reply of `POST /api/run/start`. Before a run starts `run_id` and\n`sim_now` are null and the counts are zero.",
+        "properties": {
+          "first_pass_complete": {
+            "title": "First Pass Complete",
+            "type": "boolean"
+          },
+          "mode": {
+            "enum": [
+              "live",
+              "replay",
+              "record"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "seed": {
+            "title": "Seed",
+            "type": "integer"
+          },
+          "sim_now": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sim Now"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/RunSummary"
+          }
+        },
+        "required": [
+          "run_id",
+          "mode",
+          "seed",
+          "sim_now",
+          "first_pass_complete",
+          "summary"
+        ],
+        "title": "RunView",
+        "type": "object"
+      },
+      "SettingsView": {
+        "additionalProperties": false,
+        "properties": {
+          "autonomy": {
+            "items": {
+              "$ref": "#/components/schemas/AutonomySetting"
+            },
+            "title": "Autonomy",
+            "type": "array"
+          },
+          "emergency_stop": {
+            "title": "Emergency Stop",
+            "type": "boolean"
+          },
+          "ruleset_active": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ruleset Active"
+          }
+        },
+        "required": [
+          "autonomy",
+          "emergency_stop",
+          "ruleset_active"
+        ],
+        "title": "SettingsView",
+        "type": "object"
+      },
+      "SkillResult": {
+        "additionalProperties": false,
+        "description": "`skill_results.<name>` of the latest scored run row that matches the skill's digest (section 8).",
+        "properties": {
+          "cases_passed": {
+            "title": "Cases Passed",
+            "type": "integer"
+          },
+          "cases_total": {
+            "title": "Cases Total",
+            "type": "integer"
+          },
+          "passed": {
+            "title": "Passed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "cases_passed",
+          "cases_total",
+          "passed"
+        ],
+        "title": "SkillResult",
+        "type": "object"
+      },
+      "SkillView": {
+        "additionalProperties": false,
+        "properties": {
+          "fallback": {
+            "title": "Fallback",
+            "type": "string"
+          },
+          "last_result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SkillResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "rules_changed_since_eval": {
+            "title": "Rules Changed Since Eval",
+            "type": "boolean"
+          },
+          "status": {
+            "enum": [
+              "untested",
+              "passing",
+              "failing",
+              "unavailable"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "threshold": {
+            "title": "Threshold",
+            "type": "number"
+          }
+        },
+        "required": [
+          "name",
+          "status",
+          "last_result",
+          "threshold",
+          "fallback",
+          "rules_changed_since_eval"
+        ],
+        "title": "SkillView",
+        "type": "object"
+      },
+      "StartRunCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "payload": {
+            "$ref": "#/components/schemas/StartRunPayload"
+          },
+          "type": {
+            "const": "start_run",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "payload"
+        ],
+        "title": "StartRunCommand",
+        "type": "object"
+      },
+      "StartRunPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "seed": {
+            "title": "Seed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "seed"
+        ],
+        "title": "StartRunPayload",
+        "type": "object"
+      },
+      "SurchargeEffect": {
+        "additionalProperties": false,
+        "properties": {
+          "percent": {
+            "title": "Percent",
+            "type": "integer"
+          },
+          "rule": {
+            "title": "Rule",
+            "type": "string"
+          },
+          "type": {
+            "const": "surcharge",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "rule",
+          "percent"
+        ],
+        "title": "SurchargeEffect",
+        "type": "object"
+      },
+      "TraceBranch": {
+        "additionalProperties": false,
+        "description": "One alternative of a decline on every branch: the cases taken for the unknown inputs and the path that follows.",
+        "properties": {
+          "assumed": {
+            "items": {
+              "$ref": "#/components/schemas/Assumption"
+            },
+            "minItems": 1,
+            "title": "Assumed",
+            "type": "array"
+          },
+          "board_path": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Board Path",
+            "type": "array"
+          },
+          "rule": {
+            "title": "Rule",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assumed",
+          "board_path",
+          "rule"
+        ],
+        "title": "TraceBranch",
+        "type": "object"
+      },
+      "UndecidedPage": {
+        "additionalProperties": false,
+        "properties": {
+          "graph": {
+            "title": "Graph",
+            "type": "string"
+          },
+          "waits_on": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Waits On",
+            "type": "array"
+          }
+        },
+        "required": [
+          "graph",
+          "waits_on"
+        ],
+        "title": "UndecidedPage",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Underwriting triage",
+    "version": "1"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/chat": {
+      "post": {
+        "operationId": "chat_api_chat_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Chat"
+      }
+    },
+    "/api/commands": {
+      "post": {
+        "operationId": "submit_command_api_commands_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "discriminator": {
+                  "mapping": {
+                    "apply_rule_change": "#/components/schemas/ApplyRuleChangeCommand",
+                    "approve": "#/components/schemas/ApproveCommand",
+                    "change_setting": "#/components/schemas/ChangeSettingCommand",
+                    "decline_lead": "#/components/schemas/DeclineLeadCommand",
+                    "deliver_reply": "#/components/schemas/DeliverReplyCommand",
+                    "edit_draft": "#/components/schemas/EditDraftCommand",
+                    "emergency_stop": "#/components/schemas/EmergencyStopCommand",
+                    "propose_command": "#/components/schemas/ProposeCommandCommand",
+                    "propose_rule_change": "#/components/schemas/ProposeRuleChangeCommand",
+                    "record_ruling": "#/components/schemas/RecordRulingCommand",
+                    "reject": "#/components/schemas/RejectCommand",
+                    "resolve_fact": "#/components/schemas/ResolveFactCommand",
+                    "start_run": "#/components/schemas/StartRunCommand"
+                  },
+                  "propertyName": "type"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/ApproveCommand"
+                  },
+                  {
+                    "$ref": "#/components/schemas/RejectCommand"
+                  },
+                  {
+                    "$ref": "#/components/schemas/EditDraftCommand"
+                  },
+                  {
+                    "$ref": "#/components/schemas/RecordRulingCommand"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ResolveFactCommand"
+                  },
+                  {
+                    "$ref": "#/components/schemas/DeclineLeadCommand"
+                  },
+                  {
+                    "$ref": "#/components/schemas/DeliverReplyCommand"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ChangeSettingCommand"
+                  },
+                  {
+                    "$ref": "#/components/schemas/EmergencyStopCommand"
+                  },
+                  {
+                    "$ref": "#/components/schemas/StartRunCommand"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ProposeRuleChangeCommand"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ApplyRuleChangeCommand"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ProposeCommandCommand"
+                  }
+                ],
+                "title": "Command"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Submit Command"
+      }
+    },
+    "/api/events/stream": {
+      "get": {
+        "operationId": "stream_events_api_events_stream_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "last-event-id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Last-Event-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Server-sent events; each carries an event id."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stream Events"
+      }
+    },
+    "/api/items": {
+      "get": {
+        "operationId": "list_items_api_items_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "discriminator": {
+                      "mapping": {
+                        "question": "#/components/schemas/QuestionItem",
+                        "review": "#/components/schemas/ReviewItem"
+                      },
+                      "propertyName": "type"
+                    },
+                    "oneOf": [
+                      {
+                        "$ref": "#/components/schemas/ReviewItem"
+                      },
+                      {
+                        "$ref": "#/components/schemas/QuestionItem"
+                      }
+                    ]
+                  },
+                  "title": "Response List Items Api Items Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Items"
+      }
+    },
+    "/api/leads": {
+      "get": {
+        "operationId": "list_leads_api_leads_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/QueueRow"
+                  },
+                  "title": "Response List Leads Api Leads Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Leads"
+      }
+    },
+    "/api/leads/{id}": {
+      "get": {
+        "operationId": "get_lead_api_leads__id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeadDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Lead"
+      }
+    },
+    "/api/leads/{id}/events": {
+      "get": {
+        "operationId": "get_lead_events_api_leads__id__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeadEvents"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Lead Events"
+      }
+    },
+    "/api/proposals": {
+      "get": {
+        "operationId": "list_proposals_api_proposals_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProposalView"
+                  },
+                  "title": "Response List Proposals Api Proposals Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Proposals"
+      }
+    },
+    "/api/replies": {
+      "post": {
+        "operationId": "deliver_reply_api_replies_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReplyResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Deliver Reply"
+      }
+    },
+    "/api/replies/fixtures": {
+      "post": {
+        "operationId": "deliver_fixture_replies_api_replies_fixtures_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureRepliesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Deliver Fixture Replies"
+      }
+    },
+    "/api/run": {
+      "get": {
+        "operationId": "get_run_api_run_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Run"
+      }
+    },
+    "/api/run/start": {
+      "post": {
+        "operationId": "start_run_api_run_start_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "wait",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Wait",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Run"
+      }
+    },
+    "/api/settings": {
+      "get": {
+        "operationId": "get_settings_api_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Settings"
+      }
+    },
+    "/api/skills": {
+      "get": {
+        "operationId": "list_skills_api_skills_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SkillView"
+                  },
+                  "title": "Response List Skills Api Skills Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Skills"
+      }
+    }
+  }
+}
