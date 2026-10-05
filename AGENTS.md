@@ -6,10 +6,11 @@ A take-home submission for Stand Insurance: a small skill-and-eval harness whose
 
 ## Authority
 
-- `docs/architecture.md` is the single authority. If code, the plan, or this file disagrees with it, stop and raise it with Brett. Do not resolve it silently.
-- `docs/critique.md` is the counterweight. Its findings are dispositioned in architecture section 16. Balance the two; neither is complete alone.
-- `docs/plan.md` gives the stages. Work one stage at a time. `docs/acceptance.json` lists the checks; set `passes` to true only after running the command and seeing the stated result.
-- `docs/progress.md` is the log. Read the latest entry before starting. Add an entry when a stage or task ends.
+- `docs/plan.md` gives the scope, the cut list and the milestones. Work one milestone at a time, in order. Where the architecture describes something the plan lists as cut, the plan wins.
+- `docs/architecture.md` describes the design of what is built.
+- Where the architecture is silent or disagrees with itself, take the simplest reading that keeps a lead moving safely, record it in one line in `docs/progress.md`, and carry on. Stop for Brett only when the choice changes what an underwriter or a producer sees, or spends money.
+- `docs/acceptance.json` holds at most three checks per milestone, each a command that proves a "done when" line. Set `passes` to true only after running the command and seeing the stated result.
+- `docs/progress.md` is the log. Read the latest entry before starting. Add an entry when a milestone ends.
 
 ## Hard boundaries
 
@@ -17,7 +18,8 @@ A take-home submission for Stand Insurance: a small skill-and-eval harness whose
 - `docs/brief/` and `docs/playbook/` are source material. Never edit them.
 - Nothing under `src/` imports or runs Stand's generator or reads the debug answer key. `tools/`, `evals/` and `tests/` may import Stand's code.
 - `evals/labels/` is written without reading the Python under `src/uwh/rules/`. If you are implementing rules, do not edit a label to make a test pass; raise the disagreement.
-- Once Brett has reviewed the interpretation table at stage 3, that table, the thresholds and the graders change only with his approval. Graph files are built in stage 6 against the reviewed table. Do not weaken a grader, a threshold or a test to get green.
+- Brett has reviewed the interpretation table. That table, the thresholds and the graders change only with his approval. Do not weaken a grader, a threshold or a test to get green.
+- Live model and Jev calls happen only where a milestone names them, never in an uncapped loop. DeepSeek and TypeSafe each hold $5.
 - Never commit `.env` or any key. Never write outside this repository, except temporary directories for tests and for the fresh-clone rehearsal.
 
 ## Working with Brett
@@ -27,7 +29,7 @@ A take-home submission for Stand Insurance: a small skill-and-eval harness whose
 - No flattery and no agreement for its own sake. Call out bad ideas, mistakes and unreasonable expectations, with the technical reason. If it is a gut feeling, say so.
 - When you do not know, say so at once. When there are several reasonable readings of a request, name them; do not pick one silently.
 - Do not fold when challenged unless given new evidence or a better argument.
-- Architectural decisions are discussed before implementation. Routine fixes are not.
+- A decision that changes what an underwriter or a producer sees, or spends money, is discussed before implementation. Other decisions are made, logged in one line in `docs/progress.md`, and built.
 
 ## Epistemic discipline
 
@@ -40,7 +42,7 @@ A take-home submission for Stand Insurance: a small skill-and-eval harness whose
 ## Execution principles
 
 1. **Think before coding.** State assumptions. If a simpler approach exists, say so.
-2. **Simplicity first.** YAGNI. The runtime gets only what two or more skills need. No flexibility nobody asked for.
+2. **Simplicity first.** YAGNI. Get the thinnest path working end to end, then widen it. Do not build a layer ahead of the lead that needs it.
 3. **Surgical changes.** Touch only what the task requires. Every changed line traces to the task.
 4. **Goal-driven execution.** Restate non-trivial work as objective, constraints, success criteria and verification. Plan as `step -> verification`.
 
@@ -61,13 +63,15 @@ Prerequisites on the build machine: Docker with Compose 2.20 or later, `uv`, `jq
 
 ## Test-driven development
 
-For every feature and every bug fix:
+Write a test first for behaviour with a consequence: a playbook outcome, a fact rule, a send-safety property, a reply reading, a command's effect, a grader. Table-driven tests are preferred. Do not write a test that only asserts a model, enum, table or config file rejects malformed input, that a document says what the code says, or that a constant has its value.
+
+For such behaviour, and for every bug fix:
 
 1. Write a failing test that states the behaviour.
 2. Run it and confirm it fails for the right reason.
 3. Write the smallest change that passes.
 4. Refactor with tests green.
-5. Run `make check`. Commit. One task, one commit.
+5. Run `make check`. Commit.
 
 Testing rules:
 
@@ -77,7 +81,6 @@ Testing rules:
 - Output is pristine. An expected error is captured and asserted.
 - A fixture must be able to separate the right answer from the wrong one. Check that a deliberately wrong implementation fails the test.
 - Tiers: fast (under 5 seconds, in `make check`), `@pytest.mark.slow`, `@pytest.mark.integration` (containers), eval (the eval runner).
-- Every `src/uwh/<pkg>/<name>.py` has a `tests/**/test_<name>.py`.
 - All test failures are yours, whoever caused them. Never delete or skip a failing test; raise it.
 
 ## Debugging
@@ -99,8 +102,8 @@ After three failed fixes for one problem, stop and write up what was tried. Do n
 - No backward-compatibility code without Brett's approval.
 - Match the surrounding style. Use the formatter; do not hand-edit whitespace.
 - Fix broken things you find. Record unrelated problems in the progress entry; do not fix them in passing.
-- Clean code is a grading dimension for this submission. No unused parameters, fields, settings or indirection, and no abstraction with a single user. When a design change makes code unnecessary, remove it in the same change.
-- At the end of each stage, the reviewer also reports anything that can be removed or simplified without changing behaviour. Fix those before handing back to Brett.
+- Clean code is a grading dimension for this submission. No dead code, no unused parameters, fields or settings, and no abstraction with a single user. When a design change makes code unnecessary, remove it in the same change. Code for a cut item is deleted, with its tests.
+- Change a data shape when the lead in front of you needs it, and delete what nothing reads.
 
 **Names** say what a thing does in the domain: `Blocker`, `AskPlan`, `send()`. No implementation details (`JSONParser`), no pattern names unless they add clarity, and no words like "new", "legacy", "wrapper", "unified", "improved", "enhanced".
 
@@ -113,9 +116,8 @@ After three failed fixes for one problem, stop and write up what was tried. Do n
 ## Version control
 
 - Check `git status` before starting. If the tree is dirty, stop and ask Brett.
-- Work on a branch per stage and tier pass: `stage-NN-short-name-tN` (for example `stage-04-runtime-t0`). Brett merges.
-- Branch from `main` when the previous stage is merged, otherwise from the previous stage's branch. Do not wait for a merge unless the stage has a human gate.
-- Stages run one at a time in this checkout by default. Where the plan marks work as safe in parallel and Brett asks for it, each track, and each builder working in parallel with another, runs in its own git worktree (under `.worktrees/`, or one the tool creates for an isolated subagent), branches from the same base, touches only the files the plan assigns it, and runs `make check` in its own worktree. Two agents never write to the same checkout at once.
+- One line of work on one branch, `submission`. Brett merges it to `main`.
+- Two agents never write to the checkout at once.
 - Commit often. Claude-authored commit subjects start with `CLAUDE-<model-name>: `; other agents use their own model name the same way. If the model name is unknown, ask before committing.
 - Never `git add -A` without a fresh `git status`. Never `git add -f` an ignored file. Never skip, evade or disable a hook.
 
@@ -130,7 +132,8 @@ After three failed fixes for one problem, stop and write up what was tried. Do n
 
 ## Review
 
-- Before a stage is called done, run the `verify` skill, then the `cross-review` skill.
+- The lead reads every diff. The `reviewer` subagent reads each milestone once, at its end, and also reports what can be removed.
+- `/cross-review` runs once, in milestone 6.
 - Reviewers read code and test output. They do not rerun the full suite.
 
 ## Friction
