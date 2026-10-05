@@ -272,7 +272,7 @@ def _start_run(
     run = current_run(db)
     if run is not None and run.status == "processing":
         raise _Refusal(f"run {run.run_id} is still processing")
-    return _Outcome(begin_run(db, context, env.leadgen, env.mailbox, seed), None)
+    return _Outcome(begin_run(db, context, env.leadgen, env.mailbox, seed, env.ledger_rules), None)
 
 
 def _resolve_fact(

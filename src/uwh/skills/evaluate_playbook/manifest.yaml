@@ -1,0 +1,7 @@
+name: evaluate_playbook
+version: "1"
+purpose: Walks the playbook pages that apply to a lead over its usable facts and builds the action plan with its rule traces and the pages not evaluated.
+trigger: after resolution
+command_classes: []
+fallback: none
+pass_threshold: 1.0

@@ -29,7 +29,6 @@ def build(
     *,
     skip: tuple[str, ...] = (),
     prompt: bool = False,
-    cases: tuple[str, ...] = ("one.yaml",),
 ) -> Path:
     folder = tmp_path / "demo"
     folder.mkdir()
@@ -38,25 +37,15 @@ def build(
         (folder / "manifest.yaml").write_text(text, encoding="utf-8")
     if "skill.py" not in skip:
         (folder / "skill.py").write_text("# skill\n", encoding="utf-8")
-    if "cases" not in skip:
-        (folder / "cases").mkdir()
-        for case in cases:
-            (folder / "cases" / case).write_text("input: 1\n", encoding="utf-8")
     if prompt:
         (folder / "prompt.md").write_text("prompt\n", encoding="utf-8")
     return folder
 
 
-@pytest.mark.parametrize("part", ["manifest.yaml", "skill.py", "cases"])
+@pytest.mark.parametrize("part", ["manifest.yaml", "skill.py"])
 def test_a_missing_part_is_named(tmp_path: Path, part: str) -> None:
     with pytest.raises(SkillFolderError, match=f"(?s)demo.*{part}"):
         check_skill_folder(build(tmp_path, skip=(part,)))
-
-
-@pytest.mark.parametrize("cases", [(), (".gitkeep",), (".hidden.yaml",), ("notes.md",)])
-def test_a_cases_folder_without_a_case_file_fails(tmp_path: Path, cases: tuple[str, ...]) -> None:
-    with pytest.raises(SkillFolderError, match="(?s)demo.*cases"):
-        check_skill_folder(build(tmp_path, cases=cases))
 
 
 @pytest.mark.parametrize("model_skill", [True, False])

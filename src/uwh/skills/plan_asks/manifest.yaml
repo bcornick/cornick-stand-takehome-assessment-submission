@@ -1,0 +1,7 @@
+name: plan_asks
+version: "1"
+purpose: Lists the typed asks a lead's missing producer fields and open conflicts call for, each with its stored wording, and the class of the request that carries them.
+trigger: after evaluation
+command_classes: []
+fallback: none
+pass_threshold: 1.0

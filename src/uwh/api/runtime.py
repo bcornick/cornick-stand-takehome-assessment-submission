@@ -1,5 +1,5 @@
 # ABOUTME: What the app holds while it runs: the settings, the command environment read once at startup (mode, ruleset hash, steps, clients), a database connection per request and the single worker that runs a run's first pass.
-# ABOUTME: The workflow steps and the ledger rules are module constants; the steps run in order on every lead and the ledger rules govern its facts.
+# ABOUTME: The registry is read at startup; the workflow steps run in order on every lead and the ledger rules govern its facts.
 import logging
 import sqlite3
 from collections.abc import Iterator, Mapping
@@ -16,6 +16,10 @@ from pydantic import JsonValue
 
 import uwh.rules
 import uwh.skills
+from uwh.providers.stand_in import StandInProviders
+from uwh.rules.derivations import ledger_derivations
+from uwh.rules.registry import Registry, load_registry
+from uwh.rules.validators import conflict_validators
 from uwh.runtime.bootstrap import TIMEOUT_SECONDS
 from uwh.runtime.commands import CommandResult, submit_command
 from uwh.runtime.facts import LedgerRules
@@ -24,16 +28,25 @@ from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
 from uwh.runtime.runs import RunEnvironment, current_run, pass_context, run_first_pass
 from uwh.runtime.store import open_store
-from uwh.runtime.workflow import Step
 from uwh.settings import Settings
+from uwh.skills.steps import build_steps
 
 logger = logging.getLogger(__name__)
 
-# The steps of a lead's pass in order, and the rules of the fact ledger.
-WORKFLOW_STEPS: tuple[Step, ...] = ()
-LEDGER_RULES = LedgerRules()
 # The image's rules data: the ruleset every run uses (A.4).
 IMAGE_RULES_DATA = Path(uwh.rules.__file__).parent / "data"
+
+
+def ledger_rules(registry: Registry) -> LedgerRules:
+    """The rules of the fact ledger: a reply never sets a system-owned field, the conflict validators
+    run on the facts, and the roof and siding classes are derived."""
+    return LedgerRules(
+        system_owned_keys=frozenset(
+            name for name, field in registry.items() if not field.producer_editable
+        ),
+        validators=conflict_validators(),
+        derivations=ledger_derivations(),
+    )
 
 
 @dataclass(frozen=True)
@@ -72,6 +85,7 @@ class Runtime:
             run.run_id,
             pass_context(run, env),
             env.steps,
+            env.mailbox,
         )
         future.add_done_callback(lambda done: _log_failure(run.run_id, done))
         return future
@@ -96,11 +110,13 @@ def open_runtime(
         if mailbox is None:
             http = httpx2.Client(base_url=settings.mailbox_url, timeout=TIMEOUT_SECONDS)
             mailbox = MailboxClient(stack.enter_context(http))
+        registry = load_registry(settings.registry_path)
+        rules = ledger_rules(registry)
         env = RunEnvironment(
             settings.run_mode,
             ruleset_hash(IMAGE_RULES_DATA),
-            LEDGER_RULES,
-            WORKFLOW_STEPS,
+            rules,
+            build_steps(registry, StandInProviders.for_seed(settings.seed), rules),
             Path(uwh.skills.__file__).parent,
             lambda: datetime.now(UTC),
             mailbox,

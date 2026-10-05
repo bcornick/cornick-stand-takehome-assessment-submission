@@ -53,11 +53,12 @@ class Intent:
     payload_hash: str
     state: IntentState
     mailbox_id: int | None
+    lead_revision: int  # the lead's revision when the draft was built
 
 
 _INTENT_COLUMNS = (
     "id, run_id, lead_id, round, kind, recipient, subject, body, ask_ids_json, payload_hash,"
-    " state, mailbox_id"
+    " state, mailbox_id, lead_revision"
 )
 
 
@@ -119,6 +120,24 @@ def _draft_item(db: sqlite3.Connection, intent: Intent) -> Blocker | None:
     return None
 
 
+def _delivery_unknown_open(db: sqlite3.Connection, lead_id: str) -> bool:
+    return any(blocker.kind == "delivery_unknown" for blocker in open_blockers(db, lead_id))
+
+
+def replace_stale_drafts(db: sqlite3.Connection, context: EventContext, lead_id: str) -> None:
+    """Close every draft of the lead that was built at an older revision, as not sent, with the item
+    that held it. Re-evaluation builds the draft that replaces it. The caller commits."""
+    revision, _ = lead_revision_and_plan_hash(db, lead_id)
+    for (intent_id,) in db.execute(
+        "SELECT id FROM intents WHERE lead_id = ? AND state = 'draft' AND lead_revision != ?",
+        (lead_id, revision),
+    ).fetchall():
+        item = _draft_item(db, intent_in_state(db, intent_id, "draft"))
+        if item is not None:
+            close_blocker(db, context, item.id)
+        db.execute("UPDATE intents SET state = 'closed_unsent' WHERE id = ?", (intent_id,))
+
+
 def _open_draft_item(
     db: sqlite3.Connection, context: EventContext, intent: Intent, text: str | None = None
 ) -> None:
@@ -144,7 +163,7 @@ def _insert_draft(
     """Insert the intent, which is in state `draft`, with its `intent_created` event, and open the
     item that holds it when it waits for approval. Returns the intent id."""
     db.execute(
-        f"INSERT INTO intents ({_INTENT_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        f"INSERT INTO intents ({_INTENT_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             intent.id,
             intent.run_id,
@@ -158,6 +177,7 @@ def _insert_draft(
             intent.payload_hash,
             intent.state,
             intent.mailbox_id,
+            intent.lead_revision,
         ),
     )
     append_event(
@@ -195,7 +215,8 @@ def create_draft(
     """Insert an intent in state `draft`, write `intent_created` and return the intent id.
 
     `manifest` is the issuing skill's; it must declare the send class of the kind (8). A draft whose
-    class does not run at `auto` waits as an `underwriter_review` item that names it. Sends nothing;
+    class does not run at `auto` waits as an `underwriter_review` item that names it. The draft records
+    the lead's revision now, and is never sent once the lead has moved on. Sends nothing;
     the caller commits. Raises ValueError, writing nothing, for a class the manifest does not declare.
     """
     refusal = manifest_refusal(manifest, _class_of(kind))
@@ -214,6 +235,7 @@ def create_draft(
         payload_hash(recipient, subject, body),
         "draft",
         None,
+        lead_revision_and_plan_hash(db, lead_id)[0],
     )
     return _insert_draft(
         db, context, intent, waits_for_approval=autonomy_level(_class_of(kind)) != "auto"
@@ -310,8 +332,9 @@ def _begin_dispatch(
     db: sqlite3.Connection, make_context: MakeContext, intent_id: str
 ) -> Intent | None:
     """Commit the state `dispatching` in its own transaction and return the intent, or return None when
-    the draft is not sent now: it is not a draft, it waits for an approval, it returns to review, or
-    another intent of its lead is in flight.
+    the draft is not sent now: it is not a draft, it was built at an older lead revision, an earlier
+    delivery of the lead is unresolved, it waits for an approval, it returns to review, or another
+    intent of its lead is in flight.
 
     The rechecks and the move to `dispatching` share one transaction that holds the write lock, so
     two senders cannot both pass them: a lead has at most one intent `dispatching` (7.5, one sender
@@ -323,6 +346,9 @@ def _begin_dispatch(
         if intent is None or intent.state != "draft":
             return None
         _require_current_run(db, context, intent)
+        revision, _ = lead_revision_and_plan_hash(db, intent.lead_id)
+        if intent.lead_revision != revision or _delivery_unknown_open(db, intent.lead_id):
+            return None
         item = _draft_item(db, intent)
         if autonomy_level(_class_of(intent.kind)) == "review" or item is not None:
             approved = _approved_binding(db, intent_id)
@@ -559,6 +585,11 @@ def close_unsent(db: sqlite3.Connection, context: EventContext, intent_id: str) 
     db.execute("UPDATE intents SET state = 'closed_unsent' WHERE id = ?", (intent_id,))
     _close_delivery_unknown(db, context, intent)
     fresh = replace(
-        intent, id=uuid.uuid4().hex, run_id=context.run_id, state="draft", mailbox_id=None
+        intent,
+        id=uuid.uuid4().hex,
+        run_id=context.run_id,
+        state="draft",
+        mailbox_id=None,
+        lead_revision=lead_revision_and_plan_hash(db, intent.lead_id)[0],
     )
     return _insert_draft(db, replace(context, actor="workflow"), fresh, waits_for_approval=True)

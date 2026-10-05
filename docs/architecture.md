@@ -794,7 +794,8 @@ blockers(id INTEGER PRIMARY KEY, lead_id TEXT, kind TEXT, owner TEXT, detail_jso
          opened_event_id INTEGER, closed_event_id INTEGER)
 intents(id TEXT PRIMARY KEY, run_id TEXT, lead_id TEXT, round INTEGER, kind TEXT,
         recipient TEXT, subject TEXT, body TEXT, ask_ids_json TEXT, payload_hash TEXT,
-        state TEXT, mailbox_id INTEGER)
+        state TEXT, mailbox_id INTEGER, lead_revision INTEGER)
+        -- lead_revision: the lead's revision when the draft was built; a draft at an older revision is never sent
         -- state: draft | dispatching | sent | unknown | closed_unsent
         -- kind: routine_request | sensitive_request | quote_packet | decline_notice
 approvals(id INTEGER PRIMARY KEY, lead_id TEXT, item_kind TEXT, intent_id TEXT,
@@ -895,7 +896,7 @@ nodes:
 ```
 
 - `applies_when` may be `{any: [...]}`: true when any member is true, otherwise unknown when any member is unknown, otherwise false.
-- Conditions use `equals`, `in`, `lt`, `lte`, `gt`, `gte`. A bound may be a literal or `{param: I35.tolerance}`, which reads a parameter from the named interpretation row.
+- Conditions use `equals`, `in`, `lt`, `lte`, `gt`, `gte`. A bound may be a literal or `{one_minus: I35.tolerance}` or `{one_plus: I35.tolerance}`, which are one minus and one plus a parameter of the named interpretation row.
 - `all_of` and `ladder` nodes list `children` in place of `cases`.
 - A `test` may carry `interpretation: I18`.
 - `producer_question` nodes carry `question: <catalogue id>` and `cases` on the answer.

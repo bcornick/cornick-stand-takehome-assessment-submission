@@ -12,10 +12,10 @@ from uwh.runtime.bootstrap import LEAD_COUNT
 from uwh.runtime.clock import sim_now
 from uwh.runtime.event_types import Actor, EventType, RunStarted, RunStatus
 from uwh.runtime.events import EventContext, MakeContext, append_event, format_timestamp
-from uwh.runtime.facts import LedgerRules
+from uwh.runtime.facts import LedgerRules, observe_submitted
 from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
-from uwh.runtime.send import reconcile_dispatching
+from uwh.runtime.send import dispatch_ready, reconcile_dispatching
 from uwh.runtime.store import create_tables, open_store, table_ddl
 from uwh.runtime.workflow import Step, create_lead, interrupted_leads, run_leads
 from uwh.settings import RunMode
@@ -101,13 +101,14 @@ def begin_run(
     leadgen: LeadgenClient,
     mailbox: MailboxClient,
     seed: int,
+    rules: LedgerRules,
 ) -> int:
     """Start a run and return the id of its `run_started` event. The caller commits.
 
     Recreates every table, writes the `runs` row as `processing` with the real time
     of `context` as its start, writes `run_started`, posts the queue for `seed`, ingests its leads as
-    `received`, each with `lead_received`, and resets the mailbox last, after everything that can
-    fail has succeeded. `context` names who started the run; the leads are received by the workflow.
+    `received`, each with `lead_received` and its submitted fields as observations, and resets the
+    mailbox last, after everything that can fail has succeeded. `context` names who started the run; the leads are received by the workflow.
     A failure raises and the caller's rollback restores every table; it restores neither the mailbox
     nor the leadgen queue.
     """
@@ -131,6 +132,8 @@ def begin_run(
     received = replace(started, actor="workflow")
     for lead in leadgen.list_leads():
         create_lead(db, received, lead["lead_id"], lead["source"], lead["received_at"])
+        fields = leadgen.get_lead(lead["lead_id"])["fields"]
+        observe_submitted(db, received, lead["lead_id"], fields, rules)
     mailbox.reset()
     return event_id
 
@@ -147,14 +150,33 @@ def _settling(db_path: str, run_id: str) -> Iterator[None]:
             db.commit()
 
 
+def run_passes(
+    db_path: str,
+    make_context: MakeContext,
+    lead_ids: Sequence[str],
+    steps: Sequence[Step],
+    mailbox: MailboxClient,
+) -> None:
+    """Run each lead through the steps, then send the drafts its pass built that can go (7.5)."""
+    run_leads(
+        db_path,
+        make_context,
+        lead_ids,
+        steps,
+        lambda db, lead_id: dispatch_ready(db, mailbox, make_context, lead_id),
+    )
+
+
 def run_first_pass(
     db_path: str,
     run_id: str,
     make_context: MakeContext,
     steps: Sequence[Step],
+    mailbox: MailboxClient,
 ) -> None:
-    """Run every lead of the run through the steps, then mark the run `settled`: no lead has a
-    runnable step once each has had its pass. Raises what `run_leads` raises, after settling."""
+    """Run every lead of the run through the steps and send what each pass built, then mark the run
+    `settled`: no lead has a runnable step once each has had its pass. Raises what `run_leads` raises,
+    after settling."""
     with _settling(db_path, run_id):
         with closing(open_store(db_path)) as db:
             lead_ids = [
@@ -163,7 +185,7 @@ def run_first_pass(
                     "SELECT lead_id FROM leads WHERE run_id = ? ORDER BY rowid", (run_id,)
                 )
             ]
-        run_leads(db_path, make_context, lead_ids, steps)
+        run_passes(db_path, make_context, lead_ids, steps, mailbox)
 
 
 def resume_after_restart(db_path: str, env: RunEnvironment) -> None:
@@ -179,4 +201,4 @@ def resume_after_restart(db_path: str, env: RunEnvironment) -> None:
         reconcile_dispatching(db, env.mailbox, make_context)
         lead_ids = interrupted_leads(db)
     with _settling(db_path, run.run_id):
-        run_leads(db_path, make_context, lead_ids, env.steps)
+        run_passes(db_path, make_context, lead_ids, env.steps, env.mailbox)

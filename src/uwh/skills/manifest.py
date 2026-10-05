@@ -1,5 +1,5 @@
-# ABOUTME: The skill manifest model of section 8, the loader that reads one manifest, and the check that a skill folder holds every part it needs.
-# ABOUTME: A manifest is manifest.yaml; the folder needs skill.py, a cases/ folder with a case file, and prompt.md for a model skill only.
+# ABOUTME: The skill manifest model of section 8, the loader that reads one manifest, and the check that a skill folder holds every part it needs to run.
+# ABOUTME: A manifest is manifest.yaml; the folder needs skill.py, and prompt.md for a model skill only. The eval cases are checked where the evals run.
 from pathlib import Path
 from typing import Self
 
@@ -73,20 +73,10 @@ def load_manifest(folder: Path) -> SkillManifest:
 
 
 def check_skill_folder(folder: Path) -> SkillManifest:
-    """Load the manifest of the skill folder and check the folder holds each part it needs.
-
-    A case file is a `*.yaml` file directly in `cases/` whose name does not start with a dot.
-    """
+    """Load the manifest of the skill folder and check the folder holds each part it needs to run."""
     manifest = load_manifest(folder)
     if not (folder / "skill.py").is_file():
         raise _folder_error(folder, "skill.py is missing")
-    cases = folder / "cases"
-    if not cases.is_dir():
-        raise _folder_error(folder, "cases is missing")
-    if not any(
-        p.is_file() and p.suffix == ".yaml" and not p.name.startswith(".") for p in cases.iterdir()
-    ):
-        raise _folder_error(folder, "cases holds no case file (*.yaml)")
     has_prompt = (folder / "prompt.md").is_file()
     if manifest.model_skill and not has_prompt:
         raise _folder_error(folder, "prompt.md is missing for a model skill")

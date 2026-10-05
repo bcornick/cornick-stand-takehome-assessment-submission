@@ -1,4 +1,4 @@
-# ABOUTME: The tables built on the underwriting names: terminal statuses, status transitions, blocker priority, command classes, persisting review causes, the reviews that close a round, the status a sent message gives, the rules for a servable blocker, the confirmation-only class and the reference morning.
+# ABOUTME: The tables built on the underwriting names: terminal statuses, status transitions, blocker priority, command classes, persisting review causes, the reviews that close a round, the status a sent message gives, the rules for a servable blocker, the confirmation-only class, the order of the workflow's steps and the reference morning.
 # ABOUTME: Each table is typed with a Literal value set, those of uwh.runtime.event_types, so a name outside a set fails type checking.
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -131,6 +131,15 @@ STATUS_AFTER_SEND: dict[str, Status] = {"quote_packet": "quote_sent", "decline_n
 # The class a request made only of confirmations takes. Setting it to "sensitive_request" makes an
 # underwriter see confirmations first.
 CONFIRMATION_ONLY_CLASS: RequestKind = "routine_request"
+
+# The workflow's steps in the order a lead's pass runs them (7). Each name is a skill, except
+# `ask_producer`, which plans the asks, renders them and drafts the request: the three share the asks.
+WORKFLOW_STEP_ORDER: tuple[str, ...] = (
+    "triage_fields",
+    "resolve_data",
+    "evaluate_playbook",
+    "ask_producer",
+)
 
 # The generator's reference morning, the start of simulated time.
 REFERENCE_MORNING = datetime(2026, 6, 29, 8, 0, tzinfo=UTC)

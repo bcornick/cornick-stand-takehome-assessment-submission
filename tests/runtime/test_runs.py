@@ -21,10 +21,12 @@ from tests.runtime.helpers import (
     command_environment,
     events_of,
     insert_run,
+    send_nothing,
 )
 from uwh.runtime.commands import CommandResult, submit_command
 from uwh.runtime.event_types import BlockerDetail, EventType, RunStarted
 from uwh.runtime.events import EventContext, StaleRun, format_timestamp, read_events
+from uwh.runtime.facts import submitted_values
 from uwh.runtime.faults import FaultPlan
 from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
@@ -75,7 +77,9 @@ def context_of_current_run(
 
 
 def first_pass(db: sqlite3.Connection, store_path: str, env: RunEnvironment) -> None:
-    run_first_pass(store_path, current_id(db), context_of_current_run(db, env), env.steps)
+    run_first_pass(
+        store_path, current_id(db), context_of_current_run(db, env), env.steps, env.mailbox
+    )
 
 
 def lead_ids(db: sqlite3.Connection) -> list[str]:
@@ -164,12 +168,15 @@ def test_a_start_writes_the_processing_run_its_event_and_the_ten_leads_of_the_se
     assert db.execute(
         "SELECT lead_id, run_id, source, received_at, status, revision FROM leads ORDER BY rowid"
     ).fetchall() == [
-        (q["lead_id"], run_id, q["source"], q["received_at"], "received", 0) for q in queue
+        (q["lead_id"], run_id, q["source"], q["received_at"], "received", 1) for q in queue
     ]
     received = events_of(db, EventType.lead_received)
     assert [e.lead_id for e in received] == [q["lead_id"] for q in queue]
     assert {e.actor for e in received} == {"workflow"}
-    assert db.execute("SELECT count(*) FROM events").fetchone() == (11,)
+    for q in queue:  # a null field is missing, so it is not a fact
+        fields = leadgen.get_lead(q["lead_id"])["fields"]
+        expected = {name: value for name, value in fields.items() if value is not None}
+        assert submitted_values(db, q["lead_id"]) == expected
 
 
 def test_a_start_resets_the_mailbox(db: sqlite3.Connection, env: RunEnvironment) -> None:
@@ -318,11 +325,11 @@ def test_stale_run_writes_nothing(
         db.execute("UPDATE leads SET revision = revision + 1 WHERE lead_id = ?", (lead_id,))
 
     with pytest.raises(BaseExceptionGroup) as raised:
-        run_leads(store_path, stale, lead_ids(db), (Step("change", change_the_lead),))
+        run_leads(store_path, stale, lead_ids(db), (Step("change", change_the_lead),), send_nothing)
     assert all(isinstance(error, StaleRun) for error in raised.value.exceptions)
-    run_first_pass(store_path, first_run, stale, env.steps)
+    run_first_pass(store_path, first_run, stale, env.steps, env.mailbox)
 
-    assert db.execute("SELECT DISTINCT revision FROM leads").fetchall() == [(0,)]
+    assert db.execute("SELECT DISTINCT revision FROM leads").fetchall() == [(1,)]
     assert len(read_events(db)) == events_before
     assert run_status(db) == "processing"
 

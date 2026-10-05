@@ -8,6 +8,7 @@ import httpx2
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.api.helpers import REGISTRY
 from uwh.api import runtime
 from uwh.api.app import create_app
 from uwh.runtime.leadgen_client import LeadgenClient
@@ -29,7 +30,14 @@ def rules_data(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 @pytest.fixture
 def settings(tmp_path: Path) -> Settings:
-    return Settings.load({"UWH_DB": str(tmp_path / "app.db"), "RUN_MODE": "replay", "SEED": "7"})
+    return Settings.load(
+        {
+            "UWH_DB": str(tmp_path / "app.db"),
+            "RUN_MODE": "replay",
+            "SEED": "7",
+            "UWH_REGISTRY": str(REGISTRY),
+        }
+    )
 
 
 @pytest.fixture
@@ -51,7 +59,7 @@ def open_client(
 
     @contextmanager
     def open_(steps: Sequence[Step] = ()) -> Iterator[TestClient]:
-        monkeypatch.setattr(runtime, "WORKFLOW_STEPS", tuple(steps))
+        monkeypatch.setattr(runtime, "build_steps", lambda registry, providers, rules: tuple(steps))
         with TestClient(create_app(settings, leadgen=leadgen, mailbox=mailbox)) as client:
             yield client
 

@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from tests.runtime.helpers import LEAD_ID as LEAD
-from tests.runtime.helpers import MakeContext, events_of, insert_run
+from tests.runtime.helpers import MakeContext, events_of, insert_run, send_nothing
 from uwh.runtime.event_types import BlockerDetail, EventType, Status
 from uwh.runtime.events import EventContext, StaleRun, read_events
 from uwh.runtime.facts import LedgerRules, ReplyValue, effective_facts, observe, resolve_fact
@@ -219,7 +219,7 @@ def test_a_failing_lead_does_not_touch_the_other_leads(
         if lead_id == LEAD:
             raise RuntimeError("only this lead")
 
-    run_leads(path, make_context, [LEAD, "L-2"], [Step("triage", fail_for_first)])
+    run_leads(path, make_context, [LEAD, "L-2"], [Step("triage", fail_for_first)], send_nothing)
 
     assert [b.kind for b in open_blockers(db, LEAD)] == ["data"]
     assert open_blockers(db, "L-2") == []
@@ -423,7 +423,7 @@ def test_never_more_than_four_leads_are_in_flight_and_ten_leads_all_complete(
 
         return Step(name, run)
 
-    run_leads(path, make_context, ids, [pass_step(name) for name in step_names])
+    run_leads(path, make_context, ids, [pass_step(name) for name in step_names], send_nothing)
 
     assert len(peaks) == len(ids)
     assert max(peaks) <= 4

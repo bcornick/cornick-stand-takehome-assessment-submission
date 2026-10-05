@@ -42,6 +42,7 @@ from uwh.runtime.send import (
     read_intent,
     reconcile,
     reconcile_dispatching,
+    replace_stale_drafts,
 )
 from uwh.runtime.store import open_store
 from uwh.runtime.waits import Blocker, open_blockers
@@ -199,6 +200,7 @@ def test_a_draft_holds_the_a1_fields_and_writes_intent_created(
         "payload_hash": payload_hash(RECIPIENT, "Subject", "Body"),
         "state": "draft",
         "mailbox_id": None,
+        "lead_revision": REVISION,
     }
     (created,) = events_of(store, EventType.intent_created)
     assert created.lead_id == LEAD
@@ -661,7 +663,7 @@ def test_a_reconciliation_that_finds_no_message_of_the_intent_opens_delivery_unk
     assert len(events_of(store, EventType.delivery_unknown)) == 1
 
 
-def test_a_mailbox_that_cannot_be_reached_leaves_the_intent_unknown_with_a_blocker_and_no_message(
+def test_a_mailbox_that_cannot_be_reached_leaves_the_intent_unknown_and_the_lead_sends_nothing(
     store: sqlite3.Connection,
     mailbox: MailboxClient,
     unreachable_mailbox: MailboxClient,
@@ -677,7 +679,29 @@ def test_a_mailbox_that_cannot_be_reached_leaves_the_intent_unknown_with_a_block
     assert messages(mailbox) == []
     second = draft(store, make_context)
     dispatch(store, mailbox, make_context, second)
-    assert message_intents(mailbox) == [second]
+    assert state_of(store, second) == "draft"
+    assert messages(mailbox) == []
+
+
+def test_a_draft_built_at_an_older_revision_is_not_sent_and_is_replaced(
+    store: sqlite3.Connection, mailbox: MailboxClient, make_context: MakeContext
+) -> None:
+    stale = draft(store, make_context)
+    store.execute("UPDATE leads SET revision = revision + 1 WHERE lead_id = ?", (LEAD,))
+    store.commit()
+
+    dispatch_ready(store, mailbox, make_context, LEAD)
+
+    assert messages(mailbox) == []
+    assert state_of(store, stale) == "draft"
+
+    replace_stale_drafts(store, make_context(), LEAD)
+    current = draft(store, make_context)
+    dispatch_ready(store, mailbox, make_context, LEAD)
+
+    assert state_of(store, stale) == "closed_unsent"
+    assert message_intents(mailbox) == [current]
+    assert read_intent(store, current) is not None
 
 
 # ---- resolving delivery_unknown -----------------------------------------------------------------

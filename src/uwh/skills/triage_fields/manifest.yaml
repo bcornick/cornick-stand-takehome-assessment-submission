@@ -1,0 +1,7 @@
+name: triage_fields
+version: "1"
+purpose: Joins a lead's usable facts with the field registry and decides, for each field, whether it is present, asked, deferred, fetched, derived, blocked or not required.
+trigger: a lead is received or its facts change
+command_classes: []
+fallback: none
+pass_threshold: 1.0

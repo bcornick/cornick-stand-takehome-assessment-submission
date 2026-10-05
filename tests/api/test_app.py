@@ -7,6 +7,8 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+from tests.api.helpers import REGISTRY
+
 from uwh.api.app import create_app
 from uwh.api.runtime import open_runtime
 from uwh.runtime.commands import submit_command
@@ -45,7 +47,13 @@ def static_client(tmp_path: Path) -> TestClient:
     (static / "assets").mkdir(parents=True)
     (static / "index.html").write_text('<div id="root"></div>', encoding="utf-8")
     (static / "assets/app.js").write_text("console.log(1)", encoding="utf-8")
-    settings = Settings.load({"UWH_DB": str(tmp_path / "app.db"), "UWH_STATIC_DIR": str(static)})
+    settings = Settings.load(
+        {
+            "UWH_DB": str(tmp_path / "app.db"),
+            "UWH_STATIC_DIR": str(static),
+            "UWH_REGISTRY": str(REGISTRY),
+        }
+    )
     return TestClient(create_app(settings))
 
 

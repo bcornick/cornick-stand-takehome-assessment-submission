@@ -351,6 +351,31 @@ def observe(
     ledger.finish()
 
 
+def observe_submitted(
+    db: sqlite3.Connection,
+    context: EventContext,
+    lead_id: str,
+    fields: Mapping[str, JsonValue],
+    rules: LedgerRules,
+) -> None:
+    """Record the lead's submitted fields as accepted observations, each the effective fact of its key.
+    A null field is missing (9.2) and records nothing. The caller commits."""
+    ledger = _Pass(db, context, lead_id, rules)
+    for key, value in fields.items():
+        if value is not None:
+            ledger.select(ledger.record(key, value, "submitted", {}, "accepted"))
+    ledger.finish()
+
+
+def submitted_values(db: sqlite3.Connection, lead_id: str) -> dict[str, JsonValue]:
+    """The values the lead was submitted with, by key."""
+    rows = db.execute(
+        "SELECT key, value_json FROM observations WHERE lead_id = ? AND source = 'submitted'",
+        (lead_id,),
+    )
+    return {key: json.loads(value) for key, value in rows}
+
+
 LateReplyCause = Literal["late_reply", "reply_after_terminal_status"]
 
 # The reviews a late reply raises (rule 9): acknowledging one rejects that reply's pending values.

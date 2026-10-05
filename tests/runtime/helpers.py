@@ -75,6 +75,10 @@ def ticking_context() -> MakeContext:
     return next_context
 
 
+def send_nothing(db: sqlite3.Connection, lead_id: str) -> None:
+    """The `after_pass` of a test of the lead pool, which builds no drafts."""
+
+
 def command_environment(
     tmp_path: Path,
     mailbox: MailboxClient,
@@ -119,8 +123,8 @@ def insert_dispatching(
     """An intent as a stopped process leaves it: `dispatching`, the post made or not."""
     db.execute(
         "INSERT INTO intents (id, run_id, lead_id, round, kind, recipient, subject, body,"
-        " ask_ids_json, payload_hash, state) VALUES (?, 'run-1', ?, ?, 'routine_request', ?, 'S',"
-        " 'B', '[]', ?, 'dispatching')",
-        (intent_id, lead_id, round_, RECIPIENT, payload_hash(RECIPIENT, "S", "B")),
+        " ask_ids_json, payload_hash, state, lead_revision) VALUES (?, 'run-1', ?, ?,"
+        " 'routine_request', ?, 'S', 'B', '[]', ?, 'dispatching', ?)",
+        (intent_id, lead_id, round_, RECIPIENT, payload_hash(RECIPIENT, "S", "B"), REVISION),
     )
     db.commit()

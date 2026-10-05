@@ -295,10 +295,17 @@ def interrupted_leads(db: sqlite3.Connection) -> list[str]:
     ]
 
 
-def _run_lead(db_path: str, make_context: MakeContext, lead_id: str, steps: Sequence[Step]) -> None:
+def _run_lead(
+    db_path: str,
+    make_context: MakeContext,
+    lead_id: str,
+    steps: Sequence[Step],
+    after_pass: Callable[[sqlite3.Connection, str], None],
+) -> None:
     db = open_store(db_path)
     try:
         run_steps(db, make_context, lead_id, steps)
+        after_pass(db, lead_id)
     finally:
         db.close()
 
@@ -308,18 +315,20 @@ def run_leads(
     make_context: MakeContext,
     lead_ids: Sequence[str],
     steps: Sequence[Step],
+    after_pass: Callable[[sqlite3.Connection, str], None],
 ) -> None:
     """Run every lead's steps, at most `MAX_LEADS_IN_FLIGHT` leads at once, and return when all are done.
 
     Each lead runs on its own thread with its own connection, so its steps never interleave with
-    themselves. A failing step is handled inside `run_steps` and does not raise here. What can still
+    themselves. `after_pass` then runs on that connection, outside any transaction: the send of the
+    drafts the pass built, which the workflow cannot import without a cycle. A failing step is handled inside `run_steps` and does not raise here. What can still
     raise out of a lead's thread is opening the store, `make_context`, and a failure while opening
     the blocker (a database error, or the blocker refused). Every such failure is raised together, as
     an exception group whose members carry a note naming their lead, once every lead has finished.
     """
     with ThreadPoolExecutor(max_workers=MAX_LEADS_IN_FLIGHT) as pool:
         futures = {
-            lead_id: pool.submit(_run_lead, db_path, make_context, lead_id, steps)
+            lead_id: pool.submit(_run_lead, db_path, make_context, lead_id, steps, after_pass)
             for lead_id in lead_ids
         }
     failures: list[BaseException] = []

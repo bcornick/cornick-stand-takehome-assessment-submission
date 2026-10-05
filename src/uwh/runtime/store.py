@@ -57,7 +57,7 @@ def table_ddl() -> dict[str, str]:
         "intents": f"""CREATE TABLE IF NOT EXISTS intents (
             id TEXT PRIMARY KEY, run_id TEXT, lead_id TEXT, round INTEGER, kind TEXT,
             recipient TEXT, subject TEXT, body TEXT, ask_ids_json TEXT, payload_hash TEXT,
-            state TEXT, mailbox_id INTEGER,
+            state TEXT, mailbox_id INTEGER, lead_revision INTEGER,
             {_in_set("state", get_args(IntentState))},
             {_in_set("kind", get_args(MessageKind))})""",
         "approvals": f"""CREATE TABLE IF NOT EXISTS approvals (
