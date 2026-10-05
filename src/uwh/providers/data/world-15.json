@@ -1,0 +1,1223 @@
+{
+  "count": 10,
+  "difficulty": "mixed",
+  "leads": {
+    "LEAD-00000015-000": {
+      "archetype_set": {},
+      "fields": {
+        "above_ground_pool_ladder": null,
+        "acreage": 0.29,
+        "alternative_water_source": null,
+        "broker_tier": null,
+        "city": "Flagstaff",
+        "construction_type": "Frame",
+        "county": "Coconino",
+        "coverage_a": 975000,
+        "coverage_e": "300000",
+        "coverage_f": "1000",
+        "deck_height_ft": null,
+        "dist_to_nearest_fire_hydrant": 250,
+        "distance_to_fire_department": null,
+        "dwelling_type": null,
+        "dwelling_use_type": "Primary",
+        "effective_date": "2026-08-07",
+        "electrical_panel_brand": "GE",
+        "electrical_panel_size_amps": 200,
+        "fire_alarm": null,
+        "fire_department_type": "Career",
+        "fire_dept_response_time": null,
+        "first_name": "Tomas",
+        "foundation_type": "Slab",
+        "has_animals": null,
+        "has_knob_and_tube_wiring": false,
+        "has_primary_policy_with_stand": null,
+        "heating_source": "Central Gas",
+        "insured_dob": "1969-04-21",
+        "interior_sprinklers": null,
+        "is_7a_compliant": true,
+        "is_gated_community": false,
+        "is_rental": "No",
+        "kyc_score": null,
+        "last_name": "Salazar",
+        "listed_for_sale": false,
+        "min_distance_to_neighbor_ft": 88,
+        "months_unoccupied": 0,
+        "num_stories": 2,
+        "number_of_residents": 2,
+        "occupation": "Software Engineer",
+        "opening_protection": null,
+        "owner_email": "owner@example.com",
+        "owner_phone_number": null,
+        "p_f": null,
+        "physical_barriers": null,
+        "plumbing_age_years": 5,
+        "pool_has_diving_board_or_slide": false,
+        "pool_security": "None",
+        "pool_type": "None",
+        "post_pier_supports_living_area": null,
+        "property_purchase_date": "2018-08-15",
+        "protection_class": null,
+        "replacement_cost": null,
+        "residence_held_in_trust": false,
+        "road_access": null,
+        "roof_classification": null,
+        "roof_material": null,
+        "roof_replacement_year": null,
+        "roof_shape": "Hip",
+        "siding_classification": null,
+        "siding_material": null,
+        "slope_angle_deg": null,
+        "square_feet": 2300,
+        "state": "AZ",
+        "street_address": "7740 Pinecrest Way",
+        "structure_type": "Single Family",
+        "trust_name": null,
+        "vegetation_clearance": "Adequate",
+        "water_heater_age_years": null,
+        "water_heater_location": null,
+        "water_heater_type": "Tankless",
+        "year_built": null,
+        "zip": null
+      },
+      "fingerprint": "8c795ca32b8167bbdf2f12dbdd9f077dfb4a6979cdda716d7ab6468895c70085",
+      "provider_values": {
+        "broker_tier": {
+          "status": "found",
+          "value": "Tier 2"
+        },
+        "has_primary_policy_with_stand": {
+          "status": "found",
+          "value": false
+        },
+        "kyc_score": {
+          "status": "found",
+          "value": 3
+        },
+        "min_distance_to_neighbor_ft": {
+          "status": "found",
+          "value": 88
+        },
+        "p_f": {
+          "status": "found",
+          "value": 0.19
+        },
+        "protection_class": {
+          "status": "found",
+          "value": "3"
+        },
+        "replacement_cost": {
+          "status": "found",
+          "value": 1010658
+        },
+        "road_access": {
+          "status": "found",
+          "value": "Multiple Access Points"
+        },
+        "slope_angle_deg": {
+          "status": "found",
+          "value": 2.9
+        },
+        "vegetation_clearance": {
+          "status": "found",
+          "value": "Adequate"
+        }
+      }
+    },
+    "LEAD-00000015-001": {
+      "archetype_set": {},
+      "fields": {
+        "above_ground_pool_ladder": null,
+        "acreage": 0.0,
+        "alternative_water_source": null,
+        "broker_tier": null,
+        "city": null,
+        "construction_type": "Frame",
+        "county": "Coconino",
+        "coverage_a": 950000,
+        "coverage_e": null,
+        "coverage_f": null,
+        "deck_height_ft": null,
+        "dist_to_nearest_fire_hydrant": null,
+        "distance_to_fire_department": null,
+        "dwelling_type": null,
+        "dwelling_use_type": null,
+        "effective_date": "2026-07-20",
+        "electrical_panel_brand": null,
+        "electrical_panel_size_amps": null,
+        "fire_alarm": "Central Alarm",
+        "fire_department_type": null,
+        "fire_dept_response_time": null,
+        "first_name": "Grace",
+        "foundation_type": "Piers",
+        "has_animals": false,
+        "has_knob_and_tube_wiring": false,
+        "has_primary_policy_with_stand": false,
+        "heating_source": null,
+        "insured_dob": "1970-06-25",
+        "interior_sprinklers": null,
+        "is_7a_compliant": true,
+        "is_gated_community": null,
+        "is_rental": "No",
+        "kyc_score": null,
+        "last_name": "Whitfield",
+        "listed_for_sale": false,
+        "min_distance_to_neighbor_ft": null,
+        "months_unoccupied": 0,
+        "num_stories": 2,
+        "number_of_residents": 1,
+        "occupation": "Software Engineer",
+        "opening_protection": null,
+        "owner_email": "owner@example.com",
+        "owner_phone_number": "+1-555-0141",
+        "p_f": null,
+        "physical_barriers": null,
+        "plumbing_age_years": 13,
+        "pool_has_diving_board_or_slide": false,
+        "pool_security": null,
+        "pool_type": null,
+        "post_pier_supports_living_area": true,
+        "property_purchase_date": null,
+        "protection_class": null,
+        "replacement_cost": null,
+        "residence_held_in_trust": false,
+        "road_access": null,
+        "roof_classification": null,
+        "roof_material": null,
+        "roof_replacement_year": null,
+        "roof_shape": "Gable",
+        "siding_classification": null,
+        "siding_material": null,
+        "slope_angle_deg": null,
+        "square_feet": 2400,
+        "state": "AZ",
+        "street_address": null,
+        "structure_type": null,
+        "trust_name": null,
+        "vegetation_clearance": null,
+        "water_heater_age_years": null,
+        "water_heater_location": null,
+        "water_heater_type": "Tankless",
+        "year_built": 1965,
+        "zip": null
+      },
+      "fingerprint": "a1fff98f5e17a33ee2d975e8ee90bca376b8dfeef05cde5834349a45e8525271",
+      "provider_values": {
+        "broker_tier": {
+          "status": "found",
+          "value": "Tier 1"
+        },
+        "has_primary_policy_with_stand": {
+          "status": "found",
+          "value": false
+        },
+        "kyc_score": {
+          "status": "found",
+          "value": 3
+        },
+        "min_distance_to_neighbor_ft": {
+          "status": "found",
+          "value": 120
+        },
+        "p_f": {
+          "status": "found",
+          "value": 0.04
+        },
+        "protection_class": {
+          "status": "found",
+          "value": "4"
+        },
+        "replacement_cost": {
+          "status": "found",
+          "value": 1024376
+        },
+        "road_access": {
+          "status": "found",
+          "value": "Multiple Access Points"
+        },
+        "slope_angle_deg": {
+          "status": "found",
+          "value": 7.4
+        },
+        "vegetation_clearance": {
+          "status": "found",
+          "value": "Adequate"
+        }
+      }
+    },
+    "LEAD-00000015-002": {
+      "archetype_set": {},
+      "fields": {
+        "above_ground_pool_ladder": null,
+        "acreage": null,
+        "alternative_water_source": null,
+        "broker_tier": "Tier 2",
+        "city": "Flagstaff",
+        "construction_type": "Frame",
+        "county": "Coconino",
+        "coverage_a": 1125000,
+        "coverage_e": "300000",
+        "coverage_f": "5000",
+        "deck_height_ft": null,
+        "dist_to_nearest_fire_hydrant": 474,
+        "distance_to_fire_department": 1.6,
+        "dwelling_type": "Owner Occupied Single Family Residence",
+        "dwelling_use_type": "Primary",
+        "effective_date": "2026-08-05",
+        "electrical_panel_brand": "GE",
+        "electrical_panel_size_amps": 200,
+        "fire_alarm": "Central Alarm",
+        "fire_department_type": "Mostly Career",
+        "fire_dept_response_time": null,
+        "first_name": "Tomas",
+        "foundation_type": "Slab",
+        "has_animals": true,
+        "has_knob_and_tube_wiring": false,
+        "has_primary_policy_with_stand": false,
+        "heating_source": null,
+        "insured_dob": "1980-09-13",
+        "interior_sprinklers": null,
+        "is_7a_compliant": true,
+        "is_gated_community": false,
+        "is_rental": "Short-Term Rentals",
+        "kyc_score": 4,
+        "last_name": "Reyes",
+        "listed_for_sale": false,
+        "min_distance_to_neighbor_ft": 58,
+        "months_unoccupied": 0,
+        "num_stories": null,
+        "number_of_residents": 3,
+        "occupation": "Teacher",
+        "opening_protection": null,
+        "owner_email": "owner@example.com",
+        "owner_phone_number": "+1-555-0156",
+        "p_f": null,
+        "physical_barriers": null,
+        "plumbing_age_years": 13,
+        "pool_has_diving_board_or_slide": false,
+        "pool_security": "None",
+        "pool_type": "None",
+        "post_pier_supports_living_area": null,
+        "property_purchase_date": null,
+        "protection_class": null,
+        "replacement_cost": 1165129,
+        "residence_held_in_trust": false,
+        "road_access": "Multiple Access Points",
+        "roof_classification": null,
+        "roof_material": "Standing Seam Metal",
+        "roof_replacement_year": 2020,
+        "roof_shape": "Gable",
+        "siding_classification": null,
+        "siding_material": "Stucco",
+        "slope_angle_deg": null,
+        "square_feet": 3600,
+        "state": null,
+        "street_address": null,
+        "structure_type": "Single Family",
+        "trust_name": null,
+        "vegetation_clearance": null,
+        "water_heater_age_years": null,
+        "water_heater_location": null,
+        "water_heater_type": "Tankless",
+        "year_built": null,
+        "zip": "86001"
+      },
+      "fingerprint": "213ab9af3cbfcec8e187c1c8e6f32cfba1e889197aa05d73aee415fa1d62be6a",
+      "provider_values": {
+        "broker_tier": {
+          "status": "found",
+          "value": "Tier 2"
+        },
+        "has_primary_policy_with_stand": {
+          "status": "found",
+          "value": false
+        },
+        "kyc_score": {
+          "status": "found",
+          "value": 4
+        },
+        "min_distance_to_neighbor_ft": {
+          "status": "found",
+          "value": 58
+        },
+        "p_f": {
+          "status": "found",
+          "value": 0.14
+        },
+        "protection_class": {
+          "status": "found",
+          "value": "3"
+        },
+        "replacement_cost": {
+          "status": "found",
+          "value": 1165129
+        },
+        "road_access": {
+          "status": "found",
+          "value": "Multiple Access Points"
+        },
+        "slope_angle_deg": {
+          "status": "found",
+          "value": 10.7
+        },
+        "vegetation_clearance": {
+          "status": "found",
+          "value": "Adequate"
+        }
+      }
+    },
+    "LEAD-00000015-003": {
+      "archetype_set": {
+        "road_access": "Limited / Dead-end / No Turnaround"
+      },
+      "fields": {
+        "above_ground_pool_ladder": null,
+        "acreage": 0.47,
+        "alternative_water_source": null,
+        "broker_tier": "Tier 2",
+        "city": "Flagstaff",
+        "construction_type": "Frame",
+        "county": "Coconino",
+        "coverage_a": null,
+        "coverage_e": "500000",
+        "coverage_f": null,
+        "deck_height_ft": null,
+        "dist_to_nearest_fire_hydrant": 7083,
+        "distance_to_fire_department": 10.0,
+        "dwelling_type": "Owner Occupied Single Family Residence",
+        "dwelling_use_type": "Primary",
+        "effective_date": "2026-07-30",
+        "electrical_panel_brand": "Siemens",
+        "electrical_panel_size_amps": null,
+        "fire_alarm": "Local Alarm",
+        "fire_department_type": "Volunteer",
+        "fire_dept_response_time": null,
+        "first_name": "Dana",
+        "foundation_type": null,
+        "has_animals": false,
+        "has_knob_and_tube_wiring": false,
+        "has_primary_policy_with_stand": false,
+        "heating_source": null,
+        "insured_dob": "1963-02-11",
+        "interior_sprinklers": null,
+        "is_7a_compliant": true,
+        "is_gated_community": false,
+        "is_rental": "No",
+        "kyc_score": 1,
+        "last_name": null,
+        "listed_for_sale": false,
+        "min_distance_to_neighbor_ft": 94,
+        "months_unoccupied": 0,
+        "num_stories": null,
+        "number_of_residents": 1,
+        "occupation": "Physician",
+        "opening_protection": null,
+        "owner_email": null,
+        "owner_phone_number": "+1-555-0155",
+        "p_f": null,
+        "physical_barriers": null,
+        "plumbing_age_years": 19,
+        "pool_has_diving_board_or_slide": false,
+        "pool_security": "None",
+        "pool_type": "None",
+        "post_pier_supports_living_area": null,
+        "property_purchase_date": "2018-06-15",
+        "protection_class": null,
+        "replacement_cost": 1313715,
+        "residence_held_in_trust": false,
+        "road_access": "Limited / Dead-end / No Turnaround",
+        "roof_classification": null,
+        "roof_material": "Standing Seam Metal",
+        "roof_replacement_year": null,
+        "roof_shape": "Gable",
+        "siding_classification": null,
+        "siding_material": "Stucco",
+        "slope_angle_deg": null,
+        "square_feet": 4100,
+        "state": "AZ",
+        "street_address": "9436 Summit Ave",
+        "structure_type": null,
+        "trust_name": null,
+        "vegetation_clearance": "Adequate",
+        "water_heater_age_years": null,
+        "water_heater_location": null,
+        "water_heater_type": "Tankless",
+        "year_built": 1995,
+        "zip": "86001"
+      },
+      "fingerprint": "aa83fdbbb11465a7ed25c87a5caa6866c570f7666e2e2a79036b18c25f4584a7",
+      "provider_values": {
+        "broker_tier": {
+          "status": "found",
+          "value": "Tier 2"
+        },
+        "has_primary_policy_with_stand": {
+          "status": "found",
+          "value": false
+        },
+        "kyc_score": {
+          "status": "found",
+          "value": 1
+        },
+        "min_distance_to_neighbor_ft": {
+          "status": "found",
+          "value": 94
+        },
+        "p_f": {
+          "status": "found",
+          "value": 0.19
+        },
+        "protection_class": {
+          "status": "not_found",
+          "value": null
+        },
+        "replacement_cost": {
+          "status": "found",
+          "value": 1313715
+        },
+        "road_access": {
+          "status": "found",
+          "value": "Multiple Access Points"
+        },
+        "slope_angle_deg": {
+          "status": "found",
+          "value": 5.8
+        },
+        "vegetation_clearance": {
+          "status": "found",
+          "value": "Adequate"
+        }
+      }
+    },
+    "LEAD-00000015-004": {
+      "archetype_set": {
+        "road_access": "Limited / Dead-end / No Turnaround"
+      },
+      "fields": {
+        "above_ground_pool_ladder": null,
+        "acreage": null,
+        "alternative_water_source": null,
+        "broker_tier": null,
+        "city": null,
+        "construction_type": null,
+        "county": "Coconino",
+        "coverage_a": 1125000,
+        "coverage_e": "500000",
+        "coverage_f": null,
+        "deck_height_ft": null,
+        "dist_to_nearest_fire_hydrant": 5931,
+        "distance_to_fire_department": 19.4,
+        "dwelling_type": "Owner Occupied Single Family Residence",
+        "dwelling_use_type": "Primary",
+        "effective_date": "2026-07-23",
+        "electrical_panel_brand": null,
+        "electrical_panel_size_amps": null,
+        "fire_alarm": null,
+        "fire_department_type": "Volunteer",
+        "fire_dept_response_time": null,
+        "first_name": null,
+        "foundation_type": null,
+        "has_animals": false,
+        "has_knob_and_tube_wiring": null,
+        "has_primary_policy_with_stand": null,
+        "heating_source": "Central Gas",
+        "insured_dob": "1992-07-21",
+        "interior_sprinklers": null,
+        "is_7a_compliant": true,
+        "is_gated_community": null,
+        "is_rental": null,
+        "kyc_score": 2,
+        "last_name": "Whitfield",
+        "listed_for_sale": null,
+        "min_distance_to_neighbor_ft": null,
+        "months_unoccupied": null,
+        "num_stories": 2,
+        "number_of_residents": 1,
+        "occupation": "Retired",
+        "opening_protection": null,
+        "owner_email": null,
+        "owner_phone_number": "+1-555-0156",
+        "p_f": null,
+        "physical_barriers": null,
+        "plumbing_age_years": 4,
+        "pool_has_diving_board_or_slide": false,
+        "pool_security": "None",
+        "pool_type": null,
+        "post_pier_supports_living_area": null,
+        "property_purchase_date": null,
+        "protection_class": null,
+        "replacement_cost": null,
+        "residence_held_in_trust": false,
+        "road_access": "Limited / Dead-end / No Turnaround",
+        "roof_classification": null,
+        "roof_material": null,
+        "roof_replacement_year": 2011,
+        "roof_shape": "Hip",
+        "siding_classification": null,
+        "siding_material": "Cement Fiber",
+        "slope_angle_deg": 9.8,
+        "square_feet": 1800,
+        "state": "AZ",
+        "street_address": "5568 Meadowlark Ln",
+        "structure_type": null,
+        "trust_name": null,
+        "vegetation_clearance": null,
+        "water_heater_age_years": null,
+        "water_heater_location": null,
+        "water_heater_type": "Tankless",
+        "year_built": 2007,
+        "zip": "86001"
+      },
+      "fingerprint": "738f5a86934b2b383f85d5fe3a5b121b2d00ed96cbcc0de25abbd8344ba8bd60",
+      "provider_values": {
+        "broker_tier": {
+          "status": "found",
+          "value": "Tier 1"
+        },
+        "has_primary_policy_with_stand": {
+          "status": "found",
+          "value": false
+        },
+        "kyc_score": {
+          "status": "found",
+          "value": 2
+        },
+        "min_distance_to_neighbor_ft": {
+          "status": "found",
+          "value": 92
+        },
+        "p_f": {
+          "status": "found",
+          "value": 0.14
+        },
+        "protection_class": {
+          "status": "not_found",
+          "value": null
+        },
+        "replacement_cost": {
+          "status": "found",
+          "value": 1109261
+        },
+        "road_access": {
+          "status": "found",
+          "value": "Multiple Access Points"
+        },
+        "slope_angle_deg": {
+          "status": "found",
+          "value": 9.8
+        },
+        "vegetation_clearance": {
+          "status": "found",
+          "value": "Adequate"
+        }
+      }
+    },
+    "LEAD-00000015-005": {
+      "archetype_set": {},
+      "fields": {
+        "above_ground_pool_ladder": null,
+        "acreage": 1.96,
+        "alternative_water_source": null,
+        "broker_tier": null,
+        "city": "Flagstaff",
+        "construction_type": "Frame",
+        "county": "Coconino",
+        "coverage_a": 625000,
+        "coverage_e": "500000",
+        "coverage_f": "1000",
+        "deck_height_ft": null,
+        "dist_to_nearest_fire_hydrant": 599,
+        "distance_to_fire_department": null,
+        "dwelling_type": null,
+        "dwelling_use_type": null,
+        "effective_date": "2026-07-15",
+        "electrical_panel_brand": "Federal Pacific",
+        "electrical_panel_size_amps": 60,
+        "fire_alarm": "Central Alarm",
+        "fire_department_type": "Career",
+        "fire_dept_response_time": null,
+        "first_name": "Dana",
+        "foundation_type": "Slab",
+        "has_animals": true,
+        "has_knob_and_tube_wiring": true,
+        "has_primary_policy_with_stand": false,
+        "heating_source": null,
+        "insured_dob": "1967-07-19",
+        "interior_sprinklers": null,
+        "is_7a_compliant": null,
+        "is_gated_community": false,
+        "is_rental": "No",
+        "kyc_score": null,
+        "last_name": "Salazar",
+        "listed_for_sale": false,
+        "min_distance_to_neighbor_ft": null,
+        "months_unoccupied": null,
+        "num_stories": 1,
+        "number_of_residents": 5,
+        "occupation": "Teacher",
+        "opening_protection": null,
+        "owner_email": null,
+        "owner_phone_number": null,
+        "p_f": null,
+        "physical_barriers": null,
+        "plumbing_age_years": null,
+        "pool_has_diving_board_or_slide": false,
+        "pool_security": null,
+        "pool_type": "None",
+        "post_pier_supports_living_area": null,
+        "property_purchase_date": "2023-09-15",
+        "protection_class": null,
+        "replacement_cost": null,
+        "residence_held_in_trust": null,
+        "road_access": null,
+        "roof_classification": "Class A",
+        "roof_material": "Architecture Shingles",
+        "roof_replacement_year": 2018,
+        "roof_shape": null,
+        "siding_classification": null,
+        "siding_material": "Stucco",
+        "slope_angle_deg": null,
+        "square_feet": 4100,
+        "state": "AZ",
+        "street_address": "8633 Ridgecrest Rd",
+        "structure_type": "Single Family",
+        "trust_name": null,
+        "vegetation_clearance": null,
+        "water_heater_age_years": null,
+        "water_heater_location": null,
+        "water_heater_type": null,
+        "year_built": 1936,
+        "zip": "86001"
+      },
+      "fingerprint": "f8eb884ae2fbd8cf48b63fe4977e6a1786ec891697c75211b0e96ec0b9c5fc7f",
+      "provider_values": {
+        "broker_tier": {
+          "status": "found",
+          "value": "Tier 1"
+        },
+        "has_primary_policy_with_stand": {
+          "status": "found",
+          "value": false
+        },
+        "kyc_score": {
+          "status": "found",
+          "value": 2
+        },
+        "min_distance_to_neighbor_ft": {
+          "status": "found",
+          "value": 67
+        },
+        "p_f": {
+          "status": "found",
+          "value": 0.09
+        },
+        "protection_class": {
+          "status": "found",
+          "value": "3"
+        },
+        "replacement_cost": {
+          "status": "found",
+          "value": 663006
+        },
+        "road_access": {
+          "status": "found",
+          "value": "Multiple Access Points"
+        },
+        "slope_angle_deg": {
+          "status": "found",
+          "value": 8.9
+        },
+        "vegetation_clearance": {
+          "status": "found",
+          "value": "Adequate"
+        }
+      }
+    },
+    "LEAD-00000015-006": {
+      "archetype_set": {},
+      "fields": {
+        "above_ground_pool_ladder": null,
+        "acreage": 1.66,
+        "alternative_water_source": null,
+        "broker_tier": "Tier 1",
+        "city": "Asheville",
+        "construction_type": "Frame",
+        "county": "Buncombe",
+        "coverage_a": 1150000,
+        "coverage_e": "300000",
+        "coverage_f": "1000",
+        "deck_height_ft": null,
+        "dist_to_nearest_fire_hydrant": 315,
+        "distance_to_fire_department": 4.9,
+        "dwelling_type": "Owner Occupied Single Family Residence",
+        "dwelling_use_type": "Primary",
+        "effective_date": "2026-08-07",
+        "electrical_panel_brand": "Eaton",
+        "electrical_panel_size_amps": 150,
+        "fire_alarm": "Central Alarm",
+        "fire_department_type": "Career",
+        "fire_dept_response_time": null,
+        "first_name": "Dana",
+        "foundation_type": "Slab",
+        "has_animals": null,
+        "has_knob_and_tube_wiring": false,
+        "has_primary_policy_with_stand": false,
+        "heating_source": "Central Gas",
+        "insured_dob": null,
+        "interior_sprinklers": null,
+        "is_7a_compliant": true,
+        "is_gated_community": false,
+        "is_rental": null,
+        "kyc_score": 2,
+        "last_name": "Okafor",
+        "listed_for_sale": null,
+        "min_distance_to_neighbor_ft": 108,
+        "months_unoccupied": 0,
+        "num_stories": 2,
+        "number_of_residents": 1,
+        "occupation": "Retired",
+        "opening_protection": null,
+        "owner_email": "owner@example.com",
+        "owner_phone_number": null,
+        "p_f": 0.03,
+        "physical_barriers": null,
+        "plumbing_age_years": 11,
+        "pool_has_diving_board_or_slide": false,
+        "pool_security": "None",
+        "pool_type": "None",
+        "post_pier_supports_living_area": null,
+        "property_purchase_date": "2023-06-15",
+        "protection_class": "5",
+        "replacement_cost": null,
+        "residence_held_in_trust": false,
+        "road_access": null,
+        "roof_classification": null,
+        "roof_material": "Standing Seam Metal",
+        "roof_replacement_year": 2010,
+        "roof_shape": "Gable",
+        "siding_classification": "B",
+        "siding_material": "Stucco",
+        "slope_angle_deg": null,
+        "square_feet": 1700,
+        "state": "NC",
+        "street_address": "5428 Summit Ave",
+        "structure_type": "Single Family",
+        "trust_name": null,
+        "vegetation_clearance": "Adequate",
+        "water_heater_age_years": null,
+        "water_heater_location": null,
+        "water_heater_type": "Tankless",
+        "year_built": 1994,
+        "zip": null
+      },
+      "fingerprint": "db6e3d5b059a281c4b04c0da9b06e6272efde7c0c623575b951dc916c81b4242",
+      "provider_values": {
+        "broker_tier": {
+          "status": "found",
+          "value": "Tier 1"
+        },
+        "has_primary_policy_with_stand": {
+          "status": "found",
+          "value": false
+        },
+        "kyc_score": {
+          "status": "found",
+          "value": 2
+        },
+        "min_distance_to_neighbor_ft": {
+          "status": "found",
+          "value": 108
+        },
+        "p_f": {
+          "status": "found",
+          "value": 0.03
+        },
+        "protection_class": {
+          "status": "found",
+          "value": "5"
+        },
+        "replacement_cost": {
+          "status": "found",
+          "value": 1174260
+        },
+        "road_access": {
+          "status": "found",
+          "value": "Multiple Access Points"
+        },
+        "slope_angle_deg": {
+          "status": "found",
+          "value": 10.0
+        },
+        "vegetation_clearance": {
+          "status": "found",
+          "value": "Adequate"
+        }
+      }
+    },
+    "LEAD-00000015-007": {
+      "archetype_set": {
+        "road_access": "Limited / Dead-end / No Turnaround"
+      },
+      "fields": {
+        "above_ground_pool_ladder": null,
+        "acreage": null,
+        "alternative_water_source": null,
+        "broker_tier": null,
+        "city": "Boulder",
+        "construction_type": null,
+        "county": "Boulder",
+        "coverage_a": null,
+        "coverage_e": "300000",
+        "coverage_f": "5000",
+        "deck_height_ft": null,
+        "dist_to_nearest_fire_hydrant": 3103,
+        "distance_to_fire_department": 10.7,
+        "dwelling_type": "Owner Occupied Single Family Residence",
+        "dwelling_use_type": null,
+        "effective_date": "2026-07-06",
+        "electrical_panel_brand": "Federal Pacific",
+        "electrical_panel_size_amps": null,
+        "fire_alarm": "Central Alarm",
+        "fire_department_type": "Volunteer",
+        "fire_dept_response_time": null,
+        "first_name": null,
+        "foundation_type": "Slab",
+        "has_animals": true,
+        "has_knob_and_tube_wiring": true,
+        "has_primary_policy_with_stand": null,
+        "heating_source": "Central Gas",
+        "insured_dob": "1956-08-26",
+        "interior_sprinklers": null,
+        "is_7a_compliant": true,
+        "is_gated_community": null,
+        "is_rental": "No",
+        "kyc_score": null,
+        "last_name": null,
+        "listed_for_sale": false,
+        "min_distance_to_neighbor_ft": null,
+        "months_unoccupied": null,
+        "num_stories": null,
+        "number_of_residents": null,
+        "occupation": "Physician",
+        "opening_protection": null,
+        "owner_email": "owner@example.com",
+        "owner_phone_number": "+1-555-0134",
+        "p_f": null,
+        "physical_barriers": null,
+        "plumbing_age_years": 20,
+        "pool_has_diving_board_or_slide": false,
+        "pool_security": "None",
+        "pool_type": "None",
+        "post_pier_supports_living_area": null,
+        "property_purchase_date": null,
+        "protection_class": null,
+        "replacement_cost": 607408,
+        "residence_held_in_trust": null,
+        "road_access": "Limited / Dead-end / No Turnaround",
+        "roof_classification": null,
+        "roof_material": "Clay Tile",
+        "roof_replacement_year": 2017,
+        "roof_shape": null,
+        "siding_classification": null,
+        "siding_material": "Cement Fiber",
+        "slope_angle_deg": null,
+        "square_feet": null,
+        "state": "CO",
+        "street_address": "5207 Ridgecrest Rd",
+        "structure_type": null,
+        "trust_name": null,
+        "vegetation_clearance": null,
+        "water_heater_age_years": null,
+        "water_heater_location": null,
+        "water_heater_type": "Tankless",
+        "year_built": 1908,
+        "zip": "80302"
+      },
+      "fingerprint": "0364bf10c2fb83fcd2e79e19d05dc7018dcee0ae81cb475637999c9101e62dc5",
+      "provider_values": {
+        "broker_tier": {
+          "status": "found",
+          "value": "Tier 2"
+        },
+        "has_primary_policy_with_stand": {
+          "status": "found",
+          "value": false
+        },
+        "kyc_score": {
+          "status": "found",
+          "value": 1
+        },
+        "min_distance_to_neighbor_ft": {
+          "status": "found",
+          "value": 96
+        },
+        "p_f": {
+          "status": "found",
+          "value": 0.08
+        },
+        "protection_class": {
+          "status": "not_found",
+          "value": null
+        },
+        "replacement_cost": {
+          "status": "found",
+          "value": 607408
+        },
+        "road_access": {
+          "status": "found",
+          "value": "Multiple Access Points"
+        },
+        "slope_angle_deg": {
+          "status": "found",
+          "value": 3.4
+        },
+        "vegetation_clearance": {
+          "status": "found",
+          "value": "Adequate"
+        }
+      }
+    },
+    "LEAD-00000015-008": {
+      "archetype_set": {},
+      "fields": {
+        "above_ground_pool_ladder": null,
+        "acreage": 0.81,
+        "alternative_water_source": null,
+        "broker_tier": "Tier 1",
+        "city": null,
+        "construction_type": "Frame",
+        "county": "Sonoma",
+        "coverage_a": 1025000,
+        "coverage_e": "100000",
+        "coverage_f": "3000",
+        "deck_height_ft": null,
+        "dist_to_nearest_fire_hydrant": 448,
+        "distance_to_fire_department": 1.4,
+        "dwelling_type": "Owner Occupied Single Family Residence",
+        "dwelling_use_type": "Primary",
+        "effective_date": "2026-07-08",
+        "electrical_panel_brand": "Siemens",
+        "electrical_panel_size_amps": 150,
+        "fire_alarm": "Central Alarm",
+        "fire_department_type": null,
+        "fire_dept_response_time": null,
+        "first_name": "R.",
+        "foundation_type": "Slab",
+        "has_animals": true,
+        "has_knob_and_tube_wiring": false,
+        "has_primary_policy_with_stand": false,
+        "heating_source": "Central Gas",
+        "insured_dob": "1987-07-26",
+        "interior_sprinklers": null,
+        "is_7a_compliant": true,
+        "is_gated_community": false,
+        "is_rental": "No",
+        "kyc_score": 3,
+        "last_name": "Salazar",
+        "listed_for_sale": false,
+        "min_distance_to_neighbor_ft": 76,
+        "months_unoccupied": 0,
+        "num_stories": 1,
+        "number_of_residents": 2,
+        "occupation": "Teacher",
+        "opening_protection": null,
+        "owner_email": "owner@example.com",
+        "owner_phone_number": null,
+        "p_f": 0.02,
+        "physical_barriers": null,
+        "plumbing_age_years": 13,
+        "pool_has_diving_board_or_slide": false,
+        "pool_security": "None",
+        "pool_type": "None",
+        "post_pier_supports_living_area": null,
+        "property_purchase_date": null,
+        "protection_class": null,
+        "replacement_cost": 1029094,
+        "residence_held_in_trust": false,
+        "road_access": null,
+        "roof_classification": "Class A",
+        "roof_material": "Standing Seam Metal",
+        "roof_replacement_year": 2014,
+        "roof_shape": "Gable",
+        "siding_classification": null,
+        "siding_material": null,
+        "slope_angle_deg": 10.2,
+        "square_feet": 3600,
+        "state": "CA",
+        "street_address": "8794 Ridgecrest Rd",
+        "structure_type": "Single Family",
+        "trust_name": null,
+        "vegetation_clearance": "Adequate",
+        "water_heater_age_years": null,
+        "water_heater_location": null,
+        "water_heater_type": "Tankless",
+        "year_built": 1971,
+        "zip": "95404"
+      },
+      "fingerprint": "dfa9eab33aee2b6fadab6bace154067190553d03c68c52f15bf2f3465cbee4b7",
+      "provider_values": {
+        "broker_tier": {
+          "status": "found",
+          "value": "Tier 1"
+        },
+        "has_primary_policy_with_stand": {
+          "status": "found",
+          "value": false
+        },
+        "kyc_score": {
+          "status": "found",
+          "value": 3
+        },
+        "min_distance_to_neighbor_ft": {
+          "status": "found",
+          "value": 76
+        },
+        "p_f": {
+          "status": "found",
+          "value": 0.02
+        },
+        "protection_class": {
+          "status": "found",
+          "value": "3"
+        },
+        "replacement_cost": {
+          "status": "found",
+          "value": 1029094
+        },
+        "road_access": {
+          "status": "found",
+          "value": "Multiple Access Points"
+        },
+        "slope_angle_deg": {
+          "status": "found",
+          "value": 10.2
+        },
+        "vegetation_clearance": {
+          "status": "found",
+          "value": "Adequate"
+        }
+      }
+    },
+    "LEAD-00000015-009": {
+      "archetype_set": {},
+      "fields": {
+        "above_ground_pool_ladder": null,
+        "acreage": 2.04,
+        "alternative_water_source": null,
+        "broker_tier": "Tier 1",
+        "city": "Santa Rosa",
+        "construction_type": "Frame",
+        "county": "Sonoma",
+        "coverage_a": 1075000,
+        "coverage_e": null,
+        "coverage_f": null,
+        "deck_height_ft": null,
+        "dist_to_nearest_fire_hydrant": 335,
+        "distance_to_fire_department": 1.1,
+        "dwelling_type": null,
+        "dwelling_use_type": "Primary",
+        "effective_date": null,
+        "electrical_panel_brand": "GE",
+        "electrical_panel_size_amps": 200,
+        "fire_alarm": "Central Alarm",
+        "fire_department_type": "Career",
+        "fire_dept_response_time": null,
+        "first_name": null,
+        "foundation_type": "Slab",
+        "has_animals": true,
+        "has_knob_and_tube_wiring": false,
+        "has_primary_policy_with_stand": null,
+        "heating_source": "Central Gas",
+        "insured_dob": "1962-07-14",
+        "interior_sprinklers": null,
+        "is_7a_compliant": true,
+        "is_gated_community": false,
+        "is_rental": "No",
+        "kyc_score": null,
+        "last_name": null,
+        "listed_for_sale": null,
+        "min_distance_to_neighbor_ft": 48,
+        "months_unoccupied": 0,
+        "num_stories": 1,
+        "number_of_residents": 3,
+        "occupation": null,
+        "opening_protection": null,
+        "owner_email": "owner@example.com",
+        "owner_phone_number": "+1-555-0106",
+        "p_f": null,
+        "physical_barriers": null,
+        "plumbing_age_years": 4,
+        "pool_has_diving_board_or_slide": false,
+        "pool_security": "None",
+        "pool_type": null,
+        "post_pier_supports_living_area": null,
+        "property_purchase_date": null,
+        "protection_class": "4",
+        "replacement_cost": null,
+        "residence_held_in_trust": false,
+        "road_access": "Multiple Access Points",
+        "roof_classification": null,
+        "roof_material": "Architecture Shingles",
+        "roof_replacement_year": 2011,
+        "roof_shape": "Hip",
+        "siding_classification": "B",
+        "siding_material": "Stucco",
+        "slope_angle_deg": null,
+        "square_feet": 1900,
+        "state": "CA",
+        "street_address": "8274 Meadowlark Ln",
+        "structure_type": null,
+        "trust_name": null,
+        "vegetation_clearance": "Adequate",
+        "water_heater_age_years": null,
+        "water_heater_location": null,
+        "water_heater_type": null,
+        "year_built": 2011,
+        "zip": "95404"
+      },
+      "fingerprint": "8f7231480086a9c1a893c84e862fb97f73cb46e32fadbe9e89eba454168bc186",
+      "provider_values": {
+        "broker_tier": {
+          "status": "found",
+          "value": "Tier 1"
+        },
+        "has_primary_policy_with_stand": {
+          "status": "found",
+          "value": false
+        },
+        "kyc_score": {
+          "status": "found",
+          "value": 2
+        },
+        "min_distance_to_neighbor_ft": {
+          "status": "found",
+          "value": 48
+        },
+        "p_f": {
+          "status": "found",
+          "value": 0.03
+        },
+        "protection_class": {
+          "status": "found",
+          "value": "4"
+        },
+        "replacement_cost": {
+          "status": "found",
+          "value": 1142871
+        },
+        "road_access": {
+          "status": "found",
+          "value": "Multiple Access Points"
+        },
+        "slope_angle_deg": {
+          "status": "found",
+          "value": 7.1
+        },
+        "vegetation_clearance": {
+          "status": "found",
+          "value": "Adequate"
+        }
+      }
+    }
+  },
+  "seed": 15
+}
