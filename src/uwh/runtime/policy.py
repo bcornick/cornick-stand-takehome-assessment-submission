@@ -1,12 +1,12 @@
 # ABOUTME: The autonomy level of a command class (7.4), from the settings table or the class's default with a locked class never at auto, and the check of an approval's five bound values.
-# ABOUTME: The dispatcher reads the level and the binding changes immediately before a send; this module decides nothing about the stop or the send itself.
+# ABOUTME: Pure checks over the settings table and two bindings; the stop, the send and the decision to dispatch belong to other modules.
 import json
 import sqlite3
 from dataclasses import dataclass, fields
 from typing import cast, get_args
 
 from uwh.runtime.event_types import AutonomyLevel
-from uwh.skills.vertical import COMMAND_CLASSES
+from uwh.skills import vertical
 
 
 def autonomy_level(db: sqlite3.Connection, command_class: str) -> AutonomyLevel:
@@ -16,10 +16,9 @@ def autonomy_level(db: sqlite3.Connection, command_class: str) -> AutonomyLevel:
     Raises ValueError for an unknown class, a human-only class (no level applies) and a stored value
     that is not a level.
     """
-    matches = [c for c in COMMAND_CLASSES if c.name == command_class]
-    if not matches:
+    declared = vertical.command_class(command_class)
+    if declared is None:
         raise ValueError(f"unknown command class {command_class}")
-    (declared,) = matches
     if declared.default_level is None:
         raise ValueError(f"{command_class} has no autonomy level")
     row = db.execute(

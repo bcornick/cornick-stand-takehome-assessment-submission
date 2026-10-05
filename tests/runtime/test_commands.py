@@ -1,4 +1,4 @@
-# ABOUTME: Tests the command layer of 7.4 and A.11: the actor from the transport, the class rules, the skill manifest check, item resolution, one transaction per command with the lead's re-evaluation, and the handlers built so far.
+# ABOUTME: Tests the command layer of 7.4 and A.11: the actor from the transport, the class rules, the skill manifest check, item resolution, one transaction per command with the lead's re-evaluation, and the handlers of resolve_fact, approve, reject and record_ruling.
 # ABOUTME: Each test opens a real database through open_store at a tmp_path file and reads back events, approvals and blockers; skill folders are built under tmp_path.
 import json
 import sqlite3
@@ -98,6 +98,11 @@ def skills_root(tmp_path: Path) -> Path:
         "pass_threshold": 1.0,
     }
     (folder / "manifest.yaml").write_text(yaml.safe_dump(manifest))
+    every_class = tmp_path / "skills" / "every_class"
+    every_class.mkdir()
+    declared = [c.name for c in COMMAND_CLASSES if "workflow" in c.actors]
+    manifest = {**manifest, "name": "every_class", "command_classes": declared}
+    (every_class / "manifest.yaml").write_text(yaml.safe_dump(manifest))
     return tmp_path / "skills"
 
 
@@ -197,6 +202,47 @@ def test_human_only_classes_refuse_every_other_actor(
     result = submit_command(db, env, actor, command_type, {})
 
     assert_refused(db, result, f"{actor} may not submit {command_type}")
+
+
+# Section 7.4 table: who may submit each command class, written out here.
+ALLOWED_ACTORS: dict[str, tuple[Actor, ...]] = {
+    "fetch_data": ("workflow",),
+    "send_routine_request": ("workflow",),
+    "send_sensitive_request": ("workflow",),
+    "send_quote_packet": ("workflow",),
+    "send_decline_notice": ("workflow",),
+    "deliver_reply": ("inbound", "underwriter"),
+    "approve": ("underwriter",),
+    "reject": ("underwriter",),
+    "edit_draft": ("underwriter",),
+    "resolve_fact": ("underwriter",),
+    "decline_lead": ("underwriter",),
+    "record_ruling": ("underwriter",),
+    "propose_rule_change": ("underwriter",),
+    "apply_rule_change": ("underwriter",),
+    "change_setting": ("underwriter",),
+    "emergency_stop": ("underwriter",),
+    "start_run": ("underwriter",),
+    "propose_command": ("assistant", "mcp_client"),
+}
+
+
+@pytest.mark.parametrize("actor", ACTORS)
+@pytest.mark.parametrize("command_type", list(ALLOWED_ACTORS))
+def test_the_gate_admits_exactly_the_pairs_of_the_7_4_table(
+    db: sqlite3.Connection, env: CommandEnvironment, actor: Actor, command_type: str
+) -> None:
+    skill = "every_class" if actor == "workflow" else None
+    if actor not in ALLOWED_ACTORS[command_type]:
+        result = submit_command(db, env, actor, command_type, {}, skill=skill)
+        assert_refused(db, result, f"{actor} may not submit {command_type}")
+        return
+    try:
+        result = submit_command(db, env, actor, command_type, {}, skill=skill)
+    except NotImplementedError:
+        return
+    # A handler may still refuse an empty payload; the gate has not.
+    assert result.accepted or (result.reason or "").startswith("the payload needs")
 
 
 @pytest.mark.parametrize("actor", ["assistant", "mcp_client"])
@@ -479,12 +525,80 @@ def test_approving_a_late_reply_review_acknowledges_it_and_rejects_the_reply_val
 def test_approving_an_event_review_that_is_not_a_late_reply_leaves_observations_alone(
     db: sqlite3.Connection, env: CommandEnvironment
 ) -> None:
+    observation_item = pending_observation(db)
     item_id = open_item(db, review("off_topic_reply", intent_id="i-1"))
 
     result = submit_command(db, env, "underwriter", "approve", {"item_id": item_id, "reason": "ok"})
 
     assert result.accepted
+    assert [b.id for b in open_blockers(db, LEAD)] == [observation_item]
+    (status,) = db.execute("SELECT status FROM observations WHERE source = 'reply'").fetchone()
+    assert status == "pending_review"
+
+
+def wait_on_producer(db: sqlite3.Connection, intent_id: str) -> int:
+    detail = BlockerDetail(
+        resume_trigger="the producer replies", intent_id=intent_id, text="Waiting."
+    )
+    blocker_id = open_blocker(db, SETUP, LEAD, "producer_reply", "producer", detail)
+    db.commit()
+    return blocker_id
+
+
+@pytest.mark.parametrize("cause", ["unread_reply", "off_topic_reply", "declining_reply"])
+def test_acknowledging_the_review_of_a_reply_closes_the_round_it_answered(
+    db: sqlite3.Connection, env: CommandEnvironment, cause: ReviewCause
+) -> None:
+    observation_item = pending_observation(db)
+    other_round = wait_on_producer(db, "i-2")
+    this_round = wait_on_producer(db, "i-1")
+    item_id = open_item(db, review(cause, intent_id="i-1"))
+
+    result = submit_command(db, env, "underwriter", "approve", {"item_id": item_id, "reason": "ok"})
+
+    assert result.accepted
+    assert [b.id for b in open_blockers(db, LEAD)] == [observation_item, other_round]
+    assert this_round not in [b.id for b in open_blockers(db, LEAD)]
+    (status,) = db.execute("SELECT status FROM observations WHERE source = 'reply'").fetchone()
+    assert status == "pending_review"
+
+
+def test_acknowledging_a_review_that_names_no_intent_closes_only_the_review(
+    db: sqlite3.Connection, env: CommandEnvironment
+) -> None:
+    round_blocker = wait_on_producer(db, "i-1")
+    item_id = open_item(db, review("unread_reply"))
+
+    assert submit_command(
+        db, env, "underwriter", "approve", {"item_id": item_id, "reason": "ok"}
+    ).accepted
+
+    assert [b.id for b in open_blockers(db, LEAD)] == [round_blocker]
+
+
+def test_acknowledging_a_review_with_no_open_round_closes_only_the_review(
+    db: sqlite3.Connection, env: CommandEnvironment
+) -> None:
+    item_id = open_item(db, review("unread_reply", intent_id="i-1"))
+
+    assert submit_command(
+        db, env, "underwriter", "approve", {"item_id": item_id, "reason": "ok"}
+    ).accepted
+
     assert open_blockers(db, LEAD) == []
+
+
+def test_acknowledging_a_late_reply_review_leaves_the_open_round_of_its_intent(
+    db: sqlite3.Connection, env: CommandEnvironment
+) -> None:
+    item_id = late_reply_review(db)
+    round_blocker = wait_on_producer(db, "i-1")
+
+    assert submit_command(
+        db, env, "underwriter", "approve", {"item_id": item_id, "reason": "ok"}
+    ).accepted
+
+    assert [b.id for b in open_blockers(db, LEAD)] == [round_blocker]
 
 
 def test_rejecting_an_event_review_is_refused(
@@ -524,8 +638,34 @@ def test_a_no_contact_route_item_is_refused_both_ways(
     assert_refused(db, result, "q:contact_email")
 
 
+@pytest.mark.parametrize("cause", ["draft_held_by_stop", "draft_held_class_off"])
+def test_approving_a_held_draft_with_its_hash_raises_and_writes_nothing(
+    db: sqlite3.Connection, env: CommandEnvironment, cause: ReviewCause
+) -> None:
+    item_id = open_item(db, review(cause, intent_id="i-1"))
+    before = len(read_events(db))
+    payload = {"item_id": item_id, "reason": "ok", "artifact_hash": "h" * 64}
+
+    with pytest.raises(NotImplementedError, match=cause):
+        submit_command(db, env, "underwriter", "approve", payload)
+
+    assert len(read_events(db)) == before
+    assert len(open_blockers(db, LEAD)) == 1
+
+
+@pytest.mark.parametrize("cause", ["draft_held_by_stop", "draft_held_class_off"])
+def test_rejecting_a_held_draft_review_is_refused(
+    db: sqlite3.Connection, env: CommandEnvironment, cause: ReviewCause
+) -> None:
+    item_id = open_item(db, review(cause, intent_id="i-1"))
+
+    result = submit_command(db, env, "underwriter", "reject", {"item_id": item_id, "reason": "no"})
+
+    assert_refused(db, result, "resolve_fact, record_ruling or decline_lead")
+
+
 @pytest.mark.parametrize("command", ["approve", "reject"])
-def test_a_draft_item_is_left_for_the_send_primitive_and_writes_nothing(
+def test_approving_or_rejecting_a_draft_item_raises_and_writes_nothing(
     db: sqlite3.Connection, env: CommandEnvironment, command: str
 ) -> None:
     detail = BlockerDetail(
@@ -612,6 +752,89 @@ def test_a_failing_step_opens_the_data_blocker_and_the_commands_writes_commit(
         assert source == "web"
     finally:
         other.close()
+
+
+def test_a_failing_step_rolls_back_the_whole_re_evaluation_and_the_command_still_commits(
+    db: sqlite3.Connection, skills_root: Path
+) -> None:
+    def write(db: sqlite3.Connection, context: EventContext, lead_id: str) -> None:
+        observe(db, context, lead_id, "stories", 2, "submitted", {}, RULES)
+
+    def fail(db: sqlite3.Connection, context: EventContext, lead_id: str) -> None:
+        raise RuntimeError("provider is down")
+
+    steps = (Step("write", write), Step("evaluate", fail))
+    env = CommandEnvironment("replay", RULESET, RULES, steps, skills_root, lambda: NOW)
+    payload = {"lead_id": LEAD, "key": "acreage", "value": 7, "reason": "x"}
+
+    assert submit_command(db, env, "underwriter", "resolve_fact", payload).accepted
+
+    assert sorted(effective_facts(db, LEAD)) == ["acreage"]
+    assert db.execute("SELECT status FROM leads").fetchone() == ("received",)
+    (blocker,) = open_blockers(db, LEAD)
+    assert blocker.kind == "data" and "Step evaluate failed" in blocker.detail.text
+
+
+def test_the_command_and_its_re_evaluation_commit_together(
+    path: str, db: sqlite3.Connection, skills_root: Path
+) -> None:
+    other = open_store(path)
+    seen_inside: list[list[EventType]] = []
+
+    def look(db: sqlite3.Connection, context: EventContext, lead_id: str) -> None:
+        seen_inside.append([e.type for e in read_events(other)])
+
+    env = CommandEnvironment(
+        "replay", RULESET, RULES, (Step("look", look),), skills_root, lambda: NOW
+    )
+    payload = {"lead_id": LEAD, "key": "acreage", "value": 7, "reason": "x"}
+
+    submit_command(db, env, "underwriter", "resolve_fact", payload)
+
+    assert EventType.fact_observed not in seen_inside[0]
+    assert EventType.fact_observed in [e.type for e in read_events(other)]
+    other.close()
+
+
+@pytest.mark.parametrize("accepted", [True, False])
+def test_the_events_of_a_command_take_their_timestamps_inside_its_transaction(
+    db: sqlite3.Connection, passes: Passes, skills_root: Path, accepted: bool
+) -> None:
+    in_transaction: list[bool] = []
+
+    def now() -> datetime:
+        in_transaction.append(db.in_transaction)
+        return NOW
+
+    env = CommandEnvironment("replay", RULESET, RULES, passes.steps, skills_root, now)
+    payload = {"lead_id": LEAD, "key": "acreage", "value": 7, "reason": "x"}
+
+    submit_command(db, env, "underwriter" if accepted else "assistant", "resolve_fact", payload)
+
+    assert in_transaction and all(in_transaction)
+
+
+def test_a_command_submitted_inside_a_transaction_is_an_error(
+    db: sqlite3.Connection, env: CommandEnvironment
+) -> None:
+    db.execute("BEGIN")
+
+    with pytest.raises(RuntimeError, match="transaction"):
+        submit_command(db, env, "underwriter", "resolve_fact", {})
+
+    db.rollback()
+
+
+def test_a_refusal_names_a_lead_only_when_the_lead_exists(
+    db: sqlite3.Connection, env: CommandEnvironment
+) -> None:
+    unknown = {"lead_id": "NOPE", "key": "acreage", "value": 7, "reason": "x"}
+    known = {"lead_id": LEAD, "key": "acreage", "reason": "x"}
+
+    submit_command(db, env, "underwriter", "resolve_fact", unknown)
+    assert last_refusal(db).lead_id is None
+    submit_command(db, env, "underwriter", "resolve_fact", known)
+    assert last_refusal(db).lead_id == LEAD
 
 
 # ---- record_ruling ------------------------------------------------------------------------------

@@ -68,6 +68,12 @@ COMMAND_CLASSES = (
     CommandClass("propose_command", "auto", False, ("assistant", "mcp_client")),
 )
 
+
+def command_class(name: str) -> CommandClass | None:
+    """The declared command class of that name, or None when no class has it."""
+    return next((c for c in COMMAND_CLASSES if c.name == name), None)
+
+
 # The review causes that persist (A.11's two review rows). An event raised every other cause:
 # `approve` acknowledges it (7.3 rule 9, 7.1, 10.4 step 5, A.3, 7.4). A persistent cause is
 # refused until it is removed.

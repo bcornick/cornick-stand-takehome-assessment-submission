@@ -95,23 +95,35 @@ def close_blocker(db: sqlite3.Connection, context: EventContext, blocker_id: int
     db.execute("UPDATE blockers SET closed_event_id = ? WHERE id = ?", (event_id, blocker_id))
 
 
+_BLOCKER_COLUMNS = "id, lead_id, kind, owner, detail_json"
+
+
+def _blocker(row: tuple[int, str, BlockerKind, BlockerOwner, str]) -> Blocker:
+    return Blocker(
+        id=row[0],
+        lead_id=row[1],
+        kind=row[2],
+        owner=row[3],
+        detail=BlockerDetail.model_validate_json(row[4]),
+    )
+
+
 def open_blockers(db: sqlite3.Connection, lead_id: str) -> list[Blocker]:
     """The lead's open blockers, oldest first."""
     rows = db.execute(
-        "SELECT id, lead_id, kind, owner, detail_json FROM blockers"
-        " WHERE lead_id = ? AND closed_event_id IS NULL ORDER BY id",
+        f"SELECT {_BLOCKER_COLUMNS} FROM blockers WHERE lead_id = ? AND closed_event_id IS NULL ORDER BY id",
         (lead_id,),
     ).fetchall()
-    return [
-        Blocker(
-            id=row[0],
-            lead_id=row[1],
-            kind=row[2],
-            owner=row[3],
-            detail=BlockerDetail.model_validate_json(row[4]),
-        )
-        for row in rows
-    ]
+    return [_blocker(row) for row in rows]
+
+
+def open_blocker_by_id(db: sqlite3.Connection, blocker_id: int) -> Blocker | None:
+    """The open blocker with that id, or None when there is none or it is closed."""
+    row = db.execute(
+        f"SELECT {_BLOCKER_COLUMNS} FROM blockers WHERE id = ? AND closed_event_id IS NULL",
+        (blocker_id,),
+    ).fetchone()
+    return None if row is None else _blocker(row)
 
 
 def primary_next_action(db: sqlite3.Connection, lead_id: str) -> Blocker | None:

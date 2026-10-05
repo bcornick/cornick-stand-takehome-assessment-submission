@@ -63,6 +63,13 @@ def test_command_classes() -> None:
     assert len(vertical.COMMAND_CLASSES) == len(EXPECTED_COMMAND_CLASSES)
 
 
+def test_a_command_class_is_found_by_its_name_and_an_unknown_name_has_none() -> None:
+    assert vertical.command_class("approve") == vertical.CommandClass(
+        "approve", None, False, ("underwriter",)
+    )
+    assert vertical.command_class("send_postcard") is None
+
+
 def test_each_command_class_is_submitted_by_actors_and_has_a_level_of_their_sets() -> None:
     for command_class in vertical.COMMAND_CLASSES:
         assert set(command_class.actors) <= set(get_args(Actor))

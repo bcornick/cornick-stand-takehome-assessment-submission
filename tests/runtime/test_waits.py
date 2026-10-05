@@ -13,7 +13,13 @@ from uwh.api.views import BlockerView
 from uwh.runtime.event_types import BlockerDetail, BlockerKind, BlockerOwner, EventType
 from uwh.runtime.events import EventContext, read_events
 from uwh.runtime.store import open_store
-from uwh.runtime.waits import close_blocker, open_blocker, open_blockers, primary_next_action
+from uwh.runtime.waits import (
+    close_blocker,
+    open_blocker,
+    open_blocker_by_id,
+    open_blockers,
+    primary_next_action,
+)
 
 NOW = datetime(2026, 6, 29, 8, 0, 0, tzinfo=UTC)
 CONTEXT = EventContext("run-1", "replay", "workflow", "r" * 64, NOW, NOW)
@@ -101,6 +107,24 @@ def test_closing_an_unknown_or_closed_blocker_is_refused(db: sqlite3.Connection)
         close_blocker(db, CONTEXT, blocker_id)
     with pytest.raises(ValueError, match="no blocker 99"):
         close_blocker(db, CONTEXT, 99)
+
+
+def test_an_open_blocker_is_found_by_its_id_and_a_closed_or_unknown_one_is_not(
+    db: sqlite3.Connection,
+) -> None:
+    blocker_id = open_blocker(db, CONTEXT, "L-1", "data", "data_team", detail())
+    found = open_blocker_by_id(db, blocker_id)
+    assert found is not None
+    assert (found.id, found.lead_id, found.kind, found.owner) == (
+        blocker_id,
+        "L-1",
+        "data",
+        "data_team",
+    )
+    assert found.detail.text == "waiting"
+    close_blocker(db, CONTEXT, blocker_id)
+    assert open_blocker_by_id(db, blocker_id) is None
+    assert open_blocker_by_id(db, 999) is None
 
 
 def test_blockers_of_another_lead_are_not_listed(db: sqlite3.Connection) -> None:

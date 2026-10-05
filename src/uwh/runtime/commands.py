@@ -4,6 +4,7 @@ import sqlite3
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
+from functools import partial
 from pathlib import Path
 
 from pydantic import JsonValue
@@ -14,6 +15,7 @@ from uwh.runtime.event_types import (
     ApprovalRecorded,
     CommandRefused,
     EventType,
+    ReviewCause,
     RulingRecorded,
 )
 from uwh.runtime.events import EventContext, append_event
@@ -26,13 +28,18 @@ from uwh.runtime.facts import (
     resolve_fact,
 )
 from uwh.runtime.runs import command_context
-from uwh.runtime.waits import Blocker, close_blocker, open_blockers
+from uwh.runtime.waits import Blocker, close_blocker, open_blocker_by_id, open_blockers
 from uwh.runtime.workflow import Step, reevaluate, unit_of_work
 from uwh.settings import RunMode
 from uwh.skills.manifest import SkillFolderError, load_manifest
-from uwh.skills.vertical import (
-    COMMAND_CLASSES,
-    HELD_DRAFT_CAUSES,
+from uwh.skills.vertical import HELD_DRAFT_CAUSES, command_class
+
+
+# The reviews a reply raises about an open round (7.3 rule 9, A.11): acknowledging one closes that round.
+_ROUND_REVIEW_CAUSES: tuple[ReviewCause, ...] = (
+    "unread_reply",
+    "off_topic_reply",
+    "declining_reply",
 )
 
 
@@ -89,7 +96,10 @@ def submit_command(
     whatever the handler wrote and commits one `command_refused` event. A command type whose handler
     is not built raises NotImplementedError after the checks, writing nothing.
     """
-    context = command_context(db, actor, env.mode, env.ruleset_hash, env.now())
+    if db.in_transaction:
+        raise RuntimeError(
+            "a command opens its own transaction, so the connection must not be in one"
+        )
     reason = _gate(env, actor, skill, command_type, payload)
     if reason is None:
         handler = _HANDLERS.get(command_type)
@@ -97,6 +107,7 @@ def submit_command(
             raise NotImplementedError(f"the {command_type} command is not built")
         try:
             with unit_of_work(db):
+                context = _context(db, env, actor)
                 outcome = handler(db, context, env, payload)
                 _reevaluate(db, env, outcome.lead_id)
             return CommandResult(True, outcome.event_id, None)
@@ -105,12 +116,18 @@ def submit_command(
     with unit_of_work(db):
         event_id = append_event(
             db,
-            context,
+            _context(db, env, actor),
             EventType.command_refused,
             CommandRefused(command_type=command_type, command_payload=dict(payload), reason=reason),
             lead_id=_lead_named(db, payload),
         )
     return CommandResult(False, event_id, reason)
+
+
+def _context(db: sqlite3.Connection, env: CommandEnvironment, actor: Actor) -> EventContext:
+    """The context of an event written now. Built inside the command's transaction, so a wait for
+    the write lock cannot leave stale timestamps or a stale run on the event."""
+    return command_context(db, actor, env.mode, env.ruleset_hash, env.now())
 
 
 def _gate(
@@ -123,7 +140,7 @@ def _gate(
     """The reason the actor may not submit the command, or None. The actor comes from the transport (7.4)."""
     if "actor" in payload:
         return "the payload names no actor; the transport binds it"
-    declared = next((c for c in COMMAND_CLASSES if c.name == command_type), None)
+    declared = command_class(command_type)
     if declared is None:
         return f"{command_type} is not a command"
     if actor not in declared.actors:
@@ -141,11 +158,16 @@ def _gate(
     return None
 
 
+def _lead_exists(db: sqlite3.Connection, lead_id: str) -> bool:
+    return db.execute("SELECT 1 FROM leads WHERE lead_id = ?", (lead_id,)).fetchone() is not None
+
+
 def _lead_named(db: sqlite3.Connection, payload: Mapping[str, JsonValue]) -> str | None:
-    """The lead a command's payload names, directly or through its item, for the event of a refusal."""
+    """The lead a command's payload names, directly or through its item, when that lead exists; the
+    lead of a refusal's event."""
     lead_id = payload.get("lead_id")
     if isinstance(lead_id, str):
-        return lead_id
+        return lead_id if _lead_exists(db, lead_id) else None
     item_id = payload.get("item_id")
     if isinstance(item_id, int) and not isinstance(item_id, bool):
         row = db.execute("SELECT lead_id FROM blockers WHERE id = ?", (item_id,)).fetchone()
@@ -156,27 +178,17 @@ def _lead_named(db: sqlite3.Connection, payload: Mapping[str, JsonValue]) -> str
 def _reevaluate(db: sqlite3.Connection, env: CommandEnvironment, lead_id: str) -> None:
     """Every accepted command re-evaluates its lead in the command's transaction (A.11). A
     re-evaluation builds drafts and dispatches nothing."""
-    reevaluate(
-        db,
-        lambda: command_context(db, "workflow", env.mode, env.ruleset_hash, env.now()),
-        lead_id,
-        env.steps,
-    )
-
-
-def _lead_status(db: sqlite3.Connection, lead_id: str) -> str:
-    row = db.execute("SELECT status FROM leads WHERE lead_id = ?", (lead_id,)).fetchone()
-    if row is None:
-        raise _Refusal(f"there is no lead {lead_id}")
-    return str(row[0])
+    reevaluate(db, lambda: _context(db, env, "workflow"), lead_id, env.steps)
 
 
 def _lead_binding(db: sqlite3.Connection, lead_id: str) -> tuple[int, str]:
     """The lead's revision and plan hash now."""
-    _lead_status(db, lead_id)
-    revision, plan_hash = db.execute(
+    row = db.execute(
         "SELECT revision, plan_hash FROM leads WHERE lead_id = ?", (lead_id,)
     ).fetchone()
+    if row is None:
+        raise _Refusal(f"there is no lead {lead_id}")
+    revision, plan_hash = row
     if plan_hash is None:
         raise _Refusal(f"lead {lead_id} has no plan to decide against")
     return int(revision), str(plan_hash)
@@ -204,12 +216,10 @@ def _open_item(db: sqlite3.Connection, payload: Mapping[str, JsonValue]) -> Bloc
     item_id = payload.get("item_id")
     if isinstance(item_id, bool) or not isinstance(item_id, int):
         raise _Refusal("the payload needs item_id, an integer")
-    row = db.execute("SELECT lead_id FROM blockers WHERE id = ?", (item_id,)).fetchone()
-    if row is not None:
-        for blocker in open_blockers(db, row[0]):
-            if blocker.id == item_id:
-                return blocker
-    raise _Refusal(f"item {item_id} is not an open item")
+    item = open_blocker_by_id(db, item_id)
+    if item is None:
+        raise _Refusal(f"item {item_id} is not an open item")
+    return item
 
 
 # ---- handlers -----------------------------------------------------------------------------------
@@ -225,7 +235,8 @@ def _resolve_fact(
     reason = _text(payload, "reason")
     if "value" not in payload:
         raise _Refusal("the payload needs value")
-    _lead_status(db, lead_id)
+    if not _lead_exists(db, lead_id):
+        raise _Refusal(f"there is no lead {lead_id}")
     resolve_fact(db, context, lead_id, key, payload["value"], reason, env.ledger_rules)
     (event_id,) = db.execute(
         "SELECT event_id FROM observations"
@@ -268,24 +279,6 @@ def _record_ruling(
     return _Outcome(event_id, lead_id)
 
 
-def _approve(
-    db: sqlite3.Connection,
-    context: EventContext,
-    env: CommandEnvironment,
-    payload: Mapping[str, JsonValue],
-) -> _Outcome:
-    return _settle(db, context, env, payload, approve=True)
-
-
-def _reject(
-    db: sqlite3.Connection,
-    context: EventContext,
-    env: CommandEnvironment,
-    payload: Mapping[str, JsonValue],
-) -> _Outcome:
-    return _settle(db, context, env, payload, approve=False)
-
-
 def _settle(
     db: sqlite3.Connection,
     context: EventContext,
@@ -295,13 +288,14 @@ def _settle(
     approve: bool,
 ) -> _Outcome:
     """`approve` or `reject` of an item that holds no draft, by the A.11 table. An item that holds a
-    draft, and `delivery_unknown`, raise NotImplementedError."""
+    draft, `delivery_unknown`, and an `approve` of a held draft's review raise NotImplementedError."""
     command = "approve" if approve else "reject"
     item = _open_item(db, payload)
     reason = _text(payload, "reason") if approve else _nonempty_text(payload, "reason")
     detail = item.detail
-    if item.kind == "delivery_unknown" or detail.item_kind == "draft":
-        raise NotImplementedError(f"{command} of a {detail.item_kind} item")
+    held_draft = detail.cause in HELD_DRAFT_CAUSES
+    if item.kind == "delivery_unknown" or detail.item_kind == "draft" or (held_draft and approve):
+        raise NotImplementedError(f"{command} of a {detail.cause or detail.item_kind} item")
     if item.kind != "underwriter_review":
         raise _Refusal(f"item {item.id} is a {item.kind}, not an item to {command}")
     if payload.get("artifact_hash") is not None:
@@ -338,8 +332,8 @@ def _settle_observation(
 def _acknowledge_review(
     db: sqlite3.Connection, context: EventContext, item: Blocker, *, approve: bool
 ) -> None:
-    """A review raised by an event closes on `approve`. `reject` is refused, and so is any decision on
-    a review whose cause persists (A.11)."""
+    """A review raised by an event closes on `approve`, and the round its reply raised closes with it.
+    `reject` is refused, and so is any decision on a review whose cause persists (A.11)."""
     cause = item.detail.cause
     if item.detail.cause_persists:
         raise _Refusal(
@@ -347,11 +341,16 @@ def _acknowledge_review(
         )
     if not approve:
         raise _Refusal("an underwriter acts through resolve_fact, record_ruling or decline_lead")
-    if cause in HELD_DRAFT_CAUSES:
-        raise NotImplementedError(f"approve of a {cause} review")
     if cause in LATE_REPLY_CAUSES:
         reject_late_reply_values(db, item.id)
     close_blocker(db, context, item.id)
+    if cause in _ROUND_REVIEW_CAUSES and item.detail.intent_id is not None:
+        for blocker in open_blockers(db, item.lead_id):
+            if (
+                blocker.kind == "producer_reply"
+                and blocker.detail.intent_id == item.detail.intent_id
+            ):
+                close_blocker(db, context, blocker.id)
 
 
 def _record_approval(
@@ -408,8 +407,8 @@ def _record_approval(
 # The one place that lists which command types have a handler; a type absent here raises
 # NotImplementedError in `submit_command`.
 _HANDLERS: dict[str, Handler] = {
-    "approve": _approve,
-    "reject": _reject,
+    "approve": partial(_settle, approve=True),
+    "reject": partial(_settle, approve=False),
     "resolve_fact": _resolve_fact,
     "record_ruling": _record_ruling,
 }
