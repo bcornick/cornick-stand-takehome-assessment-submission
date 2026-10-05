@@ -12,8 +12,14 @@ from hypothesis import given
 from hypothesis import strategies as st
 from pydantic import JsonValue
 
-from uwh.runtime.event_types import ConflictClosed, EventType, FactSelected
-from uwh.runtime.events import EventContext, read_events
+from uwh.runtime.event_types import (
+    BlockerDetail,
+    ConflictClosed,
+    EventType,
+    FactObserved,
+    FactSelected,
+)
+from uwh.runtime.events import EventContext, append_event, read_events
 from uwh.runtime.facts import (
     Conflict,
     Derivation,
@@ -23,6 +29,7 @@ from uwh.runtime.facts import (
     approve_observation,
     effective_facts,
     observe,
+    observe_late_reply,
     observe_reply,
     open_conflicts,
     reject_late_reply_values,
@@ -31,7 +38,8 @@ from uwh.runtime.facts import (
     usable_facts,
 )
 from uwh.runtime.store import open_store
-from uwh.runtime.waits import open_blockers
+from uwh.runtime.waits import open_blocker, open_blockers
+from uwh.runtime.workflow import create_lead
 
 NOW = datetime(2026, 6, 29, 8, 0, 0, tzinfo=UTC)
 CONTEXT = EventContext("run-1", "replay", "workflow", "r" * 64, NOW, NOW)
@@ -113,23 +121,13 @@ def submit(db: sqlite3.Connection, key: str, value: JsonValue, source: Any = "su
     observe(db, CONTEXT, LEAD, key, value, source, {"row": "x"}, RULES)
 
 
-def reply(
-    db: sqlite3.Connection, key: str, value: JsonValue, *, round_closed: bool = False
-) -> RevisionChange:
-    return observe_reply(
-        db,
-        CONTEXT,
-        LEAD,
-        [ReplyValue(key, value, {"quote": str(value)})],
-        RULES,
-        round_closed=round_closed,
-        intent_id=INTENT,
-    )
+def reply(db: sqlite3.Connection, key: str, value: JsonValue) -> RevisionChange:
+    return observe_reply(db, CONTEXT, LEAD, [ReplyValue(key, value, {"quote": str(value)})], RULES)
 
 
 def reply_values(db: sqlite3.Connection, *pairs: tuple[str, JsonValue]) -> RevisionChange:
     values = [ReplyValue(key, value, {"quote": str(value)}) for key, value in pairs]
-    return observe_reply(db, CONTEXT, LEAD, values, RULES, round_closed=False, intent_id=INTENT)
+    return observe_reply(db, CONTEXT, LEAD, values, RULES)
 
 
 def selected_observation_ids(db: sqlite3.Connection, key: str) -> list[int]:
@@ -669,7 +667,7 @@ def test_rule_9_a_reply_to_a_closed_round_is_recorded_raises_a_review_and_moves_
 ) -> None:
     submit(db, "acreage", 2)
     before = revision(db)
-    change = reply(db, "year_built", 1990, round_closed=True)
+    change = late_reply_change(db, INTENT, ("year_built", 1990))
     assert observations(db, "year_built") == [(1990, "reply", "pending_review")]
     assert effective(db, "year_built") is None
     (blocker,) = open_blockers(db, LEAD)
@@ -685,29 +683,28 @@ def test_rule_9_a_late_reply_that_holds_no_value_still_raises_the_review(
     db: sqlite3.Connection,
 ) -> None:
     before = revision(db)
-    change = observe_reply(db, CONTEXT, LEAD, [], RULES, round_closed=True, intent_id=INTENT)
+    change = observe_late_reply(db, CONTEXT, LEAD, [], RULES, intent_id=INTENT, cause="late_reply")
     assert open_kinds(db) == [("review", "late_reply")]
     assert change.after == before + 1
 
 
 def test_rule_9_a_late_reply_review_takes_the_cause_it_is_given(db: sqlite3.Connection) -> None:
     values = [ReplyValue("year_built", 1990, {})]
-    observe_reply(
+    observe_late_reply(
         db,
         CONTEXT,
         LEAD,
         values,
         RULES,
-        round_closed=True,
         intent_id=INTENT,
-        review_cause="reply_after_terminal_status",
+        cause="reply_after_terminal_status",
     )
     assert observations(db, "year_built") == [(1990, "reply", "pending_review")]
     assert open_kinds(db) == [("review", "reply_after_terminal_status")]
 
 
 def test_rule_9_a_late_reply_does_not_set_a_system_owned_field(db: sqlite3.Connection) -> None:
-    reply(db, "kyc_score", 4, round_closed=True)
+    late_reply(db, INTENT, ("kyc_score", 4))
     assert observations(db, "kyc_score") == [(4, "reply", "rejected")]
 
 
@@ -715,7 +712,7 @@ def test_rule_9_one_late_reply_raises_one_review_whatever_the_number_of_values(
     db: sqlite3.Connection,
 ) -> None:
     values = [ReplyValue("year_built", 1990, {}), ReplyValue("acreage", 2, {})]
-    observe_reply(db, CONTEXT, LEAD, values, RULES, round_closed=True, intent_id=INTENT)
+    observe_late_reply(db, CONTEXT, LEAD, values, RULES, intent_id=INTENT, cause="late_reply")
     assert open_kinds(db) == [("review", "late_reply")]
     assert revision(db) == 1
 
@@ -723,15 +720,23 @@ def test_rule_9_one_late_reply_raises_one_review_whatever_the_number_of_values(
 def test_rule_9_the_review_of_a_late_reply_names_the_intent_the_reply_answered(
     db: sqlite3.Connection,
 ) -> None:
-    reply(db, "year_built", 1990, round_closed=True)
+    late_reply(db, INTENT, ("year_built", 1990))
     (blocker,) = open_blockers(db, LEAD)
     assert blocker.detail.intent_id == INTENT
 
 
+def late_reply_change(
+    db: sqlite3.Connection, intent_id: str, *pairs: tuple[str, JsonValue]
+) -> RevisionChange:
+    values = [ReplyValue(key, value, {}) for key, value in pairs]
+    return observe_late_reply(
+        db, CONTEXT, LEAD, values, RULES, intent_id=intent_id, cause="late_reply"
+    )
+
+
 def late_reply(db: sqlite3.Connection, intent_id: str, *pairs: tuple[str, JsonValue]) -> int:
     """Record one late reply of the given values and return the id of its review."""
-    values = [ReplyValue(key, value, {}) for key, value in pairs]
-    observe_reply(db, CONTEXT, LEAD, values, RULES, round_closed=True, intent_id=intent_id)
+    late_reply_change(db, intent_id, *pairs)
     return open_blockers(db, LEAD)[-1].id
 
 
@@ -750,6 +755,57 @@ def test_rule_9_acknowledging_a_late_reply_rejects_its_values_and_no_others(
     reject_late_reply_values(db, second)
     assert observations(db, "bedrooms") == [(3, "reply", "rejected")]
     assert observations(db, "acreage")[-1] == (3, "reply", "pending_review")
+
+
+def test_rule_9_another_leads_events_between_the_values_and_the_review_change_nothing(
+    db: sqlite3.Connection,
+) -> None:
+    cursor = db.execute(
+        "INSERT INTO observations (lead_id, key, value_json, source, evidence_json, status)"
+        " VALUES (?, 'year_built', '1990', 'reply', '{}', 'pending_review')",
+        (LEAD,),
+    )
+    event_id = append_event(
+        db,
+        CONTEXT,
+        EventType.fact_observed,
+        FactObserved(
+            observation_id=cursor.lastrowid or 0,
+            key="year_built",
+            value=1990,
+            source="reply",
+            evidence={},
+            status="pending_review",
+        ),
+        lead_id=LEAD,
+    )
+    db.execute("UPDATE observations SET event_id = ? WHERE id = ?", (event_id, cursor.lastrowid))
+    create_lead(db, CONTEXT, "L-2", "web", "2026-06-29T07:00:00Z")  # another lead's event
+    review = open_blocker(
+        db,
+        CONTEXT,
+        LEAD,
+        "underwriter_review",
+        "underwriter",
+        BlockerDetail(
+            item_kind="review",
+            cause="late_reply",
+            resume_trigger="an underwriter acknowledges the late reply",
+            intent_id=INTENT,
+            text="A reply arrived after its round closed.",
+        ),
+    )
+    reject_late_reply_values(db, review)
+    assert observations(db, "year_built") == [(1990, "reply", "rejected")]
+
+
+def test_rule_9_a_late_reply_with_no_values_rejects_nothing_of_an_earlier_one(
+    db: sqlite3.Connection,
+) -> None:
+    late_reply(db, "I-1", ("year_built", 1990))
+    empty = late_reply(db, "I-2")
+    reject_late_reply_values(db, empty)
+    assert observations(db, "year_built") == [(1990, "reply", "pending_review")]
 
 
 def test_rule_9_a_late_reply_value_a_ruling_already_rejected_stays_rejected(
@@ -841,7 +897,7 @@ def test_rule_10_approve_and_reject_refuse_an_observation_that_is_not_awaiting_a
 def test_a_late_reply_observation_is_not_approvable_as_an_observation(
     db: sqlite3.Connection,
 ) -> None:
-    reply(db, "year_built", 1990, round_closed=True)
+    late_reply(db, INTENT, ("year_built", 1990))
     with pytest.raises(ValueError, match="awaiting"):
         approve_observation(db, UNDERWRITER, 1, RULES)
     assert effective(db, "year_built") is None
@@ -867,7 +923,7 @@ def test_the_revision_moves_for_every_kind_of_change_the_rules_allow(
             "a restated value confirming a conflict",
             lambda: reply(db, "roof_replacement_year", 2031),
         ),
-        ("a late reply", lambda: reply(db, "year_built", 1991, round_closed=True)),
+        ("a late reply", lambda: late_reply(db, INTENT, ("year_built", 1991))),
     ]
     for name, step in steps:
         before = revision(db)

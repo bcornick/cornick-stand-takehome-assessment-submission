@@ -1,4 +1,4 @@
-# ABOUTME: Tests the lead workflow of 7.1: A.3 status transitions, ordered steps with a data blocker on failure, re-evaluation on a changed revision, the settled run of A.5, replies after a terminal status and the bounded lead pool of A.10.
+# ABOUTME: Tests the lead workflow of 7.1: A.3 status transitions, ordered steps with a data blocker on failure, re-evaluation of a lead that is not terminal, the settled run of A.5, replies after a terminal status and the bounded lead pool of A.10.
 # ABOUTME: Each test opens a real database through open_store at a tmp_path file and runs plain Python functions as steps; the pool tests use one connection per lead, as the runtime does.
 import itertools
 import sqlite3
@@ -14,7 +14,6 @@ from uwh.runtime.events import EventContext, read_events
 from uwh.runtime.facts import (
     LedgerRules,
     ReplyValue,
-    RevisionChange,
     effective_facts,
     observe,
     resolve_fact,
@@ -218,9 +217,7 @@ def test_a_lead_whose_first_step_fails_stays_received_and_can_be_evaluated_again
     run_steps(db, make_context, LEAD, steps)
     assert status_of(db) == "received"
     seen: list[str] = []
-    change = resolve_fact(db, CONTEXT, LEAD, "acreage", 7, "reason", RULES)
-    db.commit()
-    reevaluate(db, make_context, LEAD, [logging_step(seen, "triage")], change)
+    reevaluate(db, make_context, LEAD, [logging_step(seen, "triage")])
     assert seen == ["triage:received"]
     assert status_of(db) == "in_progress"
 
@@ -362,19 +359,10 @@ def test_an_accepted_fact_re_evaluates_the_lead_through_the_whole_sequence(
     steps = evaluation_steps(log)
     run_steps(db, make_context, LEAD, steps)
     assert log == ["triage:received", "evaluate:None"]
-    change = resolve_fact(db, CONTEXT, LEAD, "acreage", 7, "the producer phoned", RULES)
-    assert change.changed
-    reevaluate(db, make_context, LEAD, steps, change)
+    resolve_fact(db, CONTEXT, LEAD, "acreage", 7, "the producer phoned", RULES)
+    reevaluate(db, make_context, LEAD, steps)
     assert log == ["triage:received", "evaluate:None", "triage:in_progress", "evaluate:7"]
     assert status_of(db) == "in_progress"
-
-
-def test_a_change_of_nothing_does_not_re_evaluate_the_lead(db: sqlite3.Connection) -> None:
-    log: list[str] = []
-    steps = evaluation_steps(log)
-    run_steps(db, make_context, LEAD, steps)
-    reevaluate(db, make_context, LEAD, steps, RevisionChange(1, 1))
-    assert len(log) == 2
 
 
 def test_a_failing_step_in_the_callers_transaction_rolls_back_to_its_savepoint_and_the_callers_writes_commit(
@@ -390,8 +378,8 @@ def test_a_failing_step_in_the_callers_transaction_rolls_back_to_its_savepoint_a
 
     other = open_store(path)
     with unit_of_work(db):
-        change = resolve_fact(db, CONTEXT, LEAD, "acreage", 7, "reason", RULES)
-        reevaluate(db, make_context, LEAD, [Step("evaluate", write_then_fail)], change)
+        resolve_fact(db, CONTEXT, LEAD, "acreage", 7, "reason", RULES)
+        reevaluate(db, make_context, LEAD, [Step("evaluate", write_then_fail)])
         assert sorted(effective_facts(other, LEAD)) == []  # nothing is committed yet
     assert seen_inside == [["acreage", "stories"]]
     assert sorted(effective_facts(other, LEAD)) == ["acreage"]
@@ -402,7 +390,46 @@ def test_a_failing_step_in_the_callers_transaction_rolls_back_to_its_savepoint_a
     other.close()
 
 
-def test_a_failure_outside_a_step_in_the_callers_transaction_still_rolls_the_caller_back(
+def test_a_failing_step_in_the_callers_transaction_rolls_back_the_steps_before_it_too(
+    db: sqlite3.Connection, path: str
+) -> None:
+    other = open_store(path)
+    with unit_of_work(db):
+        resolve_fact(db, CONTEXT, LEAD, "acreage", 7, "reason", RULES)
+        reevaluate(db, make_context, LEAD, [observing_step("stories"), failing_step("evaluate")])
+    assert sorted(effective_facts(other, LEAD)) == ["acreage"]
+    assert status_of(other) == "received"
+    assert db.execute("SELECT count(*) FROM observations").fetchone()[0] == 1
+    assert len(step_failure_blockers(other)) == 1
+    other.close()
+
+
+def test_a_pass_in_the_callers_transaction_that_completes_keeps_every_step(
+    db: sqlite3.Connection,
+) -> None:
+    with unit_of_work(db):
+        reevaluate(db, make_context, LEAD, [observing_step("a"), observing_step("b")])
+    assert sorted(effective_facts(db, LEAD)) == ["a", "b"]
+    assert status_of(db) == "in_progress"
+
+
+def test_the_last_steps_unit_closes_the_step_failure_blocker_with_the_move_to_in_progress(
+    db: sqlite3.Connection,
+) -> None:
+    run_steps(db, make_context, LEAD, [failing_step("triage")])
+    calls = itertools.count()
+
+    def context_that_fails_for_the_closing() -> EventContext:
+        if next(calls) == 1:  # the first call builds the step's context, the second the closing's
+            raise RuntimeError("no context")
+        return CONTEXT
+
+    run_steps(db, context_that_fails_for_the_closing, LEAD, [logging_step([], "triage")])
+    assert status_of(db) == "received"
+    assert len(step_failure_blockers(db)) == 1
+
+
+def test_a_unit_of_work_whose_body_raises_rolls_back_its_writes(
     db: sqlite3.Connection,
 ) -> None:
     with pytest.raises(RuntimeError, match="the caller fails"):
@@ -416,7 +443,7 @@ def test_a_failure_outside_a_step_in_the_callers_transaction_still_rolls_the_cal
 def test_a_terminal_lead_is_not_re_evaluated(db: sqlite3.Connection, status: str) -> None:
     log: list[str] = []
     set_status(db, status)
-    reevaluate(db, make_context, LEAD, evaluation_steps(log), RevisionChange(0, 1))
+    reevaluate(db, make_context, LEAD, evaluation_steps(log))
     assert log == [] and status_of(db) == status
 
 

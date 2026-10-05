@@ -28,11 +28,7 @@ class Blocker:
     detail: BlockerDetail
 
 
-def _require_pending_observation(
-    db: sqlite3.Connection, lead_id: str, observation_id: int | None
-) -> None:
-    if observation_id is None:
-        raise ValueError("an observation item names its observation: observation_id")
+def _require_pending_observation(db: sqlite3.Connection, lead_id: str, observation_id: int) -> None:
     row = db.execute(
         "SELECT lead_id, status FROM observations WHERE id = ?", (observation_id,)
     ).fetchone()

@@ -20,7 +20,14 @@ from uwh.runtime.event_types import (
     RulingRecorded,
 )
 from uwh.runtime.events import EventContext, StoredEvent, read_events
-from uwh.runtime.facts import LedgerRules, ReplyValue, effective_facts, observe, observe_reply
+from uwh.runtime.facts import (
+    LedgerRules,
+    ReplyValue,
+    effective_facts,
+    observe,
+    observe_late_reply,
+    observe_reply,
+)
 from uwh.runtime.store import open_store
 from uwh.runtime.waits import open_blocker, open_blockers
 from uwh.runtime.workflow import Step, create_lead
@@ -119,15 +126,7 @@ def assert_refused(db: sqlite3.Connection, result: CommandResult, reason_part: s
 def pending_observation(db: sqlite3.Connection) -> int:
     """A reply value that differs from a submitted one: pending, with its review open."""
     observe(db, SETUP, LEAD, "acreage", 2, "submitted", {}, RULES)
-    observe_reply(
-        db,
-        SETUP,
-        LEAD,
-        [ReplyValue("acreage", 3, {"quote": "3 acres"})],
-        RULES,
-        round_closed=False,
-        intent_id="i-1",
-    )
+    observe_reply(db, SETUP, LEAD, [ReplyValue("acreage", 3, {"quote": "3 acres"})], RULES)
     db.commit()
     (item,) = open_blockers(db, LEAD)
     assert item.detail.observation_id is not None
@@ -442,14 +441,14 @@ def test_approving_a_lead_without_a_plan_is_refused(
 
 def late_reply_review(db: sqlite3.Connection) -> int:
     observe(db, SETUP, LEAD, "acreage", 2, "submitted", {}, RULES)
-    observe_reply(
+    observe_late_reply(
         db,
         SETUP,
         LEAD,
         [ReplyValue("acreage", 9, {"quote": "9 acres"})],
         RULES,
-        round_closed=True,
         intent_id="i-1",
+        cause="late_reply",
     )
     db.commit()
     (item,) = open_blockers(db, LEAD)

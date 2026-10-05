@@ -18,6 +18,7 @@ from uwh.runtime.event_types import (
 )
 from uwh.runtime.events import EventContext, append_event
 from uwh.runtime.facts import (
+    LATE_REPLY_CAUSES,
     LedgerRules,
     approve_observation,
     reject_late_reply_values,
@@ -26,18 +27,13 @@ from uwh.runtime.facts import (
 )
 from uwh.runtime.runs import command_context
 from uwh.runtime.waits import Blocker, close_blocker, open_blockers
-from uwh.runtime.workflow import Step, run_steps, unit_of_work
+from uwh.runtime.workflow import Step, reevaluate, unit_of_work
 from uwh.settings import RunMode
 from uwh.skills.manifest import SkillFolderError, load_manifest
 from uwh.skills.vertical import (
     COMMAND_CLASSES,
     HELD_DRAFT_CAUSES,
-    TERMINAL_STATUSES,
 )
-
-# The reviews raised by a reply that arrived after its round closed or after the lead's final status
-# (7.3 rule 9): acknowledging one rejects that reply's pending values.
-_LATE_REPLY_CAUSES = ("late_reply", "reply_after_terminal_status")
 
 
 @dataclass(frozen=True)
@@ -158,11 +154,9 @@ def _lead_named(db: sqlite3.Connection, payload: Mapping[str, JsonValue]) -> str
 
 
 def _reevaluate(db: sqlite3.Connection, env: CommandEnvironment, lead_id: str) -> None:
-    """Every accepted command re-evaluates its lead in the command's transaction (A.11) unless the
-    lead is terminal. A re-evaluation builds drafts and dispatches nothing."""
-    if _lead_status(db, lead_id) in TERMINAL_STATUSES:
-        return
-    run_steps(
+    """Every accepted command re-evaluates its lead in the command's transaction (A.11). A
+    re-evaluation builds drafts and dispatches nothing."""
+    reevaluate(
         db,
         lambda: command_context(db, "workflow", env.mode, env.ruleset_hash, env.now()),
         lead_id,
@@ -355,7 +349,7 @@ def _acknowledge_review(
         raise _Refusal("an underwriter acts through resolve_fact, record_ruling or decline_lead")
     if cause in HELD_DRAFT_CAUSES:
         raise NotImplementedError(f"approve of a {cause} review")
-    if cause in _LATE_REPLY_CAUSES:
+    if cause in LATE_REPLY_CAUSES:
         reject_late_reply_values(db, item.id)
     close_blocker(db, context, item.id)
 

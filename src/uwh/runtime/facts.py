@@ -4,7 +4,7 @@ import json
 import sqlite3
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import Literal, get_args
 
 from pydantic import JsonValue
 
@@ -17,7 +17,6 @@ from uwh.runtime.event_types import (
     FactSelected,
     ObservationSource,
     ObservationStatus,
-    ReviewCause,
 )
 from uwh.runtime.events import EventContext, append_event, read_events
 from uwh.runtime.waits import close_blocker, open_blocker, open_blockers
@@ -34,7 +33,7 @@ class Conflict:
 
     @property
     def identity(self) -> tuple[str, tuple[str, ...], str]:
-        """The validator on these values: a conflict closed by a restating reply is not opened again on them (9.6)."""
+        """The validator on these values: a conflict closed by the reply or underwriter observation that confirmed its values is not opened again on them (9.6)."""
         return (self.validator, self.fields, _canonical(self.values))
 
 
@@ -262,7 +261,7 @@ def _canonical(value: JsonValue) -> str:
 def _conflict_events(
     db: sqlite3.Connection, lead_id: str
 ) -> list[tuple[bool, Conflict, int | None]]:
-    """The lead's conflict events in order: (opened, conflict, restating observation id)."""
+    """The lead's conflict events in order: (opened, conflict, observation id that closed it)."""
     found: list[tuple[bool, Conflict, int | None]] = []
     for event in read_events(db, lead_id=lead_id):
         payload = event.payload
@@ -291,7 +290,7 @@ def open_conflicts(db: sqlite3.Connection, lead_id: str) -> list[Conflict]:
 def _confirmed_identities(
     db: sqlite3.Connection, lead_id: str
 ) -> set[tuple[str, tuple[str, ...], str]]:
-    """The conflicts a restating reply closed; their validator is not to open them again."""
+    """The conflicts closed by the reply or underwriter observation that confirmed their values; their validator is not to open them again."""
     return {
         conflict.identity
         for opened, conflict, observation_id in _conflict_events(db, lead_id)
@@ -368,46 +367,67 @@ def observe(
     return ledger.finish()
 
 
+LateReplyCause = Literal["late_reply", "reply_after_terminal_status"]
+
+# The reviews a late reply raises (rule 9): acknowledging one rejects that reply's pending values.
+LATE_REPLY_CAUSES: tuple[LateReplyCause, ...] = get_args(LateReplyCause)
+
+_LATE_REPLY_TEXT: dict[LateReplyCause, str] = {
+    "late_reply": "A reply arrived after its round closed.",
+    "reply_after_terminal_status": "A reply arrived after the lead reached its final status.",
+}
+
+
 def observe_reply(
     db: sqlite3.Connection,
     context: EventContext,
     lead_id: str,
     values: Sequence[ReplyValue],
     rules: LedgerRules,
-    *,
-    round_closed: bool,
-    intent_id: str,
-    review_cause: Literal["late_reply", "reply_after_terminal_status"] = "late_reply",
 ) -> RevisionChange:
-    """Apply the values read from one reply by the source-authority rules of 7.3. The caller commits.
-
-    `intent_id` is the request the reply answers. `round_closed` is true when that request has closed
-    its round (rule 9), or when the lead is terminal (A.3): the values are recorded `pending_review`
-    and applied to nothing, one review of `review_cause` naming the intent is raised and the revision
-    moves, whatever the values.
-    """
+    """Apply the values read from one reply to an open round by the source-authority rules of 7.3.
+    The caller commits."""
     ledger = _Pass(db, context, lead_id, rules)
-    changed = set() if round_closed else _changed_keys(ledger, values)
+    changed = _changed_keys(ledger, values)
     for reply_value in values:
-        _apply_reply_value(ledger, reply_value, round_closed, changed)
-    if round_closed:
-        ledger.raise_review(
-            BlockerDetail(
-                item_kind="review",
-                cause=review_cause,
-                resume_trigger="an underwriter acknowledges the late reply",
-                intent_id=intent_id,
-                text=_LATE_REPLY_TEXT[review_cause],
-            )
-        )
-        ledger.moves_revision = True
+        _apply_reply_value(ledger, reply_value, changed)
     return ledger.finish()
 
 
-_LATE_REPLY_TEXT: dict[ReviewCause, str] = {
-    "late_reply": "A reply arrived after its round closed.",
-    "reply_after_terminal_status": "A reply arrived after the lead reached its final status.",
-}
+def observe_late_reply(
+    db: sqlite3.Connection,
+    context: EventContext,
+    lead_id: str,
+    values: Sequence[ReplyValue],
+    rules: LedgerRules,
+    *,
+    intent_id: str,
+    cause: LateReplyCause,
+) -> RevisionChange:
+    """Rule 9: record the values of a reply that arrived after its round closed, or after the lead's
+    final status (A.3), applied to nothing. The caller commits.
+
+    Each value is recorded `pending_review` (a system-owned key's is rejected by rule 4), one review
+    of `cause` naming `intent_id`, the request the reply answers, is raised and the revision moves,
+    whatever the values.
+    """
+    ledger = _Pass(db, context, lead_id, rules)
+    for reply_value in values:
+        status: ObservationStatus = (
+            "rejected" if reply_value.key in rules.system_owned_keys else "pending_review"
+        )
+        ledger.record(reply_value.key, reply_value.value, "reply", reply_value.evidence, status)
+    ledger.raise_review(
+        BlockerDetail(
+            item_kind="review",
+            cause=cause,
+            resume_trigger="an underwriter acknowledges the late reply",
+            intent_id=intent_id,
+            text=_LATE_REPLY_TEXT[cause],
+        )
+    )
+    ledger.moves_revision = True
+    return ledger.finish()
 
 
 def _changed_keys(ledger: _Pass, values: Sequence[ReplyValue]) -> set[str]:
@@ -422,15 +442,10 @@ def _changed_keys(ledger: _Pass, values: Sequence[ReplyValue]) -> set[str]:
     }
 
 
-def _apply_reply_value(
-    ledger: _Pass, reply_value: ReplyValue, round_closed: bool, changed: set[str]
-) -> None:
+def _apply_reply_value(ledger: _Pass, reply_value: ReplyValue, changed: set[str]) -> None:
     key, value, evidence = reply_value.key, reply_value.value, reply_value.evidence
     if key in ledger.rules.system_owned_keys:  # rule 4
         ledger.record(key, value, "reply", evidence, "rejected")
-        return
-    if round_closed:  # rule 9
-        ledger.record(key, value, "reply", evidence, "pending_review")
         return
     current = effective_facts(ledger.db, ledger.lead_id).get(key)
     if current is None:  # rule 2
@@ -577,7 +592,7 @@ def reject_late_reply_values(db: sqlite3.Connection, blocker_id: int) -> None:
         raise ValueError(f"blocker {blocker_id} is not the review of a late reply")
     lead_id, kind, detail_json, opened_event_id = row
     detail = BlockerDetail.model_validate_json(detail_json)
-    if kind != "underwriter_review" or detail.cause not in _LATE_REPLY_TEXT:
+    if kind != "underwriter_review" or detail.cause not in LATE_REPLY_CAUSES:
         raise ValueError(f"blocker {blocker_id} is not the review of a late reply")
     db.execute(
         "UPDATE observations SET status = 'rejected'"

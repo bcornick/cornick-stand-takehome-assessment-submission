@@ -73,6 +73,15 @@ def test_a_lead_received_on_a_saturday_ages_from_monday_midnight() -> None:
     assert age_business_days(utc(2026, 7, 4, 10), utc(2026, 7, 6, 12)) == pytest.approx(0.5)
 
 
+def test_a_business_day_is_a_utc_day_whatever_the_offset_given() -> None:
+    # Friday 22:00 at -05:00 is Saturday 03:00 UTC, a weekend moment, so the lead ages from Monday 00:00 UTC.
+    received = datetime.fromisoformat("2026-07-03T22:00:00-05:00")
+    assert age_business_days(received, utc(2026, 7, 6)) == 0.0
+    # Monday 01:00 at +02:00 is Sunday 23:00 UTC, which adds nothing.
+    now = datetime.fromisoformat("2026-07-06T01:00:00+02:00")
+    assert age_business_days(utc(2026, 7, 3, 12), now) == pytest.approx(0.5)
+
+
 def test_age_across_a_full_week_is_five_business_days() -> None:
     assert age_business_days(REFERENCE_MORNING, utc(2026, 7, 6, 8)) == pytest.approx(5.0)
 

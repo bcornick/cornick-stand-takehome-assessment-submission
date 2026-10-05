@@ -1,5 +1,5 @@
-# ABOUTME: The lead workflow of 7.1 and A.3: lead rows, status transitions, a lead's ordered steps with at most one data blocker on failure, re-evaluation on a changed revision, the settled run of A.5 and the bounded lead pool of A.10.
-# ABOUTME: The steps arrive as an ordered sequence; each step runs in one unit of work, an explicit transaction on the lead's own connection that nests as a savepoint inside a caller's transaction.
+# ABOUTME: The lead workflow of 7.1 and A.3: lead rows, status transitions, a lead's ordered steps with at most one data blocker on failure, re-evaluation of a lead that is not terminal, the settled run of A.5 and the bounded lead pool of A.10.
+# ABOUTME: The steps arrive as an ordered sequence; each step runs in one unit of work, an explicit transaction on the lead's own connection that nests as a savepoint inside a caller's transaction, where one savepoint holds the whole pass.
 import sqlite3
 from collections.abc import Callable, Iterator, Sequence
 from concurrent.futures import ThreadPoolExecutor
@@ -8,7 +8,13 @@ from dataclasses import dataclass
 
 from uwh.runtime.event_types import BlockerDetail, EventType, LeadReceived, Status
 from uwh.runtime.events import EventContext, append_event
-from uwh.runtime.facts import LedgerRules, ReplyValue, RevisionChange, observe_reply
+from uwh.runtime.facts import (
+    LedgerRules,
+    ReplyValue,
+    RevisionChange,
+    observe_late_reply,
+    observe_reply,
+)
 from uwh.runtime.store import open_store
 from uwh.runtime.waits import Blocker, close_blocker, open_blocker, open_blockers
 from uwh.skills.vertical import TERMINAL_STATUSES, TRANSITIONS
@@ -24,8 +30,8 @@ _FIRST_PASS_STATUSES: tuple[Status, ...] = ("received", "triaged")
 @dataclass(frozen=True)
 class Step:
     """One workflow step of a lead. `run` acts on the lead through the ledger, the waits and the other
-    runtime modules. It runs inside one unit of work that `run_steps` opens and commits, so it neither
-    opens its own nor commits, and it leaves the posting of a message to the send primitive.
+    runtime modules. It runs inside a unit of work that `run_steps` opens, so it neither opens its own nor
+    commits, and it leaves the posting of a message to the send primitive.
     """
 
     name: str
@@ -134,38 +140,59 @@ def _open_step_failure_blocker(
     )
 
 
+def _run_step(
+    db: sqlite3.Connection,
+    make_context: Callable[[], EventContext],
+    lead_id: str,
+    step: Step,
+    *,
+    last: bool,
+) -> None:
+    """Run the step and the status moves after it. The last step also moves the lead to `in_progress`
+    and closes its step-failure blocker, so a pass that ran every step leaves neither a stale status
+    nor a stale blocker."""
+    step.run(db, make_context(), lead_id)
+    if _status(db, lead_id) == "received":
+        transition(db, lead_id, "triaged")
+    if last:
+        transition(db, lead_id, "in_progress")
+        for blocker in _step_failure_blockers(db, lead_id):
+            close_blocker(db, make_context(), blocker.id)
+
+
 def run_steps(
     db: sqlite3.Connection,
     make_context: Callable[[], EventContext],
     lead_id: str,
     steps: Sequence[Step],
 ) -> None:
-    """Run the steps in order, each to completion before the next, in one unit of work per step.
+    """Run the steps in order, each to completion before the next.
 
-    The unit of a step also holds the status move after it: `received` to `triaged` when the first
-    step completes, and `in_progress` (A.3) when the last does, so a lead whose pass was cut short is
+    The last step's unit also moves the lead to `in_progress` (A.3) and closes its step-failure
+    blocker; the first moves it from `received` to `triaged`, so a lead whose pass was cut short is
     still `received` or `triaged`. `make_context` builds the context of each unit's events.
 
-    A step that raises rolls its unit back, the lead's remaining steps do not run and a `data`
-    blocker naming the step is opened in a unit of its own (7.1, 8). A pass that runs every step
-    closes the lead's step-failure blocker. Inside a caller's transaction a unit is a savepoint, so
-    the rollback and the blocker leave the caller's own writes to commit (A.11).
+    At top level each step is one unit of work. A step that raises rolls back its own unit, the
+    remaining steps do not run and a `data` blocker naming the step opens in a unit of its own
+    (7.1, 8). Inside a caller's transaction the whole pass is one savepoint: a step that raises rolls
+    back every step of the pass and its status moves, the blocker opens and `run_steps` returns, so
+    the caller's own writes commit (A.11).
     """
-    for position, step in enumerate(steps):
-        try:
+    step: Step | None = None
+    try:
+        if db.in_transaction:
             with unit_of_work(db):
-                step.run(db, make_context(), lead_id)
-                if _status(db, lead_id) == "received":
-                    transition(db, lead_id, "triaged")
-                if position == len(steps) - 1:
-                    transition(db, lead_id, "in_progress")
-        except Exception as error:
-            with unit_of_work(db):
-                _open_step_failure_blocker(db, make_context(), lead_id, step, error)
-            return
-    with unit_of_work(db):
-        for blocker in _step_failure_blockers(db, lead_id):
-            close_blocker(db, make_context(), blocker.id)
+                for position, step in enumerate(steps):
+                    _run_step(db, make_context, lead_id, step, last=position == len(steps) - 1)
+        else:
+            for position, step in enumerate(steps):
+                with unit_of_work(db):
+                    _run_step(db, make_context, lead_id, step, last=position == len(steps) - 1)
+    except Exception as error:
+        if step is None:
+            raise
+        with unit_of_work(db):
+            _open_step_failure_blocker(db, make_context(), lead_id, step, error)
 
 
 def reevaluate(
@@ -173,16 +200,13 @@ def reevaluate(
     make_context: Callable[[], EventContext],
     lead_id: str,
     steps: Sequence[Step],
-    change: RevisionChange,
 ) -> None:
-    """Run every step again when `change` moved the revision; a terminal lead is not evaluated again.
+    """Run every step again, unless the lead is terminal. Every skill reads facts (8), so the whole
+    sequence runs, on a lead that is `received` or `triaged` as on an `in_progress` one.
 
-    Every skill reads facts (8), so the whole sequence runs, on a lead that is `received` or `triaged`
-    as on an `in_progress` one. The command layer calls this in the transaction of the command, where
-    a failing step rolls back to its savepoint and opens the step-failure blocker, and the command's
-    own writes commit.
+    The command layer calls this for every accepted command, in the command's transaction (A.11).
     """
-    if not change.changed or _status(db, lead_id) in TERMINAL_STATUSES:
+    if _status(db, lead_id) in TERMINAL_STATUSES:
         return
     run_steps(db, make_context, lead_id, steps)
 
@@ -200,19 +224,20 @@ def record_reply(
     """Record a reply in the ledger. A reply to a terminal lead is recorded `pending_review` and
     raises a `reply_after_terminal_status` review, and the status stays (A.3). The caller commits."""
     if _status(db, lead_id) in TERMINAL_STATUSES:
-        return observe_reply(
+        return observe_late_reply(
             db,
             context,
             lead_id,
             values,
             rules,
-            round_closed=True,
             intent_id=intent_id,
-            review_cause="reply_after_terminal_status",
+            cause="reply_after_terminal_status",
         )
-    return observe_reply(
-        db, context, lead_id, values, rules, round_closed=round_closed, intent_id=intent_id
-    )
+    if round_closed:
+        return observe_late_reply(
+            db, context, lead_id, values, rules, intent_id=intent_id, cause="late_reply"
+        )
+    return observe_reply(db, context, lead_id, values, rules)
 
 
 def run_is_settled(db: sqlite3.Connection, run_id: str) -> bool:
