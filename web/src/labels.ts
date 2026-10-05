@@ -13,7 +13,6 @@ type Applies = Schemas['PlaybookPage']['applies']
 type MessageKind = Schemas['DraftView']['kind']
 type DraftState = Schemas['DraftView']['state']
 type EffectType = Schemas['PlannedEffect']['effect']['type']
-type Mode = Schemas['RunView']['mode']
 
 export const STATUS_LABELS: Record<Status, string> = {
   received: 'Received',
@@ -96,12 +95,6 @@ export const EFFECT_LABELS: Record<EffectType, string> = {
   advisory: 'Advisory',
   obligation: 'Obligation',
   no_action: 'No action',
-}
-
-export const MODE_LABELS: Record<Mode, string> = {
-  live: 'live',
-  record: 'record',
-  replay: 'replay',
 }
 
 const PAGE_LABELS: Record<string, string> = {

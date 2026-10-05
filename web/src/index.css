@@ -1,3 +1,5 @@
+/* ABOUTME: Global styles of the web client: the Tailwind and shadcn imports and the theme variables. */
+/* ABOUTME: Components take their look from these classes and variables rather than carrying their own. */
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
