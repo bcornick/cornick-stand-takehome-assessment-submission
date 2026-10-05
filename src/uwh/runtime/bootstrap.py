@@ -16,14 +16,14 @@ from uwh.settings import Settings
 LEAD_COUNT = 10
 TIMEOUT_SECONDS = 10.0
 PROBE_ADDRESS = "uw@stand.com"
-# Transport failures, a malformed URL, and an answer of the wrong form or shape.
+# Transport failures, a malformed URL, and an answer of the wrong form (ValueError) or shape
+# (LookupError, TypeError). A defect in this code is not listed and surfaces as itself.
 CHECK_FAILURES = (
     httpx2.HTTPError,
     httpx2.InvalidURL,
     ValueError,
     LookupError,
     TypeError,
-    AttributeError,
 )
 
 
