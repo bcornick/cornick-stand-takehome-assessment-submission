@@ -609,6 +609,20 @@
     "passes": false
   },
   {
+    "id": "S08-A19",
+    "stage": 8,
+    "description": "Tier 1. The `polish_message` skill tests pass. Expect: all pass.",
+    "command": "uv run pytest tests/skills/polish_message",
+    "passes": false
+  },
+  {
+    "id": "S08-A20",
+    "stage": 8,
+    "description": "Tier 1. Lead 008's delivered request carries the rendered question block unchanged inside a rewritten opening and closing, and the seed-42 message graders pass on that run. Needs `MODEL_API_KEY` in `.env`. Expect: all pass.",
+    "command": "uv run pytest -m integration tests/integration/test_polished_request.py",
+    "passes": false
+  },
+  {
     "id": "S09-A1",
     "stage": 9,
     "description": "Tier 0. Reply endpoint, reading, apply and fixture-reader tests pass. Expect: all pass.",

@@ -78,7 +78,7 @@ The brief sets a 5 to 6 hour box and says the choice of what to cut is evaluated
 | Tier | Contents |
 |---|---|
 | **0: must demo** | Compose and harness integration; queue ingest; field triage; derive, fetch, assume; the seven graphs with a non-trivial outcome on seed 42 (Profile, Occupancy, Fire Simulation, Roof, Siding, Post & Pier, Replacement Cost); ask plan; rendered request; send with intent and reconcile; reply paste, the fixture-reply control and `read_reply`; quote packet and decline notice with approval; queue and detail panes; seed-42 labels and reply fixtures; graders for coverage, one open request, asks, forbidden asks, send safety, key isolation, and Stand's key on seed 42; three controls (do nothing, email everything, send twice); results log; the reply-reading improvement cycle |
-| **1: full design** | Remaining graphs (Plumbing, Electrical, Pools, Trusts, PC 9 & 10); the 50-seed sweep, including Stand's key on seeds 1 to 50; emergency stop and settings view; skills view; MCP tools; chat panel; replay mode; remaining graders and controls; server-sent events |
+| **1: full design** | Remaining graphs (Plumbing, Electrical, Pools, Trusts, PC 9 & 10); the 50-seed sweep, including Stand's key on seeds 1 to 50; emergency stop and settings view; skills view; the conversational rewrite of request emails (`polish_message`, section 10.2); MCP tools; chat panel; replay mode; remaining graders and controls; server-sent events |
 | **2: built last** | The Jev adapter, which is built first in this tier and is not cut; then the model-driven triage comparison (section 13.6); then the rule-change flow. If anything is cut, the rule-change flow goes first, then the comparison. |
 
 If a tier is cut, the README's "cut and hand-waved" section says so and the affected graphs return an explicit `not_evaluated` note on the lead, never a silent pass.
@@ -302,6 +302,7 @@ Rules:
 | `evaluate_playbook` | no | after resolution | none |
 | `plan_asks` | no | after evaluation | none |
 | `render_message` | no | an ask plan, quote or decline needs a message | none |
+| `polish_message` | Language model | a request has been rendered | the rendered request is sent as it is |
 | `read_reply` | Language model for extraction; Jev first for classification when its key is set, language model as fallback | a reply is delivered | reply goes to the underwriter unread |
 | `build_quote_packet` | no | no open blockers and no asks remain | none |
 
@@ -598,6 +599,15 @@ One open request per lead. A second request is allowed only after a reply. A quo
 The ask plan is a list of typed asks: `field_request`, `follow_on_question`, `catalogue_question`, `confirmation`, `document_request`. Each carries its field or catalogue id, its reason, and stored plain wording.
 
 `render_message` produces the full text in code: a fixed opening, asks grouped by the registry's `section` in registry order, then a final group "Additional questions" for catalogue questions and confirmations, numbered. Each ask's id is recorded in the intent so graders can match the delivered body to the plan in both directions. Confirmations are worded neutrally and never state a consequence. No message contains a decline reason, pricing or internal notes; a pre-send check enforces this on edited drafts.
+
+**Conversational rewrite.** `polish_message` gives a request a conversational opening and closing. It applies to routine and sensitive requests only; a quote packet or decline notice is never rewritten. The model is shown the rendered request, the recipient kind and the round, and returns two pieces of text: an opening and a closing. Code builds the body as the opening, then the question block exactly as `render_message` produced it, then the closing. The model never returns the questions, so it cannot drop, add or change one.
+
+Two checks run before the rewritten body is used, and both must pass:
+
+1. **Code check.** Neither piece contains a question mark or a numbered line, and each is within its length cap (A.10).
+2. **Model check.** A second call judges the opening and closing against the rendered request and answers whether they add a consequence, a decision, a price, a deadline or a request the rendered text does not contain. It returns pass or fail with the offending sentence.
+
+When both pass, the rewritten body is the intent's body, the payload hash is taken over it, and the request keeps its class: a routine request still sends automatically. When either check fails, the skill abstains, or the skill is `failing` or `unavailable`, the rendered request is sent as it is and the event log records which check rejected the rewrite. An approval binds to the body the underwriter was shown, as for any draft.
 
 ### 10.3 Recipients
 
@@ -998,6 +1008,7 @@ Reply bodies are capped at 8,000 characters. The model id comes from `MODEL_ID`.
 - Lead concurrency: 4.
 - Skill pass threshold: 1.0 unless a manifest states another value with its reason.
 - `read_reply` sends a forced tool choice with `thinking` disabled, and `temperature` 0. The Anthropic SDK from 1.0 has no `temperature` argument, so the value goes in the call's `extra_body`. A tool input that fails validation repeats the call once; a second failure, or a `refusal` stop reason, maps to the skill's typed abstention. The abstention's reason is one of two codes, `invalid_tool_input` and `refusal`, and nothing else. Stage 1 confirms with DeepSeek's documentation and a live call that `MODEL_ID` accepts the forced tool choice and the temperature; whether `temperature` 0 gives agreeing repeats is measured by the three-repeat check of the Reply reading grader.
+- `polish_message` makes its two calls the way `read_reply` does: a forced tool choice with `thinking` disabled, `temperature` 0 in `extra_body`, one repeat on an invalid tool input, then the typed abstention. Length caps: opening 600 characters, closing 300.
 - Rounds before the lead goes to the underwriter: 2.
 - Jev confidence threshold: 0.7 per question, in the skill manifest.
 - Reply-reading repeats in evals: 3.
