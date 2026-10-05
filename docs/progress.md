@@ -110,3 +110,58 @@ No acceptance check mentions offsets, thinking or the temperature route, so `doc
 Jev: Brett added `TYPESAFE_API_KEY` to `.env` with $5 of credit, for stage 12 only. No Jev call is made before the Jev adapter task. Nothing in `src/` reads the variable; if its presence changes behaviour or a skill status before stage 12, work stops and Brett is told.
 
 **Next:** Stage 2, task 1, on `stage-02-contracts-t0`. Brett gave the go-ahead; the stage ends at his review of the data shapes.
+
+## Stage 02: Contracts and thin slice (stage-02-contracts-t0, fcdd9ee) — at the contract gate, not approved
+
+**Done:** tasks 1 to 10 of the tier-0 pass. Vertical registration; the ten A.1 tables with value-set checks and three append-only triggers on `events`; the 28 A.2 event payload models; A.4 hashes and the skill digest; domain models, the provider result and the seven skill contracts, with A.9 as amended (the model returns a `quote`, code computes offsets); the web package (Vite 8.3.2, React 19.3.0, TypeScript 6.0.3, Tailwind 4.3.3, shadcn/ui on Base UI, openapi-typescript 7.13.0, vitest 5.0.3); the 14 A.5 routes declared, every route but `GET /api/run` answering 501; `web/src/api/openapi.json` and the generated `types.ts`; UI fixtures for the ten seed-42 leads and the stand-in API; the queue page and detail pane; the frontend built in the image and served at `/`.
+
+Who did what: builders on Sonnet took tasks 1 and 2; 3 and 4; 5; 6; 7; 8; 9; 10; and five rounds of review fixes. The reviewer on Opus read tasks 1-2, 3-4, 5, 7 with the first two fix rounds, and 8-10 with the third. Codex (gpt-6-astra, read-only) reviewed the stage diff. The lead wrote no code. The last two fix rounds (46a70e6, d93dd2b, 085a045 and 1469e6a, fcdd9ee) were read by the lead and verified by the checks below, and were not sent to a reviewer.
+
+**Not done:** task 11, the human gate. S02-A8 fails until Brett's approval is recorded as `Contracts approved by Brett at <commit>`. Stages 3, 4 and 10 wait on it.
+
+**Checks:** run by the lead on the final tree. `make check` clean: 696 fast Python tests, `tsc -b`, 51 web tests. `make test-slow`: 21 pass. Acceptance ids passed: S02-A1, A2, A3, A4, A5, A6, A7. S02-A8 not passed (the gate). The stage 1 checks S01-A2 to A6 and A9 to A11 still pass; all three containers healthy.
+
+pnpm in the image: the frontend stage is `node:22.23.3-slim`, which bundles corepack 0.36.0, so no corepack install is needed. `docker build --target frontend -t uwh-frontend-probe .` then `docker run --rm -w /app/web uwh-frontend-probe pnpm --version` printed `12.9.1`. Tags probed for their bundled corepack: 22.21.1-slim 0.34.0, 22.22.0-slim 0.34.0, 22.23.0-slim 0.34.6. The pnpm 12 launch on 0.34 was not tried, so that failure is avoided, not reproduced. The image tag publishes linux/amd64 and linux/arm64; only arm64 was built. `web/package.json` pins `"packageManager": "pnpm@12.9.1"` and `engines.node` `>=22 <23`.
+
+Cross-review (Codex) findings and handling: `INSERT OR REPLACE` could overwrite an event (fixed with a third trigger, shown failing first); lead 000's decline notice was round 1 where §7.5 says 0 (fixture and test fixed); a plan-hash assertion compared a function with itself and the six-count summary test could not catch swapped counts (both rewritten and shown to fail); `web/index.html` and `web/src/index.css` had no `ABOUTME` lines (added). Two of its findings are questions 3 and 4 below. It found no mocked test and nothing outside the stage.
+
+### For Brett at the gate
+
+Read: `src/uwh/runtime/event_types.py`, `src/uwh/api/views.py` with `web/src/api/openapi.json`, `src/uwh/skills/contracts.py`, `src/uwh/rules/models.py`, `src/uwh/skills/vertical.py`. The A.9, §6.2, §10.4, §14 and A.10 amendments are commit d9c78fa. To see the pages: `uv run python tools/standin_api.py --port 8765` and `UWH_API_URL=http://localhost:8765 pnpm --dir web dev`.
+
+Where the architecture disagrees with itself or with the plan (each needs a ruling):
+1. **Approving a held draft.** A.11 says `artifact_hash` "is omitted for other item kinds", and a draft held by the stop is a `review` item; §7.4 and plan stage 4 task 11 require the hash on that approval. Built: `ApprovePayload.artifact_hash` optional, and the blocker view carries `held_draft_payload_hash` for the two held-draft causes.
+2. **Vocabulary in the runtime.** §7 says the runtime holds no insurance vocabulary and stage 4 runs a toy vertical with no edit under `src/uwh/runtime/`. §7.1 lists `delivery_unknown`, `underwriter_review` and `data` as vertical-supplied blocker kinds, while §7.5, §7.4 and §8 have the runtime open them. A.1 fixes blocker owners (`underwriter`, `producer`, `data_team`), the item kind `no_contact_route` and the observation source `underwriter` in tables the runtime owns. Built: the store takes the message kinds from the vertical and fixes the other A.1 sets itself. Options: the vertical registers blocker kinds by role; or those three kinds are runtime kinds.
+3. **I56's duration.** `duration_of_non_occupancy` applies to the occupancy modifications, which include a surcharge and coverage changes; §9.6 gives a deadline only to `requirement`. Built: as §9.6. Proposed: an optional deadline on `surcharge` and `coverage_adjustment`.
+4. **Hash exclusions.** A.4 hashes every file and excludes only compiled files. Built: hidden files and directories, `*~` and `*.swp` are also skipped, so a stray `.DS_Store` cannot change a digest. Either A.4 is amended or the exclusion is narrowed or removed.
+5. **`routine` or `routine_request`.** §10.1 sets `confirmation_only_class` to `routine`; A.1's intent kind and `PlanAsksResult.message_class` say `routine_request`. Built: both, unreconciled.
+6. **Edited drafts.** §10.1 makes "any draft a person has edited" a sensitive request. Does `edit_draft` change `intents.kind`? `DraftEdited` carries no kind.
+
+Shapes proposed where the architecture is open (confirm or change):
+7. `plan_asks`: the result always holds the outstanding asks, with `request` one of `send`, `none`, `request_open`, `round_limit`; the input carries `requests_sent` and `open_request`. Plan stage 8 tests the round rules on `plan_asks`; the alternative is to keep them in the workflow.
+8. `read_reply`: the skill result carries `dropped` beside the located candidates (A.9 calls the stored output "the classification with the located candidates"). How an abstention is recorded on the event log is not settled. `Abstention.reason` is a free string; A.10's two codes are in its docstring.
+9. `resolve_data` takes provider results as input: the runtime makes the lookups and the skill stays pure, which reverses the §6 diagram's edge from skills to providers.
+10. Rule traces: a trace is a path or a set of alternatives, never both; each alternative holds a list of assumptions, root to leaf; a trace names the choices answered on its path; the plan carries `underwriter_decline` for `decline_lead`, and `proposed_decline` is validated against the declines present. An effect with no board path is not representable.
+11. Quote packet: `notes` (not-evaluated pages, §4.1) and `obligations` were added; §10.5's list has neither.
+12. Events over the API carry the payload as a JSON object validated against its type's model, not as a typed union, so `openapi.json` does not show the 28 payload shapes; `event_types.py` does.
+13. Queue and summary: "follow-ups sent" counts requests of round 2 or later in the fixtures (nine first requests read as 0 follow-ups); "waiting on data" counts every lead waiting on data or the producer; a lead's group follows its highest-priority blocker's owner.
+14. `propose_command` may carry any of the other twelve commands, `approve` and `reject` included (§7.4: the assistant "cannot approve"; A.11: the underwriter applies a proposal by submitting it).
+15. Numbers: `SurchargeEffect.percent` is a strict integer; `1` and `1.0` hash differently; the plan hash is taken over the plan model's JSON dump.
+16. No event records round closure or the move to `dispatching`.
+17. The lead detail holds no ask list and no triage, so asks show only in the draft body and blocked fields only as what a page waits on.
+18. Who checks `build_quote_packet`'s precondition (§9.6), the skill or the workflow; and whether effects deduplicate by rule id alone or by type and rule id.
+19. In commit d9c78fa, two edits beyond Brett's wording: A.9 says the quote is not empty; §14's sentence on what stage 1 checks describes the DeepSeek check.
+20. Fixtures: the three always-required fire fields (`distance_to_fire_department`, `fire_department_type`, `dist_to_nearest_fire_hydrant`) are asked where missing; only the four fields conditional on protection class 9 or 10 are blocked. That is the registry reading and matches §5's "four protection-class questions".
+
+Open from stage 1, unanswered: `UWH_DB` required with no default; ruff skipping Markdown in `format`; the app factory; local HTTP servers in fast bootstrap tests; `ABOUTME` lines on `pyproject.toml`, `.env.example` and `.dockerignore`.
+
+Known gaps, recorded and not fixed: the fixtures show no `assumed` fact and no page that declines on every branch (no seed-42 lead produces either on a first pass; tests build them on clones); derived roof and siding classes are missing on several fixture leads; `make check` does not catch `types.ts` drift, only S02-A3 does; an unknown POST under `/api` answers 405 from the static mount, a GET 404; `/mcp` must be mounted inside the factory before the static mount (stage 11); the digest treats every directory under `skills/` as a skill (stage 4 has the skill list); `QueueGroup` has no group for a lead with no open blocker mid-run; the queue tables have no accessible name.
+
+**Friction:**
+- Every set of proposed shapes failed its first review on fit, not on style: the models could not represent a case the architecture names (a `decline_lead` ruling, nested alternatives, a pending observation in the detail pane, the round rules). Working each acceptance case of §9.6 and each row of A.11 through the models by hand, before building on them, is what found these. Task 10 was built before tasks 8 and 9 for that reason: it does not depend on the route shapes.
+- The first fixtures were written from §5 by description and contradicted §9.4 and §9.6 in several places. Reading the real seed-42 payloads from the leadgen container and deriving each lookup's status from the §9.4 table fixed them.
+- Commit 1469e6a alone fails four web tests, because the fixtures changed in it and the web tests in the next commit; `make check` is clean at fcdd9ee.
+- The Stop hook ran `make check` while a builder was mid-task with a failing test written first, and reported the failure; the tree belonged to the builder.
+- `codex exec` needs `< /dev/null`; with it the stage 2 review ran to completion.
+
+**Next:** Brett's review of the data shapes (task 11). After his approval is recorded, stage 3 task 1 on `stage-03-labels-t0` and stage 4 on `stage-04-runtime-t0`.

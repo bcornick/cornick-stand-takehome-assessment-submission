@@ -81,49 +81,49 @@
     "stage": 2,
     "description": "Tier 0. Contract tests pass. Expect: all pass.",
     "command": "uv run pytest tests/skills/test_vertical.py tests/runtime/test_store.py tests/runtime/test_event_types.py tests/runtime/test_hashing.py tests/skills/test_digest.py tests/rules/test_models.py tests/providers/test_models.py tests/skills/test_contracts.py tests/api/test_routes.py tests/api/test_views.py",
-    "passes": false
+    "passes": true
   },
   {
     "id": "S02-A2",
     "stage": 2,
     "description": "Tier 0. The committed OpenAPI file matches the app and holds the 14 A.5 paths. Expect: exit 0.",
     "command": "uv run python tools/export_openapi.py --check && jq -e '(.paths | keys | length) == 14 and (.paths | has(\"/api/run/start\")) and (.paths | has(\"/api/replies/fixtures\"))' web/src/api/openapi.json",
-    "passes": false
+    "passes": true
   },
   {
     "id": "S02-A3",
     "stage": 2,
     "description": "Tier 0. Generated TypeScript types are tracked and match the committed copy; an untracked or differing file fails. Expect: exit 0.",
     "command": "pnpm --dir web run gen:types && git ls-files --error-unmatch web/src/api/types.ts web/src/api/openapi.json >/dev/null && test -z \"$(git status --porcelain -- web/src/api)\"",
-    "passes": false
+    "passes": true
   },
   {
     "id": "S02-A4",
     "stage": 2,
     "description": "Tier 0. The stand-in API serves valid fixture data for every GET route except the event stream, and for all ten leads. Expect: all pass.",
     "command": "uv run pytest tests/tools/test_standin_api.py",
-    "passes": false
+    "passes": true
   },
   {
     "id": "S02-A5",
     "stage": 2,
     "description": "Tier 0. Web unit tests pass. Expect: all pass.",
     "command": "pnpm --dir web exec vitest run",
-    "passes": false
+    "passes": true
   },
   {
     "id": "S02-A6",
     "stage": 2,
     "description": "Tier 0. The app container serves the built frontend. Expect: `1`.",
     "command": "docker compose up -d --build --wait app && curl -s http://localhost:8000/ | grep -c 'id=\"root\"'",
-    "passes": false
+    "passes": true
   },
   {
     "id": "S02-A7",
     "stage": 2,
     "description": "Tier 0. The check command, with its web steps, is clean. Expect: exit 0, no warnings or errors.",
     "command": "make check",
-    "passes": false
+    "passes": true
   },
   {
     "id": "S02-A8",
