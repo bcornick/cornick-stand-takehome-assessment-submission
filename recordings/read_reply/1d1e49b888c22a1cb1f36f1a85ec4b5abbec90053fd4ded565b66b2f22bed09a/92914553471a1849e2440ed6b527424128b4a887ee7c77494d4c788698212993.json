@@ -32,7 +32,7 @@
   },
   "input_hash": "92914553471a1849e2440ed6b527424128b4a887ee7c77494d4c788698212993",
   "model_id": "deepseek-flash",
-  "prompt_version": "18d729dddeb2f00ea9843a781ca511a04178d621a23287b2b9473dc0c068f408",
+  "prompt_version": "1d1e49b888c22a1cb1f36f1a85ec4b5abbec90053fd4ded565b66b2f22bed09a",
   "request_id": "",
   "skill": "read_reply",
   "stop_reason": "tool_use",

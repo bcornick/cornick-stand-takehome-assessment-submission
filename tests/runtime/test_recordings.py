@@ -6,6 +6,7 @@ from uwh.runtime.recordings import (
     Exchange,
     RecordingKey,
     input_hash,
+    prompt_version,
     read_recording,
     write_recording,
 )
@@ -62,3 +63,20 @@ def test_the_input_hash_follows_the_content_and_not_the_key_order() -> None:
     assert input_hash(shown(body="Yes, the roof is 2013.")) != base
     assert input_hash(shown(asks=("roof_year", "roof_material"))) != base
     assert input_hash({"a": 1, "b": 2}) == input_hash({"b": 2, "a": 1})
+
+
+def test_the_prompt_version_follows_the_prompt_and_every_part_of_the_tool(tmp_path: Path) -> None:
+    prompt = tmp_path / "prompt.md"
+    prompt.write_text("Read the reply.", encoding="utf-8")
+    tool = {"name": "record", "description": "Record it.", "input_schema": {"type": "object"}}
+    base = prompt_version(prompt, tool)
+
+    assert prompt_version(prompt, dict(reversed(tool.items()))) == base
+    for change in (
+        {"name": "other"},
+        {"description": "Record it now."},
+        {"input_schema": {"type": "object", "required": []}},
+    ):
+        assert prompt_version(prompt, {**tool, **change}) != base
+    prompt.write_text("Read the reply twice.", encoding="utf-8")
+    assert prompt_version(prompt, tool) != base

@@ -20,8 +20,6 @@ from uwh.runtime.mailbox_client import MailboxClient
 from uwh.runtime.recordings import (
     Exchange,
     RecordingKey,
-    input_hash,
-    prompt_version,
     read_recording,
     write_recording,
 )
@@ -181,7 +179,7 @@ def record_reading(directory: Path, body: str, tool_input: dict[str, Any] | None
     """A hand-made model output for `body`, stored where replay finds it."""
     asks = skill.open_asks(ASKED, load_registry(str(REGISTRY)))
     call = skill.forced_call(skill.ReadReplyInput(body=body, asks=asks))
-    key = RecordingKey("read_reply", prompt_version(call.prompt_file), input_hash(call.shown))
+    key = call.recording_key
     write_recording(
         directory,
         key,

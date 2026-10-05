@@ -2,6 +2,7 @@
 # ABOUTME: The output is a reading or a typed abstention. A tool input that fails validation repeats the call once; a second failure, or a refusal, abstains.
 from datetime import date
 from pathlib import Path
+from typing import Any
 
 from pydantic import Field, ValidationError
 
@@ -138,6 +139,16 @@ def interpret(reading: ReplyReading, input: ReadReplyInput) -> Reading:
     return Reading(classification=reading.classification, candidates=located, dropped=dropped)
 
 
+def _tool_schema() -> dict[str, Any]:
+    """The schema of `ReplyReading` without the docstrings of its models, which are for readers of
+    this code and not for the model."""
+    schema = ReplyReading.model_json_schema()
+    del schema["description"]
+    for definition in schema["$defs"].values():
+        del definition["description"]
+    return schema
+
+
 def forced_call(input: ReadReplyInput) -> ForcedToolCall:
     """The call: the model is shown the reply body and the open asks, nothing else."""
     return ForcedToolCall(
@@ -145,7 +156,8 @@ def forced_call(input: ReadReplyInput) -> ForcedToolCall:
         prompt_file=_PROMPT_FILE,
         shown=input.model_dump(mode="json"),
         tool_name=TOOL_NAME,
-        tool_schema=ReplyReading.model_json_schema(),
+        tool_description="Record which asks the reply answers, and the answer to each.",
+        tool_schema=_tool_schema(),
     )
 
 

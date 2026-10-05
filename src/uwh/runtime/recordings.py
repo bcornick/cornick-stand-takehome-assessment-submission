@@ -7,14 +7,14 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-from uwh.runtime.hashing import hash_json, sha256_hex
+from uwh.runtime.hashing import canonical_json, hash_json, sha256_hex
 
 _PATH_PART = re.compile(r"[A-Za-z0-9_-]+")
 
 
 @dataclass(frozen=True)
 class RecordingKey:
-    """What one recording answers: the skill, the SHA-256 of its `prompt.md` and the input hash."""
+    """What one recording answers: the skill, its prompt version and the input hash."""
 
     skill: str
     prompt_version: str
@@ -55,9 +55,10 @@ def input_hash(shown: Mapping[str, Any]) -> str:
     return hash_json(dict(shown))
 
 
-def prompt_version(prompt_file: Path) -> str:
-    """The prompt version: the SHA-256 of the file's bytes (8)."""
-    return sha256_hex(prompt_file.read_bytes())
+def prompt_version(prompt_file: Path, tool: Mapping[str, Any]) -> str:
+    """The prompt version: the SHA-256 of the prompt file's bytes and the canonical JSON of the tool
+    (its name, description and input schema), so a change to anything the model is told changes the key."""
+    return sha256_hex(prompt_file.read_bytes() + canonical_json(dict(tool)))
 
 
 def _path(directory: Path, key: RecordingKey) -> Path:

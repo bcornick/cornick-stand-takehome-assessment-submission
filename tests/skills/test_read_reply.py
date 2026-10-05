@@ -1,5 +1,6 @@
 # ABOUTME: Tests what read_reply's code does with a model's reading (A.9, 10.4): locating each quote in the reply, dropping what is not asked or does not fit the field, and the repeat then abstention on an invalid tool input.
 # ABOUTME: The checks run on hand-made readings, since they test our code and not the model; the model's own reading of the fixture reply is tested in replay from the committed recording.
+import json
 from pathlib import Path
 from typing import Any
 
@@ -7,13 +8,10 @@ import pytest
 
 from tests.api.helpers import FIXTURE_REPLIES, RECORDINGS, REGISTRY
 from uwh.rules.registry import load_registry
-from uwh.runtime.event_types import Candidate, LocatedCandidate
+from uwh.runtime.event_types import Candidate
 from uwh.runtime.model import ModelAccess
 from uwh.runtime.recordings import (
     Exchange,
-    RecordingKey,
-    input_hash,
-    prompt_version,
     write_recording,
 )
 from uwh.skills.read_reply import skill
@@ -110,12 +108,10 @@ def test_the_other_candidates_of_a_reading_survive_a_dropped_one() -> None:
     assert result.dropped == [dropped]
 
 
-def model_returning(
-    tmp_path: Path, tool_input: dict[str, Any] | None
-) -> tuple[ModelAccess, Exchange]:
+def model_returning(tmp_path: Path, tool_input: dict[str, Any] | None) -> ModelAccess:
     """A replay model whose one recording holds the tool input; replay serves it for every call."""
     call = skill.forced_call(INPUT)
-    key = RecordingKey("read_reply", prompt_version(call.prompt_file), input_hash(call.shown))
+    key = call.recording_key
     exchange = Exchange(
         skill=key.skill,
         prompt_version=key.prompt_version,
@@ -129,7 +125,7 @@ def model_returning(
         tool_input=tool_input,
     )
     write_recording(tmp_path, key, exchange)
-    return ModelAccess("replay", tmp_path, None), exchange
+    return ModelAccess("replay", tmp_path, None)
 
 
 def test_the_fixture_reply_of_lead_008_is_read_from_its_recording() -> None:
@@ -152,7 +148,7 @@ def test_the_fixture_reply_of_lead_008_is_read_from_its_recording() -> None:
 
 
 def test_an_invalid_tool_input_repeats_the_call_once_then_abstains(tmp_path: Path) -> None:
-    model, _ = model_returning(tmp_path, {"classification": "maybe", "candidates": []})
+    model = model_returning(tmp_path, {"classification": "maybe", "candidates": []})
 
     result, exchanges = skill.run(INPUT, model)
 
@@ -161,7 +157,7 @@ def test_an_invalid_tool_input_repeats_the_call_once_then_abstains(tmp_path: Pat
 
 
 def test_a_refusal_abstains_without_a_repeat(tmp_path: Path) -> None:
-    model, _ = model_returning(tmp_path, None)
+    model = model_returning(tmp_path, None)
 
     result, exchanges = skill.run(INPUT, model)
 
@@ -169,22 +165,8 @@ def test_a_refusal_abstains_without_a_repeat(tmp_path: Path) -> None:
     assert len(exchanges) == 1
 
 
-def test_a_valid_tool_input_is_read_with_its_exchange(tmp_path: Path) -> None:
-    tool_input = {
-        "classification": "answers_some",
-        "candidates": [
-            {
-                "ask_id": "electrical_panel_brand",
-                "field": "electrical_panel_brand",
-                "value": "Square D",
-                "quote": "Square D",
-            }
-        ],
-    }
-    model, recorded = model_returning(tmp_path, tool_input)
+def test_the_tool_schema_sent_to_the_model_carries_no_docstring() -> None:
+    sent = json.dumps(skill.forced_call(INPUT).tool)
 
-    result, exchanges = skill.run(INPUT, model)
-
-    assert isinstance(result, Reading) and result.classification == "answers_some"
-    assert [type(c) for c in result.candidates] == [LocatedCandidate]
-    assert exchanges == [recorded]
+    for internal in (ReplyReading.__doc__, Candidate.__doc__):
+        assert internal is not None and internal not in sent

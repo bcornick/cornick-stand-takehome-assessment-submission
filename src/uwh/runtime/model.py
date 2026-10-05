@@ -25,7 +25,21 @@ class ForcedToolCall:
     prompt_file: Path
     shown: Mapping[str, Any]
     tool_name: str
+    tool_description: str
     tool_schema: dict[str, Any]
+
+    @property
+    def tool(self) -> dict[str, Any]:
+        """The tool as the endpoint receives it."""
+        return {
+            "name": self.tool_name,
+            "description": self.tool_description,
+            "input_schema": self.tool_schema,
+        }
+
+    @property
+    def recording_key(self) -> RecordingKey:
+        return RecordingKey(self.skill, prompt_version(self.prompt_file, self.tool), input_hash(self.shown))
 
 
 # Makes the live call for `call`, to be stored under `key`.
@@ -42,13 +56,7 @@ def anthropic_call(client: anthropic.Anthropic, model_id: str) -> LiveCall:
             max_tokens=MAX_OUTPUT_TOKENS,
             system=call.prompt_file.read_text(encoding="utf-8"),
             messages=[{"role": "user", "content": json.dumps(call.shown, ensure_ascii=False)}],
-            tools=[
-                {
-                    "name": call.tool_name,
-                    "description": "Return the result of reading.",
-                    "input_schema": call.tool_schema,
-                }
-            ],
+            tools=[call.tool],
             tool_choice={"type": "tool", "name": call.tool_name},
             thinking={"type": "disabled"},
             extra_body={"temperature": 0},
@@ -87,7 +95,7 @@ class ModelAccess:
     def exchange(self, call: ForcedToolCall) -> Exchange:
         """The exchange for the call, by the run mode. Raises RecordingMiss in replay when nothing is
         recorded for it. The caller checks `available` first."""
-        key = RecordingKey(call.skill, prompt_version(call.prompt_file), input_hash(call.shown))
+        key = call.recording_key
 
         def call_model() -> Exchange:
             assert self.live is not None  # `available` is checked before a call
