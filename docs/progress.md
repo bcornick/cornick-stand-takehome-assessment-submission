@@ -246,3 +246,30 @@ Left for later stages: the fingerprint must be taken over the raw `fields` as th
 **Friction:** one builder returned the word "placeholder" as its whole report after committing; the lead verified its commit by reading the tests and running the checks, and could not confirm the builder had shown each rewritten test failing first. Builder prompts now say the final message must be the full report.
 
 **Next:** Brett's review of the rows (task 4), then tasks 5 to 7 and 12 by a fresh label author on the lead's own model. Stage 4 starts in a worktree under `.worktrees/` from the approved stage 2 commit, so that Brett's edits on this branch and the stage 4 builders never share a checkout.
+
+## Stage 03: Brett's gate rulings applied; the row review is still open (stage-03-labels-t0, 627f944)
+
+**Done:** Brett ruled on the ten points of the gate entry above and edited `docs/architecture.md` himself (committed at 537fb93 with the plan reconciled to it). Builders on Sonnet applied the rulings, and the reviewer on Opus read the result and found no blocker.
+- §9.7 text: the YAML follows the amended cells of I03, I06, I14, I35, I39, I44, I47, I49 and I50. I39 states the boundary rule: exactly 4,000 square feet is in the middle band, and exactly 7,500 is treated as larger than 7,500 in Branches B and C, as in Branch A.
+- One road-access choice, `I14.road_access` (`multiple`, `limited`), carried by I14, I44 and I49: ten choices on ten rows.
+- `applied_in` takes the form `<category>: <what> (<citation>)`, the category one of the six §9.6 names, a graph page named by its playbook folder. 23 rows carry it: validator I01, I53; derivation I20; resolution rule I31, I51, I57; rendering step I47; effect field I45, I56; graph page I02, I05, I06, I10, I12, I19, I22, I23, I25, I29, I34, I43, I48, I55. The test ties a graph page to the row's source page and a validator to its §9.5 row.
+- Catalogue and wording: `kt_areas` says any high-draw area is answered high draw; `willing_to_mitigate` uses the board's words; "the applicant" replaces "the insured" and "the client"; the KYC range template and the `protection_class in (9, 10)` preamble are gone (five preambles, eleven templates).
+- `derivations.yaml` holds `operation` and `inputs` only. The world fixtures hold `fingerprint`, `provider_values` and `fields`; `archetype_set` and the recorder's `set_values` are gone.
+- The lead reconciled §9.2, §9.5, plan stage 6 task 3 and plan stage 7 task 2 with Brett's A.7 text (0c6754f), for Brett to check.
+- `design-polish-message` (e4a3d68, docs only: the tier-1 rewrite of request emails as stage 8 task 11) is merged; its worktree and branch are removed.
+- `tests/tools/test_check_generated_types.py` runs the tool with its own `TMPDIR`: two `make check` runs in two checkouts had each seen the other's temporary directory.
+
+**Not done:** task 4, Brett's review of every row (no row carries `reviewed_by`; `lenient` and `question_for_stand` stay until that review is recorded). Tasks 5 to 7 and 12 wait on it.
+
+**Checks:** run by the lead. `make check` clean at 627f944: 808 fast Python tests, both drift checks, `tsc -b`, 51 web tests. `capture_world --check` passes for seeds 42, 11 and 15 (builder and reviewer). S03-A2 needs the containers and was not rerun after the fixture change.
+
+**Open with Brett:**
+1. Validators 9 and 10 firing together must ask `dwelling_use_type` once (ruling 10). A.7 gives one template per validator and nothing defines a merge. Options: a combined template in `wording.yaml` for the pair (the lead's recommendation: fixed wording a test can pin), or a merge rule in §10.2 with the text composed in code. It decides stage 8, not the row review.
+2. No §9.7 row carries the pre-1950 knob-and-tube default (§9.3 rule 4 alone does), so `kt_present_and_where` stays under I51.
+3. "Boundary values take the stricter band on every page": the amended §9.7 states it in I39 only. Read across every page, I18 (exactly 0.50), I24 (exactly 30 and 10 years) and I30 (exactly 120 amps) take the lenient side. Left as they are.
+4. I05, I22, I29, I43 and I48 gained a graph-page `applied_in` on the reviewer's reading that no `test` node can cite them; the builder checked only I05 against its page. I32 is taken as the row the `pool_security` test cites. Unsure and left without: I03, I42, I52.
+5. No plan task tests "a lead on both pages is asked once" for road access; a tier-1 case in stage 6 should.
+
+**Friction:** the Stop hook ran `make check` in one checkout while a builder was mid-task in it, twice; both reds were the builder's failing-test-first step. Two checkouts running `make check` at once exposed the shared-temp-directory test.
+
+**Next:** Brett's row review (task 4) and the open points above, then tasks 5 to 7 and 12 by a fresh label author on the lead's own model.
