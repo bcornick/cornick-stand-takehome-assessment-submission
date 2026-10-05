@@ -1,0 +1,48 @@
+{
+  "autonomy": [
+    {
+      "command_class": "fetch_data",
+      "level": "auto",
+      "default_level": "auto",
+      "locked": false
+    },
+    {
+      "command_class": "send_routine_request",
+      "level": "auto",
+      "default_level": "auto",
+      "locked": false
+    },
+    {
+      "command_class": "send_sensitive_request",
+      "level": "review",
+      "default_level": "review",
+      "locked": false
+    },
+    {
+      "command_class": "send_quote_packet",
+      "level": "review",
+      "default_level": "review",
+      "locked": true
+    },
+    {
+      "command_class": "send_decline_notice",
+      "level": "review",
+      "default_level": "review",
+      "locked": true
+    },
+    {
+      "command_class": "deliver_reply",
+      "level": "review",
+      "default_level": "auto",
+      "locked": false
+    },
+    {
+      "command_class": "propose_command",
+      "level": "auto",
+      "default_level": "auto",
+      "locked": false
+    }
+  ],
+  "emergency_stop": false,
+  "ruleset_active": null
+}

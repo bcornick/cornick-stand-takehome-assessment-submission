@@ -1,0 +1,803 @@
+{
+  "lead_id": "LEAD-00000042-007",
+  "mode": "replay",
+  "status": "in_progress",
+  "revision": 1,
+  "facts": [
+    {
+      "key": "street_address",
+      "value": "4452 Meadowlark Ln",
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 282,
+      "is_stub": false
+    },
+    {
+      "key": "city",
+      "value": "Naples",
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 283,
+      "is_stub": false
+    },
+    {
+      "key": "county",
+      "value": "Collier",
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 284,
+      "is_stub": false
+    },
+    {
+      "key": "state",
+      "value": "FL",
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 285,
+      "is_stub": false
+    },
+    {
+      "key": "listed_for_sale",
+      "value": false,
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 286,
+      "is_stub": false
+    },
+    {
+      "key": "first_name",
+      "value": "R.",
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 287,
+      "is_stub": false
+    },
+    {
+      "key": "last_name",
+      "value": "Okafor",
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 288,
+      "is_stub": false
+    },
+    {
+      "key": "residence_held_in_trust",
+      "value": false,
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 289,
+      "is_stub": false
+    },
+    {
+      "key": "insured_dob",
+      "value": "1993-05-24",
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 290,
+      "is_stub": false
+    },
+    {
+      "key": "number_of_residents",
+      "value": 4,
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 291,
+      "is_stub": false
+    },
+    {
+      "key": "kyc_score",
+      "value": 9,
+      "source": "fetched",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "provider": "identity_screening"
+      },
+      "observation_id": 292,
+      "is_stub": false
+    },
+    {
+      "key": "effective_date",
+      "value": "2026-07-31",
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 293,
+      "is_stub": false
+    },
+    {
+      "key": "coverage_a",
+      "value": 1250000,
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 294,
+      "is_stub": false
+    },
+    {
+      "key": "coverage_f",
+      "value": "5000",
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 295,
+      "is_stub": false
+    },
+    {
+      "key": "dwelling_use_type",
+      "value": "Primary",
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 296,
+      "is_stub": false
+    },
+    {
+      "key": "is_rental",
+      "value": "No",
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 297,
+      "is_stub": false
+    },
+    {
+      "key": "months_unoccupied",
+      "value": 0,
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 298,
+      "is_stub": false
+    },
+    {
+      "key": "year_built",
+      "value": 1974,
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 299,
+      "is_stub": false
+    },
+    {
+      "key": "pool_type",
+      "value": "None",
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 300,
+      "is_stub": false
+    },
+    {
+      "key": "pool_has_diving_board_or_slide",
+      "value": false,
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 301,
+      "is_stub": false
+    },
+    {
+      "key": "is_gated_community",
+      "value": false,
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 302,
+      "is_stub": false
+    },
+    {
+      "key": "acreage",
+      "value": 1.54,
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 303,
+      "is_stub": false
+    },
+    {
+      "key": "structure_type",
+      "value": "Single Family",
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 304,
+      "is_stub": false
+    },
+    {
+      "key": "construction_type",
+      "value": "Frame",
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 305,
+      "is_stub": false
+    },
+    {
+      "key": "siding_material",
+      "value": "Brick / Masonry Veneer",
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 306,
+      "is_stub": false
+    },
+    {
+      "key": "foundation_type",
+      "value": "Slab",
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 307,
+      "is_stub": false
+    },
+    {
+      "key": "num_stories",
+      "value": 2,
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 308,
+      "is_stub": false
+    },
+    {
+      "key": "roof_replacement_year",
+      "value": 2019,
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 309,
+      "is_stub": false
+    },
+    {
+      "key": "roof_material",
+      "value": "Asphalt Fiberglass Composite",
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 310,
+      "is_stub": false
+    },
+    {
+      "key": "heating_source",
+      "value": "Central Gas",
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 311,
+      "is_stub": false
+    },
+    {
+      "key": "has_knob_and_tube_wiring",
+      "value": false,
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 312,
+      "is_stub": false
+    },
+    {
+      "key": "electrical_panel_size_amps",
+      "value": 150,
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 313,
+      "is_stub": false
+    },
+    {
+      "key": "plumbing_age_years",
+      "value": 10,
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 314,
+      "is_stub": false
+    },
+    {
+      "key": "water_heater_type",
+      "value": "Tankless",
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 315,
+      "is_stub": false
+    },
+    {
+      "key": "fire_alarm",
+      "value": "Local Alarm",
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 316,
+      "is_stub": false
+    },
+    {
+      "key": "distance_to_fire_department",
+      "value": 5.0,
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 317,
+      "is_stub": false
+    },
+    {
+      "key": "fire_department_type",
+      "value": "Mostly Career",
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 318,
+      "is_stub": false
+    },
+    {
+      "key": "dist_to_nearest_fire_hydrant",
+      "value": 91,
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 319,
+      "is_stub": false
+    },
+    {
+      "key": "is_7a_compliant",
+      "value": true,
+      "source": "submitted",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "lead_source": "agent_portal"
+      },
+      "observation_id": 320,
+      "is_stub": false
+    },
+    {
+      "key": "p_f",
+      "value": 0.1,
+      "source": "fetched",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "provider": "fire_simulation"
+      },
+      "observation_id": 321,
+      "is_stub": false
+    },
+    {
+      "key": "siding_classification",
+      "value": "A",
+      "source": "derived",
+      "status": "accepted",
+      "confirmed": false,
+      "evidence": {
+        "derivation": "derive_siding_classification",
+        "inputs": [
+          "siding_material"
+        ]
+      },
+      "observation_id": 322,
+      "is_stub": false
+    }
+  ],
+  "plan": {
+    "effects": [
+      {
+        "effect": {
+          "type": "exclusion_or_endorsement",
+          "rule": "02:HIGH1",
+          "text": "Exclude liability coverage"
+        },
+        "trace": {
+          "board_path": [
+            "02:HIGH",
+            "02:HIGH1"
+          ],
+          "alternatives": [],
+          "choice_ids": []
+        },
+        "committed": true
+      },
+      {
+        "effect": {
+          "type": "no_action",
+          "rule": "05:LOW_OK"
+        },
+        "trace": {
+          "board_path": [
+            "05:LOW",
+            "05:LOW_OK"
+          ],
+          "alternatives": [],
+          "choice_ids": []
+        },
+        "committed": true
+      },
+      {
+        "effect": {
+          "type": "no_action",
+          "rule": "06:NC_OK"
+        },
+        "trace": {
+          "board_path": [
+            "06:NC",
+            "06:NC_OK"
+          ],
+          "alternatives": [],
+          "choice_ids": []
+        },
+        "committed": true
+      }
+    ],
+    "declines_on_every_branch": [],
+    "proposed_decline": false,
+    "underwriter_decline": null,
+    "undecided": [
+      {
+        "graph": "pc_9_and_10",
+        "waits_on": [
+          "protection_class"
+        ]
+      },
+      {
+        "graph": "replacement_cost",
+        "waits_on": [
+          "replacement_cost"
+        ]
+      }
+    ],
+    "open_choices": [],
+    "catalogue_questions": [],
+    "not_evaluated": [
+      {
+        "ref": "I04",
+        "text": "Reputational damage to Stand is not evaluated; the underwriter can decline at packet approval."
+      },
+      {
+        "ref": "electrical",
+        "text": "The Electrical page is not evaluated; no electrical effect is applied."
+      },
+      {
+        "ref": "plumbing",
+        "text": "The Plumbing page is not evaluated; no plumbing effect is applied."
+      }
+    ]
+  },
+  "plan_hash": "db111553fdea5dffdeb36f5479d1b8e2d18e21bbfdbda101d7f394df75d3aab7",
+  "playbook": [
+    {
+      "graph": "profile",
+      "applies": "yes",
+      "result": "decided",
+      "waits_on": [],
+      "effects": [
+        {
+          "effect": {
+            "type": "exclusion_or_endorsement",
+            "rule": "02:HIGH1",
+            "text": "Exclude liability coverage"
+          },
+          "trace": {
+            "board_path": [
+              "02:HIGH",
+              "02:HIGH1"
+            ],
+            "alternatives": [],
+            "choice_ids": []
+          },
+          "committed": true
+        }
+      ],
+      "declines_on_every_branch": null,
+      "exception": true
+    },
+    {
+      "graph": "occupancy",
+      "applies": "no",
+      "result": null,
+      "waits_on": [],
+      "effects": [],
+      "declines_on_every_branch": null,
+      "exception": false
+    },
+    {
+      "graph": "fire_simulation",
+      "applies": "no",
+      "result": null,
+      "waits_on": [],
+      "effects": [],
+      "declines_on_every_branch": null,
+      "exception": false
+    },
+    {
+      "graph": "roof",
+      "applies": "yes",
+      "result": "decided",
+      "waits_on": [],
+      "effects": [
+        {
+          "effect": {
+            "type": "no_action",
+            "rule": "05:LOW_OK"
+          },
+          "trace": {
+            "board_path": [
+              "05:LOW",
+              "05:LOW_OK"
+            ],
+            "alternatives": [],
+            "choice_ids": []
+          },
+          "committed": true
+        }
+      ],
+      "declines_on_every_branch": null,
+      "exception": false
+    },
+    {
+      "graph": "siding",
+      "applies": "yes",
+      "result": "decided",
+      "waits_on": [],
+      "effects": [
+        {
+          "effect": {
+            "type": "no_action",
+            "rule": "06:NC_OK"
+          },
+          "trace": {
+            "board_path": [
+              "06:NC",
+              "06:NC_OK"
+            ],
+            "alternatives": [],
+            "choice_ids": []
+          },
+          "committed": true
+        }
+      ],
+      "declines_on_every_branch": null,
+      "exception": false
+    },
+    {
+      "graph": "post_and_pier",
+      "applies": "no",
+      "result": null,
+      "waits_on": [],
+      "effects": [],
+      "declines_on_every_branch": null,
+      "exception": false
+    },
+    {
+      "graph": "plumbing",
+      "applies": "yes",
+      "result": "not_evaluated",
+      "waits_on": [],
+      "effects": [],
+      "declines_on_every_branch": null,
+      "exception": true
+    },
+    {
+      "graph": "electrical",
+      "applies": "yes",
+      "result": "not_evaluated",
+      "waits_on": [],
+      "effects": [],
+      "declines_on_every_branch": null,
+      "exception": true
+    },
+    {
+      "graph": "pools",
+      "applies": "no",
+      "result": null,
+      "waits_on": [],
+      "effects": [],
+      "declines_on_every_branch": null,
+      "exception": false
+    },
+    {
+      "graph": "trusts",
+      "applies": "no",
+      "result": null,
+      "waits_on": [],
+      "effects": [],
+      "declines_on_every_branch": null,
+      "exception": false
+    },
+    {
+      "graph": "pc_9_and_10",
+      "applies": "unknown",
+      "result": "undecided",
+      "waits_on": [
+        "protection_class"
+      ],
+      "effects": [],
+      "declines_on_every_branch": null,
+      "exception": true
+    },
+    {
+      "graph": "replacement_cost",
+      "applies": "yes",
+      "result": "undecided",
+      "waits_on": [
+        "replacement_cost"
+      ],
+      "effects": [],
+      "declines_on_every_branch": null,
+      "exception": true
+    }
+  ],
+  "notes": [
+    {
+      "kind": "not_evaluated",
+      "ref": "plumbing",
+      "text": "The Plumbing page is not evaluated; no plumbing effect is applied."
+    },
+    {
+      "kind": "not_evaluated",
+      "ref": "electrical",
+      "text": "The Electrical page is not evaluated; no electrical effect is applied."
+    },
+    {
+      "kind": "not_evaluated",
+      "ref": "I04",
+      "text": "Reputational damage to Stand is not evaluated; the underwriter can decline at packet approval."
+    }
+  ],
+  "blockers": [
+    {
+      "item_id": 10,
+      "kind": "producer_reply",
+      "item_kind": null,
+      "owner": "producer",
+      "detail": {
+        "item_kind": null,
+        "cause": null,
+        "cause_persists": false,
+        "resume_trigger": "reply_received",
+        "intent_id": "INT-00000042-007-R1",
+        "observation_id": null,
+        "choice_ids": [],
+        "text": "Waiting on the reply to request round 1 (8 asks)."
+      },
+      "observation": null,
+      "review_cause": null,
+      "held_draft_payload_hash": null
+    }
+  ],
+  "drafts": [
+    {
+      "intent_id": "INT-00000042-007-R1",
+      "payload_hash": "7ee134bc2421301f524f7855013fdbff7c652510d332ed14addd392b14dd42d9",
+      "kind": "routine_request",
+      "recipient": "submissions@agent-portal.example",
+      "subject": "Information needed to quote LEAD-00000042-007",
+      "body": "Hello,\n\nThank you for the application. To continue, we need the answers below.\n\nLocation\n1. Please provide: Zip Code\n\nPrimary Coverages\n2. Please provide: Coverage E (Liability) (one of: 100000, 300000, 500000)\n\nProperty\n3. Please provide: Dwelling Use (one of: Owner Occupied Single Family Residence, Owner Occupied Multi Family Residence, Secondary Residence, Seasonal Residence)\n4. Please provide: Purchase Year\n5. Do you have any animals on the property?\n\nConstruction\n6. Please provide: Total Living Square Footage\n7. Please provide: Roof Shape (one of: Hip, Flat, Gable, Other)\n8. Please provide: Electrical Panel Brand (one of: Federal Pacific, Stab-Lok, Zinsco, Challenger, Sylvania, Square D, Eaton, Siemens, GE, Other, Unknown)\n\nThank you.",
+      "state": "sent",
+      "round": 1
+    }
+  ],
+  "open_choices": [],
+  "next_action": "Wait for the producer's reply to request round 1 (8 asks).",
+  "links": []
+}

@@ -1,0 +1,1767 @@
+{
+  "lead_id": "LEAD-00000042-008",
+  "events": [
+    {
+      "id": 510,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "lead_received",
+      "payload": {
+        "source": "broker_email",
+        "received_at": "2026-06-29T05:01:00Z"
+      },
+      "actor": "inbound",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:00Z",
+      "sim_ts": "2026-06-29T05:01:00Z"
+    },
+    {
+      "id": 511,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "provider_called",
+      "payload": {
+        "key": "broker_tier",
+        "status": "found",
+        "value": "Tier 2",
+        "source": "account_directory",
+        "fetched_at": "2026-06-29T08:00:00Z",
+        "is_stub": false,
+        "missing_inputs": []
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:01Z",
+      "sim_ts": "2026-06-29T08:00:01Z"
+    },
+    {
+      "id": 512,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "provider_called",
+      "payload": {
+        "key": "has_primary_policy_with_stand",
+        "status": "found",
+        "value": false,
+        "source": "account_directory",
+        "fetched_at": "2026-06-29T08:00:00Z",
+        "is_stub": false,
+        "missing_inputs": []
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:02Z",
+      "sim_ts": "2026-06-29T08:00:02Z"
+    },
+    {
+      "id": 513,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "provider_called",
+      "payload": {
+        "key": "kyc_score",
+        "status": "found",
+        "value": 2,
+        "source": "identity_screening",
+        "fetched_at": "2026-06-29T08:00:00Z",
+        "is_stub": false,
+        "missing_inputs": []
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:03Z",
+      "sim_ts": "2026-06-29T08:00:03Z"
+    },
+    {
+      "id": 514,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "provider_called",
+      "payload": {
+        "key": "replacement_cost",
+        "status": "found",
+        "value": 870000,
+        "source": "rebuild_cost_estimator",
+        "fetched_at": "2026-06-29T08:00:00Z",
+        "is_stub": false,
+        "missing_inputs": []
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:04Z",
+      "sim_ts": "2026-06-29T08:00:04Z"
+    },
+    {
+      "id": 515,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "provider_called",
+      "payload": {
+        "key": "road_access",
+        "status": "found",
+        "value": "Multiple Access Points",
+        "source": "road_network",
+        "fetched_at": "2026-06-29T08:00:00Z",
+        "is_stub": false,
+        "missing_inputs": []
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:05Z",
+      "sim_ts": "2026-06-29T08:00:05Z"
+    },
+    {
+      "id": 516,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "provider_called",
+      "payload": {
+        "key": "protection_class",
+        "status": "found",
+        "value": "5",
+        "source": "iso_protection_class",
+        "fetched_at": "2026-06-29T08:00:00Z",
+        "is_stub": false,
+        "missing_inputs": []
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:06Z",
+      "sim_ts": "2026-06-29T08:00:06Z"
+    },
+    {
+      "id": 517,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "provider_called",
+      "payload": {
+        "key": "p_f",
+        "status": "found",
+        "value": 0.14,
+        "source": "fire_simulation",
+        "fetched_at": "2026-06-29T08:00:00Z",
+        "is_stub": false,
+        "missing_inputs": []
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:07Z",
+      "sim_ts": "2026-06-29T08:00:07Z"
+    },
+    {
+      "id": 518,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "provider_called",
+      "payload": {
+        "key": "vegetation_clearance",
+        "status": "found",
+        "value": "Adequate",
+        "source": "vegetation_imagery",
+        "fetched_at": "2026-06-29T08:00:00Z",
+        "is_stub": false,
+        "missing_inputs": []
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:08Z",
+      "sim_ts": "2026-06-29T08:00:08Z"
+    },
+    {
+      "id": 519,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 323,
+        "key": "street_address",
+        "value": "8924 Lakeview Blvd",
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:09Z",
+      "sim_ts": "2026-06-29T08:00:09Z"
+    },
+    {
+      "id": 520,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 324,
+        "key": "city",
+        "value": "Santa Rosa",
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:10Z",
+      "sim_ts": "2026-06-29T08:00:10Z"
+    },
+    {
+      "id": 521,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 325,
+        "key": "county",
+        "value": "Sonoma",
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:11Z",
+      "sim_ts": "2026-06-29T08:00:11Z"
+    },
+    {
+      "id": 522,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 326,
+        "key": "state",
+        "value": "CA",
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:12Z",
+      "sim_ts": "2026-06-29T08:00:12Z"
+    },
+    {
+      "id": 523,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 327,
+        "key": "zip",
+        "value": "95404",
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:13Z",
+      "sim_ts": "2026-06-29T08:00:13Z"
+    },
+    {
+      "id": 524,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 328,
+        "key": "broker_tier",
+        "value": "Tier 2",
+        "source": "fetched",
+        "evidence": {
+          "provider": "account_directory"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:14Z",
+      "sim_ts": "2026-06-29T08:00:14Z"
+    },
+    {
+      "id": 525,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 329,
+        "key": "has_primary_policy_with_stand",
+        "value": false,
+        "source": "fetched",
+        "evidence": {
+          "provider": "account_directory"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:15Z",
+      "sim_ts": "2026-06-29T08:00:15Z"
+    },
+    {
+      "id": 526,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 330,
+        "key": "listed_for_sale",
+        "value": false,
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:16Z",
+      "sim_ts": "2026-06-29T08:00:16Z"
+    },
+    {
+      "id": 527,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 331,
+        "key": "first_name",
+        "value": "Lena",
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:17Z",
+      "sim_ts": "2026-06-29T08:00:17Z"
+    },
+    {
+      "id": 528,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 332,
+        "key": "last_name",
+        "value": "Ahn",
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:18Z",
+      "sim_ts": "2026-06-29T08:00:18Z"
+    },
+    {
+      "id": 529,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 333,
+        "key": "residence_held_in_trust",
+        "value": false,
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:19Z",
+      "sim_ts": "2026-06-29T08:00:19Z"
+    },
+    {
+      "id": 530,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 334,
+        "key": "owner_email",
+        "value": "owner@example.com",
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:20Z",
+      "sim_ts": "2026-06-29T08:00:20Z"
+    },
+    {
+      "id": 531,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 335,
+        "key": "owner_phone_number",
+        "value": "+1-555-0158",
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:21Z",
+      "sim_ts": "2026-06-29T08:00:21Z"
+    },
+    {
+      "id": 532,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 336,
+        "key": "insured_dob",
+        "value": "1975-04-17",
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:22Z",
+      "sim_ts": "2026-06-29T08:00:22Z"
+    },
+    {
+      "id": 533,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 337,
+        "key": "number_of_residents",
+        "value": 4,
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:23Z",
+      "sim_ts": "2026-06-29T08:00:23Z"
+    },
+    {
+      "id": 534,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 338,
+        "key": "kyc_score",
+        "value": 2,
+        "source": "fetched",
+        "evidence": {
+          "provider": "identity_screening"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:24Z",
+      "sim_ts": "2026-06-29T08:00:24Z"
+    },
+    {
+      "id": 535,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 339,
+        "key": "effective_date",
+        "value": "2026-08-01",
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:25Z",
+      "sim_ts": "2026-06-29T08:00:25Z"
+    },
+    {
+      "id": 536,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 340,
+        "key": "coverage_a",
+        "value": 875000,
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:26Z",
+      "sim_ts": "2026-06-29T08:00:26Z"
+    },
+    {
+      "id": 537,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 341,
+        "key": "coverage_e",
+        "value": "100000",
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:27Z",
+      "sim_ts": "2026-06-29T08:00:27Z"
+    },
+    {
+      "id": 538,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 342,
+        "key": "coverage_f",
+        "value": "3000",
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:28Z",
+      "sim_ts": "2026-06-29T08:00:28Z"
+    },
+    {
+      "id": 539,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 343,
+        "key": "replacement_cost",
+        "value": 870000,
+        "source": "fetched",
+        "evidence": {
+          "provider": "rebuild_cost_estimator"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:29Z",
+      "sim_ts": "2026-06-29T08:00:29Z"
+    },
+    {
+      "id": 540,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 344,
+        "key": "dwelling_type",
+        "value": "Owner Occupied Single Family Residence",
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:30Z",
+      "sim_ts": "2026-06-29T08:00:30Z"
+    },
+    {
+      "id": 541,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 345,
+        "key": "dwelling_use_type",
+        "value": "Primary",
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:31Z",
+      "sim_ts": "2026-06-29T08:00:31Z"
+    },
+    {
+      "id": 542,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 346,
+        "key": "is_rental",
+        "value": "No",
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:32Z",
+      "sim_ts": "2026-06-29T08:00:32Z"
+    },
+    {
+      "id": 543,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 347,
+        "key": "months_unoccupied",
+        "value": 0,
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:33Z",
+      "sim_ts": "2026-06-29T08:00:33Z"
+    },
+    {
+      "id": 544,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 348,
+        "key": "year_built",
+        "value": 1993,
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:34Z",
+      "sim_ts": "2026-06-29T08:00:34Z"
+    },
+    {
+      "id": 545,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 349,
+        "key": "pool_type",
+        "value": "None",
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:35Z",
+      "sim_ts": "2026-06-29T08:00:35Z"
+    },
+    {
+      "id": 546,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 350,
+        "key": "pool_security",
+        "value": "None",
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:36Z",
+      "sim_ts": "2026-06-29T08:00:36Z"
+    },
+    {
+      "id": 547,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 351,
+        "key": "pool_has_diving_board_or_slide",
+        "value": false,
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:37Z",
+      "sim_ts": "2026-06-29T08:00:37Z"
+    },
+    {
+      "id": 548,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 352,
+        "key": "is_gated_community",
+        "value": false,
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:38Z",
+      "sim_ts": "2026-06-29T08:00:38Z"
+    },
+    {
+      "id": 549,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 353,
+        "key": "acreage",
+        "value": 2.47,
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:39Z",
+      "sim_ts": "2026-06-29T08:00:39Z"
+    },
+    {
+      "id": 550,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 354,
+        "key": "has_animals",
+        "value": false,
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:40Z",
+      "sim_ts": "2026-06-29T08:00:40Z"
+    },
+    {
+      "id": 551,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 355,
+        "key": "structure_type",
+        "value": "Single Family",
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:41Z",
+      "sim_ts": "2026-06-29T08:00:41Z"
+    },
+    {
+      "id": 552,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 356,
+        "key": "construction_type",
+        "value": "Frame",
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:42Z",
+      "sim_ts": "2026-06-29T08:00:42Z"
+    },
+    {
+      "id": 553,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 357,
+        "key": "siding_material",
+        "value": "Stucco",
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:43Z",
+      "sim_ts": "2026-06-29T08:00:43Z"
+    },
+    {
+      "id": 554,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 358,
+        "key": "foundation_type",
+        "value": "Slab",
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:44Z",
+      "sim_ts": "2026-06-29T08:00:44Z"
+    },
+    {
+      "id": 555,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 359,
+        "key": "square_feet",
+        "value": 3200,
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:45Z",
+      "sim_ts": "2026-06-29T08:00:45Z"
+    },
+    {
+      "id": 556,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 360,
+        "key": "num_stories",
+        "value": 1,
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:46Z",
+      "sim_ts": "2026-06-29T08:00:46Z"
+    },
+    {
+      "id": 557,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 361,
+        "key": "roof_replacement_year",
+        "value": 2017,
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:47Z",
+      "sim_ts": "2026-06-29T08:00:47Z"
+    },
+    {
+      "id": 558,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 362,
+        "key": "roof_material",
+        "value": "Standing Seam Metal",
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:48Z",
+      "sim_ts": "2026-06-29T08:00:48Z"
+    },
+    {
+      "id": 559,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 363,
+        "key": "roof_shape",
+        "value": "Gable",
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:49Z",
+      "sim_ts": "2026-06-29T08:00:49Z"
+    },
+    {
+      "id": 560,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 364,
+        "key": "heating_source",
+        "value": "Central Gas",
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:50Z",
+      "sim_ts": "2026-06-29T08:00:50Z"
+    },
+    {
+      "id": 561,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 365,
+        "key": "has_knob_and_tube_wiring",
+        "value": false,
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:51Z",
+      "sim_ts": "2026-06-29T08:00:51Z"
+    },
+    {
+      "id": 562,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 366,
+        "key": "electrical_panel_size_amps",
+        "value": 200,
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:52Z",
+      "sim_ts": "2026-06-29T08:00:52Z"
+    },
+    {
+      "id": 563,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 367,
+        "key": "plumbing_age_years",
+        "value": 6,
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:53Z",
+      "sim_ts": "2026-06-29T08:00:53Z"
+    },
+    {
+      "id": 564,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 368,
+        "key": "water_heater_type",
+        "value": "Tankless",
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:54Z",
+      "sim_ts": "2026-06-29T08:00:54Z"
+    },
+    {
+      "id": 565,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 369,
+        "key": "fire_alarm",
+        "value": "Central Alarm",
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:55Z",
+      "sim_ts": "2026-06-29T08:00:55Z"
+    },
+    {
+      "id": 566,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 370,
+        "key": "distance_to_fire_department",
+        "value": 0.9,
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:56Z",
+      "sim_ts": "2026-06-29T08:00:56Z"
+    },
+    {
+      "id": 567,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 371,
+        "key": "fire_department_type",
+        "value": "Mostly Career",
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:57Z",
+      "sim_ts": "2026-06-29T08:00:57Z"
+    },
+    {
+      "id": 568,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 372,
+        "key": "dist_to_nearest_fire_hydrant",
+        "value": 65,
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:58Z",
+      "sim_ts": "2026-06-29T08:00:58Z"
+    },
+    {
+      "id": 569,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 373,
+        "key": "road_access",
+        "value": "Multiple Access Points",
+        "source": "fetched",
+        "evidence": {
+          "provider": "road_network"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:00:59Z",
+      "sim_ts": "2026-06-29T08:00:59Z"
+    },
+    {
+      "id": 570,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 374,
+        "key": "protection_class",
+        "value": "5",
+        "source": "fetched",
+        "evidence": {
+          "provider": "iso_protection_class"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:01:00Z",
+      "sim_ts": "2026-06-29T08:01:00Z"
+    },
+    {
+      "id": 571,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 375,
+        "key": "is_7a_compliant",
+        "value": true,
+        "source": "submitted",
+        "evidence": {
+          "lead_source": "broker_email"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:01:01Z",
+      "sim_ts": "2026-06-29T08:01:01Z"
+    },
+    {
+      "id": 572,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 376,
+        "key": "roof_classification",
+        "value": "Class A",
+        "source": "derived",
+        "evidence": {
+          "derivation": "derive_roof_classification",
+          "inputs": [
+            "roof_material"
+          ]
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:01:02Z",
+      "sim_ts": "2026-06-29T08:01:02Z"
+    },
+    {
+      "id": 573,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 377,
+        "key": "p_f",
+        "value": 0.14,
+        "source": "fetched",
+        "evidence": {
+          "provider": "fire_simulation"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:01:03Z",
+      "sim_ts": "2026-06-29T08:01:03Z"
+    },
+    {
+      "id": 574,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 378,
+        "key": "siding_classification",
+        "value": "B",
+        "source": "derived",
+        "evidence": {
+          "derivation": "derive_siding_classification",
+          "inputs": [
+            "siding_material"
+          ]
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:01:04Z",
+      "sim_ts": "2026-06-29T08:01:04Z"
+    },
+    {
+      "id": 575,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "fact_observed",
+      "payload": {
+        "observation_id": 379,
+        "key": "vegetation_clearance",
+        "value": "Adequate",
+        "source": "fetched",
+        "evidence": {
+          "provider": "vegetation_imagery"
+        },
+        "status": "accepted"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:01:05Z",
+      "sim_ts": "2026-06-29T08:01:05Z"
+    },
+    {
+      "id": 576,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "triage_completed",
+      "payload": {
+        "fields": {
+          "property_purchase_date": {
+            "value_status": "missing",
+            "requirement": "required",
+            "resolution": "ask",
+            "depends_on": []
+          },
+          "electrical_panel_brand": {
+            "value_status": "missing",
+            "requirement": "required",
+            "resolution": "ask",
+            "depends_on": []
+          }
+        }
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:01:06Z",
+      "sim_ts": "2026-06-29T08:01:06Z"
+    },
+    {
+      "id": 577,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "plan_built",
+      "payload": {
+        "plan": {
+          "effects": [
+            {
+              "effect": {
+                "type": "no_action",
+                "rule": "05:LOW_OK"
+              },
+              "trace": {
+                "board_path": [
+                  "05:LOW",
+                  "05:LOW_OK"
+                ],
+                "alternatives": [],
+                "choice_ids": []
+              },
+              "committed": true
+            },
+            {
+              "effect": {
+                "type": "no_action",
+                "rule": "06:NC_OK"
+              },
+              "trace": {
+                "board_path": [
+                  "06:NC",
+                  "06:NC_OK"
+                ],
+                "alternatives": [],
+                "choice_ids": []
+              },
+              "committed": true
+            },
+            {
+              "effect": {
+                "type": "no_action",
+                "rule": "12:AT_RCE"
+              },
+              "trace": {
+                "board_path": [
+                  "12:RCE",
+                  "12:AT"
+                ],
+                "alternatives": [],
+                "choice_ids": []
+              },
+              "committed": true
+            }
+          ],
+          "declines_on_every_branch": [],
+          "proposed_decline": false,
+          "underwriter_decline": null,
+          "undecided": [],
+          "open_choices": [],
+          "catalogue_questions": [],
+          "not_evaluated": [
+            {
+              "ref": "electrical",
+              "text": "The Electrical page is not evaluated; no electrical effect is applied."
+            },
+            {
+              "ref": "plumbing",
+              "text": "The Plumbing page is not evaluated; no plumbing effect is applied."
+            }
+          ]
+        },
+        "plan_hash": "695eea53aad079e884d26733633528d76bbdfeb2c7485ca7edff7712626aca41"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:01:07Z",
+      "sim_ts": "2026-06-29T08:01:07Z"
+    },
+    {
+      "id": 578,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "intent_created",
+      "payload": {
+        "intent_id": "INT-00000042-008-R1",
+        "round": 1,
+        "kind": "routine_request",
+        "recipient": "quotes@broker-desk.example",
+        "subject": "Information needed to quote LEAD-00000042-008",
+        "body": "Hello,\n\nThank you for the application. To continue, we need the answers below.\n\nProperty\n1. Please provide: Purchase Year\n\nConstruction\n2. Please provide: Electrical Panel Brand (one of: Federal Pacific, Stab-Lok, Zinsco, Challenger, Sylvania, Square D, Eaton, Siemens, GE, Other, Unknown)\n\nThank you.",
+        "ask_ids": [
+          "property_purchase_date",
+          "electrical_panel_brand"
+        ],
+        "payload_hash": "eaf9c208fab53508895d525200d4b1cda7173ea8a59d77efe4a79b108b395d15"
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:01:08Z",
+      "sim_ts": "2026-06-29T08:01:08Z"
+    },
+    {
+      "id": 579,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "blocker_opened",
+      "payload": {
+        "blocker_id": 11,
+        "kind": "producer_reply",
+        "owner": "producer",
+        "detail": {
+          "item_kind": null,
+          "cause": null,
+          "cause_persists": false,
+          "resume_trigger": "reply_received",
+          "intent_id": "INT-00000042-008-R1",
+          "observation_id": null,
+          "choice_ids": [],
+          "text": "Waiting on the reply to request round 1 (2 asks)."
+        }
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:01:09Z",
+      "sim_ts": "2026-06-29T08:01:09Z"
+    },
+    {
+      "id": 580,
+      "run_id": "RUN-42-0001",
+      "mode": "replay",
+      "lead_id": "LEAD-00000042-008",
+      "type": "message_sent",
+      "payload": {
+        "intent_id": "INT-00000042-008-R1",
+        "mailbox_id": 8
+      },
+      "actor": "workflow",
+      "ruleset_hash": "99c030754b69261444a37f5d6def839a9df98ec9df8a7666625ce8029c68f7cd",
+      "prompt_versions": null,
+      "model_id": null,
+      "request_id": null,
+      "real_ts": "2026-10-05T10:01:10Z",
+      "sim_ts": "2026-06-29T08:01:10Z"
+    }
+  ]
+}

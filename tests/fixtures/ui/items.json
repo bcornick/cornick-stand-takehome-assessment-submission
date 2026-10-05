@@ -1,0 +1,132 @@
+[
+  {
+    "item_id": 1,
+    "kind": "underwriter_review",
+    "item_kind": "draft",
+    "owner": "underwriter",
+    "detail": {
+      "item_kind": "draft",
+      "cause": null,
+      "cause_persists": false,
+      "resume_trigger": "approval_recorded",
+      "intent_id": "INT-00000042-000-R1",
+      "observation_id": null,
+      "choice_ids": [],
+      "text": "Review the decline notice before it is sent."
+    },
+    "observation": null,
+    "review_cause": null,
+    "held_draft_payload_hash": null,
+    "type": "review",
+    "lead_id": "LEAD-00000042-000",
+    "item": "draft_decline_notice",
+    "draft": {
+      "intent_id": "INT-00000042-000-R1",
+      "payload_hash": "2d33eed7701329e9a6d8b5be98c9d26f1a96f9adcac63102ce6de1f34d74e274",
+      "kind": "decline_notice",
+      "recipient": "owner@example.com",
+      "subject": "Your homeowners insurance application",
+      "body": "Hello,\n\nThank you for your application. After review, we are unable to offer coverage for this property.\n\nThank you.",
+      "state": "draft",
+      "round": 1
+    }
+  },
+  {
+    "item_id": 4,
+    "kind": "underwriter_question",
+    "item_kind": null,
+    "owner": "underwriter",
+    "detail": {
+      "item_kind": null,
+      "cause": null,
+      "cause_persists": false,
+      "resume_trigger": "ruling_recorded",
+      "intent_id": null,
+      "observation_id": null,
+      "choice_ids": [
+        "I13.fire_fail"
+      ],
+      "text": "The fire simulation failed; the underwriter decides how to proceed."
+    },
+    "observation": null,
+    "review_cause": null,
+    "held_draft_payload_hash": null,
+    "type": "question",
+    "lead_id": "LEAD-00000042-003",
+    "choices": [
+      {
+        "choice_id": "I13.fire_fail",
+        "options": [
+          "decline",
+          "legacy_underwriting"
+        ],
+        "prompt": "The fire simulation failed (P(F) above 0.50). Decline the lead, or consider it under legacy underwriting with the values shown?",
+        "show": [
+          "p_f",
+          "vegetation_clearance",
+          "slope_angle_deg",
+          "min_distance_to_neighbor_ft",
+          "is_7a_compliant",
+          "road_access"
+        ],
+        "shown_values": {
+          "p_f": 0.79,
+          "vegetation_clearance": "Too Close",
+          "slope_angle_deg": 30.0,
+          "min_distance_to_neighbor_ft": 14,
+          "is_7a_compliant": false,
+          "road_access": null
+        }
+      }
+    ]
+  },
+  {
+    "item_id": 8,
+    "kind": "underwriter_question",
+    "item_kind": null,
+    "owner": "underwriter",
+    "detail": {
+      "item_kind": null,
+      "cause": null,
+      "cause_persists": false,
+      "resume_trigger": "ruling_recorded",
+      "intent_id": null,
+      "observation_id": null,
+      "choice_ids": [
+        "I13.fire_fail"
+      ],
+      "text": "The fire simulation failed; the underwriter decides how to proceed."
+    },
+    "observation": null,
+    "review_cause": null,
+    "held_draft_payload_hash": null,
+    "type": "question",
+    "lead_id": "LEAD-00000042-006",
+    "choices": [
+      {
+        "choice_id": "I13.fire_fail",
+        "options": [
+          "decline",
+          "legacy_underwriting"
+        ],
+        "prompt": "The fire simulation failed (P(F) above 0.50). Decline the lead, or consider it under legacy underwriting with the values shown?",
+        "show": [
+          "p_f",
+          "vegetation_clearance",
+          "slope_angle_deg",
+          "min_distance_to_neighbor_ft",
+          "is_7a_compliant",
+          "road_access"
+        ],
+        "shown_values": {
+          "p_f": 0.89,
+          "vegetation_clearance": "Too Close",
+          "slope_angle_deg": 29.4,
+          "min_distance_to_neighbor_ft": 14,
+          "is_7a_compliant": false,
+          "road_access": null
+        }
+      }
+    ]
+  }
+]

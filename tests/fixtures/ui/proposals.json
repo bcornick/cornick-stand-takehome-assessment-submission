@@ -1,0 +1,33 @@
+[
+  {
+    "proposal_id": 1,
+    "kind": "command",
+    "payload": {
+      "type": "approve",
+      "payload": {
+        "item_id": 1,
+        "artifact_hash": "2d33eed7701329e9a6d8b5be98c9d26f1a96f9adcac63102ce6de1f34d74e274",
+        "reason": "The decline rests on the Post & Pier and Occupancy pages."
+      },
+      "rationale": "Every branch declines this lead, so no request goes to the producer."
+    },
+    "diff_hash": null,
+    "state": "open",
+    "actor": "assistant",
+    "event_id": 139
+  },
+  {
+    "proposal_id": 2,
+    "kind": "rule_change",
+    "payload": {
+      "row_id": "I12",
+      "param": "threshold",
+      "value": 0.45,
+      "reason": "Test a lower fire simulation failure threshold."
+    },
+    "diff_hash": "ba5c03d2ee2be7146dc910c535f8bb20b5d9231b40f24f879e48aed3096bcdbd",
+    "state": "open",
+    "actor": "underwriter",
+    "event_id": 9001
+  }
+]
