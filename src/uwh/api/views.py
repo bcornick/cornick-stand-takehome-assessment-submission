@@ -6,9 +6,7 @@ from pydantic import Field, JsonValue, ValidationError, model_validator
 
 from uwh.rules.models import (
     ActionPlan,
-    EveryBranchTrace,
     OpenChoice,
-    PlannedEffect,
     StrictModel,
 )
 from uwh.runtime.event_types import (
@@ -87,6 +85,7 @@ class QueueRow(StrictModel):
     `GET /api/run`'s `summary`, not part of this response."""
 
     lead_id: str
+    label: str  # the property address, or the lead id when there is none
     status: Status
     primary_next_action: (
         BlockerKind | None
@@ -95,7 +94,7 @@ class QueueRow(StrictModel):
     age_business_days: float  # in simulated time (7.6)
     service_level_breached: bool  # age against the assumed two-business-day service level
     effective_date: str | None  # the lead's effective date, None while missing
-    ask_count: int
+    ask_count: int  # the distinct asks put to the producer, across the lead's requests
     group: QueueGroup  # the ordering group of section 11
 
 
@@ -112,66 +111,6 @@ class FactView(StrictModel):
     confirmed: bool
     evidence: dict[str, JsonValue]
     observation_id: int  # `observations.id`, which `BlockerDetail.observation_id` joins on
-    is_stub: bool  # a stand-in value, shown as such (9.4)
-
-
-# Section 9.6's three node results, and the page that was not evaluated.
-PageResult = Literal["decided", "undecided", "declines_on_every_branch", "not_evaluated"]
-
-
-class PlaybookPage(StrictModel):
-    """One line of the playbook path checklist (section 11). `applies` is `unknown` when the
-    page's `applies_when` rests on an unknown fact: the graph is undecided and contributes
-    nothing (9.6). A page that does not apply has no result and no effects. `exception` marks
-    what the exceptions-only toggle shows: an undecided page, a decline, a page that applies and
-    was not evaluated, or any effect other than `no_action`."""
-
-    graph: str  # a decision-graph id, as `UndecidedPage.graph`
-    applies: Literal["yes", "no", "unknown"]
-    result: PageResult | None
-    waits_on: list[str]  # the fields, catalogue ids or choice ids an undecided page waits on
-    effects: list[PlannedEffect]  # an `all_of` page holds several, on separate paths
-    declines_on_every_branch: (
-        EveryBranchTrace | None
-    )  # the trace of that result, one branch per alternative
-    exception: bool
-
-    @model_validator(mode="after")
-    def result_follows_applies(self) -> Self:
-        if self.applies == "no" and (self.result is not None or self.effects):
-            raise ValueError("a page whose applies is `no` has no result and no effects")
-        if self.applies == "unknown" and self.result != "undecided":
-            raise ValueError("a page whose applies is `unknown` is undecided")
-        if self.applies == "unknown" and self.effects:
-            raise ValueError("a page whose applies is `unknown` contributes no effects")
-        if self.applies == "yes" and self.result is None:
-            raise ValueError("a page that applies has a result")
-        if (self.result == "undecided") != bool(self.waits_on):
-            raise ValueError("waits_on is non-empty exactly when the page is undecided")
-        if (self.result == "declines_on_every_branch") != (
-            self.declines_on_every_branch is not None
-        ):
-            raise ValueError(
-                "declines_on_every_branch is present exactly when that is the page's result"
-            )
-        expected = self.result in ("undecided", "declines_on_every_branch", "not_evaluated") or any(
-            planned.effect.type != "no_action" for planned in self.effects
-        )
-        if self.exception != expected:
-            raise ValueError(f"exception is {expected} for this page")
-        return self
-
-
-NoteKind = Literal["not_evaluated", "unevaluated_skill", "skill_fallback"]
-
-
-class LeadNote(StrictModel):
-    """A non-blocking note (section 11): a page or row not evaluated (4.1), or a skill that is
-    unevaluated or on its fallback (section 8). `ref` is a row, page or skill id."""
-
-    kind: NoteKind
-    ref: str
-    text: str
 
 
 class BlockerView(StrictModel):
@@ -226,35 +165,18 @@ class OpenChoiceView(OpenChoice):
     shown_values: dict[str, JsonValue]  # field -> its effective value; None when missing
 
 
-LinkKind = Literal["search", "map"]
-
-
-class ExternalLink(StrictModel):
-    """A search or map link where the board calls for a human look (section 11)."""
-
-    kind: LinkKind
-    label: str
-    url: str
-
-
 class LeadDetail(StrictModel):
     """`GET /api/leads/{id}`. The rule traces are the plan's (`effects[].trace`,
-    `declines_on_every_branch`) and the playbook pages'."""
+    `declines_on_every_branch`); its open choices and `not_evaluated` notes are the plan's too."""
 
     lead_id: str
-    mode: RunMode
+    label: str
     status: Status
     revision: int
     facts: list[FactView]
     plan: ActionPlan | None  # None until the lead has been triaged
-    plan_hash: str | None
-    playbook: list[PlaybookPage]
-    notes: list[LeadNote]
     blockers: list[BlockerView]
-    drafts: list[DraftView]
-    open_choices: list[OpenChoiceView]
-    next_action: str | None  # templated from the plan (section 11); None when terminal
-    links: list[ExternalLink]
+    drafts: list[DraftView]  # every message of the lead, oldest first
 
 
 # ---- events (A.1) --------------------------------------------------------------------------------

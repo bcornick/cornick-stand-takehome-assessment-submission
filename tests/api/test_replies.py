@@ -2,7 +2,6 @@
 # ABOUTME: The app runs in process with the real steps against Stand's leadgen and mailbox apps in process; replay serves the model's reading from recordings/, and hand-made readings stand in for the abnormal replies.
 import sqlite3
 from collections.abc import Iterator
-from contextlib import contextmanager
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -10,9 +9,8 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from tests.api.helpers import FIXTURE_REPLIES, RECORDINGS, REGISTRY
+from tests.api.helpers import FIXTURE_REPLIES, LEAD_008, RECORDINGS, REGISTRY, first_pass
 from uwh.api import runtime
-from uwh.api.app import create_app
 from uwh.rules.registry import load_registry
 from uwh.runtime.event_types import EventType
 from uwh.runtime.events import read_events
@@ -32,21 +30,8 @@ from uwh.runtime.waits import open_blockers
 from uwh.settings import Settings
 from uwh.skills.read_reply import skill
 
-LEAD_008 = "LEAD-00000042-008"
 FIXTURE_BODY = (FIXTURE_REPLIES / f"{LEAD_008}.txt").read_text(encoding="utf-8")
 ASKED = ["property_purchase_date", "electrical_panel_brand"]
-
-
-@contextmanager
-def first_pass(
-    settings: Settings, leadgen: LeadgenClient, mailbox: MailboxClient
-) -> Iterator[TestClient]:
-    """The app after the first pass of the seed-42 run."""
-    with TestClient(
-        create_app(replace(settings, seed=42), leadgen=leadgen, mailbox=mailbox)
-    ) as client:
-        assert client.post("/api/run/start?wait=true").status_code == 200
-        yield client
 
 
 @pytest.fixture

@@ -534,21 +534,6 @@ export interface components {
             type: "exclusion_or_endorsement";
         };
         /**
-         * ExternalLink
-         * @description A search or map link where the board calls for a human look (section 11).
-         */
-        ExternalLink: {
-            /**
-             * Kind
-             * @enum {string}
-             */
-            kind: "search" | "map";
-            /** Label */
-            label: string;
-            /** Url */
-            url: string;
-        };
-        /**
          * FactView
          * @description An effective fact with its source tag. `p_f` is a fact like any other.
          */
@@ -559,8 +544,6 @@ export interface components {
             evidence: {
                 [key: string]: components["schemas"]["JsonValue"];
             };
-            /** Is Stub */
-            is_stub: boolean;
             /** Key */
             key: string;
             /** Observation Id */
@@ -591,7 +574,7 @@ export interface components {
         /**
          * LeadDetail
          * @description `GET /api/leads/{id}`. The rule traces are the plan's (`effects[].trace`,
-         *     `declines_on_every_branch`) and the playbook pages'.
+         *     `declines_on_every_branch`); its open choices and `not_evaluated` notes are the plan's too.
          */
         LeadDetail: {
             /** Blockers */
@@ -600,26 +583,11 @@ export interface components {
             drafts: components["schemas"]["DraftView"][];
             /** Facts */
             facts: components["schemas"]["FactView"][];
+            /** Label */
+            label: string;
             /** Lead Id */
             lead_id: string;
-            /** Links */
-            links: components["schemas"]["ExternalLink"][];
-            /**
-             * Mode
-             * @enum {string}
-             */
-            mode: "live" | "replay" | "record";
-            /** Next Action */
-            next_action: string | null;
-            /** Notes */
-            notes: components["schemas"]["LeadNote"][];
-            /** Open Choices */
-            open_choices: components["schemas"]["OpenChoiceView"][];
             plan: components["schemas"]["ActionPlan"] | null;
-            /** Plan Hash */
-            plan_hash: string | null;
-            /** Playbook */
-            playbook: components["schemas"]["PlaybookPage"][];
             /** Revision */
             revision: number;
             /**
@@ -634,22 +602,6 @@ export interface components {
             events: components["schemas"]["EventRow"][];
             /** Lead Id */
             lead_id: string;
-        };
-        /**
-         * LeadNote
-         * @description A non-blocking note (section 11): a page or row not evaluated (4.1), or a skill that is
-         *     unevaluated or on its fallback (section 8). `ref` is a row, page or skill id.
-         */
-        LeadNote: {
-            /**
-             * Kind
-             * @enum {string}
-             */
-            kind: "not_evaluated" | "unevaluated_skill" | "skill_fallback";
-            /** Ref */
-            ref: string;
-            /** Text */
-            text: string;
         };
         /** NoActionEffect */
         NoActionEffect: {
@@ -723,32 +675,6 @@ export interface components {
             /** Effect */
             effect: components["schemas"]["DeclineEffect"] | components["schemas"]["RequirementEffect"] | components["schemas"]["SurchargeEffect"] | components["schemas"]["ExclusionOrEndorsementEffect"] | components["schemas"]["CoverageAdjustmentEffect"] | components["schemas"]["AdvisoryEffect"] | components["schemas"]["ObligationEffect"] | components["schemas"]["NoActionEffect"];
             trace: components["schemas"]["RuleTrace"];
-        };
-        /**
-         * PlaybookPage
-         * @description One line of the playbook path checklist (section 11). `applies` is `unknown` when the
-         *     page's `applies_when` rests on an unknown fact: the graph is undecided and contributes
-         *     nothing (9.6). A page that does not apply has no result and no effects. `exception` marks
-         *     what the exceptions-only toggle shows: an undecided page, a decline, a page that applies and
-         *     was not evaluated, or any effect other than `no_action`.
-         */
-        PlaybookPage: {
-            /**
-             * Applies
-             * @enum {string}
-             */
-            applies: "yes" | "no" | "unknown";
-            declines_on_every_branch: components["schemas"]["RuleTrace"] | null;
-            /** Effects */
-            effects: components["schemas"]["PlannedEffect"][];
-            /** Exception */
-            exception: boolean;
-            /** Graph */
-            graph: string;
-            /** Result */
-            result: ("decided" | "undecided" | "declines_on_every_branch" | "not_evaluated") | null;
-            /** Waits On */
-            waits_on: string[];
         };
         /**
          * ProposalView
@@ -846,6 +772,8 @@ export interface components {
              * @enum {string}
              */
             group: "blocked_on_underwriter" | "waiting_on_data_or_producer" | "finished";
+            /** Label */
+            label: string;
             /** Lead Id */
             lead_id: string;
             /** Primary Next Action */

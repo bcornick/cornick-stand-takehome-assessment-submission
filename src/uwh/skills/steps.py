@@ -45,6 +45,12 @@ from uwh.skills.vertical import WORKFLOW_STEP_ORDER
 _SKILLS_ROOT = Path(uwh.skills.__file__).parent
 
 
+def lead_label(db: sqlite3.Connection, lead_id: str) -> str:
+    """The property address, or the lead id when the lead has none."""
+    address = effective_facts(db, lead_id).get("street_address")
+    return address.value if address is not None and isinstance(address.value, str) else lead_id
+
+
 def _usable_values(db: sqlite3.Connection, lead_id: str) -> dict[str, JsonValue]:
     return {key: fact.value for key, fact in usable_facts(db, lead_id).items()}
 
@@ -182,11 +188,10 @@ def _ask_producer_step(
     if not planned.asks or _request_in_flight(db, lead_id):
         return
     facts = {key: fact.value for key, fact in effective_facts(db, lead_id).items()}
-    address = facts.get("street_address")
     rendered = render_message.run(
         render_message.RenderMessageInput(
             registry=registry,
-            lead_label=address if isinstance(address, str) else lead_id,
+            lead_label=lead_label(db, lead_id),
             asks=planned.asks,
         )
     )
@@ -224,10 +229,9 @@ def _quote_packet_step(
     ):
         return
     facts = effective_facts(db, lead_id)
-    address = facts["street_address"].value if "street_address" in facts else None
     packet = build_quote_packet.run(
         build_quote_packet.BuildQuotePacketInput(
-            lead_label=address if isinstance(address, str) else lead_id,
+            lead_label=lead_label(db, lead_id),
             plan=plan,
             coverages={
                 name: build_quote_packet.Coverage(

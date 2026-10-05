@@ -869,35 +869,6 @@
         "title": "ExclusionOrEndorsementEffect",
         "type": "object"
       },
-      "ExternalLink": {
-        "additionalProperties": false,
-        "description": "A search or map link where the board calls for a human look (section 11).",
-        "properties": {
-          "kind": {
-            "enum": [
-              "search",
-              "map"
-            ],
-            "title": "Kind",
-            "type": "string"
-          },
-          "label": {
-            "title": "Label",
-            "type": "string"
-          },
-          "url": {
-            "title": "Url",
-            "type": "string"
-          }
-        },
-        "required": [
-          "kind",
-          "label",
-          "url"
-        ],
-        "title": "ExternalLink",
-        "type": "object"
-      },
       "FactView": {
         "additionalProperties": false,
         "description": "An effective fact with its source tag. `p_f` is a fact like any other.",
@@ -912,10 +883,6 @@
             },
             "title": "Evidence",
             "type": "object"
-          },
-          "is_stub": {
-            "title": "Is Stub",
-            "type": "boolean"
           },
           "key": {
             "title": "Key",
@@ -957,8 +924,7 @@
           "status",
           "confirmed",
           "evidence",
-          "observation_id",
-          "is_stub"
+          "observation_id"
         ],
         "title": "FactView",
         "type": "object"
@@ -996,7 +962,7 @@
       "JsonValue": {},
       "LeadDetail": {
         "additionalProperties": false,
-        "description": "`GET /api/leads/{id}`. The rule traces are the plan's (`effects[].trace`,\n`declines_on_every_branch`) and the playbook pages'.",
+        "description": "`GET /api/leads/{id}`. The rule traces are the plan's (`effects[].trace`,\n`declines_on_every_branch`); its open choices and `not_evaluated` notes are the plan's too.",
         "properties": {
           "blockers": {
             "items": {
@@ -1019,50 +985,13 @@
             "title": "Facts",
             "type": "array"
           },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
           "lead_id": {
             "title": "Lead Id",
             "type": "string"
-          },
-          "links": {
-            "items": {
-              "$ref": "#/components/schemas/ExternalLink"
-            },
-            "title": "Links",
-            "type": "array"
-          },
-          "mode": {
-            "enum": [
-              "live",
-              "replay",
-              "record"
-            ],
-            "title": "Mode",
-            "type": "string"
-          },
-          "next_action": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Next Action"
-          },
-          "notes": {
-            "items": {
-              "$ref": "#/components/schemas/LeadNote"
-            },
-            "title": "Notes",
-            "type": "array"
-          },
-          "open_choices": {
-            "items": {
-              "$ref": "#/components/schemas/OpenChoiceView"
-            },
-            "title": "Open Choices",
-            "type": "array"
           },
           "plan": {
             "anyOf": [
@@ -1073,24 +1002,6 @@
                 "type": "null"
               }
             ]
-          },
-          "plan_hash": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Plan Hash"
-          },
-          "playbook": {
-            "items": {
-              "$ref": "#/components/schemas/PlaybookPage"
-            },
-            "title": "Playbook",
-            "type": "array"
           },
           "revision": {
             "title": "Revision",
@@ -1110,19 +1021,13 @@
         },
         "required": [
           "lead_id",
-          "mode",
+          "label",
           "status",
           "revision",
           "facts",
           "plan",
-          "plan_hash",
-          "playbook",
-          "notes",
           "blockers",
-          "drafts",
-          "open_choices",
-          "next_action",
-          "links"
+          "drafts"
         ],
         "title": "LeadDetail",
         "type": "object"
@@ -1147,36 +1052,6 @@
           "events"
         ],
         "title": "LeadEvents",
-        "type": "object"
-      },
-      "LeadNote": {
-        "additionalProperties": false,
-        "description": "A non-blocking note (section 11): a page or row not evaluated (4.1), or a skill that is\nunevaluated or on its fallback (section 8). `ref` is a row, page or skill id.",
-        "properties": {
-          "kind": {
-            "enum": [
-              "not_evaluated",
-              "unevaluated_skill",
-              "skill_fallback"
-            ],
-            "title": "Kind",
-            "type": "string"
-          },
-          "ref": {
-            "title": "Ref",
-            "type": "string"
-          },
-          "text": {
-            "title": "Text",
-            "type": "string"
-          }
-        },
-        "required": [
-          "kind",
-          "ref",
-          "text"
-        ],
-        "title": "LeadNote",
         "type": "object"
       },
       "NoActionEffect": {
@@ -1392,81 +1267,6 @@
           "committed"
         ],
         "title": "PlannedEffect",
-        "type": "object"
-      },
-      "PlaybookPage": {
-        "additionalProperties": false,
-        "description": "One line of the playbook path checklist (section 11). `applies` is `unknown` when the\npage's `applies_when` rests on an unknown fact: the graph is undecided and contributes\nnothing (9.6). A page that does not apply has no result and no effects. `exception` marks\nwhat the exceptions-only toggle shows: an undecided page, a decline, a page that applies and\nwas not evaluated, or any effect other than `no_action`.",
-        "properties": {
-          "applies": {
-            "enum": [
-              "yes",
-              "no",
-              "unknown"
-            ],
-            "title": "Applies",
-            "type": "string"
-          },
-          "declines_on_every_branch": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/RuleTrace"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "effects": {
-            "items": {
-              "$ref": "#/components/schemas/PlannedEffect"
-            },
-            "title": "Effects",
-            "type": "array"
-          },
-          "exception": {
-            "title": "Exception",
-            "type": "boolean"
-          },
-          "graph": {
-            "title": "Graph",
-            "type": "string"
-          },
-          "result": {
-            "anyOf": [
-              {
-                "enum": [
-                  "decided",
-                  "undecided",
-                  "declines_on_every_branch",
-                  "not_evaluated"
-                ],
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Result"
-          },
-          "waits_on": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Waits On",
-            "type": "array"
-          }
-        },
-        "required": [
-          "graph",
-          "applies",
-          "result",
-          "waits_on",
-          "effects",
-          "declines_on_every_branch",
-          "exception"
-        ],
-        "title": "PlaybookPage",
         "type": "object"
       },
       "ProposalView": {
@@ -1693,6 +1493,10 @@
             "title": "Group",
             "type": "string"
           },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
           "lead_id": {
             "title": "Lead Id",
             "type": "string"
@@ -1749,6 +1553,7 @@
         },
         "required": [
           "lead_id",
+          "label",
           "status",
           "primary_next_action",
           "waits_on",

@@ -8,10 +8,8 @@ from uwh.api.views import (
     ChatRequest,
     ChatResponse,
     Item,
-    LeadDetail,
     LeadEvents,
     ProposalView,
-    QueueRow,
 )
 
 router = APIRouter()
@@ -19,16 +17,6 @@ router = APIRouter()
 
 def not_implemented(route: str) -> NoReturn:
     raise HTTPException(status_code=501, detail=f"{route} is not implemented")
-
-
-@router.get("/api/leads")
-def list_leads() -> list[QueueRow]:
-    not_implemented("GET /api/leads")
-
-
-@router.get("/api/leads/{id}")
-def get_lead(id: str) -> LeadDetail:
-    not_implemented("GET /api/leads/{id}")
 
 
 @router.get("/api/leads/{id}/events")
