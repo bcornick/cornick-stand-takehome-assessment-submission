@@ -646,8 +646,8 @@ requires-dist = [
 dev = [
     { name = "hypothesis", specifier = ">=6.100" },
     { name = "jinja2", specifier = ">=3.1" },
-    { name = "mypy", specifier = ">=1.11" },
-    { name = "pytest", specifier = ">=8.3" },
-    { name = "ruff", specifier = ">=0.6" },
+    { name = "mypy", specifier = ">=2.4" },
+    { name = "pytest", specifier = ">=9.1" },
+    { name = "ruff", specifier = ">=0.16.10" },
     { name = "types-pyyaml", specifier = ">=6.0" },
 ]

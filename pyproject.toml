@@ -14,10 +14,10 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "pytest>=8.3",
+    "pytest>=9.1",
     "hypothesis>=6.100",
-    "ruff>=0.6",
-    "mypy>=1.11",
+    "ruff>=0.16.10",
+    "mypy>=2.4",
     "types-PyYAML>=6.0",
     "jinja2>=3.1",
 ]
@@ -31,8 +31,11 @@ packages = ["src/uwh"]
 
 [tool.ruff]
 line-length = 100
-# ruff 0.16 formats Python code blocks inside Markdown; docs/ is prose and source material.
-extend-exclude = ["sim-harness", "docs"]
+extend-exclude = ["sim-harness"]
+
+[tool.ruff.format]
+# ruff 0.16 formats Python code blocks inside Markdown; those blocks are prose, not source.
+exclude = ["*.md"]
 
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F"]
