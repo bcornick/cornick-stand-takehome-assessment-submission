@@ -46,6 +46,9 @@ BlockerOwner = Literal["underwriter", "producer", "data_team"]
 ApprovalItemKind = Literal["draft", "observation", "delivery_unknown", "no_contact_route", "review"]
 ApprovalDecision = Literal["approved", "rejected"]
 ProposalKind = Literal["rule_change", "command"]
+ProposalState = Literal["open", "applied", "dismissed"]
+IntentState = Literal["draft", "dispatching", "sent", "unknown", "closed_unsent"]
+RunStatus = Literal["processing", "settled"]
 SkillStatus = Literal["untested", "passing", "failing", "unavailable"]
 
 

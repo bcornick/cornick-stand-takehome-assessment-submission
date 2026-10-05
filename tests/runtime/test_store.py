@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from uwh.runtime.store import open_store
+from uwh.runtime.store import create_tables, open_store
 
 INTENT_KINDS = ("routine_request", "sensitive_request", "quote_packet", "decline_notice")
 
@@ -203,3 +203,32 @@ def test_reopening_keeps_rows(tmp_path: Path) -> None:
     second = open_store(path, intent_kinds=INTENT_KINDS)
     assert second.execute("SELECT lead_id, status FROM leads").fetchall() == [("L1", "received")]
     assert second.execute("SELECT COUNT(*) FROM events").fetchone()[0] == 1
+
+
+def test_recreating_events_restores_the_append_only_triggers(db: sqlite3.Connection) -> None:
+    db.execute("DROP TABLE events")
+    create_tables(db, ["events"], intent_kinds=INTENT_KINDS)
+    db.execute("INSERT INTO events (id, type) VALUES (1, 'run_started')")
+    with pytest.raises(sqlite3.DatabaseError, match="append-only"):
+        db.execute("UPDATE events SET type = 'x' WHERE id = 1")
+    with pytest.raises(sqlite3.DatabaseError, match="append-only"):
+        db.execute("DELETE FROM events WHERE id = 1")
+    assert db.execute("SELECT id, type FROM events").fetchall() == [(1, "run_started")]
+
+
+def test_recreating_every_table_but_settings_leaves_settings_rows(db: sqlite3.Connection) -> None:
+    db.execute(
+        "INSERT INTO settings (key, value_json) VALUES ('autonomy.fetch_data', '\"review\"')"
+    )
+    db.execute("INSERT INTO leads (lead_id) VALUES ('L1')")
+    names = [t for t in EXPECTED_TABLES if t != "settings"]
+    for name in names:
+        db.execute(f"DROP TABLE {name}")
+    create_tables(db, names, intent_kinds=INTENT_KINDS)
+    assert db.execute("SELECT key, value_json FROM settings").fetchall() == [
+        ("autonomy.fetch_data", '"review"')
+    ]
+    assert db.execute("SELECT COUNT(*) FROM leads").fetchone()[0] == 0
+    db.execute("INSERT INTO events (id, type) VALUES (1, 'run_started')")
+    with pytest.raises(sqlite3.DatabaseError, match="append-only"):
+        db.execute("DELETE FROM events WHERE id = 1")

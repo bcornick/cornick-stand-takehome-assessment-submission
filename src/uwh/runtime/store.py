@@ -1,8 +1,20 @@
 # ABOUTME: Opens the application database and creates the A.1 tables, their value-set checks and the append-only triggers on events.
-# ABOUTME: Names the vertical supplies (message kinds) are passed in; the store holds no vertical vocabulary of its own.
+# ABOUTME: The vertical passes in its message kinds; the store itself fixes the other A.1 value sets (blocker owners, approval item kinds, run modes and the rest).
 import sqlite3
 from collections.abc import Iterable
+from typing import get_args
 
+from uwh.runtime.event_types import (
+    ApprovalDecision,
+    ApprovalItemKind,
+    BlockerOwner,
+    IntentState,
+    ObservationSource,
+    ObservationStatus,
+    ProposalKind,
+    ProposalState,
+    RunStatus,
+)
 from uwh.settings import RUN_MODES
 
 
@@ -28,36 +40,36 @@ def table_ddl(intent_kinds: Iterable[str]) -> dict[str, str]:
         "observations": f"""CREATE TABLE IF NOT EXISTS observations (
             id INTEGER PRIMARY KEY, lead_id TEXT, key TEXT, value_json TEXT, source TEXT,
             evidence_json TEXT, status TEXT, event_id INTEGER,
-            {_in_set("source", ("submitted", "fetched", "derived", "assumed", "reply", "underwriter"))},
-            {_in_set("status", ("accepted", "pending_review", "rejected"))})""",
+            {_in_set("source", get_args(ObservationSource))},
+            {_in_set("status", get_args(ObservationStatus))})""",
         "effective_facts": """CREATE TABLE IF NOT EXISTS effective_facts (
             lead_id TEXT, key TEXT, observation_id INTEGER, confirmed INTEGER,
             PRIMARY KEY (lead_id, key))""",
         "blockers": f"""CREATE TABLE IF NOT EXISTS blockers (
             id INTEGER PRIMARY KEY, lead_id TEXT, kind TEXT, owner TEXT, detail_json TEXT,
             opened_event_id INTEGER, closed_event_id INTEGER,
-            {_in_set("owner", ("underwriter", "producer", "data_team"))})""",
+            {_in_set("owner", get_args(BlockerOwner))})""",
         "intents": f"""CREATE TABLE IF NOT EXISTS intents (
             id TEXT PRIMARY KEY, run_id TEXT, lead_id TEXT, round INTEGER, kind TEXT,
             recipient TEXT, subject TEXT, body TEXT, ask_ids_json TEXT, payload_hash TEXT,
             state TEXT, mailbox_id INTEGER,
-            {_in_set("state", ("draft", "dispatching", "sent", "unknown", "closed_unsent"))},
+            {_in_set("state", get_args(IntentState))},
             {_in_set("kind", intent_kinds)})""",
         "approvals": f"""CREATE TABLE IF NOT EXISTS approvals (
             id INTEGER PRIMARY KEY, lead_id TEXT, item_kind TEXT, intent_id TEXT,
             lead_revision INTEGER, plan_hash TEXT, ruleset_hash TEXT, recipient TEXT,
             payload_hash TEXT, actor TEXT, decision TEXT, reason TEXT, event_id INTEGER,
-            {_in_set("item_kind", ("draft", "observation", "delivery_unknown", "no_contact_route", "review"))},
-            {_in_set("decision", ("approved", "rejected"))})""",
+            {_in_set("item_kind", get_args(ApprovalItemKind))},
+            {_in_set("decision", get_args(ApprovalDecision))})""",
         "runs": f"""CREATE TABLE IF NOT EXISTS runs (
             run_id TEXT PRIMARY KEY, seed INTEGER, mode TEXT, started_at TEXT, status TEXT,
             {_in_set("mode", RUN_MODES)},
-            {_in_set("status", ("processing", "settled"))})""",
+            {_in_set("status", get_args(RunStatus))})""",
         "proposals": f"""CREATE TABLE IF NOT EXISTS proposals (
             id INTEGER PRIMARY KEY, kind TEXT, payload_json TEXT, diff_hash TEXT, state TEXT,
             actor TEXT, event_id INTEGER,
-            {_in_set("kind", ("rule_change", "command"))},
-            {_in_set("state", ("open", "applied", "dismissed"))})""",
+            {_in_set("kind", get_args(ProposalKind))},
+            {_in_set("state", get_args(ProposalState))})""",
         "settings": """CREATE TABLE IF NOT EXISTS settings (
             key TEXT PRIMARY KEY, value_json TEXT)""",
     }
@@ -72,12 +84,25 @@ EVENTS_TRIGGERS = (
 )
 
 
+def create_tables(
+    db: sqlite3.Connection, names: Iterable[str], *, intent_kinds: Iterable[str]
+) -> None:
+    """Create the named A.1 tables if missing, and the `events` triggers whenever `events` is among them.
+
+    Dropping `events` drops its triggers, so recreating it goes through here.
+    """
+    ddl = table_ddl(intent_kinds)
+    chosen = list(names)
+    for name in chosen:
+        db.execute(ddl[name])
+    if "events" in chosen:
+        for trigger in EVENTS_TRIGGERS:
+            db.execute(trigger)
+
+
 def open_store(path: str, *, intent_kinds: Iterable[str]) -> sqlite3.Connection:
     """Open the database at `path`, creating any missing table. Existing rows are left alone."""
     db = sqlite3.connect(path)
-    for ddl in table_ddl(intent_kinds).values():
-        db.execute(ddl)
-    for ddl in EVENTS_TRIGGERS:
-        db.execute(ddl)
+    create_tables(db, table_ddl(intent_kinds), intent_kinds=intent_kinds)
     db.commit()
     return db

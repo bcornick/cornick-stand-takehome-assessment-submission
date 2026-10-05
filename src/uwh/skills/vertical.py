@@ -1,5 +1,5 @@
 # ABOUTME: The underwriting vertical's registration: statuses, blocker kinds, transitions, command classes and message kinds.
-# ABOUTME: Plain data that the runtime reads; the runtime names none of these values itself.
+# ABOUTME: Plain data that the runtime reads; the store takes the message kinds from here and fixes the blocker owners and approval item kinds of A.1 itself.
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
