@@ -1,2 +1,2 @@
-# ABOUTME: Package for the rules core: domain models now, with the decision-graph interpreter to follow.
+# ABOUTME: Package for the rules core: its domain models.
 # ABOUTME: This file holds no code.

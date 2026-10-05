@@ -74,7 +74,7 @@ class RequirementEffect(StrictModel):
 class SurchargeEffect(StrictModel):
     type: Literal["surcharge"]
     rule: str
-    percent: int | float
+    percent: Annotated[int, Field(strict=True)]  # a whole number, as A.6 writes it
 
 
 class ExclusionOrEndorsementEffect(StrictModel):
@@ -126,19 +126,39 @@ Effect = Annotated[
 ]
 
 
-class TraceBranch(StrictModel):
-    """One alternative of a decline on every branch: the value assumed for the unknown input and the path that follows."""
+class Assumption(StrictModel):
+    """One unknown input and the case taken for it, in A.6's condition form."""
 
-    field: str  # the field or catalogue id that was unknown
-    assumed_value: JsonValue
+    field: str  # the registry field, derived input or catalogue id that was unknown
+    when: dict[str, JsonValue]  # for example {"equals": true}, {"lt": 2000}, {"gt": 8, "lte": 12}
+
+
+class TraceBranch(StrictModel):
+    """One alternative of a decline on every branch: the cases taken for the unknown inputs and the path that follows."""
+
+    assumed: list[Assumption] = Field(
+        min_length=1
+    )  # root to leaf; one alternative may rest on several
     board_path: list[str]  # root to this branch's outcome
     rule: str  # the decline's rule id on this branch
 
 
 class RuleTrace(StrictModel):
+    """Either one path or a set of alternatives, never both."""
+
     board_path: list[str]  # the concatenation of `board_path` values from root to outcome
-    # Non-empty only for a decline reached as `declines_on_every_branch`.
+    # Non-empty only for a decline reached as `declines_on_every_branch`; then `board_path` is empty
+    # and each branch carries its own full path.
     alternatives: list[TraceBranch] = []
+    # The underwriter choices answered on the path (A.11: rejecting a decline notice that followed
+    # a choice reopens it); for alternatives, the choices answered above the first unknown.
+    choice_ids: list[str] = []
+
+    @model_validator(mode="after")
+    def is_a_path_or_alternatives(self) -> Self:
+        if bool(self.board_path) == bool(self.alternatives):
+            raise ValueError("a trace holds exactly one of board_path and alternatives")
+        return self
 
 
 # Section 9.6 node results.
@@ -214,12 +234,52 @@ class NotEvaluatedNote(StrictModel):
 
 
 class ActionPlan(StrictModel):
+    """The plan of section 9.6. The plan hash (A.4) is taken over `model_dump(mode="json")`, so
+    equal plans hold every list in one stable order."""
+
     effects: list[
         PlannedEffect
     ] = []  # deduplicated by rule id; advisories, ladder rungs and suppression notes included
     declines_on_every_branch: list[RuleTrace] = []  # each trace carries its alternatives
+    # True exactly when the plan holds a committed decline effect, a decline on every branch, or
+    # the underwriter's own decline.
     proposed_decline: bool = False
+    underwriter_decline: str | None = None  # the reason of a `decline_lead` ruling (A.11)
     undecided: list[UndecidedPage] = []
     open_choices: list[OpenChoice] = []
     catalogue_questions: list[str] = []  # catalogue ids, document requests included
     not_evaluated: list[NotEvaluatedNote] = []
+
+    @model_validator(mode="after")
+    def declines_state_the_proposed_decline(self) -> Self:
+        if any(not trace.alternatives for trace in self.declines_on_every_branch):
+            raise ValueError("a decline on every branch carries its alternatives")
+        declines = (
+            any(p.committed and isinstance(p.effect, DeclineEffect) for p in self.effects)
+            or bool(self.declines_on_every_branch)
+            or self.underwriter_decline is not None
+        )
+        if self.proposed_decline != declines:
+            raise ValueError(
+                "proposed_decline is true exactly when the plan holds a committed decline, "
+                "a decline on every branch or the underwriter's decline"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def lists_are_in_a_stable_order(self) -> Self:
+        self.effects.sort(key=lambda p: (p.effect.rule, p.effect.type, p.committed))
+        self.declines_on_every_branch.sort(
+            key=lambda t: (t.alternatives[0].rule, t.alternatives[0].board_path)
+        )
+        self.undecided = sorted(
+            (
+                page.model_copy(update={"waits_on": sorted(set(page.waits_on))})
+                for page in self.undecided
+            ),
+            key=lambda page: page.graph,
+        )
+        self.open_choices.sort(key=lambda c: c.choice_id)
+        self.catalogue_questions = sorted(set(self.catalogue_questions))
+        self.not_evaluated.sort(key=lambda n: n.ref)
+        return self
