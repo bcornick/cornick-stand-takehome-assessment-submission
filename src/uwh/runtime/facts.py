@@ -17,6 +17,7 @@ from uwh.runtime.event_types import (
     FactSelected,
     ObservationSource,
     ObservationStatus,
+    ReviewCause,
 )
 from uwh.runtime.events import EventContext, append_event, read_events
 from uwh.runtime.waits import close_blocker, open_blocker, open_blockers
@@ -371,12 +372,13 @@ def observe_reply(
     rules: LedgerRules,
     *,
     round_closed: bool,
+    review_cause: Literal["late_reply", "reply_after_terminal_status"] = "late_reply",
 ) -> RevisionChange:
     """Apply the values read from one reply by the source-authority rules of 7.3. The caller commits.
 
-    `round_closed` is true when the request the reply answers has closed its round (rule 9): the
-    values are recorded `pending_review` and applied to nothing, one `late_reply` review is raised
-    and the revision moves, whatever the values.
+    `round_closed` is true when the request the reply answers has closed its round (rule 9), or when
+    the lead is terminal (A.3): the values are recorded `pending_review` and applied to nothing, one
+    review of `review_cause` is raised and the revision moves, whatever the values.
     """
     ledger = _Pass(db, context, lead_id, rules)
     changed = set() if round_closed else _changed_keys(ledger, values)
@@ -386,13 +388,19 @@ def observe_reply(
         ledger.raise_review(
             BlockerDetail(
                 item_kind="review",
-                cause="late_reply",
+                cause=review_cause,
                 resume_trigger="an underwriter acknowledges the late reply",
-                text="A reply arrived after its round closed.",
+                text=_LATE_REPLY_TEXT[review_cause],
             )
         )
         ledger.moves_revision = True
     return ledger.finish()
+
+
+_LATE_REPLY_TEXT: dict[ReviewCause, str] = {
+    "late_reply": "A reply arrived after its round closed.",
+    "reply_after_terminal_status": "A reply arrived after the lead reached its final status.",
+}
 
 
 def _changed_keys(ledger: _Pass, values: Sequence[ReplyValue]) -> set[str]:

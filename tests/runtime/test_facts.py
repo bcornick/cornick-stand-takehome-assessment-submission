@@ -601,6 +601,21 @@ def test_rule_9_a_late_reply_that_holds_no_value_still_raises_the_review(
     assert change.after == before + 1
 
 
+def test_rule_9_a_late_reply_review_takes_the_cause_it_is_given(db: sqlite3.Connection) -> None:
+    values = [ReplyValue("year_built", 1990, {})]
+    observe_reply(
+        db,
+        CONTEXT,
+        LEAD,
+        values,
+        RULES,
+        round_closed=True,
+        review_cause="reply_after_terminal_status",
+    )
+    assert observations(db, "year_built") == [(1990, "reply", "pending_review")]
+    assert open_kinds(db) == [("review", "reply_after_terminal_status")]
+
+
 def test_rule_9_a_late_reply_does_not_set_a_system_owned_field(db: sqlite3.Connection) -> None:
     reply(db, "kyc_score", 4, round_closed=True)
     assert observations(db, "kyc_score") == [(4, "reply", "rejected")]
