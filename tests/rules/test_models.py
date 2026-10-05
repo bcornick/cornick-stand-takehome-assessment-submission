@@ -546,6 +546,14 @@ def surcharge(rule: str, committed: bool = True) -> PlannedEffect:
     )
 
 
+def advisory(rule: str) -> PlannedEffect:
+    return PlannedEffect(
+        effect=AdvisoryEffect(type="advisory", rule=rule, text="Later rungs"),
+        trace=ROOF_TRACE,
+        committed=True,
+    )
+
+
 def branch(rule: str, path: list[str]) -> RuleTrace:
     return RuleTrace(
         board_path=[],
@@ -570,6 +578,7 @@ def plan_in_order(forward: bool) -> ActionPlan:
                 surcharge("RF-2", committed=False),
                 surcharge("RF-3"),
                 surcharge("PR-1"),
+                advisory("RF-1"),
             ]
         ),
         declines_on_every_branch=order(
@@ -612,11 +621,12 @@ def test_plans_built_in_different_orders_hash_equally_over_a_pinned_input() -> N
 
 def test_a_plan_puts_every_list_in_a_stable_order() -> None:
     plan = plan_in_order(False)
-    assert [(p.effect.rule, p.committed) for p in plan.effects] == [
-        ("PR-1", True),
-        ("RF-1", True),
-        ("RF-2", False),
-        ("RF-3", True),
+    assert [(p.effect.rule, p.effect.type) for p in plan.effects] == [
+        ("PR-1", "surcharge"),
+        ("RF-1", "advisory"),
+        ("RF-1", "surcharge"),
+        ("RF-2", "surcharge"),
+        ("RF-3", "surcharge"),
     ]
     assert [t.alternatives[0].rule for t in plan.declines_on_every_branch] == ["PC-2", "PP-1"]
     assert [u.graph for u in plan.undecided] == ["fire_simulation", "roof"]
@@ -635,12 +645,7 @@ def test_a_plan_holds_one_effect_for_each_effect_type_and_rule_id() -> None:
 
 
 def test_a_plan_accepts_one_rule_id_under_two_effect_types() -> None:
-    advisory = PlannedEffect(
-        effect=AdvisoryEffect(type="advisory", rule="RF-1", text="Later rungs"),
-        trace=ROOF_TRACE,
-        committed=True,
-    )
-    plan = ActionPlan(effects=[surcharge("RF-1"), advisory])
+    plan = ActionPlan(effects=[surcharge("RF-1"), advisory("RF-1")])
     assert {(p.effect.type, p.effect.rule) for p in plan.effects} == {
         ("surcharge", "RF-1"),
         ("advisory", "RF-1"),

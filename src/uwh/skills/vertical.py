@@ -1,5 +1,5 @@
-# ABOUTME: The tables built on the underwriting names: status transitions, blocker priority, command classes, review causes, the confirmation-only class and the reference morning.
-# ABOUTME: Each table is typed with the Literal value sets of uwh.runtime.event_types, so a name outside a set fails type checking.
+# ABOUTME: The tables built on the underwriting names: terminal statuses, status transitions, blocker priority, command classes, persisting review causes, the confirmation-only class and the reference morning.
+# ABOUTME: Each table is typed with a Literal value set, those of uwh.runtime.event_types and AutonomyLevel defined here, so a name outside a set fails type checking.
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Literal, get_args

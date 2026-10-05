@@ -3,7 +3,7 @@
 import hashlib
 import json
 import re
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
@@ -50,9 +50,9 @@ def hash_json(value: Any) -> str:
     return sha256_hex(canonical_json(value))
 
 
-def plan_hash(plan: Mapping[str, Any]) -> str:
-    """The plan hash: the hash of the action plan as a JSON mapping."""
-    return hash_json(dict(plan))
+def plan_hash(plan: dict[str, Any]) -> str:
+    """The plan hash: the hash of the action plan as a JSON object."""
+    return hash_json(plan)
 
 
 def payload_hash(recipient: str, subject: str, body: str) -> str:

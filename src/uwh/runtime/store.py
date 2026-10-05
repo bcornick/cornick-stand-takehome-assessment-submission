@@ -1,5 +1,5 @@
 # ABOUTME: Opens the application database and creates the A.1 tables, their value-set checks and the append-only triggers on events.
-# ABOUTME: Every value-set check is built from the Literal types of event_types, so the store and the event payloads share one definition of each set.
+# ABOUTME: Every value-set check is built from the Literal types of event_types, except the run mode, which comes from settings, so the store and the event payloads share one definition of each set.
 import sqlite3
 from collections.abc import Iterable
 from typing import get_args

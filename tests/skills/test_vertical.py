@@ -79,7 +79,6 @@ def test_the_review_causes_that_persist_are_the_three_of_a11() -> None:
 
 def test_confirmation_only_class_is_routine_request() -> None:
     # 10.1: the class takes one of the two request kinds, and is set to routine_request.
-    assert vertical.CONFIRMATION_ONLY_CLASS in ("routine_request", "sensitive_request")
     assert vertical.CONFIRMATION_ONLY_CLASS == "routine_request"
 
 

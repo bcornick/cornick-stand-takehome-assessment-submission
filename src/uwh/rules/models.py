@@ -292,7 +292,7 @@ class ActionPlan(StrictModel):
 
     @model_validator(mode="after")
     def lists_are_in_a_stable_order(self) -> Self:
-        self.effects.sort(key=lambda p: (p.effect.rule, p.effect.type, p.committed))
+        self.effects.sort(key=lambda p: (p.effect.rule, p.effect.type))
         self.declines_on_every_branch.sort(
             key=lambda t: (t.alternatives[0].rule, t.alternatives[0].board_path)
         )

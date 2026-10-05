@@ -1,5 +1,5 @@
-# ABOUTME: Request and response models of the app's HTTP routes (A.5, A.11, section 11); the OpenAPI file and the web client's types come from them.
-# ABOUTME: Value sets are the Literal types of uwh.runtime.event_types and uwh.skills.vertical, and no shape holds a model confidence (section 11).
+# ABOUTME: Request and response models of the app's HTTP routes (A.5, A.11, section 11), with the checks that tie a blocker, an item, a page and a proposed command to the architecture's rules.
+# ABOUTME: Value sets are the Literal types of event_types, vertical and settings, or are defined beside their model here; no shape holds a model confidence (section 11).
 from typing import Annotated, Any, Literal, Self, get_args
 
 from pydantic import Field, JsonValue, ValidationError, model_validator
@@ -14,6 +14,7 @@ from uwh.rules.models import (
 from uwh.runtime.event_types import (
     PAYLOAD_MODELS,
     Actor,
+    ApprovalItemKind,
     BlockerDetail,
     BlockerKind,
     BlockerOwner,
@@ -25,6 +26,7 @@ from uwh.runtime.event_types import (
     ProposalKind,
     ProposalState,
     RequestKind,
+    ReviewCause,
     SkillStatus,
     Status,
 )
@@ -191,10 +193,15 @@ class LeadNote(StrictModel):
 
 
 # A.11: the approvals item kinds of an `underwriter_review` blocker.
-_REVIEW_ITEM_KINDS = ("draft", "observation", "no_contact_route", "review")
+_REVIEW_ITEM_KINDS: tuple[ApprovalItemKind, ...] = (
+    "draft",
+    "observation",
+    "no_contact_route",
+    "review",
+)
 
 # 7.4: a dispatch the stop or a class set to `off` refused leaves its draft in review.
-_HELD_DRAFT_CAUSES = ("draft_held_by_stop", "draft_held_class_off")
+_HELD_DRAFT_CAUSES: tuple[ReviewCause, ...] = ("draft_held_by_stop", "draft_held_class_off")
 
 
 class BlockerView(StrictModel):
@@ -233,7 +240,7 @@ class BlockerView(StrictModel):
         if self.detail.cause_persists and item_kind != "review":
             raise ValueError("only a review holds a persistent cause")
         self._observation_is_the_pending_one()
-        self._review_cause_fits_its_flag()
+        self._review_cause_and_held_draft_fit()
         return self
 
     def _observation_is_the_pending_one(self) -> None:
@@ -248,7 +255,7 @@ class BlockerView(StrictModel):
         if self.detail.observation_id != self.observation.observation_id:
             raise ValueError("detail.observation_id is the observation's observation_id")
 
-    def _review_cause_fits_its_flag(self) -> None:
+    def _review_cause_and_held_draft_fit(self) -> None:
         cause = self.detail.cause
         if self.detail.item_kind == "review":
             if cause is None:
@@ -364,7 +371,7 @@ ReviewItemName = Literal[
 ]
 
 # A.11's item table: row -> (blocker kind, approvals item kind).
-_REVIEW_ROWS: dict[str, tuple[str, str]] = {
+_REVIEW_ROWS: dict[ReviewItemName, tuple[BlockerKind, ApprovalItemKind]] = {
     "draft_request": ("underwriter_review", "draft"),
     "draft_quote_packet": ("underwriter_review", "draft"),
     "draft_decline_notice": ("underwriter_review", "draft"),
@@ -377,7 +384,7 @@ _REVIEW_ROWS: dict[str, tuple[str, str]] = {
 
 
 # The message kinds of the draft each A.11 draft row holds.
-_DRAFT_ROW_KINDS: dict[str, tuple[MessageKind, ...]] = {
+_DRAFT_ROW_KINDS: dict[ReviewItemName, tuple[MessageKind, ...]] = {
     "draft_request": get_args(RequestKind),
     "draft_quote_packet": ("quote_packet",),
     "draft_decline_notice": ("decline_notice",),

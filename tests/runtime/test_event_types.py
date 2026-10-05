@@ -534,7 +534,6 @@ EXPECTED_VALUE_SETS = [
 @pytest.mark.parametrize(("literal", "expected"), EXPECTED_VALUE_SETS)
 def test_each_value_set_holds_the_architectures_values(literal: Any, expected: list[str]) -> None:
     assert sorted(get_args(literal)) == sorted(expected)
-    assert len(get_args(literal)) == len(expected)
 
 
 @pytest.mark.parametrize(

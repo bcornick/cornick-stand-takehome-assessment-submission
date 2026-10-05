@@ -10,10 +10,6 @@ from uwh.runtime.hashing import (
 )
 
 
-def _skill_folders(skills_dir: Path) -> list[Path]:
-    return [p for p in skills_dir.iterdir() if p.is_dir() and p.name != "__pycache__"]
-
-
 def skill_digest(src_root: Path, skill: str, model_id: str | None = None) -> str:
     """The digest of `skill`, under `src_root` (the `src/uwh` directory).
 
@@ -33,7 +29,7 @@ def skill_digest(src_root: Path, skill: str, model_id: str | None = None) -> str
         raise FileNotFoundError(f"skill folder not found: {skill_dir}")
 
     own = [p for p in source_files(skill_dir) if p.relative_to(skill_dir).parts[0] != "cases"]
-    folders = _skill_folders(skills_dir)
+    folders = [p for p in skills_dir.iterdir() if p.is_dir() and p.name != "__pycache__"]
     shared = [
         p
         for p in source_files(src_root)

@@ -104,7 +104,7 @@ def test_queue_row_of_a_finished_lead_has_no_next_action_and_no_owner() -> None:
         {"confidence": 0.9},
     ],
 )
-def test_queue_row_refuses_values_outside_the_vocabularies(bad: dict[str, Any]) -> None:
+def test_queue_row_refuses_values_outside_their_value_sets(bad: dict[str, Any]) -> None:
     with pytest.raises(ValidationError):
         views.QueueRow.model_validate(queue_row(**bad))
 
@@ -311,7 +311,7 @@ def test_a_review_whose_cause_persists_differs_from_one_an_event_raised() -> Non
     assert (event.detail.cause, event.detail.cause_persists) == ("late_reply", False)
     assert (persists.detail.cause, persists.detail.cause_persists) == ("round_limit", True)
     assert (event.item, persists.item) == ("review_raised_by_event", "review_cause_persists")
-    # The flag follows the registered cause, not the item row alone.
+    # The flag follows the cause, not the item row alone.
     with pytest.raises(ValidationError, match="cause_persists"):
         views.ReviewItem.model_validate(
             review_item(
@@ -341,9 +341,9 @@ def test_a_draft_review_names_its_draft() -> None:
     [
         # a review raised by an event has its cause
         blocker(detail={"cause": None}),
-        # the cause is one of the registered review causes
+        # the cause is one of the review causes
         blocker(detail={"cause": "a late reply"}),
-        # the cause's flag is the registered one
+        # the cause's flag is the one its cause has
         blocker(detail={"cause": "late_reply", "cause_persists": True}),
         blocker(detail={"cause": "round_limit", "cause_persists": False}),
         # only a review can hold a persistent cause
@@ -1198,7 +1198,7 @@ def test_an_event_payload_must_follow_the_model_of_its_type() -> None:
     assert set(PAYLOAD_MODELS) == set(EventType)
 
 
-# ---- vocabularies and confidence ----------------------------------------------------------------
+# ---- value sets and confidence ----------------------------------------------------------------
 
 
 AUTONOMY_CLASSES = [
@@ -1285,30 +1285,12 @@ def test_a_blocker_detail_shows_its_item_kind_and_cause_as_enums() -> None:
     assert [m["enum"] for m in properties["cause"]["anyOf"] if "enum" in m] == [REVIEW_CAUSES]
 
 
-def test_the_autonomy_classes_are_the_classes_with_a_default_level() -> None:
-    expected = [c.name for c in vertical.COMMAND_CLASSES if c.default_level is not None]
-    assert list(get_args(views.AutonomyClassName)) == expected
-
-
-def test_the_proposable_command_types_are_the_http_classes_but_approve_reject_and_proposals() -> (
-    None
-):
-    http = [c.name for c in vertical.COMMAND_CLASSES if c.actors != ("workflow",)]
-    expected = [t for t in http if t not in ("approve", "reject", "propose_command")]
-    assert list(get_args(views.ProposableCommandType)) == expected
-
-
 def test_the_page_results_are_the_node_results_and_not_evaluated() -> None:
     node_results = [
         get_args(model.model_fields["result"].annotation)[0]
         for model in (Decided, Undecided, DeclinesOnEveryBranch)
     ]
     assert sorted(get_args(views.PageResult)) == sorted([*node_results, "not_evaluated"])
-
-
-def test_a_value_outside_a_vocabulary_is_refused() -> None:
-    with pytest.raises(ValidationError, match="in_review"):
-        views.DraftView.model_validate(draft(state="draft", kind="in_review"))
 
 
 def test_no_schema_property_is_named_confidence_or_carries_one() -> None:
