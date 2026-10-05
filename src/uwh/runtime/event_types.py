@@ -1,9 +1,9 @@
 # ABOUTME: The event types of A.2 and one Pydantic payload model per type, named after it in PascalCase.
 # ABOUTME: Payloads hold only what the event row's own columns do not; PAYLOAD_MODELS maps each type to its model.
 from enum import StrEnum
-from typing import Any, Literal
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, JsonValue
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
 
 
 class EventType(StrEnum):
@@ -50,6 +50,8 @@ ProposalState = Literal["open", "applied", "dismissed"]
 IntentState = Literal["draft", "dispatching", "sent", "unknown", "closed_unsent"]
 RunStatus = Literal["processing", "settled"]
 SkillStatus = Literal["untested", "passing", "failing", "unavailable"]
+ReplyClassification = Literal["answers_all", "answers_some", "declines_to_answer", "off_topic"]
+RulingKind = Literal["choice", "suppression", "decline", "withdrawal", "reopened_choice"]
 
 
 class Payload(BaseModel):
@@ -75,12 +77,15 @@ class DraftEdited(Payload):
     body: str
     payload_hash: str
     reason: str
+    lead_revision: int  # the lead's revision when the edit was made
 
 
 class ProposalCreated(Payload):
+    """`diff_hash` is the dry-run diff hash: a rule change always has one, a command proposal has none."""
+
     proposal_id: int
     kind: ProposalKind
-    diff_hash: str | None  # a rule-change proposal carries its dry-run diff hash
+    diff_hash: str | None
 
 
 class LeadReceived(Payload):
@@ -93,7 +98,9 @@ class FactObserved(Payload):
     key: str  # a registry field name, or a catalogue id prefixed `q:`
     value: JsonValue
     source: ObservationSource
-    evidence: dict[str, Any]  # quoted span, provider name, derivation id or interpretation row id
+    evidence: dict[
+        str, JsonValue
+    ]  # quoted span, provider name, derivation id or interpretation row id
     status: ObservationStatus
 
 
@@ -122,8 +129,9 @@ class ConflictClosed(Payload):
 
 
 class TriageCompleted(Payload):
-    # Field id -> its triage result (value status, requirement, resolution, depends_on), section 9.2.
-    fields: dict[str, Any]
+    """Field id -> its triage result, section 9.2; each value follows `uwh.rules.models.FieldTriage`."""
+
+    fields: dict[str, JsonValue]
 
 
 class ProviderCalled(Payload):
@@ -137,15 +145,35 @@ class ProviderCalled(Payload):
 
 
 class PlanBuilt(Payload):
-    plan: dict[str, Any]  # the action plan, section 9.6
+    """The action plan of section 9.6, an object that follows `uwh.rules.models.ActionPlan`, and its hash."""
+
+    plan: dict[str, JsonValue]
     plan_hash: str
+
+
+class BlockerDetail(Payload):
+    """What a blocker carries beyond its kind and owner; also the shape of `blockers.detail_json`."""
+
+    item_kind: ApprovalItemKind | None = None  # None for a blocker that is not an underwriter item
+    cause: str | None = None  # what raised a review, for example a late reply or the round limit
+    cause_persists: bool = (
+        False  # a review whose cause persists is refused until the cause is removed
+    )
+    resume_trigger: str  # what resumes the lead (section 7.1)
+    intent_id: str | None = (
+        None  # the draft a review is about; the request a producer reply waits on
+    )
+    observation_id: int | None = None  # a pending observation
+    choice_ids: list[str] = []  # the open choices of a question card (section 9.6)
+    missing_inputs: list[str] = []  # the input fields a blocked lookup names (section 9.4)
+    text: str  # the reason shown to the underwriter (section 7.4)
 
 
 class BlockerOpened(Payload):
     blocker_id: int
     kind: str
     owner: BlockerOwner
-    detail: dict[str, Any]
+    detail: BlockerDetail
 
 
 class BlockerClosed(Payload):
@@ -179,33 +207,36 @@ class ReplyReceived(Payload):
     body_hash: str
 
 
-class ReplyCandidate(Payload):
-    """A candidate observation as the model returned it; the field names are A.9's `Candidate`."""
+class Candidate(BaseModel):
+    """A candidate observation as the model returned it (A.9)."""
 
-    ask_id: str
-    field: str
+    model_config = ConfigDict(extra="forbid")
+
+    ask_id: str  # an ask id from the open intent: field name, catalogue id or validator id
+    field: str  # the registry field or q: id the value is for; for a confirmation, one of its validator's fields
     value: str | int | float | bool
-    quote: str
+    quote: str = Field(min_length=1)  # the reply text the value was read from, copied exactly
 
 
-class LocatedReplyCandidate(ReplyCandidate):
-    """A candidate whose quote was found; the field names are A.9's `LocatedCandidate`."""
-
-    span_start: int
-    span_end: int
+class LocatedCandidate(Candidate):
+    span_start: int  # computed by code, never by the model
+    span_end: int  # body[span_start:span_end] == quote
 
 
 class ReplyRead(Payload):
-    classification: str
-    candidates: list[LocatedReplyCandidate]
-    dropped: list[ReplyCandidate]  # candidates whose quote is not in the reply, as returned
+    intent_id: str  # the intent the reply answers
+    body_hash: str  # the hash of the delivered reply body that was read
+    classification: ReplyClassification
+    candidates: list[LocatedCandidate]
+    dropped: list[Candidate]  # candidates whose quote is not in the reply, as returned
 
 
 class ApprovalRecorded(Payload):
     item_id: int  # the blocker the decision settles
     item_kind: ApprovalItemKind
     intent_id: str | None
-    # The five frozen values of the approval binding (section 7.4).
+    # The five frozen values of the approval binding (section 7.4). `ruleset_hash` shares its name
+    # with an event row column on purpose: it is the ruleset the approval is bound to.
     lead_revision: int
     plan_hash: str
     ruleset_hash: str
@@ -216,15 +247,34 @@ class ApprovalRecorded(Payload):
 
 
 class RulingRecorded(Payload):
-    choice_id: str | None  # None for the ruling a rejected decline notice records
+    """An underwriter ruling. `refers_to_event_id` is the `ruling_recorded` event a withdrawal
+    withdraws, or the choice ruling a reopening reopens; None otherwise."""
+
+    kind: RulingKind
+    choice_id: str | None
     option: str | None
     reason: str
+    lead_revision: int  # the lead's revision when the ruling was recorded
     plan_hash: str  # the lead's plan hash at that moment (section 12)
     suppressed_rule_ids: list[str]
+    refers_to_event_id: int | None
+
+    @model_validator(mode="after")
+    def _kind_has_its_parts(self) -> "RulingRecorded":
+        if self.kind == "choice" and (self.choice_id is None or self.option is None):
+            raise ValueError("a choice ruling needs choice_id and option")
+        if self.kind == "suppression" and not self.suppressed_rule_ids:
+            raise ValueError("a suppression ruling needs suppressed_rule_ids")
+        if self.kind in ("withdrawal", "reopened_choice") and self.refers_to_event_id is None:
+            raise ValueError(f"a {self.kind} ruling needs refers_to_event_id")
+        if self.kind == "reopened_choice" and self.choice_id is None:
+            raise ValueError("a reopened_choice ruling needs choice_id")
+        return self
 
 
 class CommandRefused(Payload):
     command_type: str
+    command_payload: dict[str, JsonValue]  # the payload as submitted
     reason: str
 
 
@@ -239,9 +289,12 @@ class ClassDemoted(Payload):
 
 
 class RuleChangeApplied(Payload):
+    """The event row's `ruleset_hash` holds the ruleset in force before the change;
+    `applied_ruleset_hash` is the one the change produced."""
+
     proposal_id: int
     diff_hash: str
-    new_ruleset_hash: str
+    applied_ruleset_hash: str
 
 
 class SkillFallbackUsed(Payload):

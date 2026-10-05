@@ -2,7 +2,7 @@
 # ABOUTME: Inputs carry values, never handles; each output is the skill's result or an Abstention.
 from typing import Literal
 
-from pydantic import Field, JsonValue
+from pydantic import JsonValue
 
 from uwh.rules.models import (
     ActionPlan,
@@ -17,7 +17,14 @@ from uwh.rules.models import (
     SurchargeEffect,
 )
 from uwh.providers.models import ProviderResult
-from uwh.runtime.event_types import BlockerOwner, ConflictOpened, ObservationSource
+from uwh.runtime.event_types import (
+    BlockerOwner,
+    Candidate,
+    ConflictOpened,
+    LocatedCandidate,
+    ObservationSource,
+    ReplyClassification,
+)
 
 
 class Abstention(StrictModel):
@@ -153,27 +160,12 @@ class RenderMessageResult(StrictModel):
 RenderMessageOutput = RenderMessageResult | Abstention
 
 
-# read_reply (A.9).
-class Candidate(StrictModel):
-    ask_id: str  # an ask id from the open intent: field name, catalogue id or validator id
-    field: str  # the registry field or q: id the value is for; for a confirmation, one of its validator's fields
-    value: str | int | float | bool
-    quote: str = Field(min_length=1)  # the reply text the value was read from, copied exactly
-
-
-ReplyClassification = Literal["answers_all", "answers_some", "declines_to_answer", "off_topic"]
-
-
+# read_reply (A.9). `Candidate`, `LocatedCandidate` and `ReplyClassification` are the runtime's definitions, imported above.
 class ReplyReading(StrictModel):
     """What the model returns; its JSON schema is the input schema of the forced tool."""
 
     classification: ReplyClassification
     candidates: list[Candidate]
-
-
-class LocatedCandidate(Candidate):
-    span_start: int  # computed by code, never by the model
-    span_end: int  # body[span_start:span_end] == quote
 
 
 class ReadReplyInput(StrictModel):

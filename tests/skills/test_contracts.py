@@ -6,7 +6,7 @@ import pytest
 from pydantic import BaseModel, TypeAdapter, ValidationError
 
 from uwh.rules.models import ActionPlan, Ask
-from uwh.runtime.event_types import LocatedReplyCandidate, ReplyCandidate
+from uwh.runtime import event_types
 from uwh.skills import contracts
 from uwh.skills.contracts import (
     Abstention,
@@ -342,9 +342,15 @@ def test_a_located_candidate_is_a_candidate_with_offsets() -> None:
     assert located.span_start == 4 and located.span_end == 22
 
 
-def test_candidate_field_sets_equal_those_of_the_reply_read_event() -> None:
-    assert set(Candidate.model_fields) == set(ReplyCandidate.model_fields)
-    assert set(LocatedCandidate.model_fields) == set(LocatedReplyCandidate.model_fields)
+def test_the_candidate_contracts_are_the_runtime_classes() -> None:
+    assert Candidate is event_types.Candidate
+    assert LocatedCandidate is event_types.LocatedCandidate
+    assert contracts.ReplyClassification is event_types.ReplyClassification
+
+
+def test_a_candidate_forbids_unknown_fields() -> None:
+    with pytest.raises(ValidationError):
+        Candidate.model_validate({**CANDIDATE, "surprise": 1})
 
 
 def test_the_read_reply_result_is_the_classification_with_located_candidates_and_the_dropped() -> (

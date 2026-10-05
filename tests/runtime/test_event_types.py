@@ -1,10 +1,19 @@
 # ABOUTME: Tests that the event-type enum holds the 28 names of A.2 and that each type has a payload model named after it.
 # ABOUTME: The names and each payload's field set are written out here; every payload forbids unknown fields and round-trips through JSON.
+from datetime import date
+from typing import get_args
+
 import pytest
 from pydantic import BaseModel, ValidationError
 
 from uwh.runtime import event_types
-from uwh.runtime.event_types import PAYLOAD_MODELS, EventType
+from uwh.runtime.event_types import (
+    PAYLOAD_MODELS,
+    BlockerDetail,
+    EventType,
+    ReplyClassification,
+    RulingRecorded,
+)
 
 # A.2, in order.
 A2_NAMES = [
@@ -39,10 +48,12 @@ A2_NAMES = [
 ]
 
 # The fields each payload holds; the event row's own columns are not repeated here.
+# This is the freeze of the contract shapes reviewed at the stage 2 gate: a change detector,
+# not a behaviour test. A payload change updates this table in the same commit.
 EXPECTED_FIELDS: dict[str, set[str]] = {
     "run_started": {"seed", "lead_count"},
     "replay_miss": {"skill", "prompt_version", "input_hash"},
-    "draft_edited": {"intent_id", "subject", "body", "payload_hash", "reason"},
+    "draft_edited": {"intent_id", "subject", "body", "payload_hash", "reason", "lead_revision"},
     "proposal_created": {"proposal_id", "kind", "diff_hash"},
     "lead_received": {"source", "received_at"},
     "fact_observed": {"observation_id", "key", "value", "source", "evidence", "status"},
@@ -75,7 +86,7 @@ EXPECTED_FIELDS: dict[str, set[str]] = {
     "message_sent": {"intent_id", "mailbox_id"},
     "delivery_unknown": {"intent_id"},
     "reply_received": {"intent_id", "body", "body_hash"},
-    "reply_read": {"classification", "candidates", "dropped"},
+    "reply_read": {"intent_id", "body_hash", "classification", "candidates", "dropped"},
     "approval_recorded": {
         "item_id",
         "item_kind",
@@ -88,11 +99,20 @@ EXPECTED_FIELDS: dict[str, set[str]] = {
         "decision",
         "reason",
     },
-    "ruling_recorded": {"choice_id", "option", "reason", "plan_hash", "suppressed_rule_ids"},
-    "command_refused": {"command_type", "reason"},
+    "ruling_recorded": {
+        "kind",
+        "choice_id",
+        "option",
+        "reason",
+        "lead_revision",
+        "plan_hash",
+        "suppressed_rule_ids",
+        "refers_to_event_id",
+    },
+    "command_refused": {"command_type", "command_payload", "reason"},
     "setting_changed": {"key", "value"},
     "class_demoted": {"command_class", "reason"},
-    "rule_change_applied": {"proposal_id", "diff_hash", "new_ruleset_hash"},
+    "rule_change_applied": {"proposal_id", "diff_hash", "applied_ruleset_hash"},
     "skill_fallback_used": {"skill", "status", "fallback"},
     "model_called": {
         "skill",
@@ -117,6 +137,7 @@ SAMPLES: dict[str, dict[str, object]] = {
         "body": "Line one\nLine two",
         "payload_hash": H,
         "reason": "tone",
+        "lead_revision": 2,
     },
     "proposal_created": {"proposal_id": 3, "kind": "rule_change", "diff_hash": H},
     "lead_received": {"source": "broker_email", "received_at": "2026-06-29T08:00:00+00:00"},
@@ -162,7 +183,17 @@ SAMPLES: dict[str, dict[str, object]] = {
         "blocker_id": 1,
         "kind": "data",
         "owner": "data_team",
-        "detail": {"reason": "lookup down"},
+        "detail": {
+            "item_kind": None,
+            "cause": None,
+            "cause_persists": False,
+            "resume_trigger": "provider_available",
+            "intent_id": None,
+            "observation_id": None,
+            "choice_ids": [],
+            "missing_inputs": ["zip"],
+            "text": "lookup down",
+        },
     },
     "blocker_closed": {"blocker_id": 1, "kind": "data"},
     "intent_created": {
@@ -179,6 +210,8 @@ SAMPLES: dict[str, dict[str, object]] = {
     "delivery_unknown": {"intent_id": "i1"},
     "reply_received": {"intent_id": "i1", "body": "It is 1950.", "body_hash": H},
     "reply_read": {
+        "intent_id": "i1",
+        "body_hash": H,
         "classification": "answers_some",
         "candidates": [
             {
@@ -207,16 +240,23 @@ SAMPLES: dict[str, dict[str, object]] = {
         "reason": "ok",
     },
     "ruling_recorded": {
+        "kind": "choice",
         "choice_id": "I07.two_months",
         "option": "under_60_days",
         "reason": "r",
+        "lead_revision": 3,
         "plan_hash": H,
         "suppressed_rule_ids": [],
+        "refers_to_event_id": None,
     },
-    "command_refused": {"command_type": "approve", "reason": "stale hash"},
+    "command_refused": {
+        "command_type": "approve",
+        "command_payload": {"item_id": 4, "plan_hash": H},
+        "reason": "stale hash",
+    },
     "setting_changed": {"key": "autonomy.fetch_data", "value": "review"},
     "class_demoted": {"command_class": "send_routine_request", "reason": "duplicate"},
-    "rule_change_applied": {"proposal_id": 3, "diff_hash": H, "new_ruleset_hash": H},
+    "rule_change_applied": {"proposal_id": 3, "diff_hash": H, "applied_ruleset_hash": H},
     "skill_fallback_used": {"skill": "read_reply", "status": "failing", "fallback": "unread"},
     "model_called": {
         "skill": "read_reply",
@@ -229,6 +269,9 @@ SAMPLES: dict[str, dict[str, object]] = {
     "fault_injected": {"fault": "provider_unavailable"},
 }
 
+# The event row's columns. `ruleset_hash` is a row column too but is left out on purpose:
+# `ApprovalRecorded.ruleset_hash` is the ruleset the approval is bound to (section 7.4), not the
+# ruleset in force at the event.
 ROW_COLUMNS = {
     "run_id",
     "mode",
@@ -337,3 +380,77 @@ def test_provider_status_and_observation_values_are_closed_sets() -> None:
         observed.model_validate({**SAMPLES["fact_observed"], "source": "guess"})
     with pytest.raises(ValidationError):
         observed.model_validate({**SAMPLES["fact_observed"], "status": "maybe"})
+
+
+RULING = SAMPLES["ruling_recorded"]
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"kind": "choice"},
+        {"kind": "suppression", "choice_id": None, "option": None, "suppressed_rule_ids": ["PP-3"]},
+        {"kind": "decline", "choice_id": None, "option": None},
+        {"kind": "withdrawal", "choice_id": None, "option": None, "refers_to_event_id": 5},
+        {"kind": "reopened_choice", "refers_to_event_id": 5},
+    ],
+)
+def test_a_ruling_with_its_required_parts_is_valid(overrides: dict[str, object]) -> None:
+    assert RulingRecorded.model_validate({**RULING, **overrides}).kind == overrides["kind"]
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"kind": "choice", "choice_id": None},
+        {"kind": "choice", "option": None},
+        {"kind": "suppression", "suppressed_rule_ids": []},
+        {"kind": "withdrawal", "refers_to_event_id": None},
+        {"kind": "reopened_choice", "refers_to_event_id": None},
+        {"kind": "reopened_choice", "choice_id": None, "refers_to_event_id": 5},
+        {"kind": "approved"},
+    ],
+)
+def test_a_ruling_missing_a_required_part_is_refused(overrides: dict[str, object]) -> None:
+    with pytest.raises(ValidationError):
+        RulingRecorded.model_validate({**RULING, **overrides})
+
+
+def test_blocker_detail_needs_a_resume_trigger_and_text_and_defaults_the_rest() -> None:
+    detail = BlockerDetail.model_validate({"resume_trigger": "reply_received", "text": "waiting"})
+    assert detail.item_kind is None and detail.cause is None and detail.cause_persists is False
+    assert detail.intent_id is None and detail.observation_id is None
+    assert detail.choice_ids == [] and detail.missing_inputs == []
+    for missing in ("resume_trigger", "text"):
+        full = {"resume_trigger": "x", "text": "y"}
+        del full[missing]
+        with pytest.raises(ValidationError):
+            BlockerDetail.model_validate(full)
+    with pytest.raises(ValidationError):
+        BlockerDetail.model_validate({"resume_trigger": "x", "text": "y", "surprise": 1})
+    with pytest.raises(ValidationError):
+        BlockerDetail.model_validate({"resume_trigger": "x", "text": "y", "item_kind": "other"})
+
+
+@pytest.mark.parametrize(
+    ("name", "field"),
+    [("fact_observed", "evidence"), ("triage_completed", "fields"), ("plan_built", "plan")],
+)
+def test_json_object_fields_refuse_a_value_that_does_not_survive_json(
+    name: str, field: str
+) -> None:
+    model = PAYLOAD_MODELS[EventType(name)]
+    with pytest.raises(ValidationError):
+        model.model_validate({**SAMPLES[name], field: {"when": date(2026, 6, 29)}})
+
+
+def test_reply_classification_is_the_four_a9_values() -> None:
+    assert set(get_args(ReplyClassification)) == {
+        "answers_all",
+        "answers_some",
+        "declines_to_answer",
+        "off_topic",
+    }
+    model = PAYLOAD_MODELS[EventType.reply_read]
+    with pytest.raises(ValidationError):
+        model.model_validate({**SAMPLES["reply_read"], "classification": "maybe"})
