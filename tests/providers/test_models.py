@@ -46,8 +46,23 @@ def test_the_result_holds_the_section_9_4_fields() -> None:
 
 @pytest.mark.parametrize("status", ["found", "not_found", "unavailable"])
 def test_a_result_without_missing_inputs_is_valid_for_the_other_statuses(status: str) -> None:
-    result = ProviderResult.model_validate({**FOUND, "status": status})
+    value = "4" if status == "found" else None
+    result = ProviderResult.model_validate({**FOUND, "status": status, "value": value})
     assert result.missing_inputs == []
+
+
+@pytest.mark.parametrize("status", ["not_found", "blocked", "unavailable"])
+def test_a_value_comes_only_with_a_found_result(status: str) -> None:
+    extra = {"missing_inputs": ["zip"]} if status == "blocked" else {}
+    with pytest.raises(ValidationError):
+        ProviderResult.model_validate({**FOUND, "status": status, "value": "4", **extra})
+
+
+def test_a_found_result_has_a_value() -> None:
+    with pytest.raises(ValidationError):
+        ProviderResult.model_validate({**FOUND, "value": None})
+    assert ProviderResult.model_validate({**FOUND, "value": 0}).value == 0
+    assert ProviderResult.model_validate({**FOUND, "value": False}).value is False
 
 
 def test_a_blocked_result_names_the_missing_input_fields() -> None:
@@ -63,6 +78,10 @@ def test_a_blocked_result_with_no_missing_input_is_refused() -> None:
 def test_an_unblocked_result_that_names_missing_inputs_is_refused() -> None:
     with pytest.raises(ValidationError):
         ProviderResult.model_validate({**FOUND, "missing_inputs": ["zip"]})
+    with pytest.raises(ValidationError):
+        ProviderResult.model_validate(
+            {**FOUND, "status": "not_found", "value": None, "missing_inputs": ["zip"]}
+        )
 
 
 def test_an_unknown_status_is_refused() -> None:

@@ -1,8 +1,8 @@
 # ABOUTME: Input and output models of the seven skills of section 8, the shared typed abstention, the A.9 reply models and the section 10.5 quote packet.
 # ABOUTME: Inputs carry values, never handles; each output is the skill's result or an Abstention.
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import JsonValue
+from pydantic import JsonValue, model_validator
 
 from uwh.rules.models import (
     ActionPlan,
@@ -11,6 +11,8 @@ from uwh.rules.models import (
     CoverageAdjustmentEffect,
     ExclusionOrEndorsementEffect,
     FieldTriage,
+    NotEvaluatedNote,
+    ObligationEffect,
     PlannedEffect,
     RequirementEffect,
     StrictModel,
@@ -18,11 +20,11 @@ from uwh.rules.models import (
 )
 from uwh.providers.models import ProviderResult
 from uwh.runtime.event_types import (
+    BlockerDetail,
     BlockerOwner,
     Candidate,
     ConflictOpened,
     LocatedCandidate,
-    ObservationSource,
     ReplyClassification,
 )
 
@@ -39,7 +41,9 @@ class TriageFieldsInput(StrictModel):
     facts: dict[str, JsonValue]  # the lead's effective facts; None means missing
     conflicting_fields: list[str]  # fields in an open conflict
     unsupported_fields: list[str]  # fields whose value the validators call unsupported
-    blocked_fields: list[str]  # system-owned fields whose lookup is blocked or pending
+    # System-owned field -> the missing input fields its blocked lookup names (9.4). A lookup not
+    # yet made is not in the mapping.
+    blocked_lookups: dict[str, list[str]]
 
 
 class TriageFieldsResult(StrictModel):
@@ -53,14 +57,21 @@ TriageFieldsOutput = TriageFieldsResult | Abstention
 class ResolvedObservation(StrictModel):
     key: str  # a registry field name
     value: JsonValue
-    source: ObservationSource  # derived, fetched or assumed
+    source: Literal[
+        "derived", "fetched", "assumed"
+    ]  # the three ways 9.3 resolves a value without asking
     evidence: dict[str, JsonValue]  # provider name or derivation id
 
 
 class BlockerRequest(StrictModel):
     kind: str
     owner: BlockerOwner
-    detail: dict[str, JsonValue]
+    detail: BlockerDetail
+
+
+class AskField(StrictModel):
+    field: str  # a registry field name
+    reason: str  # why it is asked, for example the blocked lookup that names it as a missing input
 
 
 class ResolveDataInput(StrictModel):
@@ -71,7 +82,7 @@ class ResolveDataInput(StrictModel):
 
 class ResolveDataResult(StrictModel):
     observations: list[ResolvedObservation]
-    ask_fields: list[str]  # fields left to ask, including the inputs a blocked lookup names
+    ask_fields: list[AskField]  # fields left to ask, including the inputs a blocked lookup names
     catalogue_questions: list[str]  # catalogue ids, such as the combined knob-and-tube question
     blockers: list[BlockerRequest]
 
@@ -84,6 +95,7 @@ class EvaluatePlaybookInput(StrictModel):
     facts: dict[str, JsonValue]  # usable facts only; a missing key is unknown
     answered_choices: dict[str, str]  # choice id -> option id
     suppressed_rules: list[str]
+    underwriter_decline: str | None = None  # the reason of a `decline_lead` ruling in force (A.11)
 
 
 EvaluatePlaybookOutput = ActionPlan | Abstention
@@ -99,6 +111,13 @@ class PlanAsksInput(StrictModel):
 
 class PlanAsksResult(StrictModel):
     asks: list[Ask]
+    message_class: Literal["routine_request", "sensitive_request"] | None  # 10.1; None with no asks
+
+    @model_validator(mode="after")
+    def has_a_class_exactly_when_it_asks(self) -> Self:
+        if (self.message_class is None) != (not self.asks):
+            raise ValueError("message_class is None exactly when asks is empty")
+        return self
 
 
 PlanAsksOutput = PlanAsksResult | Abstention
@@ -121,6 +140,8 @@ class QuotePacket(StrictModel):
     requirements: list[RequirementEffect]  # each with its deadline
     exclusions_and_endorsements: list[ExclusionOrEndorsementEffect]
     advisories: list[AdvisoryEffect]
+    obligations: list[ObligationEffect]  # every effect of the plan appears in the packet
+    notes: list[NotEvaluatedNote]  # the pages and rows the system does not evaluate (4.1)
 
 
 class InternalCopy(StrictModel):
@@ -147,6 +168,7 @@ BuildQuotePacketOutput = BuildQuotePacketResult | Abstention
 class RenderMessageInput(StrictModel):
     kind: Literal["request", "quote_packet", "decline_notice"]
     lead_label: str  # the address or lead id in the subject
+    audience: Literal["producer", "applicant"]  # a `direct_web` lead gets applicant wording (10.3)
     asks: list[Ask] = []
     packet: QuotePacket | None = None
 

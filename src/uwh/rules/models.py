@@ -200,11 +200,16 @@ class AskKind(StrEnum):
 
 
 class Ask(StrictModel):
-    ask_id: str  # a field name, a catalogue id or a validator id (A.9)
+    """One typed ask (10.2).
+
+    `ask_id` is a registry field name, a bare catalogue id (`kt_extent`) or a validator id.
+    `fields` holds fact keys (A.1): a registry field name, or for a catalogue question the
+    catalogue id prefixed `q:` (`q:kt_extent`). A confirmation lists the fields its validator covers.
+    """
+
+    ask_id: str  # a registry field name, a bare catalogue id or a validator id (A.9)
     kind: AskKind
-    fields: list[
-        str
-    ]  # the field or catalogue id; a confirmation lists the fields its validator covers
+    fields: list[str]  # fact keys: field names, `q:`-prefixed catalogue ids
     reason: str
     wording: str  # stored plain wording
 
