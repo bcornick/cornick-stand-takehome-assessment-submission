@@ -40,6 +40,11 @@ def context(tmp_path_factory: pytest.TempPathFactory) -> Path:
             target.write_bytes(source.read_bytes())
     (ctx / "docs/brief").mkdir(parents=True)
     (ctx / REGISTRY).write_bytes((ROOT / REGISTRY).read_bytes())
+    for source in (ROOT / "web").rglob("*"):
+        if source.is_file() and not {"node_modules", "dist"} & set(source.relative_to(ROOT).parts):
+            target = ctx / source.relative_to(ROOT)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(source.read_bytes())
     sentinel = ctx / "src/uwh/skills/zz_sentinel"
     (sentinel / "cases").mkdir(parents=True)
     (sentinel / "cases/case.yaml").write_text("id: sentinel\n", encoding="utf-8")
@@ -135,3 +140,17 @@ def test_python_is_the_project_interpreter(image: str) -> None:
 
 def test_sqlite3_cli_is_installed(image: str) -> None:
     run("docker", "run", "--rm", image, "sqlite3", "--version")
+
+
+def test_image_holds_the_built_frontend_at_the_static_path(image: str) -> None:
+    assert 'id="root"' in in_image(image, "cat", "/app/static/index.html")
+    assets = in_image(image, "ls", "/app/static/assets").split()
+    assert any(name.endswith(".js") for name in assets)
+
+
+def test_image_holds_no_node_modules_and_no_node(image: str) -> None:
+    found = in_image(image, "find", "/app", "-name", "node_modules")
+    assert found.strip() == ""
+    assert (
+        in_image(image, "sh", "-c", "command -v node; command -v pnpm; echo done").strip() == "done"
+    )

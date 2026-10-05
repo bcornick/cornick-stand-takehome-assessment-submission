@@ -13,6 +13,7 @@ VARIABLES = (
     "MAILBOX_URL",
     "UWH_REGISTRY",
     "UWH_DB",
+    "UWH_STATIC_DIR",
     "GIT_COMMIT",
 )
 
@@ -46,6 +47,7 @@ def test_defaults() -> None:
     assert s.leadgen_url == "http://leadgen:8080"
     assert s.mailbox_url == "http://mailbox:8080"
     assert s.registry_path == "/app/registry/field_registry.json"
+    assert s.static_dir == "/app/static"
     assert s.git_commit == "unknown"
 
 
@@ -57,6 +59,7 @@ def test_environment_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("MAILBOX_URL", "http://localhost:8025")
     monkeypatch.setenv("UWH_REGISTRY", "/tmp/registry.json")
     monkeypatch.setenv("UWH_DB", "/tmp/other.db")
+    monkeypatch.setenv("UWH_STATIC_DIR", "/tmp/built-web")
     monkeypatch.setenv("GIT_COMMIT", "abc123")
     s = Settings.load()
     assert s.seed == 7
@@ -66,6 +69,7 @@ def test_environment_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
     assert s.mailbox_url == "http://localhost:8025"
     assert s.registry_path == "/tmp/registry.json"
     assert s.db_path == "/tmp/other.db"
+    assert s.static_dir == "/tmp/built-web"
     assert s.git_commit == "abc123"
 
 

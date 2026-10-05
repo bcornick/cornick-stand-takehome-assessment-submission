@@ -51,6 +51,44 @@ def test_app_without_settings_reads_the_environment(
     assert body["summary"] == NO_RUN_SUMMARY
 
 
+def static_client(tmp_path: Path) -> TestClient:
+    static = tmp_path / "static"
+    (static / "assets").mkdir(parents=True)
+    (static / "index.html").write_text('<div id="root"></div>', encoding="utf-8")
+    (static / "assets/app.js").write_text("console.log(1)", encoding="utf-8")
+    settings = Settings.load({"UWH_DB": "unused.db", "UWH_STATIC_DIR": str(static)})
+    return TestClient(create_app(settings))
+
+
+def test_static_directory_is_served_at_the_root(tmp_path: Path) -> None:
+    with static_client(tmp_path) as client:
+        root = client.get("/")
+        asset = client.get("/assets/app.js")
+    assert root.status_code == 200
+    assert 'id="root"' in root.text
+    assert asset.status_code == 200
+    assert asset.text == "console.log(1)"
+
+
+def test_api_routes_keep_precedence_over_the_static_mount(tmp_path: Path) -> None:
+    with static_client(tmp_path) as client:
+        run = client.get("/api/run")
+        declared = client.get("/api/leads")
+        unknown = client.get("/api/no-such-route")
+    assert run.status_code == 200
+    assert run.json()["mode"] == "live"
+    assert declared.status_code == 501
+    assert unknown.status_code == 404
+    assert unknown.headers["content-type"].startswith("application/json")
+
+
+def test_missing_static_directory_leaves_the_app_running(tmp_path: Path) -> None:
+    settings = Settings.load({"UWH_DB": "unused.db", "UWH_STATIC_DIR": str(tmp_path / "absent")})
+    with TestClient(create_app(settings)) as client:
+        assert client.get("/").status_code == 404
+        assert client.get("/api/run").status_code == 200
+
+
 def test_importing_the_api_modules_reads_no_environment() -> None:
     # A bad RUN_MODE and no UWH_DB would fail Settings.load; an import must not call it.
     env = {k: v for k, v in os.environ.items() if k not in ("UWH_DB", "SEED")}

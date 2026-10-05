@@ -1,6 +1,9 @@
 # ABOUTME: The app's HTTP surface. The factory reads settings when called, never at import.
 # ABOUTME: GET /api/run reports the run's mode, seed, id (null before a run starts) and summary; the other routes are declared in routes.py.
+from pathlib import Path
+
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from uwh.api.routes import router
 from uwh.api.views import RunSummary, RunView
@@ -30,4 +33,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
 
     app.include_router(router)
+    # Mounted last so the API routes match first; absent in a checkout without a build.
+    if Path(settings.static_dir).is_dir():
+        app.mount("/", StaticFiles(directory=settings.static_dir, html=True), name="frontend")
     return app
