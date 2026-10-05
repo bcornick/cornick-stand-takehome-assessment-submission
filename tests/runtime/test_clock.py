@@ -143,6 +143,28 @@ def test_age_is_negative_for_a_lead_received_after_now() -> None:
     assert age_business_days(utc(2026, 6, 29, 20), utc(2026, 6, 29, 8)) == pytest.approx(-0.5)
 
 
+def weekday_fractions_between(start: datetime, end: datetime) -> float:
+    """Each UTC weekday contributes the fraction of its 24 hours that lies between start and end; Saturday and Sunday contribute nothing."""
+    total = 0.0
+    day_start = datetime.combine(start.date(), datetime.min.time(), tzinfo=UTC)
+    while day_start <= end:
+        if day_start.weekday() < SATURDAY:
+            overlap = min(end, day_start + timedelta(days=1)) - max(start, day_start)
+            total += max(overlap, timedelta(0)) / timedelta(days=1)
+        day_start += timedelta(days=1)
+    return total
+
+
+@given(
+    start=timestamps, length=st.timedeltas(min_value=timedelta(0), max_value=timedelta(days=400))
+)
+def test_age_is_the_weekday_fractions_of_the_span(start: datetime, length: timedelta) -> None:
+    end = start + length
+    assert age_business_days(start, end) == pytest.approx(
+        weekday_fractions_between(start, end), abs=1e-9
+    )
+
+
 @given(start=timestamps, hours=st.integers(min_value=0, max_value=24 * 30))
 def test_age_never_exceeds_elapsed_calendar_days(start: datetime, hours: int) -> None:
     elapsed = timedelta(hours=hours)

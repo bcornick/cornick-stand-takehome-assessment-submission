@@ -64,15 +64,15 @@ def append_event(
     event_type: EventType,
     payload: StrictModel,
     *,
-    lead_id: str | None = None,
+    lead_id: str | None,
     model_id: str | None = None,
     request_id: str | None = None,
     prompt_versions: dict[str, str] | None = None,
 ) -> int:
     """Insert one event and return its id. The caller commits.
 
-    Raises TypeError when `payload` is not the model of `event_type`. `lead_id` is None for an event that
-    belongs to no lead. `model_id`, `request_id` and `prompt_versions` are set where a model was called.
+    Raises TypeError when `payload` is not the model of `event_type`. `lead_id` is required; pass None for an event
+    that belongs to no lead. `model_id`, `request_id` and `prompt_versions` are set where a model was called.
     """
     model = PAYLOAD_MODELS[event_type]
     if type(payload) is not model:
