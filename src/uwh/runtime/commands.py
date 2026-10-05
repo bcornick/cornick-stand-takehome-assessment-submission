@@ -1,5 +1,5 @@
 # ABOUTME: The command layer of 7.4 and A.11: one entry point that takes the actor from the transport, applies the actor and class rules and the skill manifest, runs the handler and the lead's re-evaluation in one transaction, and writes `command_refused` for a refusal.
-# ABOUTME: Handlers exist for resolve_fact, approve and reject of an observation or an event-raised review, and record_ruling; every other command class raises NotImplementedError after the checks.
+# ABOUTME: Handlers exist for resolve_fact, edit_draft, record_ruling, and approve and reject of an observation, a draft, a delivery_unknown item or an event-raised review; every other command class raises NotImplementedError after the checks.
 import sqlite3
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
@@ -27,7 +27,17 @@ from uwh.runtime.facts import (
     reject_observation,
     resolve_fact,
 )
+from uwh.runtime.mailbox_client import MailboxClient
 from uwh.runtime.runs import command_context
+from uwh.runtime.send import (
+    Intent,
+    close_unsent,
+    dispatch_ready,
+    edit_draft,
+    read_intent,
+    reconcile,
+    void_approvals,
+)
 from uwh.runtime.waits import Blocker, close_blocker, open_blocker_by_id, open_blockers
 from uwh.runtime.workflow import Step, reevaluate, unit_of_work
 from uwh.settings import RunMode
@@ -46,7 +56,8 @@ _ROUND_REVIEW_CAUSES: tuple[ReviewCause, ...] = (
 @dataclass(frozen=True)
 class CommandEnvironment:
     """What the command layer needs from its caller: the run mode, the active ruleset hash, the ledger
-    rules and workflow steps a re-evaluation uses, the folder that holds the skills and the real clock."""
+    rules and workflow steps a re-evaluation uses, the folder that holds the skills, the real clock and
+    the mailbox that dispatched drafts are posted to."""
 
     mode: RunMode
     ruleset_hash: str
@@ -54,6 +65,7 @@ class CommandEnvironment:
     steps: Sequence[Step]
     skills_root: Path
     now: Callable[[], datetime]
+    mailbox: MailboxClient
 
 
 @dataclass(frozen=True)
@@ -69,6 +81,9 @@ class CommandResult:
 class _Outcome:
     event_id: int
     lead_id: str
+    recheck_intent_id: str | None = (
+        None  # an `unknown` intent whose mailbox check the command asks for
+    )
 
 
 class _Refusal(Exception):
@@ -92,9 +107,10 @@ def submit_command(
     """Apply one command. `actor` is the transport's binding, never a payload value; `skill` names the
     issuing skill of a `workflow` command.
 
-    An accepted command and the re-evaluation of its lead commit together. A refusal rolls back
-    whatever the handler wrote and commits one `command_refused` event. A command type whose handler
-    is not built raises NotImplementedError after the checks, writing nothing.
+    An accepted command and the re-evaluation of its lead commit together; after that commit the
+    lead's drafts that can go are dispatched (A.11). A refusal rolls back whatever the handler wrote
+    and commits one `command_refused` event. A command type whose handler is not built raises
+    NotImplementedError after the checks, writing nothing.
     """
     if db.in_transaction:
         raise RuntimeError(
@@ -110,6 +126,7 @@ def submit_command(
                 context = _context(db, env, actor)
                 outcome = handler(db, context, env, payload)
                 _reevaluate(db, env, outcome.lead_id)
+            _send_after_commit(db, env, outcome)
             return CommandResult(True, outcome.event_id, None)
         except _Refusal as refusal:
             reason = str(refusal)
@@ -128,6 +145,15 @@ def _context(db: sqlite3.Connection, env: CommandEnvironment, actor: Actor) -> E
     """The context of an event written now. Built inside the command's transaction, so a wait for
     the write lock cannot leave stale timestamps or a stale run on the event."""
     return command_context(db, actor, env.mode, env.ruleset_hash, env.now())
+
+
+def _send_after_commit(db: sqlite3.Connection, env: CommandEnvironment, outcome: _Outcome) -> None:
+    """Re-check the delivery an approval asked about, then dispatch every draft of the lead that can go.
+    The sender builds each event's context when it writes the event, after its own post."""
+    make_context = partial(_context, db, env, "workflow")
+    if outcome.recheck_intent_id is not None:
+        reconcile(db, env.mailbox, make_context, outcome.recheck_intent_id)
+    dispatch_ready(db, env.mailbox, make_context, outcome.lead_id)
 
 
 def _gate(
@@ -163,8 +189,8 @@ def _lead_exists(db: sqlite3.Connection, lead_id: str) -> bool:
 
 
 def _lead_named(db: sqlite3.Connection, payload: Mapping[str, JsonValue]) -> str | None:
-    """The lead a command's payload names, directly or through its item, when that lead exists; the
-    lead of a refusal's event."""
+    """The lead a command's payload names, directly or through its item or intent, when that lead
+    exists; the lead of a refusal's event."""
     lead_id = payload.get("lead_id")
     if isinstance(lead_id, str):
         return lead_id if _lead_exists(db, lead_id) else None
@@ -172,6 +198,10 @@ def _lead_named(db: sqlite3.Connection, payload: Mapping[str, JsonValue]) -> str
     if isinstance(item_id, int) and not isinstance(item_id, bool):
         row = db.execute("SELECT lead_id FROM blockers WHERE id = ?", (item_id,)).fetchone()
         return None if row is None else str(row[0])
+    intent_id = payload.get("intent_id")
+    if isinstance(intent_id, str):
+        intent = read_intent(db, intent_id)
+        return None if intent is None else intent.lead_id
     return None
 
 
@@ -220,6 +250,16 @@ def _open_item(db: sqlite3.Connection, payload: Mapping[str, JsonValue]) -> Bloc
     if item is None:
         raise _Refusal(f"item {item_id} is not an open item")
     return item
+
+
+def _draft_intent(db: sqlite3.Connection, intent_id: str) -> Intent:
+    """The intent, which must still be a draft."""
+    intent = read_intent(db, intent_id)
+    if intent is None:
+        raise _Refusal(f"there is no intent {intent_id}")
+    if intent.state != "draft":
+        raise _Refusal(f"intent {intent_id} is {intent.state}, not a draft")
+    return intent
 
 
 # ---- handlers -----------------------------------------------------------------------------------
@@ -287,30 +327,74 @@ def _settle(
     *,
     approve: bool,
 ) -> _Outcome:
-    """`approve` or `reject` of an item that holds no draft, by the A.11 table. An item that holds a
-    draft, `delivery_unknown`, and an `approve` of a held draft's review raise NotImplementedError."""
+    """`approve` or `reject` of an item, by the A.11 table. `approve` of a held draft's review and
+    `reject` of a draft decline notice raise NotImplementedError."""
     command = "approve" if approve else "reject"
     item = _open_item(db, payload)
     reason = _text(payload, "reason") if approve else _nonempty_text(payload, "reason")
     detail = item.detail
-    held_draft = detail.cause in HELD_DRAFT_CAUSES
-    if item.kind == "delivery_unknown" or detail.item_kind == "draft" or (held_draft and approve):
-        raise NotImplementedError(f"{command} of a {detail.cause or detail.item_kind} item")
-    if item.kind != "underwriter_review":
+    if detail.cause in HELD_DRAFT_CAUSES and approve:
+        raise NotImplementedError(f"{command} of a {detail.cause} item")
+    if item.kind not in ("underwriter_review", "delivery_unknown"):
         raise _Refusal(f"item {item.id} is a {item.kind}, not an item to {command}")
-    if payload.get("artifact_hash") is not None:
-        raise _Refusal(f"item {item.id} holds no draft, so {command} carries no artifact_hash")
+    if payload.get("artifact_hash") is not None and not (approve and detail.item_kind == "draft"):
+        raise _Refusal(f"{command} of item {item.id} carries no artifact_hash")
     if detail.item_kind == "no_contact_route":
         raise _Refusal("a missing contact route is resolved with resolve_fact on q:contact_email")
     revision, plan_hash = _lead_binding(db, item.lead_id)
-    if detail.item_kind == "observation":
+    decision: ApprovalDecision = "approved" if approve else "rejected"
+    artifact: Intent | None = None
+    recheck: str | None = None
+    if detail.item_kind == "draft":
+        assert detail.intent_id is not None  # a draft item names its draft
+        artifact = _draft_intent(db, detail.intent_id)
+        _settle_draft(db, payload, artifact, approve=approve)
+    elif detail.item_kind == "delivery_unknown":
+        assert detail.intent_id is not None  # a delivery_unknown item names its intent
+        artifact = read_intent(db, detail.intent_id)
+        assert artifact is not None and artifact.state == "unknown"
+        if approve:
+            recheck = artifact.id
+        else:
+            close_unsent(db, context, artifact.id)
+    elif detail.item_kind == "observation":
         _settle_observation(db, context, env, item, approve=approve)
     else:
         _acknowledge_review(db, context, item, approve=approve)
-    event_id = _record_approval(
-        db, context, item, "approved" if approve else "rejected", reason, revision, plan_hash
+    event_id = _record_approval(db, context, item, decision, reason, revision, plan_hash, artifact)
+    return _Outcome(event_id, item.lead_id, recheck)
+
+
+def _settle_draft(
+    db: sqlite3.Connection, payload: Mapping[str, JsonValue], intent: Intent, *, approve: bool
+) -> None:
+    """`approve` needs the payload hash of the draft the underwriter was shown (7.4). `reject` returns
+    the draft to editing: it stays a draft with its item open and loses any approval."""
+    if approve:
+        if payload.get("artifact_hash") != intent.payload_hash:
+            raise _Refusal(
+                "the artifact_hash is missing or is not the current payload hash of the draft"
+            )
+    elif intent.kind == "decline_notice":
+        raise NotImplementedError("reject of a draft decline notice")
+    else:
+        void_approvals(db, intent.id)
+
+
+def _edit_draft(
+    db: sqlite3.Connection,
+    context: EventContext,
+    env: CommandEnvironment,
+    payload: Mapping[str, JsonValue],
+) -> _Outcome:
+    intent = _draft_intent(db, _text(payload, "intent_id"))
+    subject, body, reason = (
+        _text(payload, "subject"),
+        _text(payload, "body"),
+        _text(payload, "reason"),
     )
-    return _Outcome(event_id, item.lead_id)
+    event_id = edit_draft(db, context, intent.id, subject, body, reason)
+    return _Outcome(event_id, intent.lead_id)
 
 
 def _settle_observation(
@@ -361,9 +445,12 @@ def _record_approval(
     reason: str,
     revision: int,
     plan_hash: str,
+    artifact: Intent | None,
 ) -> int:
-    """Write `approval_recorded` and the `approvals` row that points at it; return the event id. The item
-    holds no draft, so the row has no recipient or payload hash."""
+    """Write `approval_recorded` and the `approvals` row that points at it; return the event id. The
+    row binds the recipient and payload hash of the `artifact` the item holds, when it holds one."""
+    recipient = None if artifact is None else artifact.recipient
+    artifact_hash = None if artifact is None else artifact.payload_hash
     item_kind = item.detail.item_kind
     assert item_kind is not None  # an underwriter_review blocker has an item kind
     event_id = append_event(
@@ -377,8 +464,8 @@ def _record_approval(
             lead_revision=revision,
             plan_hash=plan_hash,
             ruleset_hash=context.ruleset_hash,
-            recipient=None,
-            payload_hash=None,
+            recipient=recipient,
+            payload_hash=artifact_hash,
             decision=decision,
             reason=reason,
         ),
@@ -387,7 +474,7 @@ def _record_approval(
     db.execute(
         "INSERT INTO approvals (lead_id, item_kind, intent_id, lead_revision, plan_hash,"
         " ruleset_hash, recipient, payload_hash, actor, decision, reason, event_id)"
-        " VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?, ?)",
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             item.lead_id,
             item_kind,
@@ -395,6 +482,8 @@ def _record_approval(
             revision,
             plan_hash,
             context.ruleset_hash,
+            recipient,
+            artifact_hash,
             context.actor,
             decision,
             reason,
@@ -409,6 +498,7 @@ def _record_approval(
 _HANDLERS: dict[str, Handler] = {
     "approve": partial(_settle, approve=True),
     "reject": partial(_settle, approve=False),
+    "edit_draft": _edit_draft,
     "resolve_fact": _resolve_fact,
     "record_ruling": _record_ruling,
 }
