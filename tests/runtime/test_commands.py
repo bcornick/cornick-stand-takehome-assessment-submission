@@ -5,7 +5,6 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
-import yaml
 from pydantic import JsonValue
 
 from tests.runtime.helpers import (
@@ -18,7 +17,6 @@ from tests.runtime.helpers import (
     command_environment,
     events_of,
     insert_run,
-    skill_manifest,
     state_of,
 )
 from tests.runtime.helpers import LEAD_ID as LEAD
@@ -111,30 +109,13 @@ def passes() -> Passes:
 
 
 @pytest.fixture
-def skills_root(tmp_path: Path) -> Path:
-    """The skills `fetcher`, which declares fetch_data only, and `every_class`, which declares each class a skill may issue."""
-    root = tmp_path / "skills"
-    declared = [c for c, actors in ALLOWED_ACTORS.items() if "workflow" in actors]
-    for manifest in (
-        skill_manifest("fetch_data", name="fetcher"),
-        skill_manifest(*declared, name="every_class"),
-    ):
-        (root / manifest.name).mkdir(parents=True)
-        (root / manifest.name / "manifest.yaml").write_text(
-            yaml.safe_dump(manifest.model_dump(mode="json"))
-        )
-    return root
-
-
-@pytest.fixture
 def env(
     tmp_path: Path,
     passes: Passes,
-    skills_root: Path,
     mailbox: MailboxClient,
     leadgen: LeadgenClient,
 ) -> RunEnvironment:
-    return command_environment(tmp_path, mailbox, leadgen, passes.steps, skills_root=skills_root)
+    return command_environment(tmp_path, mailbox, leadgen, passes.steps)
 
 
 def assert_refused(db: sqlite3.Connection, result: CommandResult, reason_part: str) -> None:
@@ -192,7 +173,7 @@ def decide(
     return submit_command(db, env, "underwriter", command, {"item_id": item_id, "reason": reason})
 
 
-# ---- the gate: actor, class and skill manifest --------------------------------------------------
+# ---- the gate: actor and class --------------------------------------------------
 
 
 @pytest.mark.parametrize("actor", ACTORS)
@@ -200,37 +181,16 @@ def decide(
 def test_the_gate_admits_exactly_the_pairs_of_the_7_4_table(
     db: sqlite3.Connection, env: RunEnvironment, actor: Actor, command_type: str
 ) -> None:
-    skill = "every_class" if actor == "workflow" else None
     if actor not in ALLOWED_ACTORS[command_type]:
-        result = submit_command(db, env, actor, command_type, {}, skill=skill)
+        result = submit_command(db, env, actor, command_type, {})
         assert_refused(db, result, f"{actor} may not submit {command_type}")
         return
     try:
-        result = submit_command(db, env, actor, command_type, {}, skill=skill)
+        result = submit_command(db, env, actor, command_type, {})
     except NotImplementedError:
         return
     # A handler may still refuse an empty payload; the gate has not.
     assert result.accepted or (result.reason or "").startswith("the payload needs")
-
-
-@pytest.mark.parametrize(
-    ("skill", "command_type", "reason_part"),
-    [
-        ("fetcher", "send_routine_request", "does not declare send_routine_request"),
-        (None, "fetch_data", "names the skill"),
-        ("missing", "fetch_data", "manifest.yaml is missing"),
-    ],
-)
-def test_a_workflow_command_is_refused_unless_its_skill_manifest_declares_it(
-    db: sqlite3.Connection,
-    env: RunEnvironment,
-    skill: str | None,
-    command_type: str,
-    reason_part: str,
-) -> None:
-    result = submit_command(db, env, "workflow", command_type, {}, skill=skill)
-
-    assert_refused(db, result, reason_part)
 
 
 def test_the_actor_is_the_transports_and_a_payload_naming_one_is_refused(

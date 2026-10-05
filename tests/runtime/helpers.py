@@ -86,7 +86,6 @@ def command_environment(
     leadgen: LeadgenClient,
     steps: Sequence[Step] = (),
     *,
-    skills_root: Path | None = None,
     now: Callable[[], datetime] = lambda: NOW,
 ) -> RunEnvironment:
     return RunEnvironment(
@@ -96,7 +95,7 @@ def command_environment(
         {},
         ModelAccess("replay", tmp_path, None),
         steps,
-        skills_root or tmp_path,
+        tmp_path,
         now,
         mailbox,
         leadgen,

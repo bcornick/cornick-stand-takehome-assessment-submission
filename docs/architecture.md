@@ -277,7 +277,7 @@ A skill is a folder under `src/uwh/skills/`:
 Rules:
 
 - The skill list is a plain list in code. A test fails when a folder lacks any part.
-- The command layer refuses a command class a skill's manifest does not declare.
+- A write that issues a command class refuses one the issuing skill's manifest does not declare: `create_draft` for the send classes, the resolve step for `fetch_data`.
 - **Status** is one of `untested`, `passing`, `failing`, `unavailable`. The eval runner writes `skill_results.<name>: {cases_passed, cases_total, passed}` into each `run` row, computed from the skill's `cases/` against its manifest threshold. A skill's status is read from the latest `run` row that has `status: scored`, no `control`, a digest matching the skill's current digest (appendix A.4) and a result for that skill. Control runs and invalid runs are ignored. A changed skill is `untested` until evaluated. Evals do not run at startup. `evals/results.jsonl` is mounted read-only into the app container; labels are not.
 - Status precedence: `unavailable`, then `failing`, `untested`, `passing`. Only rows from live or record mode count toward a model skill's status.
 - Dispatch by status:
@@ -358,9 +358,9 @@ Order of precedence:
 
 ### 9.4 Stand-in providers and world values
 
-`tools/capture_world.py` runs Stand's unmodified generator with a recording wrapper on `_base_lead` and on each archetype call, asserts the wrapped output equals the unwrapped output, asserts no guarantee-pass archetype fired, and writes the provider fixture for the seed. The fixture is captured for seed 42. The fixture is synthetic provider data, not ground truth. It replays the generator's state before perturbation, which keeps values such as replacement cost consistent with Coverage A; the README states this plainly. Each fixture entry stores a fingerprint of the lead's submitted fields. On a missing entry or a fingerprint mismatch the provider returns a deterministic synthetic value seeded by lead id, marked `is_stub` and shown as such. The seed is read from the environment (`SEED`, default 42). The application reads only this fixture. It never calls the debug endpoint; the leadgen service passes `DEBUG` through, off by default (section 14), and the leadgen client has no debug method.
+`tools/capture_world.py` runs Stand's unmodified generator with a recording wrapper on `_base_lead` and on each archetype call, asserts the wrapped output equals the unwrapped output, asserts no guarantee-pass archetype fired, and writes the provider fixture for the seed. The fixture is captured for seed 42. The fixture is synthetic provider data, not ground truth. It replays the generator's state before perturbation, which keeps values such as replacement cost consistent with Coverage A; the README states this plainly. Each fixture entry stores a fingerprint of the lead's submitted fields. On a missing entry or a fingerprint mismatch the provider returns `unavailable`, which opens a `data` blocker for the lead; no value is made up. The seed is read from the environment (`SEED`, default 42). The application reads only this fixture. It never calls the debug endpoint; the leadgen service passes `DEBUG` through, off by default (section 14), and the leadgen client has no debug method.
 
-Provider result: `{status, value, source, fetched_at, is_stub}` with status `found`, `not_found`, `blocked`, `unavailable`. A blocked result names the missing input fields.
+Provider result: `{status, value, source, fetched_at}` with status `found`, `not_found`, `blocked`, `unavailable`. A blocked result names the missing input fields.
 
 | Field | Provider inputs | Returned when the lead's value is missing | Real source this stands in for |
 |---|---|---|---|
@@ -737,7 +737,7 @@ Dispositions of `docs/critique.md` findings.
 | C03 underwriter question versus producer request | Accepted. | 9.6 rules 5 and 6; section 5 rows 003, 006 |
 | C04 eval grades its own reading | Accepted. Stand's key is a hard grader with enumerated allowed disagreements. | 13.2, 13.3 |
 | C05 zero model calls on the first pass | Accepted. Fixture-reply control and the harness statement. | 8, 11 |
-| C06 provider fixture limits | Accepted. Fingerprint, synthetic fallback, seed from the environment, plain statement. | 9.4 |
+| C06 provider fixture limits | Accepted. Fingerprint, `unavailable` on a mismatch, seed from the environment, plain statement. | 9.4 |
 | C07 eligibility decisions under the A tag | Accepted for I07 and I21. I12 keeps 0.50, is marked as invented and as a question for Stand, with hand cases. Lenient rows are listed for review. | 9.7 |
 | C09 board gaps with no row | Accepted. | 9.7 I52, I53, I55, I56, I57 |
 | C10 validators fitted to the generator | Accepted. Sources stated; occupancy threshold agrees with I06; roof-before-build and two validators the generator does not inject are added. | 9.5 |

@@ -30,6 +30,7 @@ from uwh.runtime.facts import (
     usable_facts,
 )
 from uwh.runtime.hashing import hash_json, plan_hash
+from uwh.runtime.policy import manifest_refusal
 from uwh.runtime.send import create_draft, replace_stale_drafts
 from uwh.runtime.waits import open_blockers
 from uwh.runtime.workflow import Step
@@ -86,7 +87,11 @@ def _resolve_step(
     context: EventContext,
     lead_id: str,
 ) -> None:
-    """Look up each field triage says to fetch, record the lookup, and observe what the skill resolves."""
+    """Look up each field triage says to fetch, record the lookup, and observe what the skill resolves.
+    Raises ValueError when the manifest of resolve_data does not declare `fetch_data` (7.4)."""
+    refusal = manifest_refusal(load_manifest(_SKILLS_ROOT / "resolve_data"), "fetch_data")
+    if refusal is not None:
+        raise ValueError(refusal)
     facts = _usable_values(db, lead_id)
     submitted = submitted_values(db, lead_id)
     fingerprint = hash_json({name: submitted.get(name) for name in registry})

@@ -1,5 +1,5 @@
 # ABOUTME: The stand-in providers of 9.4: a lookup for each system-owned field, answered from the captured world fixture of the seed and checked first for the inputs it needs.
-# ABOUTME: A lead the fixture has no entry for, or whose submitted fields differ from the captured ones, gets `unavailable`; no synthetic stub value is made.
+# ABOUTME: A lead the fixture has no entry for, or whose submitted fields differ from the captured ones, gets `unavailable`; no value is made up.
 import json
 from collections.abc import Mapping
 from pathlib import Path
@@ -56,7 +56,6 @@ class StandInProviders:
                 value=None,
                 source=source,
                 fetched_at=fetched_at,
-                is_stub=False,
                 missing_inputs=missing,
             )
         if entry is None or entry["fingerprint"] != fingerprint:
@@ -65,7 +64,6 @@ class StandInProviders:
                 value=None,
                 source=source,
                 fetched_at=fetched_at,
-                is_stub=False,
             )
         answer = entry["provider_values"][field]
         return ProviderResult(
@@ -73,5 +71,4 @@ class StandInProviders:
             value=answer["value"],
             source=source,
             fetched_at=fetched_at,
-            is_stub=False,
         )

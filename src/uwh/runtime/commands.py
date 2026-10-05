@@ -1,4 +1,4 @@
-# ABOUTME: The command layer of 7.4 and A.11: one entry point that takes the actor from the transport, applies the actor and class rules and the skill manifest, runs the handler and the lead's re-evaluation in one transaction, and writes `command_refused` for a refusal.
+# ABOUTME: The command layer of 7.4 and A.11: one entry point that takes the actor from the transport, applies the actor and class rules, runs the handler and the lead's re-evaluation in one transaction, and writes `command_refused` for a refusal.
 # ABOUTME: The handlers are start_run, deliver_reply, resolve_fact, edit_draft, record_ruling, and approve and reject of an observation, a draft, a delivery_unknown item or an event-raised review; a command class with no handler raises NotImplementedError after the checks.
 import sqlite3
 from collections.abc import Callable, Mapping
@@ -35,7 +35,6 @@ from uwh.runtime.facts import (
 )
 from uwh.runtime.hashing import sha256_hex
 from uwh.runtime.modes import RecordingMiss
-from uwh.runtime.policy import manifest_refusal
 from uwh.runtime.runs import RunEnvironment, begin_run, command_context, current_run, pass_context
 from uwh.runtime.send import (
     Intent,
@@ -62,7 +61,7 @@ from uwh.runtime.workflow import (
     reevaluate,
     unit_of_work,
 )
-from uwh.skills.manifest import SkillFolderError, load_manifest
+from uwh.skills.manifest import load_manifest
 from uwh.skills.read_reply import skill as read_reply
 from uwh.skills.vertical import ROUND_REVIEW_CAUSES, command_class
 
@@ -102,11 +101,8 @@ def submit_command(
     actor: Actor,
     command_type: str,
     payload: Mapping[str, JsonValue],
-    *,
-    skill: str | None = None,
 ) -> CommandResult:
-    """Apply one command. `actor` is the transport's binding, never a payload value; `skill` names the
-    issuing skill of a `workflow` command.
+    """Apply one command. `actor` is the transport's binding, never a payload value.
 
     An accepted command and the re-evaluation of its lead commit together; after that commit the
     lead's drafts that can go are dispatched, as the run the command ran in; when a start has replaced
@@ -119,7 +115,7 @@ def submit_command(
         raise RuntimeError(
             "a command opens its own transaction, so the connection must not be in one"
         )
-    reason = _gate(env, actor, skill, command_type, payload)
+    reason = _gate(actor, command_type, payload)
     if reason is None:
         try:
             handler = _handler_for(db, env, actor, command_type, payload)
@@ -181,13 +177,7 @@ def _send_after_commit(
     dispatch_ready(db, env.mailbox, make_context, lead_id)
 
 
-def _gate(
-    env: RunEnvironment,
-    actor: Actor,
-    skill: str | None,
-    command_type: str,
-    payload: Mapping[str, JsonValue],
-) -> str | None:
+def _gate(actor: Actor, command_type: str, payload: Mapping[str, JsonValue]) -> str | None:
     """The reason the actor may not submit the command, or None. The actor comes from the transport (7.4)."""
     if "actor" in payload:
         return "the payload names no actor; the transport binds it"
@@ -196,15 +186,7 @@ def _gate(
         return f"{command_type} is not a command"
     if actor not in declared.actors:
         return f"{actor} may not submit {command_type}"
-    if actor != "workflow":
-        return None
-    if skill is None:
-        return f"a workflow {command_type} names the skill that issues it"
-    try:
-        manifest = load_manifest(env.skills_root / skill)
-    except SkillFolderError as error:
-        return str(error)
-    return manifest_refusal(manifest, command_type)
+    return None
 
 
 def _lead_exists(db: sqlite3.Connection, lead_id: str) -> bool:

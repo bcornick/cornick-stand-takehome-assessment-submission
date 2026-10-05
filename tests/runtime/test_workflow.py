@@ -154,7 +154,7 @@ def test_a_step_that_raises_stops_the_lead_with_one_data_blocker_naming_the_step
     assert seen == ["triage:received", "triage:triaged"]
     (blocker,) = open_blockers(db, LEAD)
     assert (blocker.kind, blocker.owner) == ("data", "data_team")
-    assert "fetch_data" in blocker.detail.text and "provider is down" in blocker.detail.text
+    assert blocker.detail.text == "Step fetch_data failed: provider is down"
     assert status_of(db) == "triaged"
     assert primary_next_action(db, LEAD) == blocker
     assert len(events_of(db, EventType.blocker_opened)) == 1

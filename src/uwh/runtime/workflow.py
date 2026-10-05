@@ -165,7 +165,7 @@ def _open_step_failure_blocker(
         "data_team",
         BlockerDetail(
             resume_trigger=_STEP_FAILURE_RESUME_TRIGGER,
-            text=f"Step {step.name} failed: {type(error).__name__}: {error}",
+            text=f"Step {step.name} failed: {error}",
         ),
     )
 
