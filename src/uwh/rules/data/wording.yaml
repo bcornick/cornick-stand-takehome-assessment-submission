@@ -1,5 +1,5 @@
-# ABOUTME: Stored plain wording for asks: one question per producer-editable registry field, one conditional preamble per requiredWhen form, one confirmation per conflict check.
-# ABOUTME: Sections 9.2, 9.5, 10.2 and A.7 define the three groups; fields are in registry order.
+# ABOUTME: Stored plain wording for asks: a question per producer-editable registry field, a preamble per requiredWhen form a follow-on can take,
+# ABOUTME: and a confirmation per conflict check that goes to a producer. Sections 9.2, 9.5, 10.2 and A.7 define them; fields are in registry order.
 
 # One question for every field the producer can edit (`editableByProducer` true in the registry).
 fields:

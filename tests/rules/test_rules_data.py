@@ -239,31 +239,49 @@ def test_rows_not_evaluated_are_the_kind_n_rows() -> None:
 
 
 # `applied_in` reads "<category>: <what> (<citation>)". The category is one of the six places a row can be
-# applied outside a graph node (section 9.6); the first backticked name after the colon is the thing named.
-APPLIED_IN_CATEGORIES = {
-    "validator",
-    "derivation",
-    "resolution rule",
-    "rendering step",
-    "graph page",
-    "effect field",
+# applied outside a graph node (section 9.6 load-time checks); the first backticked name after the colon is
+# the thing named.
+LOAD_TIME_SENTENCE = re.search(
+    r"carries `applied_in` \(naming the (.+?) that applies it\)", ARCHITECTURE
+)
+assert LOAD_TIME_SENTENCE
+APPLIED_IN_CATEGORIES = set(re.split(r", | or ", LOAD_TIME_SENTENCE.group(1)))
+# Section 9.7 names pages as the board does; each page is the playbook folder named here.
+PAGE_FOLDERS = {
+    "Profile": "02-profile",
+    "Occupancy": "03-occupancy",
+    "Fire Simulation": "04-fire-simulation",
+    "Roof": "05-roof-class",
+    "Siding": "06-siding",
+    "Post & Pier": "07-post-and-pier-foundations",
+    "Plumbing": "08-plumbing",
+    "Electrical": "09-electrical-systems",
+    "Pools": "10-swimming-pools",
+    "Trusts": "11-trusts-and-llcs",
+    "Replacement Cost": "12-replacement-cost",
+    "PC 9 & 10": "13-protection-class-9-and-10",
 }
-# The section 9.5 validator that goes to the underwriter has an id but no confirmation template.
-VALIDATOR_WITHOUT_TEMPLATE = "kyc_score_out_of_range"
+# The effect fields section 9.6 lists for a requirement.
+REQUIREMENT_FIELDS = re.search(r"`requirement` \(([^)]*)\)", ARCHITECTURE).group(1).split(", ")  # type: ignore[union-attr]
 APPLIED_IN_CATEGORY = {
     "I01": "validator",
     "I02": "graph page",
+    "I05": "graph page",
     "I06": "graph page",
     "I10": "graph page",
     "I12": "graph page",
     "I19": "graph page",
     "I20": "derivation",
+    "I22": "graph page",
     "I23": "graph page",
     "I25": "graph page",
+    "I29": "graph page",
     "I31": "resolution rule",
     "I34": "graph page",
+    "I43": "graph page",
     "I45": "effect field",
     "I47": "rendering step",
+    "I48": "graph page",
     "I51": "resolution rule",
     "I53": "validator",
     "I55": "graph page",
@@ -272,10 +290,17 @@ APPLIED_IN_CATEGORY = {
 }
 
 
+def test_the_six_applied_in_categories_are_parsed_from_the_load_time_checks() -> None:
+    assert len(APPLIED_IN_CATEGORIES) == 6
+    assert {"validator", "graph page", "effect field"} <= APPLIED_IN_CATEGORIES
+
+
 def test_rows_applied_outside_the_graph_nodes_name_what_applies_them() -> None:
     rows = row_by_id()
     assert {id_ for id_, row in rows.items() if "applied_in" in row} == set(APPLIED_IN_CATEGORY)
-    confirmations = load("wording.yaml")["confirmations"]
+    confirmation_ids = list(load("wording.yaml")["confirmations"])
+    # the validator ids sit in the order of the section 9.5 rows that have a confirmation
+    i53_position = next(n for n, cells in enumerate(PRODUCER_VALIDATOR_ROWS) if "(I53)" in cells[1])
     for id_, category in APPLIED_IN_CATEGORY.items():
         text = rows[id_]["applied_in"]
         assert category in APPLIED_IN_CATEGORIES, id_
@@ -283,16 +308,25 @@ def test_rows_applied_outside_the_graph_nodes_name_what_applies_them() -> None:
         named = re.findall(r"`([^`]+)`", text.split(" (")[0])
         if category == "validator":
             assert len(named) == 1, id_
-            assert named[0] in {*confirmations, VALIDATOR_WITHOUT_TEMPLATE}, id_
         if category == "graph page":
-            assert len(named) == 1 and (ROOT / "docs/playbook" / named[0]).is_dir(), id_
+            folders = {PAGE_FOLDERS[page] for page in rows[id_]["source"].split(", ")}
+            assert len(named) == 1 and named[0] in folders, id_
+            assert (ROOT / "docs/playbook" / named[0]).is_dir(), id_
         if category == "effect field":
-            assert named == ["deadline"] and "(text, deadline)" in ARCHITECTURE, id_
+            assert named == ["deadline"] and "deadline" in REQUIREMENT_FIELDS, id_
         for file in re.findall(r"`([^`]+\.yaml)`", text):
             assert (DATA / file).is_file(), id_
+    assert re.findall(r"`([^`]+)`", rows["I53"]["applied_in"].split(" (")[0]) == [
+        confirmation_ids[i53_position]
+    ]
+    (kyc_row,) = KYC_VALIDATOR_ROWS
+    kyc_validator = re.findall(r"`([^`]+)`", rows["I01"]["applied_in"].split(" (")[0])[0]
+    assert kyc_validator not in confirmation_ids
+    assert KYC_FIELD in kyc_validator and KYC_FIELD in kyc_row[0]
     assert "derivations.yaml" in rows["I20"]["applied_in"]
-    # the pairs that share a test: the row a test cites needs no applied_in, the outcome-only row does
-    assert not {"I18", "I24", "I39", "I50"} & {
+    # a row that shares its test with a cited row, or is an outcome of the page, is applied on the page
+    assert {"I19", "I25"} <= {id_ for id_, row in rows.items() if "applied_in" in row}
+    assert not {"I18", "I24", "I32", "I39", "I50"} & {
         id_ for id_, row in rows.items() if "applied_in" in row
     }
 
@@ -345,7 +379,9 @@ def test_catalogue_rows_exist_and_the_producer_rows_are_kind_p() -> None:
 
 # The registry fields a section 9.5 row names in its Validator cell, in the order the row gives them.
 # The kyc_score range validator goes to the underwriter, so it has no confirmation (A.7).
-PRODUCER_VALIDATOR_ROWS = [cells for cells in VALIDATOR_ROWS if "`kyc_score`" not in cells[0]]
+KYC_FIELD = "kyc_score"
+KYC_VALIDATOR_ROWS = [cells for cells in VALIDATOR_ROWS if f"`{KYC_FIELD}`" in cells[0]]
+PRODUCER_VALIDATOR_ROWS = [cells for cells in VALIDATOR_ROWS if cells not in KYC_VALIDATOR_ROWS]
 VALIDATOR_FIELDS = [
     list(dict.fromkeys(f for f in re.findall(r"`([^`]+)`", cells[0]) if f in REGISTRY))
     for cells in PRODUCER_VALIDATOR_ROWS
@@ -387,7 +423,7 @@ def test_there_is_one_confirmation_per_producer_validator_and_each_lists_its_fie
     assert len(PRODUCER_VALIDATOR_ROWS) == 11
     confirmations = load("wording.yaml")["confirmations"]
     assert len(confirmations) == 11
-    assert VALIDATOR_WITHOUT_TEMPLATE not in confirmations
+    assert len(KYC_VALIDATOR_ROWS) == 1
     assert [entry["fields"] for entry in confirmations.values()] == VALIDATOR_FIELDS
     for entry in confirmations.values():
         assert set(entry["fields"]) <= set(REGISTRY)

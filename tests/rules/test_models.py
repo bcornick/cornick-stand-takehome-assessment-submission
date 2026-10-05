@@ -300,8 +300,8 @@ def test_a_trace_is_a_path_or_a_set_of_alternatives_never_both_and_never_neither
 def test_a_trace_names_the_underwriter_choices_it_followed() -> None:
     trace = RuleTrace(board_path=["04:ROOT", "04:LEGACY", "04:D1"], choice_ids=["I13.fire_fail"])
     assert trace.choice_ids == ["I13.fire_fail"]
-    alternatives = PP_ALTERNATIVES.model_copy(update={"choice_ids": ["I44.road_access"]})
-    assert alternatives.choice_ids == ["I44.road_access"]
+    alternatives = PP_ALTERNATIVES.model_copy(update={"choice_ids": ["I14.road_access"]})
+    assert alternatives.choice_ids == ["I14.road_access"]
 
 
 def test_a_decline_on_every_branch_carries_one_trace_per_branch_with_its_assumptions() -> None:
