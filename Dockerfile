@@ -34,4 +34,4 @@ ARG GIT_COMMIT=unknown
 ENV GIT_COMMIT=$GIT_COMMIT
 
 EXPOSE 8000
-CMD ["uvicorn", "uwh.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "--factory", "uwh.api.app:create_app", "--host", "0.0.0.0", "--port", "8000"]
