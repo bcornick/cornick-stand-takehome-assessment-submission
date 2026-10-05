@@ -29,8 +29,8 @@ A5_ROUTES = {
 LEAD = "LEAD-00000042-000"
 REPLY = {"lead_id": LEAD, "intent_id": "intent-1", "body": "The roof is slate."}
 
-# One valid request for every route that is not yet built.
-NOT_BUILT = [
+# One valid request for every declared route that answers 501.
+DECLARED_ROUTES = [
     ("post", "/api/run/start", None),
     ("post", "/api/run/start?wait=true", None),
     ("get", "/api/leads", None),
@@ -78,8 +78,8 @@ def test_no_route_or_mount_of_the_app_is_under_mcp() -> None:
     assert [p for p in paths if p.startswith("/mcp")] == []
 
 
-@pytest.mark.parametrize(("method", "url", "body"), NOT_BUILT)
-def test_unbuilt_route_answers_501_with_a_json_detail(
+@pytest.mark.parametrize(("method", "url", "body"), DECLARED_ROUTES)
+def test_a_declared_route_answers_501_with_a_json_detail(
     app_client: TestClient, method: str, url: str, body: dict[str, Any] | None
 ) -> None:
     response = app_client.request(method, url, json=body)
@@ -89,7 +89,7 @@ def test_unbuilt_route_answers_501_with_a_json_detail(
 
 
 def test_every_a5_route_but_run_is_covered_by_the_501_cases() -> None:
-    covered = {url.split("?")[0] for _, url, _ in NOT_BUILT}
+    covered = {url.split("?")[0] for _, url, _ in DECLARED_ROUTES}
     covered = {u.replace(LEAD, "{id}") for u in covered}
     assert covered == set(A5_ROUTES) - {"/api/run"}
 

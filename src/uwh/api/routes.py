@@ -1,4 +1,4 @@
-# ABOUTME: The A.5 routes other than GET /api/run, declared with their request and response models; each answers 501 until its stage builds it.
+# ABOUTME: The A.5 routes other than GET /api/run, declared with their request and response models; each answers 501.
 # ABOUTME: `/mcp` is mounted outside OpenAPI and is not declared here.
 from typing import Annotated, NoReturn
 
