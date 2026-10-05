@@ -497,6 +497,8 @@ Each row is a ruling on something the board leaves open. Rows live in `interpret
 
 These rulings are this submission's reading, not Stand's. Brett reviews every row before stage 3 labels are written.
 
+**Boundary test.** Where the board states both sides of a line and leaves the exact value in neither, the exact value takes the stricter band. Where the board states one side only, the literal reading holds and there is no gap. Rows I18, I24, I30, I39 and I50 apply this test.
+
 | Id | Page | Gap | Ruling | Kind |
 |---|---|---|---|---|
 | I01 | Profile | KYC scale undefined; example payload shows 82 | Scale is 1 to 10; other values are unsupported | A |
@@ -516,19 +518,19 @@ These rulings are this submission's reading, not Stand's. Brett reviews every ro
 | I15 | Fire Simulation | Vegetation wording against `vegetation_clearance` | Too Close is Heavy; Adequate is Moderate/Light; Marginal and Unknown are an underwriter choice | A, U |
 | I16 | Fire Simulation | "Steep" slope and "too close" neighbour distance have no thresholds | No number is invented; underwriter choice showing the value | U |
 | I17 | Fire Simulation | Client willingness to mitigate | Producer catalogue question | P |
-| I18 | Roof | Non-Class A at `p_f` exactly 0.50 | Middle band, matching the Unknown Class and Siding pages | A |
+| I18 | Roof | Non-Class A at `p_f` exactly 0.50: the board's bands are "> .15 < .50" and "> .50" | The high band, by the boundary test: the board states both sides and leaves 0.50 in neither | A |
 | I19 | Roof | "Or decline" beside a requirement | The requirement is the effect; decline remains the underwriter's option at packet approval | A |
 | I20 | Roof | Roof age when the material is known; the Unknown Class branch | Class comes from the derivation map; roof age is handled by I52. The Unknown Class branch is not encoded. While `roof_material` is missing, a submitted roof class is used (section 9.3); with both missing the Roof graph is undecided on `roof_material`, which the registry asks for anyway. | A |
 | I21 | Siding | Nine materials against two branches | Wood and Wood Shake / Shingle take the wood branch. Vinyl, Aluminum / Steel and Other (class C in the derivation map) take no action with an advisory on the quote. The rest take no action. | A |
 | I22 | Siding | "Class A" on the siding page | Read as non-combustible siding | A |
 | I23 | Post & Pier | When the page applies | `foundation_type` is Piers, Stilts or Pilings | A |
-| I24 | Plumbing | Exactly 30 years; heater exactly 10 years | Not older | A |
+| I24 | Plumbing | Exactly 30 years; heater exactly 10 years: the board says "older than" and "newer than" for each | Older, by the boundary test: the board states both sides and leaves the exact age in neither | A |
 | I25 | Plumbing | Tank heater newer than 10 years has no outcome | No action | A |
 | I26 | Plumbing, Electrical | "Tier one broker or rounded account" | Tier 1 answers yes. Otherwise underwriter choice on "rounded account", shown with `has_primary_policy_with_stand` | A, U |
 | I27 | Electrical | Isolated versus whole-house knob-and-tube; high or low draw areas | Producer catalogue questions | P |
 | I28 | Electrical | "Ineligible panels" names no brands | Federal Pacific, Stab-Lok, Zinsco, Challenger, Sylvania. Only Federal Pacific is supported by Stand's code; the other four are this submission's assumption and a question for Stand. | A |
 | I29 | Electrical | Panel brand Unknown or Other | Not ineligible; advisory on the quote | A |
-| I30 | Electrical | Exactly 120 amps | Not under 120 | A |
+| I30 | Electrical | Exactly 120 amps | Not under 120: the board says "less than 120 amp" only, so by the boundary test the literal reading holds | A |
 | I31 | Electrical | Overview page shows a different subtree | Detail page wins | A |
 | I32 | Pools | "Fenced" against "self-locking gate or safety cover" | Fenced satisfies the branch | A |
 | I33 | Pools | "Gated community or multi-acre property" | `is_gated_community` alone; the registry labels that field "in gated community or multi-acre property" | A |
@@ -574,7 +576,7 @@ These rulings are this submission's reading, not Stand's. Brett reviews every ro
 
 **Fan-outs on Fire Simulation.** `04:LEGACY`, `04:MAP` and `04:ACCESS` are `all_of`. `04:VEG`, `04:INGRESS`, `04:MIND` and `04:SLOPE` are `one_of`.
 
-**Rows that read more leniently than the alternative** (review these first): I03, I19, I20, I21, I24, I25, I29, I30, I32, I42. **Rows that are questions for Stand:** I12, I28, I52.
+**Rows that read more leniently than the alternative** (review these first): I03, I19, I20, I21, I25, I29, I32, I42. **Rows that are questions for Stand:** I12, I28, I52.
 
 ## 10. Messages
 
@@ -964,7 +966,7 @@ nodes:
 
 `catalogue.yaml` holds id, wording, answer type and the interpretation row for each: `kt_extent` (isolated or whole house), `kt_areas` (high or low draw areas), `kt_present_and_where`, `tankers_bring_water`, `water_source_within_1000ft`, `water_source_year_round`, `dry_hydrant`, `county_and_calfire_fittings`, `paved_roads_year_round`, `willing_to_mitigate`, `rce_documentation` (document request).
 
-`wording.yaml` holds one plain-language question per producer-editable registry field, one conditional preamble per `requiredWhen` form that a follow-on question can take, and one neutral confirmation template per validator whose confirmation goes to a producer. The `protection_class in (9, 10)` form has no preamble, since its dependents are `blocked` and never follow-ons (section 9.2); `is_gated_community` is asked with no preamble; and the `kyc_score` range validator has no template, since that case goes to the underwriter (section 9.5). Each validator has an id and lists the fields it covers. A test asserts every producer-editable field has an entry.
+`wording.yaml` holds one plain-language question per producer-editable registry field, one conditional preamble per `requiredWhen` form that a follow-on question can take, and one neutral confirmation template per validator whose confirmation goes to a producer, and one combined template for the two validators that both name `dwelling_use_type` (owner-occupied with another use, and Tenant or Mixed use with `is_rental` "No"): when both fire, the combined template replaces the two, so `dwelling_use_type` is asked once. The `protection_class in (9, 10)` form has no preamble, since its dependents are `blocked` and never follow-ons (section 9.2); `is_gated_community` is asked with no preamble; and the `kyc_score` range validator has no template, since that case goes to the underwriter (section 9.5). Each validator has an id and lists the fields it covers. A test asserts every producer-editable field has an entry.
 
 ### A.8 Message text
 
