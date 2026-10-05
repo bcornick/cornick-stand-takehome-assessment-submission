@@ -412,47 +412,34 @@ def _record_reply_events(
     append_event(db, context, EventType.reply_read, read, lead_id=intent.lead_id)
 
 
-def _record_reply(
+def _answers(result: read_reply.Reading | read_reply.Abstention | None) -> list[ReplyValue] | None:
+    """The values a reading answers, or None when the reply is unread, off topic or a refusal."""
+    if not isinstance(result, read_reply.Reading) or result.classification not in (
+        "answers_all",
+        "answers_some",
+    ):
+        return None
+    return [
+        ReplyValue(
+            c.field,
+            c.value,
+            {"quote": c.quote, "span_start": c.span_start, "span_end": c.span_end},
+        )
+        for c in result.candidates
+    ]
+
+
+def _settle_round(
     db: sqlite3.Connection,
     context: EventContext,
     env: RunEnvironment,
-    payload: Mapping[str, JsonValue],
-    *,
-    reading: _ReplyReading,
-) -> _Outcome:
-    """Record the reply and its reading, apply the values it answers by the ledger's rules and settle
-    the round (10.4). A reply to a closed round or a final lead only raises a late-reply review. An
-    unread reply, an off-topic one and a declining one leave the round open for the underwriter."""
-    intent = _reply_target(db, payload)
-    lead_id, body = intent.lead_id, _text(payload, "body")
-    body_hash = sha256_hex(body.encode())
-    event_id = append_event(
-        db,
-        context,
-        EventType.reply_received,
-        ReplyReceived(intent_id=intent.id, body=body, body_hash=body_hash),
-        lead_id=lead_id,
-    )
-    _record_reply_events(db, context, env, intent, body_hash, reading)
-    result = None if reading is None else reading[0]
-    answered = (
-        result
-        if isinstance(result, read_reply.Reading)
-        and result.classification in ("answers_all", "answers_some")
-        else None
-    )
-    values = (
-        []
-        if answered is None
-        else [
-            ReplyValue(
-                c.field,
-                c.value,
-                {"quote": c.quote, "span_start": c.span_start, "span_end": c.span_end},
-            )
-            for c in answered.candidates
-        ]
-    )
+    intent: Intent,
+    result: read_reply.Reading | read_reply.Abstention | None,
+    answers: list[ReplyValue] | None,
+) -> None:
+    """Apply the answers to the ledger and close the round the reply answers, or raise the review
+    that holds an unanswered round for the underwriter."""
+    lead_id = intent.lead_id
     round_item = next(
         (
             b
@@ -461,6 +448,7 @@ def _record_reply(
         ),
         None,
     )
+    values = answers or []
     if round_item is None or is_terminal(db, lead_id):
         record_reply(
             db,
@@ -471,7 +459,7 @@ def _record_reply(
             round_closed=round_item is None,
             intent_id=intent.id,
         )
-    elif answered is not None:
+    elif answers is not None:
         record_reply(
             db, context, lead_id, values, env.ledger_rules, round_closed=False, intent_id=intent.id
         )
@@ -494,7 +482,33 @@ def _record_reply(
                 text=_REVIEW_TEXT[cause],
             ),
         )
-    return _Outcome(event_id, lead_id)
+
+
+def _record_reply(
+    db: sqlite3.Connection,
+    context: EventContext,
+    env: RunEnvironment,
+    payload: Mapping[str, JsonValue],
+    *,
+    reading: _ReplyReading,
+) -> _Outcome:
+    """Record the reply and its reading, apply the values it answers by the ledger's rules and settle
+    the round (10.4). A reply to a closed round or a final lead only raises a late-reply review. An
+    unread reply, an off-topic one and a declining one leave the round open for the underwriter."""
+    intent = _reply_target(db, payload)
+    body = _text(payload, "body")
+    body_hash = sha256_hex(body.encode())
+    event_id = append_event(
+        db,
+        context,
+        EventType.reply_received,
+        ReplyReceived(intent_id=intent.id, body=body, body_hash=body_hash),
+        lead_id=intent.lead_id,
+    )
+    _record_reply_events(db, context, env, intent, body_hash, reading)
+    result = None if reading is None else reading[0]
+    _settle_round(db, context, env, intent, result, _answers(result))
+    return _Outcome(event_id, intent.lead_id)
 
 
 def _resolve_fact(
