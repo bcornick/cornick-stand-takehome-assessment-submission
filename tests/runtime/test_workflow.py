@@ -3,8 +3,7 @@
 import itertools
 import sqlite3
 import threading
-import time
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import get_args
 
@@ -25,14 +24,12 @@ from uwh.runtime.waits import close_blocker, open_blockers, primary_next_action
 from uwh.runtime.workflow import (
     MAX_LEADS_IN_FLIGHT,
     Step,
-    TransitionRefused,
     create_lead,
     reevaluate,
     record_reply,
     run_is_settled,
     run_leads,
     run_steps,
-    settle_run,
     transition,
     unit_of_work,
 )
@@ -74,11 +71,11 @@ def set_status(db: sqlite3.Connection, status: str, lead_id: str = LEAD) -> None
     db.commit()
 
 
-def logging_step(log: list[str], name: str, *, reads_facts: bool = False) -> Step:
+def logging_step(log: list[str], name: str) -> Step:
     def run(db: sqlite3.Connection, context: EventContext, lead_id: str) -> None:
         log.append(f"{name}:{status_of(db, lead_id)}")
 
-    return Step(name, run, reads_facts)
+    return Step(name, run)
 
 
 def failing_step(name: str) -> Step:
@@ -123,7 +120,7 @@ def test_a_transition_succeeds_exactly_along_the_a3_table_and_a_refusal_writes_n
         transition(db, LEAD, target)
         assert status_of(db) == target
     else:
-        with pytest.raises(TransitionRefused):
+        with pytest.raises(ValueError, match="cannot move"):
             transition(db, LEAD, target)
         assert status_of(db) == start
     assert len(read_events(db)) == events_before
@@ -142,6 +139,13 @@ def test_a_transition_for_an_unknown_lead_is_refused(db: sqlite3.Connection) -> 
 # ---- steps in order -----------------------------------------------------------------------------
 
 
+def observing_step(key: str, value: int = 1) -> Step:
+    def run(db: sqlite3.Connection, context: EventContext, lead_id: str) -> None:
+        observe(db, context, lead_id, key, value, "submitted", {}, RULES)
+
+    return Step(key, run)
+
+
 def test_a_leads_steps_run_in_the_given_order_and_each_sees_the_one_before(
     db: sqlite3.Connection,
 ) -> None:
@@ -150,39 +154,36 @@ def test_a_leads_steps_run_in_the_given_order_and_each_sees_the_one_before(
     def writer(key: str) -> Step:
         def run(db: sqlite3.Connection, context: EventContext, lead_id: str) -> None:
             order.append(f"{key} sees {sorted(effective_facts(db, lead_id))}")
-            with unit_of_work(db):
-                observe(db, context, lead_id, key, 1, "submitted", {}, RULES)
+            observe(db, context, lead_id, key, 1, "submitted", {}, RULES)
 
         return Step(key, run)
 
-    run_steps(db, CONTEXT, LEAD, [writer("a"), writer("b"), writer("c")])
+    run_steps(db, make_context, LEAD, [writer("a"), writer("b"), writer("c")])
     assert order == ["a sees []", "b sees ['a']", "c sees ['a', 'b']"]
 
 
-def test_the_first_step_moves_the_lead_to_triaged_and_the_first_facts_step_to_in_progress(
+def test_the_lead_is_triaged_once_its_first_step_completes_and_in_progress_once_all_have(
     db: sqlite3.Connection,
 ) -> None:
     seen: list[str] = []
-    steps = [
-        logging_step(seen, "triage"),
-        logging_step(seen, "resolve"),
-        logging_step(seen, "evaluate", reads_facts=True),
-        logging_step(seen, "render", reads_facts=True),
-    ]
-    run_steps(db, CONTEXT, LEAD, steps)
-    assert seen == [
-        "triage:received",
-        "resolve:triaged",
-        "evaluate:in_progress",
-        "render:in_progress",
-    ]
+    steps = [logging_step(seen, name) for name in ("triage", "resolve", "evaluate", "render")]
+    run_steps(db, make_context, LEAD, steps)
+    assert seen == ["triage:received", "resolve:triaged", "evaluate:triaged", "render:triaged"]
     assert status_of(db) == "in_progress"
 
 
-def test_a_lead_that_ran_every_step_without_a_facts_step_ends_in_progress(
+def test_a_lead_with_one_step_ends_in_progress(db: sqlite3.Connection) -> None:
+    run_steps(db, make_context, LEAD, [logging_step([], "triage")])
+    assert status_of(db) == "in_progress"
+
+
+def test_a_completed_pass_on_an_in_progress_lead_leaves_it_in_progress(
     db: sqlite3.Connection,
 ) -> None:
-    run_steps(db, CONTEXT, LEAD, [logging_step([], "triage")])
+    set_status(db, "in_progress")
+    seen: list[str] = []
+    run_steps(db, make_context, LEAD, [logging_step(seen, "a"), logging_step(seen, "b")])
+    assert seen == ["a:in_progress", "b:in_progress"]
     assert status_of(db) == "in_progress"
 
 
@@ -193,9 +194,9 @@ def test_a_step_that_raises_stops_the_lead_with_a_data_blocker_naming_the_step(
     steps = [
         logging_step(seen, "triage"),
         failing_step("fetch_data"),
-        logging_step(seen, "evaluate", reads_facts=True),
+        logging_step(seen, "evaluate"),
     ]
-    run_steps(db, CONTEXT, LEAD, steps)
+    run_steps(db, make_context, LEAD, steps)
     assert seen == ["triage:received"]
     (blocker,) = open_blockers(db, LEAD)
     assert (blocker.kind, blocker.owner) == ("data", "data_team")
@@ -204,34 +205,67 @@ def test_a_step_that_raises_stops_the_lead_with_a_data_blocker_naming_the_step(
     assert primary_next_action(db, LEAD) == blocker
 
 
-def test_a_failing_step_rolls_back_its_own_writes_and_keeps_the_steps_before_it(
+def test_a_lead_whose_first_step_fails_stays_received_and_can_be_evaluated_again(
+    db: sqlite3.Connection,
+) -> None:
+    steps = [failing_step("triage")]
+    run_steps(db, make_context, LEAD, steps)
+    assert status_of(db) == "received"
+    seen: list[str] = []
+    change = resolve_fact(db, CONTEXT, LEAD, "acreage", 7, "reason", RULES)
+    db.commit()
+    reevaluate(db, make_context, LEAD, [logging_step(seen, "triage")], change)
+    assert seen == ["triage:received"]
+    assert status_of(db) == "in_progress"
+
+
+def test_a_failing_step_rolls_back_all_its_writes_and_keeps_the_steps_before_it(
     db: sqlite3.Connection,
 ) -> None:
     def write_then_fail(db: sqlite3.Connection, context: EventContext, lead_id: str) -> None:
-        with unit_of_work(db):
-            observe(db, context, lead_id, "year_built", 1990, "submitted", {}, RULES)
-            raise RuntimeError("after the write")
+        observe(db, context, lead_id, "year_built", 1990, "submitted", {}, RULES)
+        observe(db, context, lead_id, "stories", 2, "submitted", {}, RULES)
+        raise RuntimeError("after the writes")
 
-    def write(db: sqlite3.Connection, context: EventContext, lead_id: str) -> None:
-        with unit_of_work(db):
-            observe(db, context, lead_id, "acreage", 2, "submitted", {}, RULES)
-
-    run_steps(db, CONTEXT, LEAD, [Step("triage", write), Step("fetch", write_then_fail)])
+    run_steps(
+        db, make_context, LEAD, [observing_step("acreage", 2), Step("fetch", write_then_fail)]
+    )
     assert sorted(effective_facts(db, LEAD)) == ["acreage"]
     assert db.execute("SELECT count(*) FROM observations").fetchone()[0] == 1
+    assert len(workflow_events(db, EventType.fact_observed)) == 1
+    assert [b.kind for b in open_blockers(db, LEAD)] == ["data"]
 
 
-def test_a_step_that_leaves_a_transaction_open_fails_instead_of_losing_its_writes(
-    db: sqlite3.Connection,
+def test_a_steps_writes_and_the_status_move_after_it_commit_together(
+    path: str, db: sqlite3.Connection
 ) -> None:
-    def forgets_the_unit(db: sqlite3.Connection, context: EventContext, lead_id: str) -> None:
-        observe(db, context, lead_id, "acreage", 2, "submitted", {}, RULES)
+    other = open_store(path)
+    seen_inside: list[tuple[str, list[str]]] = []
 
-    run_steps(db, CONTEXT, LEAD, [Step("triage", forgets_the_unit)])
-    (blocker,) = open_blockers(db, LEAD)
-    assert "triage" in blocker.detail.text and "transaction" in blocker.detail.text
-    assert not db.in_transaction
-    assert effective_facts(db, LEAD) == {}
+    def write_and_look(db: sqlite3.Connection, context: EventContext, lead_id: str) -> None:
+        observe(db, context, lead_id, "acreage", 2, "submitted", {}, RULES)
+        seen_inside.append((status_of(other), sorted(effective_facts(other, LEAD))))
+
+    run_steps(db, make_context, LEAD, [Step("triage", write_and_look)])
+    assert seen_inside == [("received", [])]
+    assert (status_of(other), sorted(effective_facts(other, LEAD))) == (
+        "in_progress",
+        ["acreage"],
+    )
+    other.close()
+
+
+def test_each_step_has_its_own_unit_with_its_own_context(db: sqlite3.Connection) -> None:
+    ticks = itertools.count()
+
+    def advancing_context() -> EventContext:
+        moment = NOW + timedelta(minutes=next(ticks))
+        return EventContext("run-1", "replay", "workflow", "r" * 64, moment, moment)
+
+    run_steps(db, advancing_context, LEAD, [observing_step("a"), observing_step("b")])
+    first, second = [e for e in read_events(db, lead_id=LEAD) if e.type is EventType.fact_observed]
+    assert first.real_ts == NOW and second.real_ts == NOW + timedelta(minutes=1)
+    assert first.sim_ts != second.sim_ts
 
 
 def test_a_failing_lead_does_not_touch_the_other_leads(path: str, db: sqlite3.Connection) -> None:
@@ -256,57 +290,61 @@ def evaluation_steps(log: list[str]) -> list[Step]:
         fact = effective_facts(db, lead_id).get("acreage")
         log.append(f"evaluate:{None if fact is None else fact.value}")
 
-    return [logging_step(log, "triage"), Step("evaluate", evaluate, reads_facts=True)]
+    return [logging_step(log, "triage"), Step("evaluate", evaluate)]
 
 
-def test_an_accepted_fact_re_evaluates_the_lead_from_the_first_step_that_reads_facts(
+def test_an_accepted_fact_re_evaluates_the_lead_through_the_whole_sequence(
     db: sqlite3.Connection,
 ) -> None:
     log: list[str] = []
     steps = evaluation_steps(log)
-    run_steps(db, CONTEXT, LEAD, steps)
+    run_steps(db, make_context, LEAD, steps)
     assert log == ["triage:received", "evaluate:None"]
     change = resolve_fact(db, CONTEXT, LEAD, "acreage", 7, "the producer phoned", RULES)
     assert change.changed
-    reevaluate(db, CONTEXT, LEAD, steps, change)
-    assert log == ["triage:received", "evaluate:None", "evaluate:7"]
+    reevaluate(db, make_context, LEAD, steps, change)
+    assert log == ["triage:received", "evaluate:None", "triage:in_progress", "evaluate:7"]
     assert status_of(db) == "in_progress"
 
 
 def test_a_change_of_nothing_does_not_re_evaluate_the_lead(db: sqlite3.Connection) -> None:
     log: list[str] = []
     steps = evaluation_steps(log)
-    run_steps(db, CONTEXT, LEAD, steps)
-    reevaluate(db, CONTEXT, LEAD, steps, RevisionChange(1, 1))
+    run_steps(db, make_context, LEAD, steps)
+    reevaluate(db, make_context, LEAD, steps, RevisionChange(1, 1))
     assert len(log) == 2
 
 
 def test_re_evaluation_runs_in_the_callers_transaction_and_commits_nothing(
     db: sqlite3.Connection, path: str
 ) -> None:
-    log: list[str] = []
-    steps = evaluation_steps(log)
-    run_steps(db, CONTEXT, LEAD, steps)
+    run_steps(db, make_context, LEAD, [logging_step([], "triage")])
+    seen_inside: list[list[str]] = []
+
+    def write_then_fail(db: sqlite3.Connection, context: EventContext, lead_id: str) -> None:
+        observe(db, context, lead_id, "stories", 2, "submitted", {}, RULES)
+        seen_inside.append(sorted(effective_facts(db, lead_id)))
+        raise RuntimeError("the step fails")
+
     other = open_store(path)
-    with pytest.raises(RuntimeError, match="refused"):
+    events_before = len(read_events(db))
+    with pytest.raises(RuntimeError, match="the step fails"):
         with unit_of_work(db):
             change = resolve_fact(db, CONTEXT, LEAD, "acreage", 7, "reason", RULES)
-            reevaluate(db, CONTEXT, LEAD, steps, change)
-            assert log[-1] == "evaluate:7"
-            assert effective_facts(other, LEAD) == {}
-            raise RuntimeError("the command is refused after its steps ran")
-    assert effective_facts(db, LEAD) == {}
-    assert effective_facts(other, LEAD) == {}
+            reevaluate(db, make_context, LEAD, [Step("evaluate", write_then_fail)], change)
+    assert seen_inside == [["acreage", "stories"]]
+    assert effective_facts(db, LEAD) == {} and effective_facts(other, LEAD) == {}
+    assert db.execute("SELECT count(*) FROM observations").fetchone()[0] == 0
+    assert open_blockers(db, LEAD) == []
+    assert len(read_events(db)) == events_before
     other.close()
 
 
-@pytest.mark.parametrize("status", ["received", *TERMINAL_STATUSES])
-def test_a_lead_that_is_not_in_flight_is_not_re_evaluated(
-    db: sqlite3.Connection, status: str
-) -> None:
+@pytest.mark.parametrize("status", TERMINAL_STATUSES)
+def test_a_terminal_lead_is_not_re_evaluated(db: sqlite3.Connection, status: str) -> None:
     log: list[str] = []
     set_status(db, status)
-    reevaluate(db, CONTEXT, LEAD, evaluation_steps(log), RevisionChange(0, 1))
+    reevaluate(db, make_context, LEAD, evaluation_steps(log), RevisionChange(0, 1))
     assert log == [] and status_of(db) == status
 
 
@@ -356,34 +394,28 @@ def add_lead(db: sqlite3.Connection, lead_id: str, status: str, *, run_id: str =
 
 
 def hold_blocker(db: sqlite3.Connection, lead_id: str) -> None:
-    run_steps(db, CONTEXT, lead_id, [failing_step("fetch_data")])
+    run_steps(db, make_context, lead_id, [failing_step("fetch_data")])
 
 
-def test_a_run_with_a_lead_that_has_not_run_its_steps_is_not_settled(
+def test_a_run_with_a_received_or_triaged_lead_that_holds_no_blocker_is_not_settled(
     db: sqlite3.Connection,
 ) -> None:
     assert not run_is_settled(db, "run-1")
-    assert not settle_run(db, "run-1")
-    assert db.execute("SELECT status FROM runs").fetchone() == ("processing",)
     set_status(db, "triaged")
     assert not run_is_settled(db, "run-1")
 
 
-def test_a_run_is_settled_when_every_lead_is_terminal_blocked_or_has_run_its_steps(
+def test_a_run_is_settled_when_every_lead_is_terminal_blocked_or_in_progress(
     db: sqlite3.Connection,
 ) -> None:
     add_lead(db, "L-2", "quote_sent")
     add_lead(db, "L-3", "declined")
     add_lead(db, "L-4", "received")
     hold_blocker(db, "L-4")
-    add_lead(db, "L-5", "triaged")
-    run_steps(db, CONTEXT, "L-5", [logging_step([], "triage")])
+    add_lead(db, "L-5", "received")
+    run_steps(db, make_context, "L-5", [logging_step([], "triage")])
     set_status(db, "in_progress")
-    db.commit()
     assert run_is_settled(db, "run-1")
-    assert settle_run(db, "run-1")
-    db.commit()
-    assert db.execute("SELECT status FROM runs").fetchone() == ("settled",)
 
 
 def test_a_lead_of_another_run_does_not_keep_this_run_unsettled(db: sqlite3.Connection) -> None:
@@ -392,13 +424,16 @@ def test_a_lead_of_another_run_does_not_keep_this_run_unsettled(db: sqlite3.Conn
     assert run_is_settled(db, "run-1")
 
 
-def test_closing_the_last_blocker_of_an_unstarted_lead_makes_the_run_runnable_again(
+def test_closing_the_last_blocker_of_a_first_pass_lead_leaves_a_runnable_step_that_run_steps_runs(
     db: sqlite3.Connection,
 ) -> None:
     hold_blocker(db, LEAD)
     assert run_is_settled(db, "run-1")
     close_blocker(db, CONTEXT, open_blockers(db, LEAD)[0].id)
+    db.commit()
     assert not run_is_settled(db, "run-1")
+    run_steps(db, make_context, LEAD, [logging_step([], "triage")])
+    assert run_is_settled(db, "run-1")
 
 
 # ---- the pool -----------------------------------------------------------------------------------
@@ -429,6 +464,18 @@ def test_run_leads_runs_every_lead_through_every_step(path: str, db: sqlite3.Con
     assert run_is_settled(db, "run-1")
 
 
+def test_every_failure_outside_a_step_is_reported_after_all_leads_finish(
+    tmp_path: Path, db: sqlite3.Connection
+) -> None:
+    create_lead(db, CONTEXT, "L-2", "web", "2026-06-29T07:00:00Z")
+    db.commit()
+    unopenable = str(tmp_path / "missing" / "app.db")
+    with pytest.raises(ExceptionGroup) as raised:
+        run_leads(unopenable, make_context, [LEAD, "L-2"], [logging_step([], "triage")])
+    assert [type(e) for e in raised.value.exceptions] == [sqlite3.OperationalError] * 2
+    assert [e.__notes__ for e in raised.value.exceptions] == [["lead L-1"], ["lead L-2"]]
+
+
 @pytest.mark.slow
 def test_never_more_than_four_leads_are_in_flight_and_ten_leads_all_complete(
     path: str, db: sqlite3.Connection
@@ -438,22 +485,33 @@ def test_never_more_than_four_leads_are_in_flight_and_ten_leads_all_complete(
         create_lead(db, CONTEXT, lead_id, "web", "2026-06-29T07:00:00Z")
     db.commit()
     lock = threading.Lock()
+    four_together = threading.Barrier(MAX_LEADS_IN_FLIGHT, timeout=10)
+    all_ten_started = threading.Event()
+    started = 0
     in_flight = 0
     peak = 0
 
     def wait_for_a_provider(db: sqlite3.Connection, context: EventContext, lead_id: str) -> None:
-        nonlocal in_flight, peak
+        # The first four to arrive wait for each other: the barrier breaks if the pool holds fewer
+        # than four. They then stay in flight until all ten leads have started, which happens only
+        # if the pool admits a fifth, so the peak shows the bound.
+        nonlocal started, in_flight, peak
         with lock:
+            started += 1
+            arrival = started
+            if started == len(ids):
+                all_ten_started.set()
             in_flight += 1
             peak = max(peak, in_flight)
-        time.sleep(0.1)
+        if arrival <= MAX_LEADS_IN_FLIGHT:
+            four_together.wait()
+            all_ten_started.wait(timeout=1)
         with lock:
             in_flight -= 1
 
     def write_facts(db: sqlite3.Connection, context: EventContext, lead_id: str) -> None:
-        with unit_of_work(db):
-            for number in range(5):
-                observe(db, context, lead_id, f"k{number}", number, "submitted", {}, RULES)
+        for number in range(5):
+            observe(db, context, lead_id, f"k{number}", number, "submitted", {}, RULES)
 
     run_leads(
         path,

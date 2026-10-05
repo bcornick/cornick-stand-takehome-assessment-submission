@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from uwh.runtime.store import create_tables, open_store
+from uwh.runtime.store import BUSY_TIMEOUT_MS, create_tables, open_store
 
 # A.1: table -> ordered (column, declared type, primary-key position).
 EXPECTED_TABLES: dict[str, list[tuple[str, str, int]]] = {
@@ -150,6 +150,13 @@ VALUE_SETS = [
 @pytest.fixture
 def db(tmp_path: Path) -> sqlite3.Connection:
     return open_store(str(tmp_path / "uwh.db"))
+
+
+def test_an_opened_connection_waits_for_a_locked_database_for_the_busy_timeout(
+    db: sqlite3.Connection,
+) -> None:
+    assert BUSY_TIMEOUT_MS == 30_000
+    assert db.execute("PRAGMA busy_timeout").fetchone() == (BUSY_TIMEOUT_MS,)
 
 
 def test_opened_database_has_exactly_the_a1_tables(db: sqlite3.Connection) -> None:

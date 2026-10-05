@@ -21,6 +21,10 @@ from uwh.runtime.event_types import (
 from uwh.settings import RUN_MODES
 
 
+# A connection waiting for another writer's lock waits this long before SQLite raises SQLITE_BUSY.
+BUSY_TIMEOUT_MS = 30_000
+
+
 def _in_set(column: str, values: Iterable[str]) -> str:
     quoted = ", ".join("'" + v.replace("'", "''") + "'" for v in values)
     return f"CHECK ({column} IN ({quoted}))"
@@ -106,8 +110,12 @@ def create_tables(db: sqlite3.Connection, names: Iterable[str]) -> None:
 
 
 def open_store(path: str) -> sqlite3.Connection:
-    """Open the database at `path`, creating any missing table. Existing rows are left alone."""
+    """Open the database at `path`, creating any missing table. Existing rows are left alone.
+
+    Every connection waits `BUSY_TIMEOUT_MS` for a lock held by another writer.
+    """
     db = sqlite3.connect(path)
+    db.execute(f"PRAGMA busy_timeout = {BUSY_TIMEOUT_MS}")
     create_tables(db, table_ddl())
     db.commit()
     return db
