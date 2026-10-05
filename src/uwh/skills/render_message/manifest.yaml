@@ -1,7 +1,7 @@
 name: render_message
 version: "1"
-purpose: Renders a request to the producer in code from the asks, with the fixed opening, the registry's sections and numbered questions, and issues its draft.
-trigger: an ask plan needs a message
-command_classes: [send_routine_request, send_sensitive_request]
+purpose: Renders a request to the producer in code from the asks, with the fixed opening, the registry's sections and numbered questions, and the fixed decline notice, and issues their drafts.
+trigger: an ask plan or a proposed decline needs a message
+command_classes: [send_routine_request, send_sensitive_request, send_decline_notice]
 fallback: none
 pass_threshold: 1.0

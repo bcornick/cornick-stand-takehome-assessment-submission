@@ -132,6 +132,9 @@ STATUS_AFTER_SEND: dict[str, Status] = {"quote_packet": "quote_sent", "decline_n
 # underwriter see confirmations first.
 CONFIRMATION_ONLY_CLASS: RequestKind = "routine_request"
 
+# A.10: the requests a lead may be sent before it goes to the underwriter (10.1).
+MAX_REQUEST_ROUNDS = 2
+
 # The workflow's steps in the order a lead's pass runs them (7). Each name is a skill, except
 # `ask_producer`, which plans the asks, renders them and drafts the request: the three share the asks.
 WORKFLOW_STEP_ORDER: tuple[str, ...] = (

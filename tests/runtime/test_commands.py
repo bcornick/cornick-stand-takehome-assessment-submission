@@ -20,6 +20,7 @@ from tests.runtime.helpers import (
     state_of,
 )
 from tests.runtime.helpers import LEAD_ID as LEAD
+from uwh.rules.models import ActionPlan, OpenChoice
 from uwh.runtime.commands import CommandResult, submit_command
 from uwh.runtime.event_types import (
     Actor,
@@ -45,10 +46,11 @@ from uwh.runtime.facts import (
 from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
 from uwh.runtime.runs import RunEnvironment
+from uwh.runtime.rulings import rulings_in_force
 from uwh.runtime.send import create_draft
 from uwh.runtime.store import open_store
 from uwh.runtime.waits import open_blocker, open_blockers
-from uwh.runtime.workflow import Step, create_lead
+from uwh.runtime.workflow import Step, create_lead, lead_revision_and_plan_hash
 from uwh.skills.vertical import REFERENCE_MORNING
 
 SETUP = EventContext("run-1", "replay", "workflow", RULESET, RUN_START, REFERENCE_MORNING)
@@ -617,17 +619,36 @@ def test_the_events_of_a_command_take_their_timestamps_inside_its_transaction(
     assert in_transaction and all(in_transaction)
 
 
+def open_choice(db: sqlite3.Connection) -> dict[str, JsonValue]:
+    """An open choice on the lead's plan and its question card; returns the payload that answers it."""
+    plan = ActionPlan(
+        open_choices=[
+            OpenChoice(
+                choice_id="I13.fire_fail",
+                options=["decline", "legacy_underwriting"],
+                prompt="Decline, or legacy underwriting?",
+                show=[],
+            )
+        ]
+    )
+    db.execute("UPDATE leads SET plan_json = ? WHERE lead_id = ?", (plan.model_dump_json(), LEAD))
+    open_item(
+        db,
+        BlockerDetail(resume_trigger="a ruling", text="Pick.", choice_ids=["I13.fire_fail"]),
+        "underwriter_question",
+    )
+    return {
+        "lead_id": LEAD,
+        "choice_id": "I13.fire_fail",
+        "option": "legacy_underwriting",
+        "reason": "r",
+    }
+
+
 def test_record_ruling_writes_the_ruling_with_actor_reason_and_the_plan_hash_and_re_evaluates(
     db: sqlite3.Connection, env: RunEnvironment, passes: Passes
 ) -> None:
-    detail = BlockerDetail(resume_trigger="a ruling", text="Pick.", choice_ids=["roof_age_basis"])
-    open_item(db, detail, "underwriter_question")
-    payload = {
-        "lead_id": LEAD,
-        "choice_id": "roof_age_basis",
-        "option": "use_permit",
-        "reason": "r",
-    }
+    payload = open_choice(db)
 
     result = submit_command(db, env, "underwriter", "record_ruling", payload)
 
@@ -637,8 +658,48 @@ def test_record_ruling_writes_the_ruling_with_actor_reason_and_the_plan_hash_and
     assert isinstance(event.payload, RulingRecorded)
     assert (event.payload.kind, event.payload.choice_id, event.payload.option) == (
         "choice",
-        "roof_age_basis",
-        "use_permit",
+        "I13.fire_fail",
+        "legacy_underwriting",
     )
     assert (event.payload.reason, event.payload.plan_hash) == ("r", PLAN_HASH)
     assert passes.leads == [LEAD]
+    # The ruling moves the lead revision, so a draft built before it is replaced.
+    assert lead_revision_and_plan_hash(db, LEAD)[0] == 1
+
+
+def test_a_ruling_with_an_option_the_choice_does_not_offer_is_refused(
+    db: sqlite3.Connection, env: RunEnvironment
+) -> None:
+    payload = {**open_choice(db), "option": "maybe"}
+
+    assert_refused(db, submit_command(db, env, "underwriter", "record_ruling", payload), "maybe")
+
+    assert events_of(db, EventType.ruling_recorded) == []
+
+
+def test_decline_lead_records_the_decline_ruling_and_re_evaluates_the_lead(
+    db: sqlite3.Connection, env: RunEnvironment, passes: Passes
+) -> None:
+    result = submit_command(
+        db, env, "underwriter", "decline_lead", {"lead_id": LEAD, "reason": "reputational risk"}
+    )
+
+    assert result.accepted
+    (event,) = events_of(db, EventType.ruling_recorded)
+    assert isinstance(event.payload, RulingRecorded)
+    assert (event.payload.kind, event.payload.reason) == ("decline", "reputational risk")
+    assert rulings_in_force(db, LEAD).decline_reason == "reputational risk"
+    assert passes.leads == [LEAD]
+
+
+def test_decline_lead_is_refused_for_a_lead_that_is_already_final(
+    db: sqlite3.Connection, env: RunEnvironment
+) -> None:
+    db.execute("UPDATE leads SET status = 'quote_sent'")
+    db.commit()
+
+    result = submit_command(
+        db, env, "underwriter", "decline_lead", {"lead_id": LEAD, "reason": "too late"}
+    )
+
+    assert_refused(db, result, "already final")

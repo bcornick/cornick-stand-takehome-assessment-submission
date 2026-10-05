@@ -16,6 +16,7 @@ class PlanAsksInput(StrictModel):
     registry: Registry
     triage: dict[str, FieldTriage]
     conflicts: list[ConflictOpened]  # the open conflicts, each to be confirmed
+    catalogue_questions: list[str]  # the catalogue ids the playbook asks the producer
 
 
 class PlanAsksOutput(StrictModel):
@@ -84,11 +85,35 @@ def _confirmations(conflicts: list[ConflictOpened], wording: dict[str, Any]) -> 
     return asks
 
 
+def _catalogue_asks(catalogue_ids: list[str]) -> list[Ask]:
+    questions = read_yaml("catalogue.yaml")["questions"]
+    return [
+        Ask(
+            ask_id=catalogue_id,
+            kind=AskKind.catalogue_question,
+            fields=[f"q:{catalogue_id}"],
+            reason="The playbook needs it to decide.",
+            wording=questions[catalogue_id]["wording"],
+        )
+        for catalogue_id in catalogue_ids
+    ]
+
+
+def _message_class(asks: list[Ask]) -> RequestKind:
+    """A catalogue question makes a sensitive request (10.1); a request of confirmations alone takes
+    the configured class."""
+    if any(ask.kind == AskKind.catalogue_question for ask in asks):
+        return "sensitive_request"
+    if asks and all(ask.kind == AskKind.confirmation for ask in asks):
+        return CONFIRMATION_ONLY_CLASS
+    return "routine_request"
+
+
 def run(input: PlanAsksInput) -> PlanAsksOutput:
     wording = read_yaml("wording.yaml")
-    asks = _field_asks(input, wording) + _confirmations(input.conflicts, wording)
-    confirmation_only = bool(asks) and all(ask.kind == AskKind.confirmation for ask in asks)
-    return PlanAsksOutput(
-        asks=asks,
-        message_class=CONFIRMATION_ONLY_CLASS if confirmation_only else "routine_request",
+    asks = (
+        _field_asks(input, wording)
+        + _confirmations(input.conflicts, wording)
+        + _catalogue_asks(input.catalogue_questions)
     )
+    return PlanAsksOutput(asks=asks, message_class=_message_class(asks))

@@ -131,3 +131,19 @@ def test_every_effect_is_on_its_own_line_with_its_deadline_and_no_rule_id() -> N
 def test_a_plan_with_a_decline_or_anything_open_is_refused(refused: ActionPlan) -> None:
     with pytest.raises(ValueError, match="nothing declined or open"):
         build(refused)
+
+
+def test_an_advisory_for_the_underwriter_alone_is_left_out_of_the_packet() -> None:
+    body = build(
+        plan(
+            {"type": "advisory", "rule": "A-1", "text": "Siding is vinyl."},
+            {
+                "type": "advisory",
+                "rule": "PP-1",
+                "text": "A decline was overridden.",
+                "internal": True,
+            },
+        )
+    )
+
+    assert "Siding is vinyl." in body and "overridden" not in body

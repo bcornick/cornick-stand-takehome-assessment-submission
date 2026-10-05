@@ -73,7 +73,8 @@ def _after(deadline: Deadline | None, wording: dict[Deadline, str]) -> str:
 
 def _entry(effect: Effect, coverages: dict[str, Coverage]) -> tuple[str, str] | None:
     """The section an effect belongs to and its line; None for an effect that adds nothing to the
-    producer's packet. No rule id is shown: the rule trace is the internal view's."""
+    producer's packet: a no_action, and an advisory for the underwriter alone. No rule id is shown:
+    the rule trace is the internal view's."""
     match effect:
         case SurchargeEffect():
             return (
@@ -93,7 +94,7 @@ def _entry(effect: Effect, coverages: dict[str, Coverage]) -> tuple[str, str] | 
         case ExclusionOrEndorsementEffect():
             return "Exclusions and endorsements", effect.text
         case AdvisoryEffect():
-            return "Advisories", effect.text
+            return None if effect.internal else ("Advisories", effect.text)
         case ObligationEffect():
             return (
                 "Obligations after binding",

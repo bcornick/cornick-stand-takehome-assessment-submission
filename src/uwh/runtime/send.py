@@ -96,16 +96,22 @@ def _class_of(kind: MessageKind) -> str:
 # ---- drafts -------------------------------------------------------------------------------------
 
 
-def _next_round(db: sqlite3.Connection, lead_id: str, kind: MessageKind) -> int:
-    """Rounds number requests only: a request takes the round after the last one, and a quote packet
-    or a decline notice carries the round of the last request, or 0 (7.5)."""
+def rounds_used(db: sqlite3.Connection, lead_id: str) -> int:
+    """The rounds the lead's requests have taken: the round of the last one that was not closed unsent."""
     placeholders = ", ".join("?" for _ in REQUEST_KINDS)
     (last,) = db.execute(
         f"SELECT COALESCE(MAX(round), 0) FROM intents WHERE lead_id = ?"
         f" AND kind IN ({placeholders}) AND state != 'closed_unsent'",
         (lead_id, *REQUEST_KINDS),
     ).fetchone()
-    return int(last) + 1 if kind in REQUEST_KINDS else int(last)
+    return int(last)
+
+
+def _next_round(db: sqlite3.Connection, lead_id: str, kind: MessageKind) -> int:
+    """Rounds number requests only: a request takes the round after the last one, and a quote packet
+    or a decline notice carries the round of the last request, or 0 (7.5)."""
+    last = rounds_used(db, lead_id)
+    return last + 1 if kind in REQUEST_KINDS else last
 
 
 def _round_had_unknown_delivery(db: sqlite3.Connection, lead_id: str, round_: int) -> bool:
@@ -514,6 +520,10 @@ def _record_sent(
                 ),
             )
         else:
+            # A packet or a notice may follow an open request and closes it (10.1).
+            for blocker in open_blockers(db, intent.lead_id):
+                if blocker.kind == "producer_reply":
+                    close_blocker(db, context, blocker.id)
             target = STATUS_AFTER_SEND[intent.kind]
             if transition_refusal(db, intent.lead_id, target) is None:
                 transition(db, intent.lead_id, target)

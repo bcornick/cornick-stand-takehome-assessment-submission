@@ -11,9 +11,10 @@ from pydantic import JsonValue
 import uwh.skills
 from uwh.providers.stand_in import StandInProviders
 from uwh.rules.data_files import read_yaml
-from uwh.rules.models import ActionPlan, FieldTriage, NotBuilt
+from uwh.rules.models import ActionPlan, FieldTriage
 from uwh.rules.registry import Registry
 from uwh.runtime.event_types import (
+    BlockerDetail,
     ConflictOpened,
     EventType,
     PlanBuilt,
@@ -31,8 +32,9 @@ from uwh.runtime.facts import (
 )
 from uwh.runtime.hashing import hash_json, plan_hash
 from uwh.runtime.policy import manifest_refusal
-from uwh.runtime.send import create_draft, replace_stale_drafts
-from uwh.runtime.waits import open_blockers
+from uwh.runtime.rulings import rulings_in_force
+from uwh.runtime.send import create_draft, replace_stale_drafts, rounds_used
+from uwh.runtime.waits import Blocker, close_blocker, open_blocker, open_blockers
 from uwh.runtime.workflow import Step
 from uwh.skills.build_quote_packet import skill as build_quote_packet
 from uwh.skills.evaluate_playbook import skill as evaluate_playbook
@@ -41,7 +43,7 @@ from uwh.skills.render_message import skill as render_message
 from uwh.skills.resolve_data import skill as resolve_data
 from uwh.skills.triage_fields import skill as triage_fields
 from uwh.skills.manifest import load_manifest
-from uwh.skills.vertical import WORKFLOW_STEP_ORDER
+from uwh.skills.vertical import MAX_REQUEST_ROUNDS, WORKFLOW_STEP_ORDER
 
 _SKILLS_ROOT = Path(uwh.skills.__file__).parent
 
@@ -126,23 +128,64 @@ def _resolve_step(
         observe(db, context, lead_id, fact.key, fact.value, fact.source, fact.evidence, rules)
 
 
+def _stored_plan(db: sqlite3.Connection, lead_id: str) -> ActionPlan:
+    """The action plan the pass's evaluation stored on the lead."""
+    (plan_json,) = db.execute(
+        "SELECT plan_json FROM leads WHERE lead_id = ?", (lead_id,)
+    ).fetchone()
+    return ActionPlan.model_validate_json(plan_json)
+
+
+def _sync_underwriter_question(
+    db: sqlite3.Connection, context: EventContext, lead_id: str, plan: ActionPlan
+) -> None:
+    """One question card holds every open choice of the lead (9.6 rule 6). The card is replaced when
+    the open choices change and closed when none is open."""
+    choice_ids = [choice.choice_id for choice in plan.open_choices]
+    card = next((b for b in open_blockers(db, lead_id) if b.kind == "underwriter_question"), None)
+    if card is not None and card.detail.choice_ids == choice_ids:
+        return
+    if card is not None:
+        close_blocker(db, context, card.id)
+    if choice_ids:
+        open_blocker(
+            db,
+            context,
+            lead_id,
+            "underwriter_question",
+            "underwriter",
+            BlockerDetail(
+                choice_ids=choice_ids,
+                resume_trigger="an underwriter answers the choices",
+                text=f"The playbook leaves {', '.join(choice_ids)} to the underwriter.",
+            ),
+        )
+
+
 def _evaluate_step(db: sqlite3.Connection, context: EventContext, lead_id: str) -> None:
-    """Build the action plan and store it on the lead when it differs from the stored one."""
+    """Build the action plan and store it on the lead when it differs from the stored one; keep the
+    lead's question card in step with the plan's open choices."""
     plan = evaluate_playbook.run(
-        evaluate_playbook.EvaluatePlaybookInput(facts=_usable_values(db, lead_id))
+        evaluate_playbook.EvaluatePlaybookInput(
+            facts=_usable_values(db, lead_id), rulings=rulings_in_force(db, lead_id)
+        )
     )
     dumped = plan.model_dump(mode="json")
     digest = plan_hash(dumped)
     (stored,) = db.execute("SELECT plan_hash FROM leads WHERE lead_id = ?", (lead_id,)).fetchone()
-    if stored == digest:
-        return
-    db.execute(
-        "UPDATE leads SET plan_json = ?, plan_hash = ? WHERE lead_id = ?",
-        (json.dumps(dumped), digest, lead_id),
-    )
-    append_event(
-        db, context, EventType.plan_built, PlanBuilt(plan=dumped, plan_hash=digest), lead_id=lead_id
-    )
+    if stored != digest:
+        db.execute(
+            "UPDATE leads SET plan_json = ?, plan_hash = ? WHERE lead_id = ?",
+            (json.dumps(dumped), digest, lead_id),
+        )
+        append_event(
+            db,
+            context,
+            EventType.plan_built,
+            PlanBuilt(plan=dumped, plan_hash=digest),
+            lead_id=lead_id,
+        )
+    _sync_underwriter_question(db, context, lead_id, plan)
 
 
 def _recipient(db: sqlite3.Connection, lead_id: str, facts: dict[str, JsonValue]) -> str:
@@ -154,9 +197,7 @@ def _recipient(db: sqlite3.Connection, lead_id: str, facts: dict[str, JsonValue]
         else read_yaml("contacts.yaml").get(source)
     )
     if not isinstance(address, str):
-        raise NotBuilt(
-            f"lead {lead_id} has no contact route, and the review that resolves it is not built"
-        )
+        raise ValueError(f"lead {lead_id} has no contact route")
     return address
 
 
@@ -180,7 +221,7 @@ def _request_in_flight(db: sqlite3.Connection, lead_id: str) -> bool:
 
 
 def _planned_asks(
-    registry: Registry, db: sqlite3.Connection, lead_id: str
+    registry: Registry, db: sqlite3.Connection, lead_id: str, plan: ActionPlan
 ) -> plan_asks.PlanAsksOutput:
     conflicts = [
         ConflictOpened(
@@ -190,19 +231,81 @@ def _planned_asks(
     ]
     return plan_asks.run(
         plan_asks.PlanAsksInput(
-            registry=registry, triage=_triage(db, lead_id, registry), conflicts=conflicts
+            registry=registry,
+            triage=_triage(db, lead_id, registry),
+            conflicts=conflicts,
+            catalogue_questions=plan.catalogue_questions,
         )
     )
+
+
+def _draft_decline_notice(
+    registry: Registry, db: sqlite3.Connection, context: EventContext, lead_id: str
+) -> None:
+    """The decline notice of a proposed decline waits for the underwriter. A lead holding an unsettled
+    message gets none yet."""
+    if _unsettled_intent(db, lead_id):
+        return
+    facts = {key: fact.value for key, fact in effective_facts(db, lead_id).items()}
+    notice = render_message.run(
+        render_message.RenderMessageInput(
+            kind="decline_notice", registry=registry, lead_label=lead_label(db, lead_id), asks=[]
+        )
+    )
+    create_draft(
+        db,
+        context,
+        load_manifest(_SKILLS_ROOT / "render_message"),
+        lead_id,
+        "decline_notice",
+        _recipient(db, lead_id, facts),
+        notice.subject,
+        notice.body,
+        [],
+    )
+
+
+def _round_limit_review(db: sqlite3.Connection, lead_id: str) -> Blocker | None:
+    return next((b for b in open_blockers(db, lead_id) if b.detail.cause == "round_limit"), None)
 
 
 def _ask_producer_step(
     registry: Registry, db: sqlite3.Connection, context: EventContext, lead_id: str
 ) -> None:
-    """Plan the asks, render them and draft the request. A draft built at an older revision is replaced;
-    a lead with a request in flight, or nothing to ask, gets no new draft."""
-    planned = _planned_asks(registry, db, lead_id)
+    """Draft the message the plan calls for. A proposed decline suppresses every request and drafts the
+    decline notice (9.6 rule 1). Otherwise the asks are planned, rendered and drafted as a request; a
+    draft built at an older revision is replaced, a lead with a request in flight, or nothing to ask,
+    gets no new draft, and a lead that has had its two rounds goes to the underwriter (10.1)."""
     replace_stale_drafts(db, context, lead_id)
-    if not planned.asks or _request_in_flight(db, lead_id):
+    plan = _stored_plan(db, lead_id)
+    if plan.proposed_decline:
+        _draft_decline_notice(registry, db, context, lead_id)
+        return
+    planned = _planned_asks(registry, db, lead_id, plan)
+    limit_review = _round_limit_review(db, lead_id)
+    if not planned.asks:
+        if limit_review is not None:
+            close_blocker(db, context, limit_review.id)
+        return
+    if _request_in_flight(db, lead_id):
+        return
+    if rounds_used(db, lead_id) >= MAX_REQUEST_ROUNDS:
+        if limit_review is None:
+            open_blocker(
+                db,
+                context,
+                lead_id,
+                "underwriter_review",
+                "underwriter",
+                BlockerDetail(
+                    item_kind="review",
+                    cause="round_limit",
+                    cause_persists=True,
+                    resume_trigger="the facts are supplied or the lead is declined",
+                    text=f"Two requests have been sent and these asks are still open: "
+                    f"{', '.join(ask.ask_id for ask in planned.asks)}.",
+                ),
+            )
         return
     facts = {key: fact.value for key, fact in effective_facts(db, lead_id).items()}
     rendered = render_message.run(
@@ -235,10 +338,7 @@ def _quote_packet_step(
     """Draft the quote packet when the plan holds no decline and nothing open, and the lead holds no
     blocker and no unsettled message (8). An ask that remains is held by an unsettled request or a
     blocker, so the last two checks cover it. The draft waits for the underwriter."""
-    (plan_json,) = db.execute(
-        "SELECT plan_json FROM leads WHERE lead_id = ?", (lead_id,)
-    ).fetchone()
-    plan = ActionPlan.model_validate_json(plan_json)
+    plan = _stored_plan(db, lead_id)
     if (
         not build_quote_packet.is_ready(plan)
         or open_blockers(db, lead_id)

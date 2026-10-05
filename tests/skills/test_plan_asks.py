@@ -34,7 +34,12 @@ def test_a_request_of_confirmations_only_takes_the_confirmation_only_class(
     monkeypatch.setattr(skill, "CONFIRMATION_ONLY_CLASS", "sensitive_request")
 
     planned = skill.run(
-        PlanAsksInput(registry=load_registry(str(REGISTRY)), triage=triage, conflicts=[CONFLICT])
+        PlanAsksInput(
+            registry=load_registry(str(REGISTRY)),
+            triage=triage,
+            conflicts=[CONFLICT],
+            catalogue_questions=[],
+        )
     )
 
     assert planned.message_class == expected

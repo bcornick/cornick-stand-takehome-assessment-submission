@@ -1,5 +1,7 @@
-# ABOUTME: The render_message skill (10.2, A.8): a request rendered in code from the asks, with the fixed opening, the field asks grouped by the registry's sections in registry order, then the additional questions, numbered through.
-# ABOUTME: Deterministic. Confirmations go in the additional group; the subject names the property.
+# ABOUTME: The render_message skill (10.1, 10.2, A.8): a request rendered in code from the asks, with the fixed opening, the field asks grouped by the registry's sections in registry order, then the additional questions, numbered through; and the fixed decline notice.
+# ABOUTME: Deterministic. Confirmations and catalogue questions go in the additional group; the subject names the property; the decline notice states no reason.
+from typing import Literal
+
 from uwh.rules.models import Ask, AskKind, StrictModel
 from uwh.rules.registry import Registry
 
@@ -9,12 +11,18 @@ OPENING = (
     "One reply covering all of them is ideal."
 )
 ADDITIONAL_QUESTIONS = "Additional questions"
+# 10.1: the decline notice is a fixed template; a message carries no decline reason.
+DECLINE_NOTICE = (
+    "Thank you for your submission. After review we are unable to offer coverage for this "
+    "property. We appreciate the opportunity to consider it."
+)
 
 
 class RenderMessageInput(StrictModel):
+    kind: Literal["request", "decline_notice"] = "request"
     registry: Registry
     lead_label: str  # the property address, or the lead id when there is none
-    asks: list[Ask]
+    asks: list[Ask]  # the asks of a request; a decline notice has none
 
 
 class RenderMessageOutput(StrictModel):
@@ -24,6 +32,12 @@ class RenderMessageOutput(StrictModel):
 
 
 def run(input: RenderMessageInput) -> RenderMessageOutput:
+    if input.kind == "decline_notice":
+        return RenderMessageOutput(
+            subject=f"Regarding your submission: {input.lead_label}",
+            body=DECLINE_NOTICE,
+            ask_ids=[],
+        )
     groups: dict[str, list[Ask]] = {field.section: [] for field in input.registry.values()}
     groups[ADDITIONAL_QUESTIONS] = []
     for ask in input.asks:

@@ -1,5 +1,5 @@
 # ABOUTME: The command layer of 7.4 and A.11: one entry point that takes the actor from the transport, applies the actor and class rules, runs the handler and the lead's re-evaluation in one transaction, and writes `command_refused` for a refusal.
-# ABOUTME: The handlers are start_run, deliver_reply, resolve_fact, edit_draft, record_ruling, and approve and reject of an observation, a draft, a delivery_unknown item or an event-raised review; a command class with no handler raises NotImplementedError after the checks.
+# ABOUTME: The handlers are start_run, deliver_reply, resolve_fact, edit_draft, record_ruling, decline_lead, and approve and reject of an observation, a draft, a delivery_unknown item or an event-raised review; a command type with no handler raises NotImplementedError after the checks.
 import sqlite3
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
@@ -21,7 +21,6 @@ from uwh.runtime.event_types import (
     ReplyRead,
     ReplyReceived,
     ReviewCause,
-    RulingRecorded,
     SkillFallbackUsed,
 )
 from uwh.runtime.events import EventContext, MakeContext, StaleRun, append_event, read_events
@@ -33,9 +32,11 @@ from uwh.runtime.facts import (
     reject_observation,
     resolve_fact,
 )
+from uwh.rules.models import ActionPlan
 from uwh.runtime.hashing import sha256_hex
 from uwh.runtime.modes import RecordingMiss
 from uwh.runtime.runs import RunEnvironment, begin_run, command_context, current_run, pass_context
+from uwh.runtime.rulings import active_rulings, declines_of, write_ruling
 from uwh.runtime.send import (
     Intent,
     close_unsent,
@@ -535,29 +536,42 @@ def _record_ruling(
 ) -> _Outcome:
     lead_id, choice_id = _text(payload, "lead_id"), _text(payload, "choice_id")
     option, reason = _text(payload, "option"), _nonempty_text(payload, "reason")
-    revision, plan_hash = _lead_binding(db, lead_id)
+    _lead_binding(db, lead_id)
     if not any(
         b.kind == "underwriter_question" and choice_id in b.detail.choice_ids
         for b in open_blockers(db, lead_id)
     ):
         raise _Refusal(f"{choice_id} is not an open choice of lead {lead_id}")
-    event_id = append_event(
-        db,
-        context,
-        EventType.ruling_recorded,
-        RulingRecorded(
-            kind="choice",
-            choice_id=choice_id,
-            option=option,
-            reason=reason,
-            lead_revision=revision,
-            plan_hash=plan_hash,
-            suppressed_rule_ids=[],
-            refers_to_event_id=None,
-        ),
-        lead_id=lead_id,
+    (choice,) = [c for c in _plan_of(db, lead_id).open_choices if c.choice_id == choice_id]
+    if option not in choice.options:
+        raise _Refusal(f"{option} is not an option of {choice_id}: {', '.join(choice.options)}")
+    event_id = write_ruling(
+        db, context, lead_id, "choice", reason, choice_id=choice_id, option=option
     )
     return _Outcome(event_id, lead_id)
+
+
+def _plan_of(db: sqlite3.Connection, lead_id: str) -> ActionPlan:
+    (plan_json,) = db.execute(
+        "SELECT plan_json FROM leads WHERE lead_id = ?", (lead_id,)
+    ).fetchone()
+    return ActionPlan.model_validate_json(plan_json)
+
+
+def _decline_lead(
+    db: sqlite3.Connection,
+    context: EventContext,
+    env: RunEnvironment,
+    payload: Mapping[str, JsonValue],
+) -> _Outcome:
+    """The underwriter's decline: the plan becomes a proposed decline with the reason as its trace and
+    the decline notice is drafted by the lead's re-evaluation (A.11)."""
+    lead_id, reason = _text(payload, "lead_id"), _nonempty_text(payload, "reason")
+    if not _lead_exists(db, lead_id):
+        raise _Refusal(f"there is no lead {lead_id}")
+    if is_terminal(db, lead_id):
+        raise _Refusal(f"lead {lead_id} is already final")
+    return _Outcome(write_ruling(db, context, lead_id, "decline", reason), lead_id)
 
 
 def _settle(
@@ -568,8 +582,7 @@ def _settle(
     *,
     approve: bool,
 ) -> _Outcome:
-    """`approve` or `reject` of an item, by the A.11 table. `reject` of a draft decline notice raises
-    NotImplementedError."""
+    """`approve` or `reject` of an item, by the A.11 table."""
     command = "approve" if approve else "reject"
     item = _open_item(db, payload)
     reason = _text(payload, "reason") if approve else _nonempty_text(payload, "reason")
@@ -587,7 +600,7 @@ def _settle(
     if detail.item_kind == "draft":
         assert detail.intent_id is not None  # a draft item names its draft
         artifact = _intent_in_state(db, detail.intent_id, "draft")
-        _settle_draft(db, payload, artifact, approve=approve)
+        _settle_draft(db, context, payload, artifact, reason, approve=approve)
     elif detail.item_kind == "delivery_unknown":
         assert detail.intent_id is not None  # a delivery_unknown item names its intent
         artifact = _intent_in_state(db, detail.intent_id, "unknown")
@@ -604,19 +617,56 @@ def _settle(
 
 
 def _settle_draft(
-    db: sqlite3.Connection, payload: Mapping[str, JsonValue], intent: Intent, *, approve: bool
+    db: sqlite3.Connection,
+    context: EventContext,
+    payload: Mapping[str, JsonValue],
+    intent: Intent,
+    reason: str,
+    *,
+    approve: bool,
 ) -> None:
     """`approve` needs the payload hash of the draft the underwriter was shown (7.4). `reject` returns
-    the draft to editing: it stays a draft with its item open and loses any approval."""
+    the draft to editing: it stays a draft with its item open and loses any approval; the rejection
+    of a decline notice is a ruling and the notice is replaced by the re-evaluation."""
     if approve:
         if payload.get("artifact_hash") != intent.payload_hash:
             raise _Refusal(
                 "the artifact_hash is missing or is not the current payload hash of the draft"
             )
     elif intent.kind == "decline_notice":
-        raise NotImplementedError("reject of a draft decline notice")
+        _reject_decline(db, context, intent.lead_id, reason)
     else:
         void_approvals(db, intent.id)
+
+
+def _reject_decline(
+    db: sqlite3.Connection, context: EventContext, lead_id: str, reason: str
+) -> None:
+    """Rejecting a decline notice overrides what proposed the decline (A.11): the underwriter's own
+    decline is withdrawn, a choice that led to a decline is reopened, and every other declining rule
+    is suppressed for this lead (9.6)."""
+    active = active_rulings(db, lead_id)
+    decline_event = next((i for i, r in active.items() if r.kind == "decline"), None)
+    if decline_event is not None:
+        write_ruling(db, context, lead_id, "withdrawal", reason, refers_to_event_id=decline_event)
+        return
+    reopened = {choice for _, choices in declines_of(_plan_of(db, lead_id)) for choice in choices}
+    for choice_id in sorted(reopened):
+        (ruling_event,) = [
+            i for i, r in active.items() if r.kind == "choice" and r.choice_id == choice_id
+        ]
+        write_ruling(
+            db,
+            context,
+            lead_id,
+            "reopened_choice",
+            reason,
+            choice_id=choice_id,
+            refers_to_event_id=ruling_event,
+        )
+    suppressed = [rule for rule, choices in declines_of(_plan_of(db, lead_id)) if not choices]
+    if suppressed:
+        write_ruling(db, context, lead_id, "suppression", reason, suppressed_rule_ids=suppressed)
 
 
 def _edit_draft(
@@ -767,4 +817,5 @@ _HANDLERS: dict[str, Handler] = {
     "edit_draft": _edit_draft,
     "resolve_fact": _resolve_fact,
     "record_ruling": _record_ruling,
+    "decline_lead": _decline_lead,
 }

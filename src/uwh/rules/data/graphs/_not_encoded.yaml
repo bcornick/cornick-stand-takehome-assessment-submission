@@ -1,5 +1,5 @@
-# ABOUTME: The five playbook pages no seed-42 lead reaches, each with the condition under which it applies; a lead it applies to carries a note that the page is not evaluated.
-# ABOUTME: Their interpretation rows, questions and wording are not in the data files (section 4.1).
+# ABOUTME: The five playbook pages no seed-42 lead reaches, and the Animals criterion of the overview (I46), each with the condition under which it applies; a lead it applies to carries a note that the page is not evaluated.
+# ABOUTME: Their interpretation rows, questions and wording are not in the data files (section 4.1), except I46, which is a row of its own.
 pages:
   - id: plumbing
     title: Plumbing
@@ -26,3 +26,8 @@ pages:
     producer_text: Protection class 9 and 10 requirements were not reviewed for this quote.
     page: docs/playbook/13-protection-class-9-and-10/flowchart.md
     applies_when: {field: protection_class, in: ["9", "10"]}
+  - id: animals
+    title: Animals
+    producer_text: Animals on the property were not reviewed for this quote.
+    page: docs/playbook/01-decision-points/flowchart.md
+    applies_when: {field: has_animals, equals: true}
