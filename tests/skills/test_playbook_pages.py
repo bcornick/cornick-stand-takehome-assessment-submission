@@ -7,6 +7,8 @@ from pydantic import JsonValue
 
 from tests.skills.helpers import lead_008
 from uwh.rules.models import ActionPlan, Rulings
+from uwh.skills.build_quote_packet import skill as build_quote_packet
+from uwh.skills.build_quote_packet.skill import BuildQuotePacketInput
 from uwh.skills.evaluate_playbook.skill import EvaluatePlaybookInput, run
 
 # The facts that make the Occupancy page apply on a home unoccupied for some months, with a primary
@@ -444,3 +446,43 @@ def test_an_underwriters_decline_is_a_proposed_decline_with_its_reason() -> None
     plan = plan_for(Rulings(decline_reason="Reputational risk"))
 
     assert plan.proposed_decline and plan.underwriter_decline == "Reputational risk"
+
+
+# ---- the quote packet -------------------------------------------------------------------------
+
+
+def test_the_packet_carries_the_exclusion_the_advisories_and_the_modifications_with_their_deadlines() -> (
+    None
+):
+    plan = plan_for(
+        Rulings(
+            choices={
+                "I13.fire_fail": "legacy_underwriting",
+                "I16.slope": "gentle",
+                "I16.distance": "adequate",
+            }
+        ),
+        kyc_score=6,
+        p_f=0.79,
+        vegetation_clearance="Adequate",
+        road_access="Multiple Access Points",
+        is_7a_compliant=True,
+        **UNOCCUPIED,
+    )
+
+    body = build_quote_packet.run(
+        BuildQuotePacketInput(lead_label="8924 Lakeview Blvd", plan=plan, coverages={})
+    ).body
+
+    assert "Surcharges\n- 25% surcharge (for the duration of non-occupancy)" in body
+    assert "- Liability coverage is excluded" in body  # PF-1
+    assert "- A 100k AOP deductible, for the duration of non-occupancy" in body  # OC-9
+    assert (
+        "- A low temperature alarm or a winterized home in a cold climate (for the duration of non-occupancy)"
+        in body
+    )
+    assert "- A preliminary mitigation plan will be discussed with the broker" in body  # I55
+    assert (
+        "- If the liability exclusion is a deal killer: a social media exclusion" in body
+    )  # I03, I05
+    assert "PF-" not in body and "OC-" not in body  # no rule id reaches the producer
