@@ -4,8 +4,8 @@ import json
 import sqlite3
 import uuid
 from collections.abc import Callable
-from dataclasses import dataclass
-from typing import Literal, get_args
+from dataclasses import dataclass, replace
+from typing import get_args
 
 import httpx2
 
@@ -25,23 +25,15 @@ from uwh.runtime.event_types import (
 from uwh.runtime.events import EventContext, append_event, require_current_run
 from uwh.runtime.hashing import payload_hash
 from uwh.runtime.mailbox_client import MailboxClient
-from uwh.runtime.policy import ApprovalBinding, autonomy_level, binding_changes
+from uwh.runtime.policy import ApprovalBinding, autonomy_level, binding_changes, manifest_refusal
 from uwh.runtime.waits import Blocker, close_blocker, open_blocker, open_blockers
-from uwh.runtime.workflow import transition, unit_of_work
-from uwh.skills.vertical import TRANSITIONS
+from uwh.runtime.workflow import transition, transition_refusal, unit_of_work
+from uwh.skills.manifest import SkillManifest
 
 # A.8: the address every message is sent from.
 SENDER = "uw@stand.com"
 
 MakeContext = Callable[[], EventContext]
-DispatchOutcome = Literal[
-    "sent",
-    "unknown",
-    "waiting_for_approval",
-    "returned_to_review",
-    "lead_busy",
-    "not_a_draft",
-]
 
 _REQUEST_KINDS: tuple[str, ...] = get_args(RequestKind)
 # The status a lead takes when a packet or a notice is sent (A.3).
@@ -77,42 +69,18 @@ def read_intent(db: sqlite3.Connection, intent_id: str) -> Intent | None:
     row = db.execute(f"SELECT {_INTENT_COLUMNS} FROM intents WHERE id = ?", (intent_id,)).fetchone()
     if row is None:
         return None
-    (
-        id_,
-        run_id,
-        lead_id,
-        round_,
-        kind,
-        recipient,
-        subject,
-        body,
-        ask_ids,
-        hashed,
-        state,
-        mailbox_id,
-    ) = row
-    return Intent(
-        id_,
-        run_id,
-        lead_id,
-        round_,
-        kind,
-        recipient,
-        subject,
-        body,
-        json.loads(ask_ids),
-        hashed,
-        state,
-        mailbox_id,
-    )
+    values = list(row)
+    values[8] = json.loads(values[8])  # the ask ids
+    return Intent(*values)
 
 
-def _draft(db: sqlite3.Connection, intent_id: str) -> Intent:
+def intent_in_state(db: sqlite3.Connection, intent_id: str, *states: IntentState) -> Intent:
+    """The intent with that id, which must be in one of the states. Raises ValueError otherwise."""
     intent = read_intent(db, intent_id)
     if intent is None:
         raise ValueError(f"there is no intent {intent_id}")
-    if intent.state != "draft":
-        raise ValueError(f"intent {intent_id} is {intent.state}, not a draft")
+    if intent.state not in states:
+        raise ValueError(f"intent {intent_id} is {intent.state}, not {' or '.join(states)}")
     return intent
 
 
@@ -147,7 +115,10 @@ def _draft_item(db: sqlite3.Connection, intent: Intent) -> Blocker | None:
     return None
 
 
-def _open_draft_item(db: sqlite3.Connection, context: EventContext, intent: Intent) -> None:
+def _open_draft_item(
+    db: sqlite3.Connection, context: EventContext, intent: Intent, text: str | None = None
+) -> None:
+    """Open the `underwriter_review` item that holds the draft; `text` is the reason it shows."""
     open_blocker(
         db,
         context,
@@ -158,7 +129,7 @@ def _open_draft_item(db: sqlite3.Connection, context: EventContext, intent: Inte
             item_kind="draft",
             intent_id=intent.id,
             resume_trigger="an underwriter approves the draft",
-            text=f"Review this {intent.kind} before it is sent.",
+            text=text or f"Review this {intent.kind} before it is sent.",
         ),
     )
 
@@ -176,13 +147,25 @@ def _insert_draft(
     *,
     waits_for_approval: bool,
 ) -> str:
-    intent_id = uuid.uuid4().hex
-    hashed = payload_hash(recipient, subject, body)
+    intent = Intent(
+        uuid.uuid4().hex,
+        context.run_id,
+        lead_id,
+        round_,
+        kind,
+        recipient,
+        subject,
+        body,
+        ask_ids,
+        payload_hash(recipient, subject, body),
+        "draft",
+        None,
+    )
     db.execute(
-        f"INSERT INTO intents ({_INTENT_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', NULL)",
+        f"INSERT INTO intents ({_INTENT_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
-            intent_id,
-            context.run_id,
+            intent.id,
+            intent.run_id,
             lead_id,
             round_,
             kind,
@@ -190,7 +173,9 @@ def _insert_draft(
             subject,
             body,
             json.dumps(ask_ids),
-            hashed,
+            intent.payload_hash,
+            intent.state,
+            intent.mailbox_id,
         ),
     )
     append_event(
@@ -198,27 +183,26 @@ def _insert_draft(
         context,
         EventType.intent_created,
         IntentCreated(
-            intent_id=intent_id,
+            intent_id=intent.id,
             round=round_,
             kind=kind,
             recipient=recipient,
             subject=subject,
             body=body,
             ask_ids=ask_ids,
-            payload_hash=hashed,
+            payload_hash=intent.payload_hash,
         ),
         lead_id=lead_id,
     )
     if waits_for_approval:
-        intent = read_intent(db, intent_id)
-        assert intent is not None  # inserted above
         _open_draft_item(db, context, intent)
-    return intent_id
+    return intent.id
 
 
 def create_draft(
     db: sqlite3.Connection,
     context: EventContext,
+    manifest: SkillManifest,
     lead_id: str,
     kind: MessageKind,
     recipient: str,
@@ -228,9 +212,13 @@ def create_draft(
 ) -> str:
     """Insert an intent in state `draft`, write `intent_created` and return the intent id.
 
-    A draft whose class does not run at `auto` waits as an `underwriter_review` item that names it.
-    Sends nothing; the caller commits.
+    `manifest` is the issuing skill's; it must declare the send class of the kind (8). A draft whose
+    class does not run at `auto` waits as an `underwriter_review` item that names it. Sends nothing;
+    the caller commits. Raises ValueError, writing nothing, for a class the manifest does not declare.
     """
+    refusal = manifest_refusal(manifest, _class_of(kind))
+    if refusal is not None:
+        raise ValueError(refusal)
     return _insert_draft(
         db,
         context,
@@ -259,13 +247,14 @@ def edit_draft(
     reason: str,
 ) -> int:
     """Replace the subject, body and payload hash of a draft, void its approval and write `draft_edited`
-    with the kind it now has; return that event's id (7.5). A `routine_request` becomes a
+    with the kind after the edit; return that event's id (7.5). A `routine_request` becomes a
     `sensitive_request`, so it waits for approval; a quote packet or decline notice keeps its kind.
     Raises ValueError for an intent that is not a draft. The caller commits.
     """
-    intent = _draft(db, intent_id)
+    intent = intent_in_state(db, intent_id, "draft")
     kind: MessageKind = "sensitive_request" if intent.kind == "routine_request" else intent.kind
     hashed = payload_hash(intent.recipient, subject, body)
+    edited = replace(intent, subject=subject, body=body, payload_hash=hashed, kind=kind)
     db.execute(
         "UPDATE intents SET subject = ?, body = ?, payload_hash = ?, kind = ? WHERE id = ?",
         (subject, body, hashed, kind, intent_id),
@@ -289,8 +278,6 @@ def edit_draft(
         ),
         lead_id=intent.lead_id,
     )
-    edited = read_intent(db, intent_id)
-    assert edited is not None  # updated above
     if autonomy_level(db, _class_of(kind)) != "auto" and _draft_item(db, edited) is None:
         _open_draft_item(db, context, edited)
     return event_id
@@ -319,9 +306,9 @@ def _approved_binding(db: sqlite3.Connection, intent_id: str) -> ApprovalBinding
     return None if row is None else ApprovalBinding(*row)
 
 
-def _refuse_what_tier_one_holds(db: sqlite3.Connection, intent: Intent) -> None:
-    """A dispatch the emergency stop or a class set to `off` refuses leaves the draft held in review
-    with the reason (7.4); that hold is not built."""
+def _refuse_held_dispatch(db: sqlite3.Connection, intent: Intent) -> None:
+    """A dispatch that the emergency stop or a class set to `off` refuses holds the draft in review
+    with the reason (7.4). Raises NotImplementedError for either: no command writes those settings."""
     if autonomy_level(db, _class_of(intent.kind)) == "off":
         raise NotImplementedError("holding a draft whose class is off")
     row = db.execute("SELECT value_json FROM settings WHERE key = 'emergency_stop'").fetchone()
@@ -329,10 +316,29 @@ def _refuse_what_tier_one_holds(db: sqlite3.Connection, intent: Intent) -> None:
         raise NotImplementedError("holding a draft while the emergency stop is engaged")
 
 
+def _return_to_review(
+    db: sqlite3.Connection,
+    context: EventContext,
+    intent: Intent,
+    item: Blocker | None,
+    reason: str | None = None,
+) -> None:
+    """Void the approvals of the draft and leave it with an open item. With a `reason` the item shows
+    it, replacing an item that shows another; without one an open item stays as it is."""
+    void_approvals(db, intent.id)
+    if item is not None and reason is not None:
+        close_blocker(db, context, item.id)
+        item = None
+    if item is None:
+        _open_draft_item(db, context, intent, reason)
+
+
 def _begin_dispatch(
     db: sqlite3.Connection, make_context: MakeContext, intent_id: str
-) -> Intent | DispatchOutcome:
-    """Commit the state `dispatching` in its own transaction, or return why the draft is not sent now.
+) -> Intent | None:
+    """Commit the state `dispatching` in its own transaction and return the intent, or return None when
+    the draft is not sent now: it is not a draft, it waits for an approval, it returns to review, or
+    another intent of its lead is in flight.
 
     The rechecks and the move to `dispatching` share one transaction that holds the write lock, so
     two senders cannot both pass them: a lead has at most one intent `dispatching` (7.5, one sender
@@ -342,91 +348,90 @@ def _begin_dispatch(
         context = make_context()
         intent = read_intent(db, intent_id)
         if intent is None or intent.state != "draft":
-            return "not_a_draft"
+            return None
         require_current_run(db, intent.run_id)
-        _refuse_what_tier_one_holds(db, intent)
+        _refuse_held_dispatch(db, intent)
         item = _draft_item(db, intent)
         if autonomy_level(db, _class_of(intent.kind)) == "review" or item is not None:
             approved = _approved_binding(db, intent_id)
             if approved is None:
-                return "waiting_for_approval"
-            if binding_changes(approved, _current_binding(db, intent, context.ruleset_hash)):
-                void_approvals(db, intent_id)
                 if item is None:
                     _open_draft_item(db, context, intent)
-                return "returned_to_review"
+                return None
+            if binding_changes(approved, _current_binding(db, intent, context.ruleset_hash)):
+                _return_to_review(db, context, intent, item)
+                return None
         target = _STATUS_AFTER_SEND.get(intent.kind)
-        (status,) = db.execute(
-            "SELECT status FROM leads WHERE lead_id = ?", (intent.lead_id,)
-        ).fetchone()
-        if target is not None and (status, target) not in TRANSITIONS:
-            raise ValueError(f"a lead cannot move from {status} to {target}")
+        refusal = None if target is None else transition_refusal(db, intent.lead_id, target)
+        if refusal is not None:
+            _return_to_review(db, context, intent, item, refusal)
+            return None
         if db.execute(
             "SELECT 1 FROM intents WHERE lead_id = ? AND state = 'dispatching'", (intent.lead_id,)
         ).fetchone():
-            return "lead_busy"
+            return None
         db.execute("UPDATE intents SET state = 'dispatching' WHERE id = ?", (intent_id,))
         if item is not None:
             close_blocker(db, context, item.id)
         return intent
 
 
+def _post(mailbox: MailboxClient, intent: Intent) -> int | None:
+    """Post the intent and return the mailbox id of the message, or None when the result is ambiguous:
+    the request failed or the response carries no usable id (7.5 step 4)."""
+    metadata = {
+        "intent_id": intent.id,
+        "run_id": intent.run_id,
+        "kind": intent.kind,
+        "round": intent.round,
+        "payload_hash": intent.payload_hash,
+    }
+    try:
+        posted = mailbox.send(
+            intent.lead_id, intent.recipient, SENDER, intent.subject, intent.body, metadata
+        )
+        return int(posted["id"])
+    except (httpx2.HTTPError, ValueError, KeyError, TypeError):
+        return None
+
+
 def dispatch(
     db: sqlite3.Connection, mailbox: MailboxClient, make_context: MakeContext, intent_id: str
-) -> DispatchOutcome:
+) -> None:
     """Send a draft if its class and approval allow it now (7.4, 7.5).
 
     Commits `dispatching`, posts outside any transaction, then records `sent`; an ambiguous result is
-    reconciled by the intent id. A draft that needs an approval it does not have waits; one whose
-    approval does not hold against the current values returns to review and loses the approval; another intent of the lead in
-    flight leaves the draft for a later pass. `make_context` builds the context of each event when it is
-    written. Raises RuntimeError inside a transaction, ValueError when a lead's status does not allow the
-    move a packet or notice makes, and NotImplementedError where a hold is not built. Raises StaleRun
-    when the draft's run has been replaced, before the post or after it; nothing is written then (14).
+    reconciled by the intent id. A draft that needs an approval it does not have waits as an item; one
+    whose approval does not hold against the current values, or whose packet or notice the lead's
+    status does not allow, returns to review and loses the approval; another intent of the lead in
+    flight leaves the draft for a later pass. `make_context` builds the context of each event when it
+    is written. Raises RuntimeError inside a transaction and NotImplementedError for a held dispatch.
+    Raises StaleRun when the draft's run has been replaced, before the post or after it; nothing is
+    written then (14).
     """
     if db.in_transaction:
         raise RuntimeError(
             "a dispatch commits and posts on its own, so the connection must not be in a transaction"
         )
     begun = _begin_dispatch(db, make_context, intent_id)
-    if not isinstance(begun, Intent):
-        return begun
-    metadata = {
-        "intent_id": begun.id,
-        "run_id": begun.run_id,
-        "kind": begun.kind,
-        "round": begun.round,
-        "payload_hash": begun.payload_hash,
-    }
-    try:
-        posted = mailbox.send(
-            begun.lead_id, begun.recipient, SENDER, begun.subject, begun.body, metadata
-        )
-    except httpx2.HTTPError:
-        return reconcile(db, mailbox, make_context, intent_id)
-    _record_sent(db, mailbox, make_context, begun, posted["id"])
-    return "sent"
+    if begun is None:
+        return
+    mailbox_id = _post(mailbox, begun)
+    if mailbox_id is None:
+        reconcile(db, mailbox, make_context, intent_id)
+    else:
+        _record_sent(db, mailbox, make_context, begun, mailbox_id)
 
 
 def dispatch_ready(
     db: sqlite3.Connection, mailbox: MailboxClient, make_context: MakeContext, lead_id: str
 ) -> None:
-    """Dispatch every draft of the lead that can go now. A draft skipped because another sender held
-    the lead is tried again once this pass has finished its own sends."""
-    tried: set[str] = set()
-    while True:
-        waiting = [
-            intent_id
-            for (intent_id,) in db.execute(
-                "SELECT id FROM intents WHERE lead_id = ? AND state = 'draft' ORDER BY rowid",
-                (lead_id,),
-            )
-            if intent_id not in tried
-        ]
-        if not waiting:
-            return
-        tried.add(waiting[0])
-        dispatch(db, mailbox, make_context, waiting[0])
+    """Dispatch every draft the lead holds when the pass starts, in the order they were created. A
+    draft that has left `draft` by then is skipped."""
+    for (intent_id,) in db.execute(
+        "SELECT id FROM intents WHERE lead_id = ? AND state = 'draft' ORDER BY rowid", (lead_id,)
+    ).fetchall():
+        dispatch(db, mailbox, make_context, intent_id)
 
 
 # ---- results ------------------------------------------------------------------------------------
@@ -457,15 +462,21 @@ def _record_sent(
     mailbox_id: int,
 ) -> None:
     """Record the mailbox id, set `sent`, write `message_sent`, and apply what a sent message does: a
-    request opens its round, a packet or a notice moves the lead (A.2, A.3)."""
+    request opens its round, a packet or a notice moves the lead (A.2, A.3). A sent message is history
+    (7.3): where the lead's status does not allow the move, the status stays. An intent that is not
+    `dispatching` or `unknown`, because another command settled it first, is left as it is.
+    """
     with unit_of_work(db):
         require_current_run(db, intent.run_id)
         context = make_context()
         _record_faults(db, context, mailbox, intent.lead_id)
-        db.execute(
-            "UPDATE intents SET state = 'sent', mailbox_id = ? WHERE id = ?",
+        settled = db.execute(
+            "UPDATE intents SET state = 'sent', mailbox_id = ?"
+            " WHERE id = ? AND state IN ('dispatching', 'unknown')",
             (mailbox_id, intent.id),
         )
+        if settled.rowcount == 0:
+            return
         append_event(
             db,
             context,
@@ -488,21 +499,27 @@ def _record_sent(
                 ),
             )
         else:
-            transition(db, intent.lead_id, _STATUS_AFTER_SEND[intent.kind])
+            target = _STATUS_AFTER_SEND[intent.kind]
+            if transition_refusal(db, intent.lead_id, target) is None:
+                transition(db, intent.lead_id, target)
 
 
 def _record_unknown(
     db: sqlite3.Connection, mailbox: MailboxClient, make_context: MakeContext, intent: Intent
 ) -> None:
-    """Set `unknown`, write `delivery_unknown` and open the underwriter's blocker; an intent already
-    `unknown` has both."""
+    """Set `unknown`, write `delivery_unknown` and open the underwriter's blocker. An intent that is not
+    `dispatching`, because it is `unknown` with both already or another command settled it, is left
+    as it is."""
     with unit_of_work(db):
         require_current_run(db, intent.run_id)
         context = make_context()
         _record_faults(db, context, mailbox, intent.lead_id)
-        if intent.state == "unknown":
+        settled = db.execute(
+            "UPDATE intents SET state = 'unknown' WHERE id = ? AND state = 'dispatching'",
+            (intent.id,),
+        )
+        if settled.rowcount == 0:
             return
-        db.execute("UPDATE intents SET state = 'unknown' WHERE id = ?", (intent.id,))
         append_event(
             db,
             context,
@@ -520,39 +537,34 @@ def _record_unknown(
                 item_kind="delivery_unknown",
                 resume_trigger="an underwriter checks the mailbox",
                 intent_id=intent.id,
-                text="The mailbox shows no message for this intent, so it may not have been delivered.",
+                text="The mailbox did not show a message for this intent, so it may not have been delivered.",
             ),
         )
 
 
 def reconcile(
     db: sqlite3.Connection, mailbox: MailboxClient, make_context: MakeContext, intent_id: str
-) -> Literal["sent", "unknown"]:
+) -> None:
     """Settle an intent in `dispatching` or `unknown` by listing the lead's mailbox and matching the
     intent id (7.5 step 4). A match is recorded as `sent`; no match leaves it `unknown`, with
     `delivery_unknown` written and its blocker opened when it was `dispatching`.
 
-    A listing that fails raises and leaves the intent as it was. Raises RuntimeError inside a
-    transaction, ValueError for an intent in another state and StaleRun, writing nothing, for an
-    intent of a replaced run.
+    A listing that fails finds no match, so the intent is `unknown` and nothing is sent again.
+    Raises RuntimeError inside a transaction, ValueError for an intent in another state and
+    StaleRun, writing nothing, for an intent of a replaced run.
     """
     if db.in_transaction:
         raise RuntimeError("a reconciliation lists the mailbox outside any transaction")
-    intent = read_intent(db, intent_id)
-    if intent is None:
-        raise ValueError(f"there is no intent {intent_id}")
-    if intent.state not in ("dispatching", "unknown"):
-        raise ValueError(f"intent {intent_id} is {intent.state}, not dispatching or unknown")
-    matches = [
-        m
-        for m in mailbox.list_for_lead(intent.lead_id)
-        if (m["metadata"] or {}).get("intent_id") == intent.id
-    ]
+    intent = intent_in_state(db, intent_id, "dispatching", "unknown")
+    try:
+        listed = mailbox.list_for_lead(intent.lead_id)
+    except (httpx2.HTTPError, ValueError):
+        listed = []
+    matches = [m for m in listed if (m["metadata"] or {}).get("intent_id") == intent.id]
     if matches:
         _record_sent(db, mailbox, make_context, intent, matches[0]["id"])
-        return "sent"
-    _record_unknown(db, mailbox, make_context, intent)
-    return "unknown"
+    else:
+        _record_unknown(db, mailbox, make_context, intent)
 
 
 def reconcile_dispatching(
@@ -568,19 +580,15 @@ def reconcile_dispatching(
 
 def close_unsent(db: sqlite3.Connection, context: EventContext, intent_id: str) -> str:
     """Close an `unknown` intent as not sent and return the id of a fresh draft of the same round,
-    kind and text that waits for approval whatever its class (7.5). The caller commits.
-    Raises ValueError for an intent that is not `unknown`.
+    kind and text that waits for approval whatever its class (7.5). The workflow creates the draft.
+    The caller commits. Raises ValueError for an intent that is not `unknown`.
     """
-    intent = read_intent(db, intent_id)
-    if intent is None:
-        raise ValueError(f"there is no intent {intent_id}")
-    if intent.state != "unknown":
-        raise ValueError(f"intent {intent_id} is {intent.state}, not unknown")
+    intent = intent_in_state(db, intent_id, "unknown")
     db.execute("UPDATE intents SET state = 'closed_unsent' WHERE id = ?", (intent_id,))
     _close_delivery_unknown(db, context, intent)
     return _insert_draft(
         db,
-        context,
+        replace(context, actor="workflow"),
         intent.lead_id,
         intent.round,
         intent.kind,

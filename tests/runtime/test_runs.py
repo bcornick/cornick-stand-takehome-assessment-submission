@@ -11,6 +11,7 @@ import pytest
 from fastapi import FastAPI
 from starlette.testclient import TestClient
 
+from tests.runtime.conftest import ASKER
 from uwh.runtime.commands import CommandEnvironment, CommandResult, submit_command
 from uwh.runtime.event_types import BlockerDetail, EventType, RunStarted
 from uwh.runtime.events import EventContext, StaleRun, StoredEvent, format_timestamp, read_events
@@ -366,7 +367,9 @@ def test_stale_run_writes_nothing(
     first_leads = lead_ids(db)
     first_pass(db, store_path, env)
     stale = pass_context(first_run, env.mode, env.ruleset_hash, env.now)
-    create_draft(db, stale(), first_leads[0], "routine_request", RECIPIENT, "S", "B", ["acreage"])
+    create_draft(
+        db, stale(), ASKER, first_leads[0], "routine_request", RECIPIENT, "S", "B", ["acreage"]
+    )
     (intent_id,) = db.execute("SELECT id FROM intents").fetchone()
     db.commit()
 
@@ -438,7 +441,7 @@ def test_startup_settles_interrupted_run(
         db.execute("UPDATE leads SET status = ? WHERE lead_id = ?", (status, lead_id))
     # The process stopped after the post and before `sent` was recorded.
     intent_id = create_draft(
-        db, make_context(), in_progress, "routine_request", RECIPIENT, "S", "B", ["acreage"]
+        db, make_context(), ASKER, in_progress, "routine_request", RECIPIENT, "S", "B", ["acreage"]
     )
     db.execute("UPDATE intents SET state = 'dispatching' WHERE id = ?", (intent_id,))
     db.commit()

@@ -15,6 +15,7 @@ from uwh.runtime.event_types import (
     ApprovalRecorded,
     CommandRefused,
     EventType,
+    IntentState,
     ReviewCause,
     RulingRecorded,
 )
@@ -29,12 +30,14 @@ from uwh.runtime.facts import (
 )
 from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
+from uwh.runtime.policy import manifest_refusal
 from uwh.runtime.runs import begin_run, command_context, current_run
 from uwh.runtime.send import (
     Intent,
     close_unsent,
     dispatch_ready,
     edit_draft,
+    intent_in_state,
     read_intent,
     reconcile,
     void_approvals,
@@ -156,11 +159,16 @@ def _context(db: sqlite3.Connection, env: CommandEnvironment, actor: Actor) -> E
 def _send_after_commit(
     db: sqlite3.Connection, env: CommandEnvironment, lead_id: str, recheck_intent_id: str | None
 ) -> None:
-    """Re-check the delivery an approval asked about, then dispatch every draft of the lead that can go.
-    The sender builds each event's context when it writes the event, after its own post."""
+    """Re-check the delivery an approval asked about, unless another command has settled it since, then
+    dispatch every draft of the lead that can go. The command has committed, so what the mailbox or a
+    draft's state makes impossible is recorded on the intent or the draft and never raised; only
+    StaleRun, the emergency stop and a class set to `off` raise. The sender builds each event's
+    context when it writes the event, after its own post."""
     make_context = partial(_context, db, env, "workflow")
     if recheck_intent_id is not None:
-        reconcile(db, env.mailbox, make_context, recheck_intent_id)
+        rechecked = read_intent(db, recheck_intent_id)
+        if rechecked is not None and rechecked.state == "unknown":
+            reconcile(db, env.mailbox, make_context, recheck_intent_id)
     dispatch_ready(db, env.mailbox, make_context, lead_id)
 
 
@@ -187,9 +195,7 @@ def _gate(
         manifest = load_manifest(env.skills_root / skill)
     except SkillFolderError as error:
         return str(error)
-    if command_type not in manifest.command_classes:
-        return f"the manifest of {skill} does not declare {command_type}"
-    return None
+    return manifest_refusal(manifest, command_type)
 
 
 def _lead_exists(db: sqlite3.Connection, lead_id: str) -> bool:
@@ -267,14 +273,12 @@ def _open_item(db: sqlite3.Connection, payload: Mapping[str, JsonValue]) -> Bloc
     return item
 
 
-def _draft_intent(db: sqlite3.Connection, intent_id: str) -> Intent:
-    """The intent, which must still be a draft."""
-    intent = read_intent(db, intent_id)
-    if intent is None:
-        raise _Refusal(f"there is no intent {intent_id}")
-    if intent.state != "draft":
-        raise _Refusal(f"intent {intent_id} is {intent.state}, not a draft")
-    return intent
+def _intent_in_state(db: sqlite3.Connection, intent_id: str, state: IntentState) -> Intent:
+    """The intent, which must be in the state."""
+    try:
+        return intent_in_state(db, intent_id, state)
+    except ValueError as error:
+        raise _Refusal(str(error)) from error
 
 
 # ---- handlers -----------------------------------------------------------------------------------
@@ -376,12 +380,11 @@ def _settle(
     recheck: str | None = None
     if detail.item_kind == "draft":
         assert detail.intent_id is not None  # a draft item names its draft
-        artifact = _draft_intent(db, detail.intent_id)
+        artifact = _intent_in_state(db, detail.intent_id, "draft")
         _settle_draft(db, payload, artifact, approve=approve)
     elif detail.item_kind == "delivery_unknown":
         assert detail.intent_id is not None  # a delivery_unknown item names its intent
-        artifact = read_intent(db, detail.intent_id)
-        assert artifact is not None and artifact.state == "unknown"
+        artifact = _intent_in_state(db, detail.intent_id, "unknown")
         if approve:
             recheck = artifact.id
         else:
@@ -416,7 +419,7 @@ def _edit_draft(
     env: CommandEnvironment,
     payload: Mapping[str, JsonValue],
 ) -> _Outcome:
-    intent = _draft_intent(db, _text(payload, "intent_id"))
+    intent = _intent_in_state(db, _text(payload, "intent_id"), "draft")
     subject, body, reason = (
         _text(payload, "subject"),
         _text(payload, "body"),
@@ -481,7 +484,9 @@ def _record_approval(
     recipient = None if artifact is None else artifact.recipient
     artifact_hash = None if artifact is None else artifact.payload_hash
     item_kind = item.detail.item_kind
-    assert item_kind is not None  # an underwriter_review blocker has an item kind
+    assert (
+        item_kind is not None
+    )  # an underwriter_review or delivery_unknown blocker has an item kind
     event_id = append_event(
         db,
         context,

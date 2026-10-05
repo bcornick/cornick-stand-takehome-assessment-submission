@@ -1,4 +1,4 @@
-# ABOUTME: Tests the command layer of 7.4 and A.11: the actor from the transport, the class rules, the skill manifest check, item resolution, one transaction per command with the lead's re-evaluation, and the handlers of resolve_fact, approve, reject and record_ruling.
+# ABOUTME: Tests the command layer of 7.4 and A.11: the actor from the transport, the class rules, the skill manifest check, item resolution, one transaction per command with the lead's re-evaluation, the dispatch and mailbox re-check after the commit, and the handlers of resolve_fact, approve, reject, edit_draft and record_ruling.
 # ABOUTME: Each test opens a real database through open_store at a tmp_path file and reads back events, approvals and blockers; skill folders are built under tmp_path.
 import json
 import sqlite3
@@ -9,6 +9,7 @@ import pytest
 import yaml
 from pydantic import JsonValue
 
+from tests.runtime.conftest import ASKER
 from uwh.runtime.commands import CommandEnvironment, CommandResult, submit_command
 from uwh.runtime.event_types import (
     Actor,
@@ -683,7 +684,9 @@ RECIPIENT = "producer@example.com"
 def make_draft(db: sqlite3.Connection, kind: MessageKind = "sensitive_request") -> str:
     """A draft of the kind in the `in_progress` lead; returns its intent id."""
     db.execute("UPDATE leads SET status = 'in_progress'")
-    intent_id = create_draft(db, SETUP, LEAD, kind, RECIPIENT, "Subject", "Body", ["acreage"])
+    intent_id = create_draft(
+        db, SETUP, ASKER, LEAD, kind, RECIPIENT, "Subject", "Body", ["acreage"]
+    )
     db.commit()
     return intent_id
 
@@ -810,7 +813,7 @@ def test_approving_a_draft_item_whose_draft_is_gone_or_sent_is_refused(
         db, env, "underwriter", "approve", approve_payload(db, intent_id, sent_item)
     )
 
-    assert_refused(db, result, "not a draft")
+    assert_refused(db, result, "not draft")
 
 
 def test_rejecting_a_draft_request_returns_it_to_draft_with_the_reason_and_voids_its_approval(
@@ -890,7 +893,7 @@ def test_edit_draft_of_a_draft_that_has_left_draft_is_refused_and_names_its_lead
 
     result = submit_command(db, env, "underwriter", "edit_draft", payload)
 
-    assert_refused(db, result, "not a draft")
+    assert_refused(db, result, "not draft")
     assert last_refusal(db).lead_id == LEAD
     assert events_of(db, EventType.draft_edited) == []
 
