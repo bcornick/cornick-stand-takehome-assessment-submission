@@ -1,4 +1,4 @@
-// ABOUTME: Tests the page against fetch stubbed at the boundary: the queue in the order served with its next action, the waiting packet with an Approve that posts the item id and the payload hash, and the fixture-reply control.
+// ABOUTME: Tests the page against fetch stubbed at the boundary: the queue in the order served with its next action, the waiting packet with an Approve that posts the item id and the payload hash, and the fixture-reply control in the queue header.
 // ABOUTME: The stubbed responses are typed objects of the generated API types, so a shape the backend does not serve fails the type check.
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -90,7 +90,13 @@ const lead: Schemas['LeadDetail'] = {
     undecided: [],
     open_choices: [],
     catalogue_questions: [],
-    not_evaluated: [{ ref: 'electrical', text: 'The Electrical page is not evaluated.' }],
+    not_evaluated: [
+      {
+        ref: 'electrical',
+        text: 'The Electrical page is not evaluated.',
+        producer_text: 'Electrical systems were not reviewed for this quote.',
+      },
+    ],
   },
   blockers: [
     {
@@ -175,11 +181,14 @@ describe('App', () => {
     await vi.waitFor(() => expect(calls.filter((c) => c === 'GET /api/leads')).toHaveLength(2))
   })
 
-  it('delivers the fixture replies from the detail pane', async () => {
+  it('delivers the fixture replies from the queue header, and the detail pane has no such control', async () => {
     const { calls } = stubApi()
     render(<App />)
-    await userEvent.click(await screen.findByRole('button', { name: row.lead_id }))
     await userEvent.click(await screen.findByRole('button', { name: 'Deliver fixture replies' }))
     expect(calls).toContain('POST /api/replies/fixtures')
+
+    await userEvent.click(await screen.findByRole('button', { name: row.lead_id }))
+    const pane = await screen.findByRole('article')
+    expect(within(pane).queryByRole('button', { name: 'Deliver fixture replies' })).toBeNull()
   })
 })

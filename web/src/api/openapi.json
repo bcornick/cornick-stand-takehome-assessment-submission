@@ -1077,6 +1077,10 @@
       "NotEvaluatedNote": {
         "additionalProperties": false,
         "properties": {
+          "producer_text": {
+            "title": "Producer Text",
+            "type": "string"
+          },
           "ref": {
             "title": "Ref",
             "type": "string"
@@ -1088,7 +1092,8 @@
         },
         "required": [
           "ref",
-          "text"
+          "text",
+          "producer_text"
         ],
         "title": "NotEvaluatedNote",
         "type": "object"
@@ -1656,7 +1661,7 @@
       },
       "ReplyRequest": {
         "additionalProperties": false,
-        "description": "`POST /api/replies` and the `deliver_reply` payload; the body is capped at 8,000 characters (A.9).",
+        "description": "`POST /api/replies` and the `deliver_reply` payload; the body is capped at `MAX_BODY_CHARACTERS` (A.9).",
         "properties": {
           "body": {
             "maxLength": 8000,

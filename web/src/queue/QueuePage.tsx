@@ -1,4 +1,4 @@
-// ABOUTME: The queue page: the mode label, the start control, the one-sentence run summary and one table per queue group.
+// ABOUTME: The queue page: the mode label, the start and fixture-reply controls, the one-sentence run summary and one table per queue group.
 // ABOUTME: Rows keep the order the API returns; the page groups them under headings and never re-sorts.
 import type { components } from '@/api/types'
 import { Badge } from '@/components/ui/badge'
@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { startRun } from '@/api/client'
+import { deliverFixtureReplies, startRun } from '@/api/client'
 import { ActionButton } from '@/components/ActionButton'
 import { MISSING } from '@/format'
 import {
@@ -51,14 +51,24 @@ export function QueuePage({ run, rows, selectedLeadId, onSelect, onChange }: Pro
           <Badge variant="outline">{`Mode: ${run.mode}`}</Badge>
           <span>{run.run_id === null ? 'No run started' : `Run ${run.run_id}`}</span>
         </p>
-        <ActionButton
-          label="Start morning run"
-          act={async () => {
-            await startRun()
-            return null
-          }}
-          onDone={onChange}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <ActionButton
+            label="Start morning run"
+            act={async () => {
+              await startRun()
+              return null
+            }}
+            onDone={onChange}
+          />
+          <ActionButton
+            label="Deliver fixture replies"
+            act={async () => {
+              const { replies } = await deliverFixtureReplies()
+              return replies.find((reply) => !reply.accepted)?.reason ?? null
+            }}
+            onDone={onChange}
+          />
+        </div>
         <p className="text-base">{summarySentence(run.summary)}</p>
       </header>
       {GROUP_ORDER.map((group) => {

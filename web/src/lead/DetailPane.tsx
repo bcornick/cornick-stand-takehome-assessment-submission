@@ -1,6 +1,6 @@
-// ABOUTME: The lead detail pane: what the lead waits on with the Approve button of a waiting draft, its facts with source tags, its plan, its messages, and the fixture-reply control.
+// ABOUTME: The lead detail pane: what the lead waits on with the Approve button of a waiting draft, its facts with source tags, its plan, and its messages.
 // ABOUTME: Shows one LeadDetail; the plan is the internal view, so rule ids appear here and never in a message.
-import { approve, deliverFixtureReplies } from '@/api/client'
+import { approve } from '@/api/client'
 import type { components } from '@/api/types'
 import { ActionButton } from '@/components/ActionButton'
 import { Badge } from '@/components/ui/badge'
@@ -44,14 +44,6 @@ export function DetailPane({ lead, onChange }: Props) {
       </Section>
       <Section title="Messages">
         <Drafts drafts={lead.drafts} />
-        <ActionButton
-          label="Deliver fixture replies"
-          act={async () => {
-            const { replies } = await deliverFixtureReplies()
-            return replies.find((reply) => !reply.accepted)?.reason ?? null
-          }}
-          onDone={onChange}
-        />
       </Section>
       <Section title="Plan">
         {lead.plan === null ? <Empty>Not triaged yet.</Empty> : <PlanView plan={lead.plan} />}

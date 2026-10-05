@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import anthropic
+from anthropic.types import ToolParam
 
 from uwh.runtime.modes import exchange_for_mode
 from uwh.runtime.recordings import Exchange, RecordingKey, input_hash, prompt_version
@@ -29,7 +30,7 @@ class ForcedToolCall:
     tool_schema: dict[str, Any]
 
     @property
-    def tool(self) -> dict[str, Any]:
+    def tool(self) -> ToolParam:
         """The tool as the endpoint receives it."""
         return {
             "name": self.tool_name,

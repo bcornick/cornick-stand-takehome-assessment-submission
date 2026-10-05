@@ -615,6 +615,8 @@ export interface components {
         };
         /** NotEvaluatedNote */
         NotEvaluatedNote: {
+            /** Producer Text */
+            producer_text: string;
             /** Ref */
             ref: string;
             /** Text */
@@ -826,7 +828,7 @@ export interface components {
         };
         /**
          * ReplyRequest
-         * @description `POST /api/replies` and the `deliver_reply` payload; the body is capped at 8,000 characters (A.9).
+         * @description `POST /api/replies` and the `deliver_reply` payload; the body is capped at `MAX_BODY_CHARACTERS` (A.9).
          */
         ReplyRequest: {
             /** Body */
