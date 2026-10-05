@@ -273,3 +273,25 @@ Left for later stages: the fingerprint must be taken over the raw `fields` as th
 **Friction:** the Stop hook ran `make check` in one checkout while a builder was mid-task in it, twice; both reds were the builder's failing-test-first step. Two checkouts running `make check` at once exposed the shared-temp-directory test.
 
 **Next:** Brett's row review (task 4) and the open points above, then tasks 5 to 7 and 12 by a fresh label author on the lead's own model.
+
+## Stage 03: Brett's second set of answers applied; the row review is still open (stage-03-labels-t0, 9854f2a)
+
+**Done:** Brett answered the open points of the entry above; the architecture carries them at 94d374c and the data at cc989ce and 9854f2a.
+- §9.7 states the boundary test once: where the board states both sides of a line and leaves the exact value in neither, the exact value takes the stricter band; where it states one side only, the literal reading holds. I18 (Roof, bands "> .15 < .50" and "> .50"): exactly 0.50 takes the high band. I24 (Plumbing, "older than" and "newer than"): exactly 30 years and exactly 10 years are older. I30 (Electrical, "less than 120 amp" only): the ruling stands as a literal reading. I24 and I30 are off the lenient list. I39 and I50 agree with the test as they stood.
+- `wording.yaml` holds a `combined_confirmation` that replaces the two `dwelling_use_type` validators' confirmations when both fire (A.7); no merge rule in §10.2.
+- `kt_present_and_where` is filed under I27. No row is added for the pre-1950 default.
+- The reviewer checked I22, I29, I43 and I48 against their playbook pages: all four match and each needs its `applied_in`; I32 is the row the `pool_security` test cites. The `applied_in` notes of I22, I29 and I43 no longer credit the board with what it does not draw. I03, I42 and I52 can each be cited by one test and carry none.
+- S03-A2 rerun against the leadgen container after the fixture change: 3 passed.
+
+**Not done:** task 4, Brett's row review. Tasks 5 to 7 and 12 wait on it.
+
+**Checks:** run by the lead. `make check` clean at cc989ce: 809 fast Python tests, both drift checks, `tsc -b`, 51 web tests; the builder reported exit 0 at 9854f2a.
+
+**Open with Brett, for the row review:**
+1. I48 reads leniently and is not on the lenient list: an unfenced inground pool in a gated community gets a recommended cover where "Fenced = No" would require one. Add it to the list, or state in its rationale that "Fenced = No" is for fenced pools without a gate or cover (I32); its "unreachable" claim holds only given I32.
+2. I43's ruling skips the fittings question for a home with no dry hydrant and does not say so.
+3. I22's rationale does not mention the registry's siding class A as the other reading of "Class A"; I42's ruling does not say None and Local Alarm get the requirement.
+4. Other validator pairs list a shared field. Read from the templates, only the pair the combined template covers can ask about one field twice in a message, except the two roof-year validators when the roof year is in the future and before `year_built`. Not tested; no template added.
+5. For stage 6: citing I52 through `roof_age_years` adds a `p_f` dependency to Class A roofs, so a blocked `p_f` could hold a packet for an advisory. Whether a seed-42 lead hits it is unchecked.
+
+**Next:** Brett's row review, then tasks 5 to 7 and 12 by a fresh label author on the lead's own model.
