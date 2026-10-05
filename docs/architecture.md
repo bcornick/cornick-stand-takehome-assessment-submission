@@ -148,7 +148,7 @@ flowchart LR
 
 ```
 compose.yaml              one launch file; services and profiles are listed in section 14
-.env.example              the six variables listed in section 14
+.env.example              the seven variables listed in section 14
 sim-harness/              Stand's code, unmodified
 src/uwh/
   runtime/                events, facts, workflow, waits, commands, policy
@@ -171,7 +171,7 @@ docs/                     this file, critique, plan, progress, brief, playbook
 
 - **Backend:** Python 3.12, `uv` with a lockfile, FastAPI (server-sent events built in), Pydantic, SQLite, pytest, ruff, mypy.
 - **Frontend:** pnpm, Vite, React, TypeScript, shadcn/ui, built inside the container to static files that FastAPI serves.
-- **Models:** Claude through the Anthropic SDK with structured outputs (`messages.parse()`). Forced `tool_choice` is not used; current Claude models reject it. Jev (`jev-1.13.0`, TypeSafe SDK) answers reply classification first when its key is set, with Claude as the fallback.
+- **Models:** DeepSeek V4.1 Flash (`deepseek-flash`), an open-weights model, through DeepSeek's Anthropic-format endpoint (`https://api.deepseek.com/anthropic`) with the Anthropic SDK. `MODEL_API_KEY`, `MODEL_BASE_URL` and `MODEL_ID` configure it. Structured output is a forced tool call: one tool whose input schema is the output model's JSON schema, `tool_choice` naming that tool, and the tool input validated with Pydantic. `messages.parse()` is not used; the endpoint ignores its output format. Jev (`jev-1.13.0`, TypeSafe SDK) answers reply classification first when its key is set, with the language model as the fallback.
 - **Stand's harness** keeps its own Python 3.11 images.
 
 ## 7. Runtime
@@ -291,7 +291,7 @@ Rules:
   - `unavailable` (no key, provider down): same as `failing`.
 - The eval runner dispatches every skill whatever its stored status, so a failing skill can be re-evaluated. A test hook in `FaultPlan` can force a status for the Skill gating grader.
 - `unavailable` applies in live mode with no key. Replay mode needs no key and runs model skills from recordings.
-- A release check fails when any skill is `untested` or `failing` at the tagged commit. The Jev adapter is part of `read_reply`; with no Jev key it is inactive and `read_reply` is evaluated on its Claude path.
+- A release check fails when any skill is `untested` or `failing` at the tagged commit. The Jev adapter is part of `read_reply`; with no Jev key it is inactive and `read_reply` is evaluated on its language-model path.
 - **What makes this a harness:** a skill added with a manifest, cases and a threshold is dispatched, permission-checked and gated by its evals with no runtime change.
 
 | Skill | Model | Fires when | Fallback |
@@ -301,7 +301,7 @@ Rules:
 | `evaluate_playbook` | no | after resolution | none |
 | `plan_asks` | no | after evaluation | none |
 | `render_message` | no | an ask plan, quote or decline needs a message | none |
-| `read_reply` | Claude for extraction; Jev first for classification when its key is set, Claude as fallback | a reply is delivered | reply goes to the underwriter unread |
+| `read_reply` | Language model for extraction; Jev first for classification when its key is set, language model as fallback | a reply is delivered | reply goes to the underwriter unread |
 | `build_quote_packet` | no | no open blockers and no asks remain | none |
 
 The chat panel is governed the same way: its tool list, prompt and eval cases live in `src/uwh/chat/` with a manifest.
@@ -625,7 +625,7 @@ Then code:
 
 Reply text is untrusted. It is length-capped, passed to the model as data, and cannot approve an action or change a setting. Accepted facts, round closure and re-evaluation commit in one transaction.
 
-**Classification cascade.** With a Jev key (`TYPESAFE_API_KEY`), Jev answers the classification as a choice question. The interface computes confidence from the returned probabilities, and when it is below the per-question threshold (default 0.7) Claude answers instead. Without a Jev key Claude answers every time, so the system works fully on Claude alone. Brett and Stand's reviewers both run with a Jev key; the Claude-only path is the fallback.
+**Classification cascade.** With a Jev key (`TYPESAFE_API_KEY`), Jev answers the classification as a choice question. The interface computes confidence from the returned probabilities, and when it is below the per-question threshold (default 0.7) the language model answers instead. Without a Jev key the language model answers every time, so the system works fully without Jev. Brett and Stand's reviewers both run with a Jev key; the path without Jev is the fallback.
 
 ### 10.5 Quote packet and decline notice
 
@@ -736,7 +736,7 @@ A reference run passes everything. Each broken variant must be failed by its nam
 
 ### 13.6 Model-driven triage comparison (tier 2)
 
-One experiment answers "where is the agent?" with a measurement: the ten seed-42 leads go through a tool-calling Claude loop that is given the registry and asked to produce the ask list, scored by the Asks and Forbidden asks graders over five repeats. The result is one row in the results log beside the rules core's row. It is evidence for keeping the decision path in code, or against it.
+One experiment answers "where is the agent?" with a measurement: the ten seed-42 leads go through a tool-calling model loop that is given the registry and asked to produce the ask list, scored by the Asks and Forbidden asks graders over five repeats. The result is one row in the results log beside the rules core's row. It is evidence for keeping the decision path in code, or against it.
 
 ## 14. Dependencies and packaging
 
@@ -754,7 +754,7 @@ One experiment answers "where is the agent?" with a measurement: the ten seed-42
 - Inside the network the app calls `http://leadgen:8080` and `http://mailbox:8080`.
 - "Start morning run" recreates every app table except `settings`, resets the interactive mailbox and posts the queue for `SEED` (default 42), count 10. Settings, including the emergency stop and any demotion, persist across runs. A start is refused while a run is still processing. Every commit and dispatch checks that its run id is the current one, so work left over from a replaced run writes nothing.
 - Replay mode uses its own app database and a `replay` run id; it writes to the interactive mailbox after a reset.
-- `.env` must exist: the README's first step is `cp .env.example .env`. It is passed into the app and eval services explicitly, along with `LEADGEN_URL` and `MAILBOX_URL` (defaults `http://leadgen:8080` and `http://mailbox:8080`; the eval overrides them). `.env.example` documents `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` (default `claude-sonnet-5-5`), `TYPESAFE_API_KEY` (optional), `RUN_MODE`, `SEED`, `DEBUG`.
+- `.env` must exist: the README's first step is `cp .env.example .env`. It is passed into the app and eval services explicitly, along with `LEADGEN_URL` and `MAILBOX_URL` (defaults `http://leadgen:8080` and `http://mailbox:8080`; the eval overrides them). `.env.example` documents `MODEL_API_KEY` (a DeepSeek key), `MODEL_BASE_URL` (default `https://api.deepseek.com/anthropic`), `MODEL_ID` (default `deepseek-flash`), `TYPESAFE_API_KEY` (optional), `RUN_MODE`, `SEED`, `DEBUG`.
 - `.gitattributes` sets `eol=lf`. The frontend builds inside the container. Images build for linux/amd64 and linux/arm64.
 - Stage 13 runs the compose file on macOS (arm64), on an amd64 Linux host, and on Windows with WSL2, and records each result in the README. A platform that was not run is stated as not run.
 - Requires Docker Compose 2.20 or later.
@@ -791,7 +791,7 @@ Dispositions of `docs/critique.md` findings.
 | C16 reply confirming a conflict | Accepted. | 7.3 rule 6 |
 | C17 roof age unreachable | Accepted as an advisory row and a question for Stand. | 9.7 I52 |
 | C18 SDK claims, model id | Accepted. | 14 |
-| C19 cut Jev | Declined by Brett's decision. Jev is built in tier 2 and is not cut. Brett and Stand's reviewers run with a Jev key; Claude alone is the fallback. | 4.1, 10.4 |
+| C19 cut Jev | Declined by Brett's decision. Jev is built in tier 2 and is not cut. Brett and Stand's reviewers run with a Jev key; the language model alone is the fallback. | 4.1, 10.4 |
 | C20 small inaccuracies | Accepted. | 1, 2.2, 14 |
 | C21 service-level source | Accepted. Labelled as an assumed service level with its source. | 11 |
 | C22 knob-and-tube question | Accepted. | 9.3, 9.7 I51 |
@@ -979,13 +979,13 @@ class ReplyReading(BaseModel):
     candidates: list[Candidate]
 ```
 
-Reply bodies are capped at 8,000 characters. The model id comes from `ANTHROPIC_MODEL`. The prompt lives in `src/uwh/skills/read_reply/prompt.md`.
+Reply bodies are capped at 8,000 characters. The model id comes from `MODEL_ID`. The prompt lives in `src/uwh/skills/read_reply/prompt.md`.
 
 ### A.10 Fixed values
 
 - Lead concurrency: 4.
 - Skill pass threshold: 1.0 unless a manifest states another value with its reason.
-- `read_reply` sends no sampling parameters. Stage 1 confirms which parameters `ANTHROPIC_MODEL` accepts. A `refusal` stop reason maps to the skill's typed abstention.
+- `read_reply` sends `temperature` 0 and a forced tool choice. A tool input that fails validation repeats the call once; a second failure, or a `refusal` stop reason, maps to the skill's typed abstention. Stage 1 confirms with DeepSeek's documentation and one live call that `MODEL_ID` honours both.
 - Rounds before the lead goes to the underwriter: 2.
 - Jev confidence threshold: 0.7 per question, in the skill manifest.
 - Reply-reading repeats in evals: 3.

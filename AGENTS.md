@@ -73,7 +73,7 @@ Testing rules:
 
 - Tests assert real behaviour. Never write a test whose assertion is satisfied by a mock; if you find one, stop and tell Brett.
 - No mocks in end-to-end or integration tests. They run against the real leadgen and mailbox containers.
-- Model calls in tests are served from `recordings/`, never from a hand-written response. The plan names the few tasks and acceptance checks that make a live call, to record an exchange or to rehearse; those need `ANTHROPIC_API_KEY`.
+- Model calls in tests are served from `recordings/`, never from a hand-written response. The plan names the few tasks and acceptance checks that make a live call, to record an exchange or to rehearse; those need `MODEL_API_KEY`.
 - Output is pristine. An expected error is captured and asserted.
 - A fixture must be able to separate the right answer from the wrong one. Check that a deliberately wrong implementation fails the test.
 - Tiers: fast (under 5 seconds, in `make check`), `@pytest.mark.slow`, `@pytest.mark.integration` (containers), eval (the eval runner).

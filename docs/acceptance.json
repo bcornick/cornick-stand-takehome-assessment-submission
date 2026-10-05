@@ -58,16 +58,16 @@
   {
     "id": "S01-A9",
     "stage": 1,
-    "description": "Tier 0. `.env.example` documents the six variables and the default model. Expect: `6`, then exit 0.",
-    "command": "grep -cE '^(ANTHROPIC_API_KEY|ANTHROPIC_MODEL|TYPESAFE_API_KEY|RUN_MODE|SEED|DEBUG)=' .env.example && grep -q '^ANTHROPIC_MODEL=claude-sonnet-5-5$' .env.example",
-    "passes": true
+    "description": "Tier 0. `.env.example` documents the seven variables, the default model and its endpoint. Expect: `7`, then exit 0.",
+    "command": "grep -cE '^(MODEL_API_KEY|MODEL_BASE_URL|MODEL_ID|TYPESAFE_API_KEY|RUN_MODE|SEED|DEBUG)=' .env.example && grep -q '^MODEL_ID=deepseek-flash$' .env.example && grep -q '^MODEL_BASE_URL=https://api.deepseek.com/anthropic$' .env.example",
+    "passes": false
   },
   {
     "id": "S01-A10",
     "stage": 1,
-    "description": "Tier 0. The Anthropic SDK and `httpx2` versions are pinned, and the SDK check, the sampling-parameter check for `ANTHROPIC_MODEL` and the `TestClient` check are recorded. Expect: `2`, then three numbers, each at least 1.",
-    "command": "grep -A1 -E '^name = \"(anthropic|httpx2)\"$' uv.lock | grep -c '^version = ' && grep -c 'messages.parse' docs/progress.md && grep -cE 'Sampling parameters accepted by claude-sonnet-5-5: .+' docs/progress.md && grep -c 'httpx2.Client' docs/progress.md",
-    "passes": true
+    "description": "Tier 0. The Anthropic SDK and `httpx2` versions are pinned, and the live forced-tool call, the sampling-parameter check for `MODEL_ID` and the `TestClient` check are recorded. Expect: `2`, then three numbers, each at least 1.",
+    "command": "grep -A1 -E '^name = \"(anthropic|httpx2)\"$' uv.lock | grep -c '^version = ' && grep -cE 'Forced tool call on deepseek-flash: .+' docs/progress.md && grep -cE 'Sampling parameters accepted by deepseek-flash: .+' docs/progress.md && grep -c 'httpx2.Client' docs/progress.md",
+    "passes": false
   },
   {
     "id": "S01-A11",
@@ -394,7 +394,7 @@
   {
     "id": "S06-A6",
     "stage": 6,
-    "description": "Tier 1. All twelve graphs load, no page is listed as not encoded, and every case passes. Needs `ANTHROPIC_API_KEY` in `.env`: the `cases` suite runs the `read_reply` cases once that skill is registered. Expect: exit 0.",
+    "description": "Tier 1. All twelve graphs load, no page is listed as not encoded, and every case passes. Needs `MODEL_API_KEY` in `.env`: the `cases` suite runs the `read_reply` cases once that skill is registered. Expect: exit 0.",
     "command": "test \"$(ls src/uwh/rules/data/graphs/*.yaml | grep -vc _not_encoded)\" -eq 12 && uv run python -c \"import yaml; d = yaml.safe_load(open('src/uwh/rules/data/graphs/_not_encoded.yaml')) or {}; raise SystemExit(len(d.get('pages') or []))\" && make eval ARGS='--suite cases' && tail -1 evals/results.jsonl | jq -e '.skill_results.evaluate_playbook.cases_total > 0 and all(.skill_results[]; .passed == true)'",
     "passes": false
   },
@@ -555,7 +555,7 @@
   {
     "id": "S08-A11",
     "stage": 8,
-    "description": "Tier 1. The variant that accepts an approval without checking its hash is caught by Approval binding on the `replies` suite's dedicated run. Needs `ANTHROPIC_API_KEY` in `.env`. Expect: exit 0.",
+    "description": "Tier 1. The variant that accepts an approval without checking its hash is caught by Approval binding on the `replies` suite's dedicated run. Needs `MODEL_API_KEY` in `.env`. Expect: exit 0.",
     "command": "make eval ARGS='--control stale_approval' && tail -1 evals/results.jsonl | jq -e '.scores.approval_binding.passed == false'",
     "passes": false
   },
@@ -618,7 +618,7 @@
   {
     "id": "S09-A2",
     "stage": 9,
-    "description": "Tier 0. Lead 008 reaches a sent quote packet through the running app in record mode, and the app is back in live mode afterwards. Needs `ANTHROPIC_API_KEY` in `.env`. Expect: the record-mode tests pass, then `true`.",
+    "description": "Tier 0. Lead 008 reaches a sent quote packet through the running app in record mode, and the app is back in live mode afterwards. Needs `MODEL_API_KEY` in `.env`. Expect: the record-mode tests pass, then `true`.",
     "command": "make test-record && curl -s http://localhost:8000/api/run | jq -e '.mode == \"live\"'",
     "passes": false
   },
@@ -639,21 +639,21 @@
   {
     "id": "S09-A5",
     "stage": 9,
-    "description": "Tier 0. An instruction-bearing reply changes nothing. Needs `ANTHROPIC_API_KEY` in `.env`: the live app reads the reply. Expect: all pass.",
+    "description": "Tier 0. An instruction-bearing reply changes nothing. Needs `MODEL_API_KEY` in `.env`: the live app reads the reply. Expect: all pass.",
     "command": "uv run pytest -m integration tests/integration/test_reply_safety.py",
     "passes": false
   },
   {
     "id": "S09-A6",
     "stage": 9,
-    "description": "Tier 0. The fixture-reply control exercises `read_reply` on several leads. Needs `ANTHROPIC_API_KEY` in `.env`. Expect: `1`.",
+    "description": "Tier 0. The fixture-reply control exercises `read_reply` on several leads. Needs `MODEL_API_KEY` in `.env`. Expect: `1`.",
     "command": "curl -s -X POST 'http://localhost:8000/api/run/start?wait=true' >/dev/null && curl -s -X POST http://localhost:8000/api/replies/fixtures >/dev/null && echo \"SELECT count(DISTINCT lead_id) >= 2 FROM events WHERE type = 'reply_read';\" | docker compose exec -T app sh -c 'sqlite3 \"$UWH_DB\"'",
     "passes": false
   },
   {
     "id": "S09-A7",
     "stage": 9,
-    "description": "Tier 0. The reply suite passes Reply reading, with three agreeing live repeats and no critical error. Needs `ANTHROPIC_API_KEY` in `.env`. Expect: exit 0.",
+    "description": "Tier 0. The reply suite passes Reply reading, with three agreeing live repeats and no critical error. Needs `MODEL_API_KEY` in `.env`. Expect: exit 0.",
     "command": "make eval ARGS='--suite replies' && tail -1 evals/results.jsonl | jq -e '.scores.reply_reading.passed == true and .scores.reply_reading.repeat_agreement == \"passed\" and .critical_errors == []'",
     "passes": false
   },
@@ -667,7 +667,7 @@
   {
     "id": "S09-A9",
     "stage": 9,
-    "description": "Tier 1. A `read_reply` forced to `failing` hands the reply to the underwriter and the Skill gating grader passes. Needs `ANTHROPIC_API_KEY` in `.env`. Expect: exit 0.",
+    "description": "Tier 1. A `read_reply` forced to `failing` hands the reply to the underwriter and the Skill gating grader passes. Needs `MODEL_API_KEY` in `.env`. Expect: exit 0.",
     "command": "make eval ARGS='--suite replies' && tail -1 evals/results.jsonl | jq -e '.scores.skill_gating.passed == true'",
     "passes": false
   },
@@ -744,7 +744,7 @@
   {
     "id": "S11-A4",
     "stage": 11,
-    "description": "Tier 1. The chat suite passes. Needs `ANTHROPIC_API_KEY` in `.env`. Expect: exit 0.",
+    "description": "Tier 1. The chat suite passes. Needs `MODEL_API_KEY` in `.env`. Expect: exit 0.",
     "command": "make eval ARGS='--suite chat'",
     "passes": false
   },
@@ -814,7 +814,7 @@
   {
     "id": "S13-A1",
     "stage": 13,
-    "description": "Tier 0. The reference run passes every grader it scores with no critical error, and every `skill_results` entry passes. Needs `ANTHROPIC_API_KEY` in `.env`: `all` runs the reply suite and the `read_reply` cases. Expect: exit 0.",
+    "description": "Tier 0. The reference run passes every grader it scores with no critical error, and every `skill_results` entry passes. Needs `MODEL_API_KEY` in `.env`: `all` runs the reply suite and the `read_reply` cases. Expect: exit 0.",
     "command": "make eval ARGS='--suite all'",
     "passes": false
   },
@@ -877,7 +877,7 @@
   {
     "id": "S13-A10",
     "stage": 13,
-    "description": "Tier 1. In the tier-1 pass, all eight controls are caught. Needs `ANTHROPIC_API_KEY` in `.env`: the control that accepts an approval without checking its hash runs the `replies` suite. Expect: exit 0.",
+    "description": "Tier 1. In the tier-1 pass, all eight controls are caught. Needs `MODEL_API_KEY` in `.env`: the control that accepts an approval without checking its hash runs the `replies` suite. Expect: exit 0.",
     "command": "make eval ARGS='--controls all'; tail -1 evals/results.jsonl | jq -e '(.controls | length) == 8 and all(.controls[]; .caught == true)'",
     "passes": false
   }
