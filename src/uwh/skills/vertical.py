@@ -1,4 +1,4 @@
-# ABOUTME: The tables built on the underwriting names: terminal statuses, status transitions, blocker priority, command classes, persisting review causes, the confirmation-only class and the reference morning.
+# ABOUTME: The tables built on the underwriting names: terminal statuses, status transitions, blocker priority, command classes, persisting review causes, the rules for a servable blocker, the confirmation-only class and the reference morning.
 # ABOUTME: Each table is typed with a Literal value set, those of uwh.runtime.event_types, so a name outside a set fails type checking.
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -6,7 +6,9 @@ from typing import get_args
 
 from uwh.runtime.event_types import (
     Actor,
+    ApprovalItemKind,
     AutonomyLevel,
+    BlockerDetail,
     BlockerKind,
     RequestKind,
     ReviewCause,
@@ -26,6 +28,8 @@ TRANSITIONS: tuple[tuple[Status, Status], ...] = (
     ("in_progress", "in_progress"),
     ("in_progress", "quote_sent"),
     ("in_progress", "declined"),
+    ("received", "declined"),
+    ("triaged", "declined"),
 )
 
 
@@ -64,12 +68,65 @@ COMMAND_CLASSES = (
     CommandClass("propose_command", "auto", False, ("assistant", "mcp_client")),
 )
 
+
+def command_class(name: str) -> CommandClass | None:
+    """The declared command class of that name, or None when no class has it."""
+    return next((c for c in COMMAND_CLASSES if c.name == name), None)
+
+
 # The review causes that persist (A.11's two review rows). An event raised every other cause:
 # `approve` acknowledges it (7.3 rule 9, 7.1, 10.4 step 5, A.3, 7.4). A persistent cause is
 # refused until it is removed.
 PERSISTING_REVIEW_CAUSES: frozenset[ReviewCause] = frozenset(
     {"round_limit", "identity_score_missing", "identity_score_unsupported"}
 )
+
+# A.11: the approvals item kinds of an `underwriter_review` blocker.
+_REVIEW_ITEM_KINDS: tuple[ApprovalItemKind, ...] = (
+    "draft",
+    "observation",
+    "no_contact_route",
+    "review",
+)
+
+# 7.4: a dispatch the stop or a class set to `off` refused leaves its draft in review.
+HELD_DRAFT_CAUSES: tuple[ReviewCause, ...] = ("draft_held_by_stop", "draft_held_class_off")
+
+
+def refuse_unservable_blocker(kind: BlockerKind, detail: BlockerDetail) -> None:
+    """Raise ValueError for a blocker the lead detail view could not serve (A.11): the item kind, cause,
+    intent, observation and choices that each kind of blocker carries. The one rule for opening a
+    blocker and for serving it."""
+    item_kind = detail.item_kind
+    if kind == "underwriter_review":
+        if item_kind not in _REVIEW_ITEM_KINDS:
+            raise ValueError(f"an underwriter_review item_kind is one of {_REVIEW_ITEM_KINDS}")
+    elif kind == "delivery_unknown":
+        if item_kind != "delivery_unknown":
+            raise ValueError("a delivery_unknown blocker has the item_kind delivery_unknown")
+    elif item_kind is not None:
+        raise ValueError(f"a {kind} blocker has no item_kind")
+    if item_kind == "draft" and detail.intent_id is None:
+        raise ValueError("a draft review names its draft: intent_id")
+    if item_kind == "observation" and detail.observation_id is None:
+        raise ValueError("an observation item names its observation: observation_id")
+    if detail.cause_persists and item_kind != "review":
+        raise ValueError("only a review holds a persistent cause: cause_persists")
+    if item_kind == "review":
+        if detail.cause is None:
+            raise ValueError("a review has a cause")
+        persists = detail.cause in PERSISTING_REVIEW_CAUSES
+        if detail.cause_persists != persists:
+            raise ValueError(f"cause_persists is {persists} for {detail.cause}")
+    elif detail.cause is not None:
+        raise ValueError("only a review has a cause")
+    if detail.cause in HELD_DRAFT_CAUSES and detail.intent_id is None:
+        raise ValueError("a held draft's review names its draft: intent_id")
+    if kind == "underwriter_question" and not detail.choice_ids:
+        raise ValueError("a question blocker names its choices: choice_ids")
+    if kind != "underwriter_question" and detail.choice_ids:
+        raise ValueError(f"a {kind} blocker has no choice_ids")
+
 
 # The class a request made only of confirmations takes. Setting it to "sensitive_request" makes an
 # underwriter see confirmations first.

@@ -1,5 +1,5 @@
-# ABOUTME: Shared test setup that loads Stand's mailbox app in process and applies the host URLs for integration tests.
-# ABOUTME: Stand's package must be imported before the standard-library module of the same name.
+# ABOUTME: Shared test setup that loads Stand's leadgen and mailbox apps in process and applies the host URLs for integration tests.
+# ABOUTME: Stand's mailbox package must be imported before the standard-library module of the same name.
 import atexit
 import os
 import shutil
@@ -25,12 +25,28 @@ sys.path.insert(0, str(ROOT / "sim-harness"))
 assert "mailbox" not in sys.modules, (
     "Stand's package must be imported before the standard-library module of the same name"
 )
+import leadgen.main as stand_leadgen  # noqa: E402
 import mailbox.main as stand_mailbox  # noqa: E402
 
+from uwh.runtime.leadgen_client import LeadgenClient  # noqa: E402
+
 assert Path(stand_mailbox.__file__).is_relative_to(ROOT / "sim-harness")
+assert Path(stand_leadgen.__file__).is_relative_to(ROOT / "sim-harness")
 
 HOST_LEADGEN_URL = "http://localhost:8081"
 HOST_MAILBOX_URL = "http://localhost:8025"
+
+
+@pytest.fixture
+def stand_leadgen_client() -> Iterator[httpx2.Client]:
+    """Stand's unmodified leadgen app served in process; an httpx2.Client."""
+    with TestClient(stand_leadgen.app, base_url="http://leadgen") as client:
+        yield client
+
+
+@pytest.fixture
+def leadgen(stand_leadgen_client: httpx2.Client) -> LeadgenClient:
+    return LeadgenClient(stand_leadgen_client)
 
 
 @pytest.fixture

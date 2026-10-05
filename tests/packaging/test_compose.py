@@ -93,6 +93,20 @@ def test_app_environment(services):
     assert env["UWH_DB"] == "/data/app-${RUN_MODE:-live}.db"
 
 
+def test_app_mounts_recordings_read_only_unless_recordings_access_is_rw(services):
+    binds = [v for v in services["app"]["volumes"] if v.startswith("./recordings:")]
+    assert binds == ["./recordings:/app/recordings:${RECORDINGS_ACCESS:-ro}"]
+
+
+def test_recordings_has_a_tracked_placeholder_so_the_mount_has_a_source():
+    assert (ROOT / "recordings" / ".gitkeep").is_file()
+
+
+def test_dockerignore_does_not_exclude_what_the_mount_needs():
+    lines = (ROOT / ".dockerignore").read_text(encoding="utf-8").splitlines()
+    assert "recordings" not in [line.strip("/") for line in lines]
+
+
 def test_app_waits_for_healthy_stand_services(services):
     depends_on = services["app"]["depends_on"]
     assert set(depends_on) == {"leadgen", "mailbox"}

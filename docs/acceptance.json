@@ -207,14 +207,14 @@
     "stage": 4,
     "description": "Tier 0. Runtime, skill-registry and API tests pass. Expect: all pass.",
     "command": "uv run pytest tests/runtime tests/skills tests/api",
-    "passes": false
+    "passes": true
   },
   {
     "id": "S04-A2",
     "stage": 4,
     "description": "Tier 0. Faults and startup reconcile against the mailbox container leave exactly one message per intent. Expect: all pass.",
     "command": "uv run pytest -m integration tests/integration/test_send_faults.py",
-    "passes": false
+    "passes": true
   },
   {
     "id": "S04-A3",
@@ -277,7 +277,7 @@
     "stage": 4,
     "description": "Tier 0. The named intent, approval and run-lifecycle cases pass. Expect: `8 passed`.",
     "command": "uv run pytest tests/runtime/test_send.py tests/runtime/test_commands.py tests/runtime/test_runs.py -k \"restart_with_pending_draft or delivery_unknown_approve_rechecks or delivery_unknown_reject_closes_unsent or stale_artifact_hash_refused or start_while_processing_refused or stale_run_writes_nothing or dispatching_committed_before_post or startup_settles_interrupted_run\"",
-    "passes": false
+    "passes": true
   },
   {
     "id": "S04-A13",

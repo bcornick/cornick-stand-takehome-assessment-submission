@@ -1,19 +1,21 @@
-# ABOUTME: A stand-in for the app's HTTP surface that serves the A.5 read routes from tests/fixtures/ui; the other routes answer 501 as the app's do.
+# ABOUTME: A stand-in for the app's HTTP surface that serves the A.5 read routes from tests/fixtures/ui; the start and command routes keep the app's handlers and the other routes answer 501.
 # ABOUTME: It is the app's own application with each read handler replaced, so paths, response models and OpenAPI are the app's; run it with --port.
 import argparse
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.routing import APIRoute
 from pydantic import TypeAdapter
 
+from uwh.api import commands, run
 from uwh.api.app import create_app
 from uwh.api.routes import router
+from uwh.api.runtime import get_runtime
 from uwh.api.views import (
     Item,
     LeadDetail,
@@ -81,6 +83,12 @@ def lead_of[T](records: dict[str, T], lead_id: str) -> T:
     return records[lead_id]
 
 
+def no_runtime() -> NoReturn:
+    """The stand-in runs no runtime, so a route that needs one answers 501 as the app's other
+    unserved routes do."""
+    raise HTTPException(status_code=501, detail="not implemented by the stand-in")
+
+
 def create_standin_app(fixtures_dir: Path = DEFAULT_FIXTURES) -> FastAPI:
     """An application that declares each of the app's routes again from the app's own route
     objects (path, methods, response model, responses), so its OpenAPI document is the app's.
@@ -123,8 +131,13 @@ def create_standin_app(fixtures_dir: Path = DEFAULT_FIXTURES) -> FastAPI:
         "/api/proposals": list_proposals,
     }
     real = create_app(Settings.load({"UWH_DB": "unused.db"}))
-    declared = [r for r in (*real.router.routes, *router.routes) if isinstance(r, APIRoute)]
+    declared = [
+        r
+        for r in (*router.routes, *run.router.routes, *commands.router.routes)
+        if isinstance(r, APIRoute)
+    ]
     standin = FastAPI(title=real.title, version=real.version)
+    standin.dependency_overrides[get_runtime] = no_runtime
     served_paths: set[str] = set()
     for route in declared:
         reads = route.methods == {"GET"} and route.path in served

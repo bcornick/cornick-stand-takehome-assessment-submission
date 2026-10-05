@@ -1,4 +1,4 @@
-# ABOUTME: Tests that the app's OpenAPI paths are the A.5 route table and that every route except GET /api/run is declared and answers 501.
+# ABOUTME: Tests that the app's OpenAPI paths are the A.5 route table and that every route that answers 501 is declared.
 # ABOUTME: The expected paths and methods are written out from A.5; /mcp is mounted outside OpenAPI and is not among them.
 from typing import Any
 
@@ -31,17 +31,10 @@ REPLY = {"lead_id": LEAD, "intent_id": "intent-1", "body": "The roof is slate."}
 
 # One valid request for every declared route that answers 501.
 DECLARED_ROUTES = [
-    ("post", "/api/run/start", None),
-    ("post", "/api/run/start?wait=true", None),
     ("get", "/api/leads", None),
     ("get", f"/api/leads/{LEAD}", None),
     ("get", f"/api/leads/{LEAD}/events", None),
     ("get", "/api/items", None),
-    (
-        "post",
-        "/api/commands",
-        {"type": "reject", "payload": {"item_id": 1, "reason": "wrong recipient"}},
-    ),
     ("post", "/api/replies", REPLY),
     ("post", "/api/replies/fixtures", None),
     ("get", "/api/settings", None),
@@ -88,10 +81,10 @@ def test_a_declared_route_answers_501_with_a_json_detail(
     assert "not implemented" in response.json()["detail"]
 
 
-def test_every_a5_route_but_run_is_covered_by_the_501_cases() -> None:
+def test_every_a5_route_that_is_not_served_is_covered_by_the_501_cases() -> None:
     covered = {url.split("?")[0] for _, url, _ in DECLARED_ROUTES}
     covered = {u.replace(LEAD, "{id}") for u in covered}
-    assert covered == set(A5_ROUTES) - {"/api/run"}
+    assert covered == set(A5_ROUTES) - {"/api/run", "/api/run/start", "/api/commands"}
 
 
 def test_run_start_declares_the_wait_flag() -> None:
@@ -112,8 +105,3 @@ def test_a_reply_body_over_8000_characters_is_refused(app_client: TestClient) ->
     response = app_client.post("/api/replies", json={**REPLY, "body": "x" * 8001})
     assert response.status_code == 422
     assert app_client.post("/api/replies", json={**REPLY, "body": "x" * 8000}).status_code == 501
-
-
-def test_a_command_the_http_surface_does_not_accept_is_refused(app_client: TestClient) -> None:
-    response = app_client.post("/api/commands", json={"type": "fetch_data", "payload": {}})
-    assert response.status_code == 422

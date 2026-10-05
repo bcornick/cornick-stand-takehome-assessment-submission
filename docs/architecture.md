@@ -176,7 +176,7 @@ docs/                     this file, critique, plan, progress, brief, playbook
 
 ## 7. Runtime
 
-This is an underwriting tool, and the runtime uses underwriting names directly: its statuses, blocker kinds, blocker owners, message kinds, item kinds, observation sources and actors are the ones this section and Appendix A give, and the ruling kinds and review causes are the ones the stage 2 contracts fix. Each of these value sets is defined once, in `src/uwh/runtime/event_types.py`, the request kinds among the message kinds and the autonomy levels included; the run mode alone is defined in `src/uwh/settings.py`, which reads it. `src/uwh/skills/vertical.py` holds what is built on those names: the status transitions and terminal statuses, the blocker priority order, the command classes, the review causes that persist, `confirmation_only_class`, the reference morning, the order of the workflow's steps and the effect of `approve` and `reject` on each item (A.11).
+This is an underwriting tool, and the runtime uses underwriting names directly: its statuses, blocker kinds, blocker owners, message kinds, item kinds, observation sources and actors are the ones this section and Appendix A give, and the ruling kinds and review causes are the ones the stage 2 contracts fix. Each of these value sets is defined once, in `src/uwh/runtime/event_types.py`, the request kinds among the message kinds and the autonomy levels included; the run mode alone is defined in `src/uwh/settings.py`, which reads it. `src/uwh/skills/vertical.py` holds what is built on those names: the status transitions and terminal statuses, the blocker priority order, the command classes, the review causes that persist, the rule for a blocker the lead detail view can serve, `confirmation_only_class`, the reference morning, the order of the workflow's steps and the effect of `approve` and `reject` on each item (A.11).
 
 ### 7.1 Lead workflow
 
@@ -186,12 +186,13 @@ A lead has a **status** and a **set of open blockers**. Statuses: `received`, `t
 - One waiting primitive: a blocker row with a kind, an owner and a resume trigger. A lead may hold several blockers at once.
 - The **primary next action** shown for a lead is its highest-priority open blocker, in the order `delivery_unknown`, `underwriter_question`, `underwriter_review`, `data`, `producer_reply`. Terminal leads have none.
 - Any accepted new fact re-evaluates the lead.
-- At startup, after intents are reconciled (section 7.5), a run left in `processing` is marked `settled`, so a new run can start. Leads keep the state they had reached.
+- A step that fails rolls back its own writes and opens a `data` blocker on the lead. A lead holds at most one open step-failure blocker, so a repeat failure opens no second one, and the blocker closes when a later pass on that lead completes.
+- At startup, after intents are reconciled (section 7.5), the pass of every lead in `received` or `triaged` that has no open blocker, or only a step-failure `data` blocker, is run again. A run left in `processing` is then marked `settled`, so a new run can start. Every other lead keeps the state it had reached.
 - With no API key in live mode, a delivered reply is recorded unread and raises an underwriter review.
 
 ### 7.2 Event log
 
-Append-only table. Each row: id, lead id, run id, event type, payload, actor, ruleset hash, prompt versions, model id and request id where a model was called, real timestamp, simulated timestamp.
+Append-only table. Each row: id, lead id, run id, event type, payload, actor, ruleset hash, prompt versions, model id and request id where a model was called, real timestamp, simulated timestamp. A command can arrive before any run exists (a setting change, the emergency stop, a refused command); its events carry the fixed run id `pre-run` and the reference morning as their simulated time, so no event has an empty run id.
 
 ### 7.3 Fact ledger
 
@@ -199,16 +200,16 @@ Two layers.
 
 - **Observations.** One row per reported value: field or catalogue question id, value, source (`submitted`, `fetched`, `derived`, `assumed`, `reply`, `underwriter`), evidence (quoted span, provider name, derivation id, interpretation row id), status (`accepted`, `pending_review`, `rejected`).
 - **Effective facts.** The selected value per field, pointing at its observation. Selection follows source authority:
-  1. An underwriter ruling outranks everything.
+  1. An underwriter ruling outranks everything. `resolve_fact` closes the open conflicts on its key, and a validator does not reopen a conflict on the same values; `resolve_fact` also rejects the open `pending_review` observations on its key, so an older reply value cannot replace the ruling.
   2. A reply value fills a missing producer-editable field directly, and replaces an `assumed` value the same way.
-  3. A reply value that differs from an existing submitted or fetched value is `pending_review` and raises an underwriter review.
+  3. A reply value that differs from an existing submitted, fetched or underwriter value is `pending_review` and raises an underwriter review; the existing value stays in force until the underwriter approves or rejects. A value that also trips a validator follows this rule and opens no conflict.
   4. A reply never sets a system-owned field.
   5. A derived fact is recomputed when its input changes.
   6. A reply that restates a value under an open conflict closes the conflict, records the reply as evidence and marks the fact confirmed. A reply that changes either field of a conflicting pair follows rule 3.
   7. A reply value that differs from an accepted value from an earlier reply is `pending_review`.
   8. A reply value that trips a validator is accepted and opens the conflict; its confirmation goes in the next request.
-  9. A reply to a round that has closed is recorded, raises an underwriter review and increments the lead revision, so a pending approval on that lead returns to review.
-  10. The underwriter settles a `pending_review` observation with `approve` (it becomes the effective fact) or `reject` (the existing value stays), and can supply or correct any fact with `resolve_fact`.
+  9. A reply to a round that has closed is recorded, raises an underwriter review and increments the lead revision, so a pending approval on that lead returns to review. Its values are recorded `pending_review` and applied to nothing; the review names the intent the reply answered, and acknowledging the review marks those values rejected. The values reach the facts only through `resolve_fact`.
+  10. The underwriter settles a `pending_review` observation raised under rule 3 or rule 7 with `approve` (it becomes the effective fact) or `reject` (the existing value stays), and can supply or correct any fact with `resolve_fact`.
 
 Derived facts and decisions record the fact ids and rule versions they used. A changed effective fact marks its dependants stale. Stale drafts and approvals return to review. A sent message is history and is never undone.
 
@@ -871,11 +872,11 @@ settings(key TEXT PRIMARY KEY, value_json TEXT)   -- autonomy levels, emergency_
 
 `run_started`, `replay_miss`, `draft_edited`, `proposal_created`, `lead_received`, `fact_observed`, `fact_selected`, `conflict_opened`, `conflict_closed`, `triage_completed`, `provider_called`, `plan_built`, `blocker_opened`, `blocker_closed`, `intent_created`, `message_sent`, `delivery_unknown`, `reply_received`, `reply_read`, `approval_recorded`, `ruling_recorded`, `command_refused`, `setting_changed`, `class_demoted`, `rule_change_applied`, `skill_fallback_used`, `model_called`, `fault_injected`.
 
-Each payload is a Pydantic model named after the type. Graders import those models. `draft_edited` carries the intent's kind after the edit (section 7.5). `provider_called` carries the field looked up and the section 9.4 provider result as one nested object, the same model the providers return. No event records the move to `dispatching` or the closing of a round. The move to `dispatching` is held in `intents.state`. Round state is held in the reply-wait blocker: a round is open while that `producer_reply` blocker is open, and it closes with `blocker_closed`.
+Each payload is a Pydantic model named after the type. Graders import those models. `draft_edited` carries the intent's kind after the edit (section 7.5). `provider_called` carries the field looked up and the section 9.4 provider result as one nested object, the same model the providers return. No event records a status change, the move to `dispatching` or the closing of a round. A lead's status is held in `leads.status`. The move to `dispatching` is held in `intents.state`. Round state is held in the reply-wait blocker: a round is open while that `producer_reply` blocker is open, and it closes with `blocker_closed`.
 
 ### A.3 Status transitions
 
-`received → triaged → in_progress → quote_sent | declined`. `in_progress` re-enters itself on re-evaluation. `quote_sent` and `declined` are terminal; a reply arriving after either is recorded and raises an underwriter review without changing the status.
+`received → triaged → in_progress → quote_sent | declined`. `received` and `triaged` also move to `declined`, so `decline_lead` ends any lead that is not terminal. `in_progress` re-enters itself on re-evaluation. `quote_sent` and `declined` are terminal; a reply arriving after either is recorded and raises an underwriter review without changing the status.
 
 ### A.4 Hashes and digests
 
@@ -1046,7 +1047,7 @@ Reply bodies are capped at 8,000 characters. The model id comes from `MODEL_ID`.
 | A review raised by an event (a late or unread reply, an off-topic or declining reply, a draft held by the stop) | acknowledges it with a reason and closes it; when a reply raised it, the round closes too. A held draft is dispatched, and its approval carries the draft's payload hash; one whose hash is missing or not current is refused. | refused; the underwriter acts through `resolve_fact`, `record_ruling` or `decline_lead` |
 | A review whose cause persists (the round limit, a missing or unsupported identity score) | refused | refused. It closes when the cause is removed: `resolve_fact` supplies the fact, or `decline_lead` ends the lead. |
 
-Every item above is an `underwriter_review` blocker, except `delivery_unknown` (its own kind) and an open choice (`underwriter_question`). Each blocker in the lead detail response carries its kind and, in its `detail`, its item kind (the `approvals.item_kind` values in A.1) and, for a review, its cause; each open choice carries its option ids. Every accepted command re-evaluates its lead in the same transaction.
+Every item above is an `underwriter_review` blocker, except `delivery_unknown` (its own kind) and an open choice (`underwriter_question`). Each blocker in the lead detail response carries its kind and, in its `detail`, its item kind (the `approvals.item_kind` values in A.1) and, for a review, its cause; each open choice carries its option ids. Every accepted command re-evaluates its lead in the same transaction. The re-evaluation builds drafts and dispatches nothing; a draft whose class runs at `auto` is dispatched after the command commits (section 7.5). When a step fails during the re-evaluation, the whole re-evaluation rolls back to its savepoint, so no part of the pass is kept, and the step-failure `data` blocker opens (section 7.1); the command's own writes commit, so an underwriter can always correct a fact.
 
 Workflow-only classes (`fetch_data` and the send classes) are submitted in process and are not accepted over HTTP.
 
