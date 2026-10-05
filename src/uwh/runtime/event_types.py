@@ -57,7 +57,9 @@ RulingKind = Literal["choice", "suppression", "decline", "withdrawal", "reopened
 class Payload(BaseModel):
     """Base of every event payload: unknown fields are an error."""
 
-    model_config = ConfigDict(extra="forbid")
+    # A defaulted field is always present in what the model serializes, so the generated client
+    # types it as present rather than optional.
+    model_config = ConfigDict(extra="forbid", json_schema_serialization_defaults_required=True)
 
 
 class RunStarted(Payload):
@@ -165,7 +167,6 @@ class BlockerDetail(Payload):
     )
     observation_id: int | None = None  # a pending observation
     choice_ids: list[str] = []  # the open choices of a question card (section 9.6)
-    missing_inputs: list[str] = []  # the input fields a blocked lookup names (section 9.4)
     text: str  # the reason shown to the underwriter (section 7.4)
 
 
@@ -274,6 +275,17 @@ class RulingRecorded(Payload):
             raise ValueError("a choice ruling needs choice_id and option")
         if self.kind == "suppression" and not self.suppressed_rule_ids:
             raise ValueError("a suppression ruling needs suppressed_rule_ids")
+        if self.kind != "suppression" and self.suppressed_rule_ids:
+            raise ValueError("only a suppression ruling holds suppressed_rule_ids")
+        if self.kind in ("suppression", "decline", "withdrawal") and (
+            self.choice_id is not None or self.option is not None
+        ):
+            raise ValueError(f"a {self.kind} ruling holds no choice_id or option")
+        if (
+            self.kind in ("choice", "suppression", "decline")
+            and self.refers_to_event_id is not None
+        ):
+            raise ValueError(f"a {self.kind} ruling refers to no event")
         if self.kind in ("withdrawal", "reopened_choice") and self.refers_to_event_id is None:
             raise ValueError(f"a {self.kind} ruling needs refers_to_event_id")
         if self.kind == "reopened_choice" and self.choice_id is None:

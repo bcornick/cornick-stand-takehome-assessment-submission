@@ -70,6 +70,16 @@
             "title": "Underwriter Decline"
           }
         },
+        "required": [
+          "effects",
+          "declines_on_every_branch",
+          "proposed_decline",
+          "underwriter_decline",
+          "undecided",
+          "open_choices",
+          "catalogue_questions",
+          "not_evaluated"
+        ],
         "title": "ActionPlan",
         "type": "object"
       },
@@ -325,14 +335,6 @@
             ],
             "title": "Item Kind"
           },
-          "missing_inputs": {
-            "default": [],
-            "items": {
-              "type": "string"
-            },
-            "title": "Missing Inputs",
-            "type": "array"
-          },
           "observation_id": {
             "anyOf": [
               {
@@ -354,7 +356,13 @@
           }
         },
         "required": [
+          "item_kind",
+          "cause",
+          "cause_persists",
           "resume_trigger",
+          "intent_id",
+          "observation_id",
+          "choice_ids",
           "text"
         ],
         "title": "BlockerDetail",
@@ -2128,7 +2136,8 @@
         "required": [
           "type",
           "rule",
-          "text"
+          "text",
+          "deadline"
         ],
         "title": "RequirementEffect",
         "type": "object"
@@ -2295,7 +2304,9 @@
           "detail",
           "type",
           "lead_id",
-          "item"
+          "item",
+          "draft",
+          "observation"
         ],
         "title": "ReviewItem",
         "type": "object"
@@ -2329,7 +2340,9 @@
           }
         },
         "required": [
-          "board_path"
+          "board_path",
+          "alternatives",
+          "choice_ids"
         ],
         "title": "RuleTrace",
         "type": "object"

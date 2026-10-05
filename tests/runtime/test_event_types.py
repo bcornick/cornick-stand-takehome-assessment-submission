@@ -6,6 +6,7 @@ from typing import get_args
 import pytest
 from pydantic import BaseModel, ValidationError
 
+from uwh.rules.models import ActionPlan, FieldTriage
 from uwh.runtime import event_types
 from uwh.runtime.event_types import (
     PAYLOAD_MODELS,
@@ -51,6 +52,17 @@ A2_NAMES = [
 # The fields each payload holds; the event row's own columns are not repeated here.
 # This is the freeze of the contract shapes reviewed at the stage 2 gate: a change detector,
 # not a behaviour test. A payload change updates this table in the same commit.
+EXPECTED_BLOCKER_DETAIL_FIELDS = {
+    "item_kind",
+    "cause",
+    "cause_persists",
+    "resume_trigger",
+    "intent_id",
+    "observation_id",
+    "choice_ids",
+    "text",
+}
+
 EXPECTED_FIELDS: dict[str, set[str]] = {
     "run_started": {"seed", "lead_count"},
     "replay_miss": {"skill", "prompt_version", "input_hash"},
@@ -169,7 +181,16 @@ SAMPLES: dict[str, dict[str, object]] = {
         "values": {"roof_replacement_year": 1990, "year_built": 2000},
         "observation_id": 9,
     },
-    "triage_completed": {"fields": {"year_built": {"value_status": "present", "depends_on": []}}},
+    "triage_completed": {
+        "fields": {
+            "year_built": {
+                "value_status": "present",
+                "requirement": "required",
+                "resolution": "none",
+                "depends_on": [],
+            }
+        }
+    },
     "provider_called": {
         "key": "protection_class",
         "status": "blocked",
@@ -179,7 +200,21 @@ SAMPLES: dict[str, dict[str, object]] = {
         "is_stub": True,
         "missing_inputs": ["zip"],
     },
-    "plan_built": {"plan": {"asks": [], "effects": [{"kind": "no_action"}]}, "plan_hash": H},
+    "plan_built": {
+        "plan": ActionPlan.model_validate(
+            {
+                "effects": [
+                    {
+                        "effect": {"type": "no_action", "rule": "R-01-1"},
+                        "trace": {"board_path": ["01:START", "01:OK"]},
+                        "committed": True,
+                    }
+                ],
+                "catalogue_questions": ["kt_extent"],
+            }
+        ).model_dump(mode="json"),
+        "plan_hash": H,
+    },
     "blocker_opened": {
         "blocker_id": 1,
         "kind": "data",
@@ -192,7 +227,6 @@ SAMPLES: dict[str, dict[str, object]] = {
             "intent_id": None,
             "observation_id": None,
             "choice_ids": [],
-            "missing_inputs": ["zip"],
             "text": "lookup down",
         },
     },
@@ -443,11 +477,73 @@ def test_a_ruling_missing_a_required_part_is_refused(overrides: dict[str, object
         RulingRecorded.model_validate({**RULING, **overrides})
 
 
+def test_a_blocker_detail_names_no_missing_inputs() -> None:
+    # Section 9.4: a blocked lookup does not raise a data blocker, so no blocker carries inputs.
+    assert set(BlockerDetail.model_fields) == EXPECTED_BLOCKER_DETAIL_FIELDS
+    with pytest.raises(ValidationError):
+        BlockerDetail.model_validate(
+            {"resume_trigger": "x", "text": "y", "missing_inputs": ["zip"]}
+        )
+
+
+def test_the_plan_and_triage_samples_follow_the_rules_models() -> None:
+    plan = SAMPLES["plan_built"]["plan"]
+    assert ActionPlan.model_validate(plan).model_dump(mode="json") == plan
+    fields = SAMPLES["triage_completed"]["fields"]
+    assert isinstance(fields, dict) and fields
+    for triage in fields.values():
+        assert FieldTriage.model_validate(triage).model_dump(mode="json") == triage
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        # suppressed_rule_ids belongs to a suppression only
+        {"kind": "choice", "suppressed_rule_ids": ["PP-3"]},
+        {"kind": "decline", "choice_id": None, "option": None, "suppressed_rule_ids": ["PP-3"]},
+        {
+            "kind": "withdrawal",
+            "choice_id": None,
+            "option": None,
+            "refers_to_event_id": 5,
+            "suppressed_rule_ids": ["PP-3"],
+        },
+        {
+            "kind": "reopened_choice",
+            "refers_to_event_id": 5,
+            "suppressed_rule_ids": ["PP-3"],
+        },
+        # choice_id and option do not belong to a suppression, a decline or a withdrawal
+        {"kind": "suppression", "suppressed_rule_ids": ["PP-3"], "choice_id": "c", "option": None},
+        {"kind": "suppression", "suppressed_rule_ids": ["PP-3"], "choice_id": None, "option": "o"},
+        {"kind": "decline", "choice_id": "c", "option": None},
+        {"kind": "decline", "choice_id": None, "option": "o"},
+        {"kind": "withdrawal", "refers_to_event_id": 5, "choice_id": "c", "option": None},
+        {"kind": "withdrawal", "refers_to_event_id": 5, "choice_id": None, "option": "o"},
+        # refers_to_event_id does not belong to a choice, a suppression or a decline
+        {"kind": "choice", "refers_to_event_id": 5},
+        {
+            "kind": "suppression",
+            "choice_id": None,
+            "option": None,
+            "suppressed_rule_ids": ["PP-3"],
+            "refers_to_event_id": 5,
+        },
+        {"kind": "decline", "choice_id": None, "option": None, "refers_to_event_id": 5},
+    ],
+)
+def test_a_ruling_carrying_a_part_its_kind_does_not_use_is_refused(
+    overrides: dict[str, object],
+) -> None:
+    with pytest.raises(ValidationError):
+        RulingRecorded.model_validate({**RULING, **overrides})
+
+
 def test_blocker_detail_needs_a_resume_trigger_and_text_and_defaults_the_rest() -> None:
     detail = BlockerDetail.model_validate({"resume_trigger": "reply_received", "text": "waiting"})
     assert detail.item_kind is None and detail.cause is None and detail.cause_persists is False
     assert detail.intent_id is None and detail.observation_id is None
-    assert detail.choice_ids == [] and detail.missing_inputs == []
+    assert detail.choice_ids == []
     for missing in ("resume_trigger", "text"):
         full = {"resume_trigger": "x", "text": "y"}
         del full[missing]

@@ -232,3 +232,13 @@ def test_recreating_every_table_but_settings_leaves_settings_rows(db: sqlite3.Co
     db.execute("INSERT INTO events (id, type) VALUES (1, 'run_started')")
     with pytest.raises(sqlite3.DatabaseError, match="append-only"):
         db.execute("DELETE FROM events WHERE id = 1")
+
+
+def test_a_generator_of_intent_kinds_constrains_every_intent_insert(tmp_path: Path) -> None:
+    kinds = (kind for kind in INTENT_KINDS)
+    db = open_store(str(tmp_path / "generator.db"), intent_kinds=kinds)
+    for kind in INTENT_KINDS:
+        db.execute("INSERT INTO intents (id, kind) VALUES (?, ?)", (f"i-{kind}", kind))
+    with pytest.raises(sqlite3.IntegrityError):
+        db.execute("INSERT INTO intents (id, kind) VALUES ('bad', 'not_a_kind')")
+    assert db.execute("SELECT COUNT(*) FROM intents").fetchone()[0] == len(INTENT_KINDS)

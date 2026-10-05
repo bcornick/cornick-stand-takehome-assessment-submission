@@ -91,7 +91,7 @@ def create_tables(
 
     Dropping `events` drops its triggers, so recreating it goes through here.
     """
-    ddl = table_ddl(intent_kinds)
+    ddl = table_ddl(tuple(intent_kinds))
     chosen = list(names)
     for name in chosen:
         db.execute(ddl[name])
@@ -102,7 +102,8 @@ def create_tables(
 
 def open_store(path: str, *, intent_kinds: Iterable[str]) -> sqlite3.Connection:
     """Open the database at `path`, creating any missing table. Existing rows are left alone."""
+    kinds = tuple(intent_kinds)  # read once: a generator would be empty at the second use
     db = sqlite3.connect(path)
-    create_tables(db, table_ddl(intent_kinds), intent_kinds=intent_kinds)
+    create_tables(db, table_ddl(kinds), intent_kinds=kinds)
     db.commit()
     return db

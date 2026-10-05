@@ -66,6 +66,26 @@ def test_command_classes() -> None:
     assert len(vertical.COMMAND_CLASSES) == len(EXPECTED_COMMAND_CLASSES)
 
 
+# A.11's two review rows, A.3 and sections 7.1, 7.3 rule 9, 7.4 and 10.4: (cause, persists).
+# A cause an event raised closes on `approve`; a persistent cause closes when it is removed.
+EXPECTED_REVIEW_CAUSES = (
+    ("late_reply", False),  # 7.3 rule 9: a reply to a closed round
+    ("unread_reply", False),  # 7.1: a reply recorded unread
+    ("off_topic_reply", False),  # A.11
+    ("declining_reply", False),  # 10.4 step 5
+    ("reply_after_terminal_status", False),  # A.3
+    ("draft_held_by_stop", False),  # 7.4: a dispatch refused by the stop
+    ("draft_held_class_off", False),  # 7.4: a dispatch refused by a class set to off
+    ("round_limit", True),  # A.11
+    ("identity_score_missing", True),  # A.11
+    ("identity_score_unsupported", True),  # A.11
+)
+
+
+def test_review_causes_are_the_ten_of_a11_with_whether_each_persists() -> None:
+    assert vertical.REVIEW_CAUSES == EXPECTED_REVIEW_CAUSES
+
+
 def test_message_kinds_are_the_intent_kinds() -> None:
     assert vertical.MESSAGE_KINDS == (
         "routine_request",

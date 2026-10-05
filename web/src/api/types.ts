@@ -288,7 +288,7 @@ export interface components {
              */
             undecided: components["schemas"]["UndecidedPage"][];
             /** Underwriter Decline */
-            underwriter_decline?: string | null;
+            underwriter_decline: string | null;
         };
         /** AdvisoryEffect */
         AdvisoryEffect: {
@@ -377,7 +377,7 @@ export interface components {
          */
         BlockerDetail: {
             /** Cause */
-            cause?: string | null;
+            cause: string | null;
             /**
              * Cause Persists
              * @default false
@@ -389,16 +389,11 @@ export interface components {
              */
             choice_ids: string[];
             /** Intent Id */
-            intent_id?: string | null;
+            intent_id: string | null;
             /** Item Kind */
-            item_kind?: ("draft" | "observation" | "delivery_unknown" | "no_contact_route" | "review") | null;
-            /**
-             * Missing Inputs
-             * @default []
-             */
-            missing_inputs: string[];
+            item_kind: ("draft" | "observation" | "delivery_unknown" | "no_contact_route" | "review") | null;
             /** Observation Id */
-            observation_id?: number | null;
+            observation_id: number | null;
             /** Resume Trigger */
             resume_trigger: string;
             /** Text */
@@ -1039,7 +1034,7 @@ export interface components {
         };
         /** RequirementEffect */
         RequirementEffect: {
-            deadline?: components["schemas"]["Deadline"] | null;
+            deadline: components["schemas"]["Deadline"] | null;
             /** Rule */
             rule: string;
             /** Text */
@@ -1077,7 +1072,7 @@ export interface components {
          */
         ReviewItem: {
             detail: components["schemas"]["BlockerDetail"];
-            draft?: components["schemas"]["DraftView"] | null;
+            draft: components["schemas"]["DraftView"] | null;
             /**
              * Item
              * @enum {string}
@@ -1094,7 +1089,7 @@ export interface components {
             kind: "delivery_unknown" | "underwriter_question" | "underwriter_review" | "data" | "producer_reply";
             /** Lead Id */
             lead_id: string;
-            observation?: components["schemas"]["FactView"] | null;
+            observation: components["schemas"]["FactView"] | null;
             /**
              * Owner
              * @enum {string}

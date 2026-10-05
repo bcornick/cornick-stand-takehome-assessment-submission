@@ -67,6 +67,22 @@ COMMAND_CLASSES = (
 # The intent kinds; each is one section 10.1 message class.
 MESSAGE_KINDS = ("routine_request", "sensitive_request", "quote_packet", "decline_notice")
 
+# What raised an `underwriter_review` item of item kind `review`, with whether the cause persists
+# (A.11's two review rows). An event raised a cause that does not persist: `approve` acknowledges it
+# (7.3 rule 9, 7.1, 10.4 step 5, A.3, 7.4). A persistent cause is refused until it is removed.
+REVIEW_CAUSES = (
+    ("late_reply", False),
+    ("unread_reply", False),
+    ("off_topic_reply", False),
+    ("declining_reply", False),
+    ("reply_after_terminal_status", False),
+    ("draft_held_by_stop", False),
+    ("draft_held_class_off", False),
+    ("round_limit", True),
+    ("identity_score_missing", True),
+    ("identity_score_unsupported", True),
+)
+
 # The class a request made only of confirmations takes. Setting it to "sensitive" makes an
 # underwriter see confirmations first.
 CONFIRMATION_ONLY_CLASS = "routine"
