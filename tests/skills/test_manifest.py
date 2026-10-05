@@ -8,7 +8,8 @@ import yaml
 
 import uwh.skills
 from uwh.skills import SKILLS
-from uwh.skills.manifest import SkillFolderError, check_skill_folder
+from uwh.skills.manifest import SkillFolderError, check_skill_folder, load_manifest
+from uwh.skills.vertical import COMMAND_CLASSES
 
 MANIFEST: dict[str, Any] = {
     "name": "demo",
@@ -86,9 +87,63 @@ def test_a_manifest_name_that_differs_from_the_folder_fails(tmp_path: Path) -> N
         check_skill_folder(build(tmp_path, {**MANIFEST, "name": "other"}))
 
 
+def test_load_manifest_reads_a_folder_that_has_no_cases(tmp_path: Path) -> None:
+    folder = build(tmp_path, skip=("cases",))
+    assert load_manifest(folder).name == "demo"
+    with pytest.raises(SkillFolderError, match="(?s)demo.*cases"):
+        check_skill_folder(folder)
+
+
+def test_load_manifest_refuses_a_missing_manifest_and_a_name_that_differs(tmp_path: Path) -> None:
+    with pytest.raises(SkillFolderError, match="(?s)demo.*manifest.yaml"):
+        load_manifest(build(tmp_path, skip=("manifest.yaml",)))
+    folder = tmp_path / "other"
+    folder.mkdir()
+    (folder / "manifest.yaml").write_text(yaml.safe_dump(MANIFEST), encoding="utf-8")
+    with pytest.raises(SkillFolderError, match="(?s)other.*name"):
+        load_manifest(folder)
+
+
 def test_an_unknown_command_class_fails(tmp_path: Path) -> None:
     folder = build(tmp_path, {**MANIFEST, "command_classes": ["launch_rocket"]})
     with pytest.raises(SkillFolderError, match="(?s)demo.*launch_rocket"):
+        check_skill_folder(folder)
+
+
+WORKFLOW_CLASSES = [c.name for c in COMMAND_CLASSES if "workflow" in c.actors]
+
+
+def test_the_classes_a_skill_may_issue_are_the_workflow_ones() -> None:
+    assert WORKFLOW_CLASSES == [
+        "fetch_data",
+        "send_routine_request",
+        "send_sensitive_request",
+        "send_quote_packet",
+        "send_decline_notice",
+    ]
+
+
+def test_a_skill_may_issue_every_workflow_class(tmp_path: Path) -> None:
+    folder = build(tmp_path, {**MANIFEST, "command_classes": WORKFLOW_CLASSES})
+    assert check_skill_folder(folder).command_classes == WORKFLOW_CLASSES
+
+
+@pytest.mark.parametrize("name", [c.name for c in COMMAND_CLASSES if "workflow" not in c.actors])
+def test_a_class_the_workflow_actor_may_not_submit_fails(tmp_path: Path, name: str) -> None:
+    folder = build(tmp_path, {**MANIFEST, "command_classes": ["fetch_data", name]})
+    with pytest.raises(SkillFolderError, match=f"(?s)demo.*{name}"):
+        check_skill_folder(folder)
+
+
+def test_a_duplicate_command_class_fails(tmp_path: Path) -> None:
+    folder = build(tmp_path, {**MANIFEST, "command_classes": ["fetch_data", "fetch_data"]})
+    with pytest.raises(SkillFolderError, match="(?s)demo.*duplicate.*fetch_data"):
+        check_skill_folder(folder)
+
+
+def test_a_threshold_of_one_with_a_reason_fails(tmp_path: Path) -> None:
+    folder = build(tmp_path, {**MANIFEST, "threshold_reason": "Not needed."})
+    with pytest.raises(SkillFolderError, match="(?s)demo.*threshold_reason"):
         check_skill_folder(folder)
 
 

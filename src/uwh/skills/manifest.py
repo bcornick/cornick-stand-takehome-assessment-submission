@@ -1,4 +1,4 @@
-# ABOUTME: The skill manifest model of section 8 and the check that a skill folder holds every part it needs.
+# ABOUTME: The skill manifest model of section 8, the loader that reads one manifest, and the check that a skill folder holds every part it needs.
 # ABOUTME: A manifest is manifest.yaml; the folder needs skill.py, a cases/ folder with a case file, and prompt.md for a model skill only.
 from pathlib import Path
 from typing import Self
@@ -29,13 +29,47 @@ class SkillManifest(StrictModel):
 
     @model_validator(mode="after")
     def _check_rules(self) -> Self:
-        known = {c.name for c in COMMAND_CLASSES}
-        unknown = [c for c in self.command_classes if c not in known]
-        if unknown:
-            raise ValueError(f"command_classes names unknown classes: {', '.join(unknown)}")
+        # A skill issues its commands as the workflow actor (7.4).
+        issuable = {c.name for c in COMMAND_CLASSES if "workflow" in c.actors}
+        refused = [c for c in self.command_classes if c not in issuable]
+        if refused:
+            raise ValueError(
+                f"command_classes names classes a skill cannot issue: {', '.join(refused)}"
+            )
+        repeated = sorted({c for c in self.command_classes if self.command_classes.count(c) > 1})
+        if repeated:
+            raise ValueError(
+                f"command_classes lists a class twice: duplicate {', '.join(repeated)}"
+            )
         if self.pass_threshold != 1.0 and not self.threshold_reason:
             raise ValueError("a pass_threshold other than 1.0 needs a threshold_reason")
+        if self.pass_threshold == 1.0 and self.threshold_reason:
+            raise ValueError("a threshold_reason accompanies a pass_threshold other than 1.0")
         return self
+
+
+def _folder_error(folder: Path, problem: str) -> SkillFolderError:
+    return SkillFolderError(f"skill folder {folder.name}: {problem}")
+
+
+def load_manifest(folder: Path) -> SkillManifest:
+    """Read and validate the manifest of the skill folder; its name must equal the folder's.
+
+    Only manifest.yaml is read, so it works on the app image, which holds no `cases/`.
+    """
+    manifest_path = folder / "manifest.yaml"
+    if not manifest_path.is_file():
+        raise _folder_error(folder, "manifest.yaml is missing")
+    raw = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+    if not isinstance(raw, dict):
+        raise _folder_error(folder, "manifest.yaml is not a mapping")
+    try:
+        manifest = SkillManifest.model_validate(raw)
+    except ValidationError as error:
+        raise _folder_error(folder, f"manifest.yaml is invalid: {error}") from error
+    if manifest.name != folder.name:
+        raise _folder_error(folder, f"manifest name {manifest.name!r} differs from the folder name")
+    return manifest
 
 
 def check_skill_folder(folder: Path) -> SkillManifest:
@@ -43,34 +77,21 @@ def check_skill_folder(folder: Path) -> SkillManifest:
 
     A case file is a `*.yaml` file directly in `cases/` whose name does not start with a dot.
     """
-
-    def fail(problem: str) -> SkillFolderError:
-        return SkillFolderError(f"skill folder {folder.name}: {problem}")
-
-    manifest_path = folder / "manifest.yaml"
-    if not manifest_path.is_file():
-        raise fail("manifest.yaml is missing")
-    raw = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
-    if not isinstance(raw, dict):
-        raise fail("manifest.yaml is not a mapping")
-    try:
-        manifest = SkillManifest.model_validate(raw)
-    except ValidationError as error:
-        raise fail(f"manifest.yaml is invalid: {error}") from error
-    if manifest.name != folder.name:
-        raise fail(f"manifest name {manifest.name!r} differs from the folder name")
+    manifest = load_manifest(folder)
     if not (folder / "skill.py").is_file():
-        raise fail("skill.py is missing")
+        raise _folder_error(folder, "skill.py is missing")
     cases = folder / "cases"
     if not cases.is_dir():
-        raise fail("cases is missing")
+        raise _folder_error(folder, "cases is missing")
     if not any(
         p.is_file() and p.suffix == ".yaml" and not p.name.startswith(".") for p in cases.iterdir()
     ):
-        raise fail("cases holds no case file (*.yaml)")
+        raise _folder_error(folder, "cases holds no case file (*.yaml)")
     has_prompt = (folder / "prompt.md").is_file()
     if manifest.model_skill and not has_prompt:
-        raise fail("prompt.md is missing for a model skill")
+        raise _folder_error(folder, "prompt.md is missing for a model skill")
     if has_prompt and not manifest.model_skill:
-        raise fail("prompt.md exists but the manifest does not declare a model skill")
+        raise _folder_error(
+            folder, "prompt.md exists but the manifest does not declare a model skill"
+        )
     return manifest
