@@ -3,7 +3,7 @@
 import sqlite3
 from collections.abc import Callable
 from dataclasses import replace
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 from pathlib import Path
 
 import httpx2
@@ -11,7 +11,7 @@ import pytest
 from fastapi import FastAPI
 from starlette.testclient import TestClient
 
-from tests.runtime.conftest import ASKER
+from tests.runtime.helpers import ASKER, RULESET, RUN_START
 from uwh.runtime.commands import CommandEnvironment, CommandResult, submit_command
 from uwh.runtime.event_types import BlockerDetail, EventType, RunStarted
 from uwh.runtime.events import EventContext, StaleRun, StoredEvent, format_timestamp, read_events
@@ -33,8 +33,6 @@ from uwh.runtime.waits import open_blocker, open_blockers
 from uwh.runtime.workflow import Step, create_lead, run_leads, run_steps
 from uwh.skills.vertical import REFERENCE_MORNING
 
-RULESET = "r" * 64
-RUN_START = datetime(2026, 10, 5, 12, 0, tzinfo=UTC)
 NOW = RUN_START + timedelta(minutes=5)
 SEED = 42
 RECIPIENT = "producer@example.com"

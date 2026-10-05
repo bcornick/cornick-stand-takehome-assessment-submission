@@ -11,8 +11,8 @@ from typing import Any, get_args
 import httpx2
 import pytest
 
-from tests.runtime.conftest import ASKER, PLAN_HASH, REVISION, RULESET
-from tests.runtime.conftest import LEAD_ID as LEAD
+from tests.runtime.helpers import ASKER, PLAN_HASH, REVISION, RULESET
+from tests.runtime.helpers import LEAD_ID as LEAD
 from uwh.runtime.commands import CommandEnvironment, _send_after_commit, submit_command
 from uwh.runtime.event_types import (
     DraftEdited,

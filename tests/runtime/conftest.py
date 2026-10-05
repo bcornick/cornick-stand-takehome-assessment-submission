@@ -1,40 +1,19 @@
 # ABOUTME: Fixtures for the sending tests: a database with one in-progress lead, Stand's mailbox in process behind a client with an unarmed fault plan, and an event context clock that advances on every call.
-# ABOUTME: The constants of that lead, the ruleset and the skill that drafts messages are defined here; the mailbox is emptied before each test, since Stand's in-process mailbox keeps one database for the whole session.
+# ABOUTME: The constants of that lead and the ruleset are in helpers.py; the mailbox is emptied before each test, since Stand's in-process mailbox keeps one database for the whole session.
 import sqlite3
 from collections.abc import Callable
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 from pathlib import Path
 
 import httpx2
 import pytest
 
+from tests.runtime.helpers import LEAD_ID, PLAN_HASH, REVISION, RULESET, RUN_START
 from uwh.runtime.events import EventContext
 from uwh.runtime.faults import FaultPlan
 from uwh.runtime.mailbox_client import MailboxClient
 from uwh.runtime.store import open_store
-from uwh.skills.manifest import SkillManifest
 from uwh.skills.vertical import REFERENCE_MORNING
-
-RUN_START = datetime(2026, 10, 5, 12, 0, tzinfo=UTC)
-RULESET = "r" * 64
-LEAD_ID = "L-1"
-PLAN_HASH = "p" * 64
-REVISION = 3
-# The skill that issues every send class.
-ASKER = SkillManifest(
-    name="asker",
-    version="1",
-    purpose="Drafts the messages a lead needs.",
-    trigger="a fact is missing or a decision is made",
-    command_classes=[
-        "send_routine_request",
-        "send_sensitive_request",
-        "send_quote_packet",
-        "send_decline_notice",
-    ],
-    fallback="none",
-    pass_threshold=1.0,
-)
 
 
 @pytest.fixture

@@ -7,8 +7,8 @@ from typing import Any
 import httpx2
 import pytest
 
-from tests.runtime.conftest import ASKER
-from tests.runtime.conftest import LEAD_ID as LEAD
+from tests.runtime.helpers import ASKER
+from tests.runtime.helpers import LEAD_ID as LEAD
 
 from uwh.runtime.event_types import EventType, FaultInjected
 from uwh.runtime.events import EventContext, read_events

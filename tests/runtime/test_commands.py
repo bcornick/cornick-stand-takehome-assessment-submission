@@ -2,14 +2,15 @@
 # ABOUTME: Each test opens a real database through open_store at a tmp_path file and reads back events, approvals and blockers; skill folders are built under tmp_path.
 import json
 import sqlite3
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import pytest
 import yaml
 from pydantic import JsonValue
 
-from tests.runtime.conftest import ASKER
+from tests.runtime.helpers import ASKER, PLAN_HASH, RULESET, RUN_START
+from tests.runtime.helpers import LEAD_ID as LEAD
 from uwh.runtime.commands import CommandEnvironment, CommandResult, submit_command
 from uwh.runtime.event_types import (
     Actor,
@@ -40,13 +41,9 @@ from uwh.runtime.waits import open_blocker, open_blockers
 from uwh.runtime.workflow import Step, create_lead
 from uwh.skills.vertical import COMMAND_CLASSES, REFERENCE_MORNING
 
-RULESET = "r" * 64
-RUN_START = datetime(2026, 10, 5, 12, 0, tzinfo=UTC)
 NOW = RUN_START + timedelta(minutes=5)
 SETUP = EventContext("run-1", "replay", "workflow", RULESET, RUN_START, REFERENCE_MORNING)
 RULES = LedgerRules()
-LEAD = "L-1"
-PLAN_HASH = "p" * 64
 ACTORS: tuple[Actor, ...] = ("workflow", "underwriter", "assistant", "mcp_client", "inbound")
 HUMAN_ONLY = [c.name for c in COMMAND_CLASSES if c.actors == ("underwriter",)]
 
