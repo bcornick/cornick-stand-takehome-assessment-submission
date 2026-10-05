@@ -1,46 +1,8 @@
 # ABOUTME: The producer catalogue: the questions and the one document request that no registry field covers.
-# ABOUTME: Section A.7 names the eleven ids; `row` is the interpretation row each comes from.
+# ABOUTME: `row` is the interpretation row each question comes from.
 
 # Answer types: yes_no, choice (with `options`), text, document (a document request, not a question).
 questions:
-  kt_extent:
-    wording: "Is the knob-and-tube wiring in part of the home only, or throughout the whole house?"
-    answer_type: choice
-    options: [isolated, whole_house]
-    row: I27
-  kt_areas:
-    wording: "Is the knob-and-tube wiring in any high draw area (kitchens, bathrooms, equipment rooms), or only in low draw areas (bedrooms, hallways, living and dining rooms)? If any high draw area has it, answer high draw."
-    answer_type: choice
-    options: [high_draw, low_draw]
-    row: I27
-  kt_present_and_where:
-    wording: "Is knob-and-tube wiring present, and if so where?"
-    answer_type: text
-    row: I27
-  tankers_bring_water:
-    wording: "Would fire tankers bring water to the property?"
-    answer_type: yes_no
-    row: I41
-  water_source_within_1000ft:
-    wording: "Is the alternative water source within 1,000 feet of the home?"
-    answer_type: yes_no
-    row: I41
-  water_source_year_round:
-    wording: "Can the water source be reached all year round?"
-    answer_type: yes_no
-    row: I41
-  dry_hydrant:
-    wording: "Does the water source have a dry hydrant?"
-    answer_type: yes_no
-    row: I41
-  county_and_calfire_fittings:
-    wording: "Does the water source have both County and Cal Fire fittings?"
-    answer_type: yes_no
-    row: I41
-  paved_roads_year_round:
-    wording: "Is the home reached by paved roads that are accessible all year?"
-    answer_type: yes_no
-    row: I41
   willing_to_mitigate:
     wording: "Is the applicant willing to mitigate greater distance?"
     answer_type: yes_no
