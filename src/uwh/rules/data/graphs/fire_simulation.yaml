@@ -1,5 +1,117 @@
-# ABOUTME: The Fire Simulation page: when it applies (I12). The page has no decision graph, so a lead it applies to is stopped with a reason.
-# ABOUTME: A graph with no root holds only the page's `applies_when`.
+# ABOUTME: The Fire Simulation page as a decision graph: a failed simulation is the underwriter's choice between a decline and legacy underwriting (I13), and legacy underwriting checks access, vegetation, Chapter 7A compliance and the distance to the neighbours.
+# ABOUTME: The board's branches that no field decides are underwriter choices (I14 to I16) or a producer question (I17); the responder turn-around box is not evaluated (I14) and the mitigation plan is an advisory (I55).
 id: fire_simulation
 page: docs/playbook/04-fire-simulation/flowchart.md
 applies_when: {field: p_f, gt: 0.50}
+root: fail
+nodes:
+  fail:
+    kind: underwriter_choice
+    choice: I13.fire_fail
+    interpretation: I13
+    board_path: ["04:ROOT", "04:FAIL"]
+    prompt: "The fire simulation fails. Decline, or consider legacy underwriting? The legacy checklist values are shown."
+    show: [p_f, road_access, vegetation_clearance, slope_angle_deg, is_7a_compliant, min_distance_to_neighbor_ft]
+    options: {decline: decline_after_fail, legacy_underwriting: legacy}
+  decline_after_fail: {kind: outcome, board_path: ["04:D_FAIL"], effects: [{type: decline, rule: FS-1}]}
+  legacy: {kind: all_of, board_path: ["04:LEGACY"], children: [map_risk, compliance_7a, distance_to_neighbors]}
+  map_risk: {kind: all_of, board_path: ["04:MAP"], children: [ingress, vegetation]}
+
+  # Check access: ingress and egress by `road_access`.
+  ingress:
+    kind: test
+    field: road_access
+    interpretation: I14
+    board_path: ["04:ACCESS", "04:INGRESS"]
+    cases:
+      - {when: {equals: Multiple Access Points}, then: access_continues}
+      - {when: {equals: Limited / Dead-end / No Turnaround}, then: limited_access}
+      - {when: {in: [Single Access Point, Unknown]}, then: access_choice}
+  access_choice:
+    kind: underwriter_choice
+    choice: I14.road_access
+    interpretation: I14
+    board_path: []
+    prompt: "The road access is a single access point or unknown. Does the home have multiple access points or limited access?"
+    show: [road_access]
+    options: {multiple: access_continues, limited: limited_access}
+  access_continues:
+    kind: outcome
+    interpretation: I55
+    board_path: ["04:MULTI", "04:CTQ_A", "04:MITIG"]
+    effects: [{type: advisory, rule: FS-2, text: "A preliminary mitigation plan will be discussed with the broker"}]
+  limited_access: {kind: outcome, board_path: ["04:LIMITED", "04:D_LIM"], effects: [{type: decline, rule: FS-3}]}
+
+  # Assess vegetation by `vegetation_clearance`.
+  vegetation:
+    kind: test
+    field: vegetation_clearance
+    interpretation: I15
+    board_path: ["04:VEG"]
+    cases:
+      - {when: {equals: Too Close}, then: heavy_vegetation}
+      - {when: {equals: Adequate}, then: moderate_or_light_vegetation}
+      - {when: {in: [Marginal, Unknown]}, then: vegetation_choice}
+  vegetation_choice:
+    kind: underwriter_choice
+    choice: I15.vegetation
+    interpretation: I15
+    board_path: []
+    prompt: "The vegetation clearance is marginal or unknown. Is the vegetation heavy, or moderate or light?"
+    show: [vegetation_clearance]
+    options: {heavy: heavy_vegetation, moderate_or_light: moderate_or_light_vegetation}
+  heavy_vegetation: {kind: all_of, board_path: ["04:HEAVY"], children: [willingness]}
+  moderate_or_light_vegetation:
+    kind: underwriter_choice
+    choice: I16.slope
+    interpretation: I16
+    board_path: ["04:MODL", "04:SLOPE"]
+    prompt: "A steep slope increases the clearance the home needs. Is the slope steep, or gentle or level?"
+    show: [slope_angle_deg]
+    options: {steep: steep_slope, gentle: gentle_slope}
+  steep_slope: {kind: all_of, board_path: ["04:STEEP"], children: [willingness]}
+  gentle_slope:
+    kind: outcome
+    interpretation: I55
+    board_path: ["04:GENTLE", "04:QUOTE", "04:MITIG"]
+    effects: [{type: advisory, rule: FS-2, text: "A preliminary mitigation plan will be discussed with the broker"}]
+
+  # Chapter 7A compliance by `is_7a_compliant`.
+  compliance_7a:
+    kind: test
+    field: is_7a_compliant
+    board_path: ["04:C7A"]
+    cases:
+      - {when: {equals: false}, then: willingness}
+      - {when: {equals: true}, then: quote_after_7a}
+  quote_after_7a:
+    kind: outcome
+    interpretation: I55
+    board_path: ["04:CTQ_B", "04:QUOTE", "04:MITIG"]
+    effects: [{type: advisory, rule: FS-2, text: "A preliminary mitigation plan will be discussed with the broker"}]
+
+  # The minimum distance to the neighbours' homes has no threshold on the board (I16).
+  distance_to_neighbors:
+    kind: underwriter_choice
+    choice: I16.distance
+    interpretation: I16
+    board_path: ["04:MIND"]
+    prompt: "Is the distance to the nearest neighbour's home adequate or too close?"
+    show: [min_distance_to_neighbor_ft]
+    options: {adequate: quote_after_7a, too_close: too_close_to_neighbors}
+  too_close_to_neighbors: {kind: outcome, board_path: ["04:CLOSE", "04:D_CLOSE"], effects: [{type: decline, rule: FS-4}]}
+
+  # The client's willingness to mitigate a greater distance is a producer question (I17).
+  willingness:
+    kind: producer_question
+    field: "q:willing_to_mitigate"
+    interpretation: I17
+    board_path: ["04:WILL"]
+    cases:
+      - {when: {equals: true}, then: quote_after_mitigation}
+      - {when: {equals: false}, then: limited_access}
+  quote_after_mitigation:
+    kind: outcome
+    interpretation: I55
+    board_path: ["04:QUOTE", "04:MITIG"]
+    effects: [{type: advisory, rule: FS-2, text: "A preliminary mitigation plan will be discussed with the broker"}]

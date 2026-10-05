@@ -1,5 +1,34 @@
-# ABOUTME: The Post & Pier page: when it applies (I23). The page has no decision graph, so a lead it applies to is stopped with a reason.
-# ABOUTME: A graph with no root holds only the page's `applies_when`.
+# ABOUTME: The Post & Pier page as a decision graph: a foundation under any part of the living area declines, and a deck-only support is judged by the year built and the deck height above grade.
+# ABOUTME: The deck height bands are the board's: at most 8 feet, over 8 and at most 12, over 12.
 id: post_and_pier
 page: docs/playbook/07-post-and-pier-foundations/flowchart.md
 applies_when: {field: foundation_type, in: [Piers, Stilts, Pilings]}
+root: supports
+nodes:
+  supports:
+    kind: test
+    field: post_pier_supports_living_area
+    board_path: ["07:ROOT"]
+    cases:
+      - {when: {equals: true}, then: living_area}
+      - {when: {equals: false}, then: decking}
+  living_area: {kind: outcome, board_path: ["07:LIVING", "07:D1"], effects: [{type: decline, rule: PP-1}]}
+  decking:
+    kind: test
+    field: year_built
+    board_path: ["07:DECK"]
+    cases:
+      - {when: {lt: 2000}, then: built_before_2000}
+      - {when: {gte: 2000}, then: deck_height}
+  built_before_2000: {kind: outcome, board_path: ["07:PRE2000", "07:D1"], effects: [{type: decline, rule: PP-2}]}
+  deck_height:
+    kind: test
+    field: deck_height_ft
+    board_path: ["07:POST2000"]
+    cases:
+      - {when: {lte: 8}, then: low_deck}
+      - {when: {gt: 8, lte: 12}, then: mid_deck}
+      - {when: {gt: 12}, then: high_deck}
+  low_deck: {kind: outcome, board_path: ["07:LOW", "07:S15"], effects: [{type: surcharge, rule: PP-3, percent: 15}]}
+  mid_deck: {kind: outcome, board_path: ["07:MID", "07:S25"], effects: [{type: surcharge, rule: PP-4, percent: 25}]}
+  high_deck: {kind: outcome, board_path: ["07:HIGH", "07:D2"], effects: [{type: decline, rule: PP-5}]}

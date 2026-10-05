@@ -86,6 +86,11 @@
       "AdvisoryEffect": {
         "additionalProperties": false,
         "properties": {
+          "internal": {
+            "default": false,
+            "title": "Internal",
+            "type": "boolean"
+          },
           "rule": {
             "title": "Rule",
             "type": "string"
@@ -103,7 +108,8 @@
         "required": [
           "type",
           "rule",
-          "text"
+          "text",
+          "internal"
         ],
         "title": "AdvisoryEffect",
         "type": "object"

@@ -1,22 +1,10 @@
 # ABOUTME: Tests the evaluate_playbook skill on lead 008's facts: the outcome of each page it reaches, the pages it does not reach, the not-evaluated notes, and the outcomes of the same pages on the values around each band.
 # ABOUTME: Lead 008's values are the captured seed-42 lead plus the fetched and derived facts its first pass adds; each variation changes only the values named.
-import json
-from pathlib import Path
-
 import pytest
 from pydantic import JsonValue
 
-from uwh.rules.models import NotBuilt
+from tests.skills.helpers import lead_008
 from uwh.skills.evaluate_playbook.skill import EvaluatePlaybookInput, run
-
-WORLD = Path(__file__).resolve().parents[2] / "src/uwh/providers/data/world-42.json"
-
-
-def lead_008(**changes: JsonValue) -> dict[str, JsonValue]:
-    fields = json.loads(WORLD.read_text(encoding="utf-8"))["leads"]["LEAD-00000042-008"]["fields"]
-    facts = {name: value for name, value in fields.items() if value is not None}
-    # What the first pass adds: the derived siding class and the fetched replacement cost.
-    return {**facts, "siding_classification": "B", "replacement_cost": 928992, **changes}
 
 
 def outcomes(**changes: JsonValue) -> dict[tuple[str, str], list[str]]:
@@ -98,22 +86,6 @@ def test_an_unknown_fire_probability_leaves_the_fire_simulation_page_undecided()
     plan = run(EvaluatePlaybookInput(facts=facts))
 
     assert ("fire_simulation", ["p_f"]) in [(u.graph, u.waits_on) for u in plan.undecided]
-
-
-@pytest.mark.parametrize(
-    "page_values",
-    [
-        {"kyc_score": 6},  # Profile
-        {"months_unoccupied": 1},  # Occupancy
-        {"p_f": 0.51},  # Fire Simulation
-        {"foundation_type": "Piers"},  # Post & Pier
-    ],
-)
-def test_a_page_that_applies_and_is_not_built_stops_the_lead_with_its_name(
-    page_values: dict[str, JsonValue],
-) -> None:
-    with pytest.raises(NotBuilt, match="graph is not built"):
-        run(EvaluatePlaybookInput(facts=lead_008(**page_values)))
 
 
 def test_a_cut_page_that_applies_is_noted_and_one_that_does_not_is_not() -> None:

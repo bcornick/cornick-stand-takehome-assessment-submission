@@ -105,6 +105,7 @@ class AdvisoryEffect(StrictModel):
     type: Literal["advisory"]
     rule: str
     text: str
+    internal: bool = False  # for the underwriter only: the quote packet leaves it out
 
 
 class ObligationEffect(StrictModel):
@@ -180,29 +181,6 @@ def _carries_alternatives(trace: RuleTrace) -> RuleTrace:
 EveryBranchTrace = Annotated[RuleTrace, AfterValidator(_carries_alternatives)]
 
 
-# Section 9.6 node results.
-class Decided(StrictModel):
-    result: Literal["decided"]
-    effects: list[Effect]
-
-
-class Undecided(StrictModel):
-    result: Literal["undecided"]
-    waits_on: list[str] = Field(min_length=1)  # fields, catalogue ids or choice ids
-    effects: list[Effect] = []  # effects of decided children of an `all_of`, which stay committed
-    possible_effects: list[
-        Effect
-    ] = []  # effects beneath an unanswered choice: possible, not committed
-
-
-class DeclinesOnEveryBranch(StrictModel):
-    result: Literal["declines_on_every_branch"]
-    trace: EveryBranchTrace
-
-
-NodeResult = Annotated[Decided | Undecided | DeclinesOnEveryBranch, Field(discriminator="result")]
-
-
 # Section 10.2.
 class AskKind(StrEnum):
     field_request = "field_request"
@@ -232,6 +210,14 @@ class PlannedEffect(StrictModel):
     effect: Effect
     trace: RuleTrace
     committed: bool  # False beneath an unanswered underwriter choice
+
+
+class Rulings(StrictModel):
+    """The underwriter's rulings in force on a lead (A.11), which the graphs read."""
+
+    choices: dict[str, str] = {}  # choice id -> the option chosen
+    suppressed_rules: list[str] = []  # the rule ids of the declines the underwriter overrode
+    decline_reason: str | None = None  # the reason of a `decline_lead` ruling
 
 
 class UndecidedPage(StrictModel):

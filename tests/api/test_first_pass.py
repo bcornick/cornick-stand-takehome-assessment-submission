@@ -79,15 +79,10 @@ def test_lead_008_has_its_plan_stored_with_the_two_pages_not_evaluated(
     assert built.payload == PlanBuilt(plan=plan.model_dump(mode="json"), plan_hash=plan_hash)
 
 
-def test_every_other_lead_ends_with_a_sent_request_or_a_stated_reason_and_no_exception(
+def test_every_lead_ends_the_first_pass_with_one_request_sent_and_the_wait_for_its_reply(
     first_pass: sqlite3.Connection, mailbox: MailboxClient
 ) -> None:
     for (lead_id,) in first_pass.execute("SELECT lead_id FROM leads ORDER BY rowid").fetchall():
-        blockers = open_blockers(first_pass, lead_id)
-        sent = mailbox.list_for_lead(lead_id)
-        (kind,) = {b.kind for b in blockers}  # one open wait each
-        if kind == "producer_reply":
-            assert len(sent) == 1, lead_id
-        else:
-            assert kind == "data" and sent == [], lead_id
-            assert "is not built" in blockers[0].detail.text, lead_id
+        (blocker,) = open_blockers(first_pass, lead_id)
+        assert blocker.kind == "producer_reply", lead_id
+        assert len(mailbox.list_for_lead(lead_id)) == 1, lead_id

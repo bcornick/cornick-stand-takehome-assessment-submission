@@ -241,6 +241,11 @@ export interface components {
         };
         /** AdvisoryEffect */
         AdvisoryEffect: {
+            /**
+             * Internal
+             * @default false
+             */
+            internal: boolean;
             /** Rule */
             rule: string;
             /** Text */

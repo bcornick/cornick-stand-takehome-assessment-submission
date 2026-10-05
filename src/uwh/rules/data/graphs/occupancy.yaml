@@ -1,5 +1,5 @@
-# ABOUTME: The Occupancy page: when it applies (I06). The page has no decision graph, so a lead it applies to is stopped with a reason.
-# ABOUTME: A graph with no root holds only the page's `applies_when`.
+# ABOUTME: The Occupancy page as a decision graph: the rental, vacant or unoccupied, and for-sale branches each apply when their I06 condition holds, and their effects combine.
+# ABOUTME: The branch of an unoccupied home reads months unoccupied against 60 days by I07 and the board's "Primary w/ Stand" by I08; the rental exceptions the board leaves open are the underwriter's choice (I09).
 id: occupancy
 page: docs/playbook/03-occupancy/flowchart.md
 applies_when:
@@ -7,3 +7,118 @@ applies_when:
     - {field: is_rental, in: [Short-Term Rentals, Long-Term Rentals]}
     - {field: months_unoccupied, gte: 1}
     - {field: listed_for_sale, equals: true}
+root: occupancy
+nodes:
+  occupancy: {kind: all_of, board_path: ["03:ROOT"], children: [rentals, unoccupied, for_sale]}
+  not_this_branch: {kind: outcome, board_path: [], effects: []}
+
+  # Rentals
+  rentals:
+    kind: test
+    field: is_rental
+    interpretation: I06
+    board_path: ["03:RENT"]
+    cases:
+      - {when: {equals: "No"}, then: not_this_branch}
+      - {when: {in: [Short-Term Rentals, Long-Term Rentals]}, then: rental_policy}
+  rental_policy:
+    kind: test
+    field: has_primary_policy_with_stand
+    interpretation: I08
+    board_path: []
+    cases:
+      - {when: {equals: true}, then: rental_with_primary}
+      - {when: {equals: false}, then: rental_without_primary}
+  rental_with_primary:
+    kind: test
+    field: is_rental
+    board_path: ["03:R_P"]
+    cases:
+      - {when: {equals: Long-Term Rentals}, then: long_term_rental}
+      - {when: {equals: Short-Term Rentals}, then: short_term_rental}
+  long_term_rental:
+    kind: outcome
+    board_path: ["03:LONG", "03:W15"]
+    effects: [{type: surcharge, rule: OC-1, percent: 15}]
+  short_term_rental:
+    kind: outcome
+    board_path: ["03:SHORT", "03:W15STR"]
+    effects:
+      - {type: surcharge, rule: OC-2, percent: 15}
+      - {type: exclusion_or_endorsement, rule: OC-3, text: "Short-term rental endorsement attached"}
+  rental_without_primary:
+    kind: test
+    field: broker_tier
+    board_path: ["03:R_NP"]
+    cases:
+      - {when: {equals: Tier 1}, then: tier_1_broker}
+      - {when: {in: [Tier 2, Tier 3]}, then: rental_exception}
+  tier_1_broker: {kind: outcome, board_path: ["03:TIER1", "03:W15"], effects: [{type: surcharge, rule: OC-4, percent: 15}]}
+  rental_exception:
+    kind: underwriter_choice
+    choice: I09.rental_exception
+    interpretation: I09
+    board_path: []
+    prompt: "The rental has no primary policy with Stand and is not from a Tier 1 broker. Is there a justifiable exception, such as a lead line for a larger desirable account or a well-managed property in excess of $5m Coverage A?"
+    show: [broker_tier, has_primary_policy_with_stand, coverage_a]
+    options: {exception: rental_exception_granted, decline: no_justifiable_exception}
+  rental_exception_granted: {kind: outcome, board_path: ["03:LEAD", "03:W15"], effects: [{type: surcharge, rule: OC-5, percent: 15}]}
+  no_justifiable_exception: {kind: outcome, board_path: ["03:NOEX", "03:DECLINE"], effects: [{type: decline, rule: OC-6}]}
+
+  # Vacant and unoccupied homes: the board's two boxes share their children, and I06 names the unoccupied box.
+  unoccupied:
+    kind: test
+    field: months_unoccupied
+    interpretation: I06
+    board_path: ["03:UNOCC"]
+    cases:
+      - {when: {lt: 1}, then: not_this_branch}
+      - {when: {gte: 1}, then: unoccupied_policy}
+  unoccupied_policy:
+    kind: test
+    field: has_primary_policy_with_stand
+    interpretation: I08
+    board_path: []
+    cases:
+      - {when: {equals: false}, then: unoccupied_without_primary}
+      - {when: {equals: true}, then: unoccupied_with_primary}
+  unoccupied_without_primary: {kind: outcome, board_path: ["03:V_NP", "03:DECLINE"], effects: [{type: decline, rule: OC-7}]}
+  unoccupied_with_primary:
+    kind: test
+    field: months_unoccupied
+    interpretation: I07
+    board_path: ["03:V_P"]
+    cases:
+      - {when: {lt: 2}, then: under_60_days}
+      - {when: {gte: 2, lt: 3}, then: two_months}
+      - {when: {gte: 3}, then: over_60_days}
+  two_months:
+    kind: underwriter_choice
+    choice: I07.two_months
+    interpretation: I07
+    board_path: []
+    prompt: "The home has been unoccupied for exactly 2 months. Is that under 60 days or over 60 days?"
+    show: [months_unoccupied]
+    options: {under_60_days: under_60_days, over_60_days: over_60_days}
+  under_60_days:
+    kind: outcome
+    interpretation: I10
+    board_path: ["03:LT60", "03:MODS"]
+    effects:
+      - {type: surcharge, rule: OC-8, percent: 25, deadline: duration_of_non_occupancy}
+      - {type: exclusion_or_endorsement, rule: OC-9, text: "A 100k AOP deductible, for the duration of non-occupancy"}
+      - {type: exclusion_or_endorsement, rule: OC-10, text: "3% water cover, for the duration of non-occupancy"}
+      - {type: requirement, rule: OC-11, text: "A low temperature alarm or a winterized home in a cold climate", deadline: duration_of_non_occupancy}
+      - {type: obligation, rule: OC-12, text: "Twice-weekly interior and exterior visits to the home", owner: insured, trigger: duration of non-occupancy}
+  over_60_days: {kind: outcome, board_path: ["03:GT60", "03:DECLINE"], effects: [{type: decline, rule: OC-13}]}
+
+  # For sale
+  for_sale:
+    kind: test
+    field: listed_for_sale
+    interpretation: I06
+    board_path: ["03:SALE"]
+    cases:
+      - {when: {equals: false}, then: not_this_branch}
+      - {when: {equals: true}, then: listed_for_sale}
+  listed_for_sale: {kind: outcome, board_path: ["03:DECLINE"], effects: [{type: decline, rule: OC-14}]}

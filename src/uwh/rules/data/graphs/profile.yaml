@@ -1,5 +1,50 @@
-# ABOUTME: The Profile page: when it applies. The page has no decision graph, so a lead it applies to is stopped with a reason.
-# ABOUTME: A graph with no root holds only the page's `applies_when`.
+# ABOUTME: The Profile page as a decision graph: every KYC band begins with the liability exclusion, and the fallbacks the board lists after it are a ladder (I05) that reaches the quote as an advisory.
+# ABOUTME: KYC 6 to 7 takes the spotlight ladder and 8 to 10 the high ladder (I03); the private branch and the reputational damage box are not encoded (I03, I04).
 id: profile
 page: docs/playbook/02-profile/flowchart.md
 applies_when: {field: kyc_score, gt: 5}
+root: kyc_band
+nodes:
+  kyc_band:
+    kind: test
+    field: kyc_score
+    interpretation: I03
+    board_path: ["02:ROOT"]
+    cases:
+      # The page applies above 5 (I02). 6 to 7 is read as in the spotlight (I03).
+      - {when: {lte: 7}, then: spotlight}
+      - {when: {gt: 7}, then: high}
+  spotlight:
+    kind: ladder
+    interpretation: I05
+    board_path: ["02:SPOT"]
+    rungs: [spotlight_exclusion, spotlight_defense_within_limits, spotlight_premises_only, spotlight_decline]
+  spotlight_exclusion:
+    kind: outcome
+    board_path: ["02:SPOT1"]
+    effects: [{type: exclusion_or_endorsement, rule: PF-1, text: "Liability coverage is excluded"}]
+  spotlight_defense_within_limits:
+    kind: outcome
+    board_path: ["02:SPOT2", "02:SPOT3"]
+    effects:
+      - type: exclusion_or_endorsement
+        rule: PF-2
+        text: "If the liability exclusion is a deal killer: a social media exclusion, a libel/slander exclusion and defense within limits"
+  spotlight_premises_only:
+    kind: outcome
+    board_path: ["02:SPOT4", "02:SPOT5"]
+    effects:
+      - type: exclusion_or_endorsement
+        rule: PF-3
+        text: "If defense within limits is a deal killer: a social media exclusion, a libel/slander exclusion and premises liability only"
+  spotlight_decline: {kind: outcome, board_path: ["02:SPOT6", "02:DECLINE"], effects: [{type: decline, rule: PF-4}]}
+  high:
+    kind: ladder
+    interpretation: I05
+    board_path: ["02:HIGH"]
+    rungs: [high_exclusion, high_decline]
+  high_exclusion:
+    kind: outcome
+    board_path: ["02:HIGH1"]
+    effects: [{type: exclusion_or_endorsement, rule: PF-5, text: "Liability coverage is excluded"}]
+  high_decline: {kind: outcome, board_path: ["02:HIGH2", "02:DECLINE"], effects: [{type: decline, rule: PF-6}]}
