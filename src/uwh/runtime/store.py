@@ -75,11 +75,16 @@ def table_ddl(intent_kinds: Iterable[str]) -> dict[str, str]:
     }
 
 
-# The event log is append-only (section 7.2): a changed or removed row raises.
+# The event log is append-only (section 7.2): a changed, removed or replaced row raises.
+# REPLACE conflict resolution deletes the old row without firing delete triggers, so an insert
+# that names an existing id raises here, before the conflict is resolved.
 EVENTS_TRIGGERS = (
     """CREATE TRIGGER IF NOT EXISTS events_no_update BEFORE UPDATE ON events
        BEGIN SELECT RAISE(ABORT, 'events is append-only'); END""",
     """CREATE TRIGGER IF NOT EXISTS events_no_delete BEFORE DELETE ON events
+       BEGIN SELECT RAISE(ABORT, 'events is append-only'); END""",
+    """CREATE TRIGGER IF NOT EXISTS events_no_replace BEFORE INSERT ON events
+       WHEN NEW.id IS NOT NULL AND EXISTS (SELECT 1 FROM events WHERE id = NEW.id)
        BEGIN SELECT RAISE(ABORT, 'events is append-only'); END""",
 )
 

@@ -186,6 +186,27 @@ def test_events_refuse_update_and_delete(db: sqlite3.Connection) -> None:
     assert db.execute("SELECT id, type FROM events").fetchall() == [(1, "run_started")]
 
 
+@pytest.mark.parametrize("verb", ["INSERT OR REPLACE INTO", "REPLACE INTO"])
+def test_events_refuse_replacement_of_an_existing_id(db: sqlite3.Connection, verb: str) -> None:
+    db.execute("INSERT INTO events (id, type) VALUES (1, 'run_started')")
+    with pytest.raises(sqlite3.DatabaseError, match="append-only"):
+        db.execute(f"{verb} events (id, type) VALUES (1, 'other')")
+    assert db.execute("SELECT id, type FROM events").fetchall() == [(1, "run_started")]
+
+
+def test_events_still_take_new_ids_and_refuse_duplicate_ids(db: sqlite3.Connection) -> None:
+    db.execute("INSERT INTO events (id, type) VALUES (1, 'run_started')")
+    db.execute("INSERT OR REPLACE INTO events (id, type) VALUES (2, 'lead_received')")
+    db.execute("INSERT INTO events (type) VALUES ('auto_id')")
+    with pytest.raises(sqlite3.IntegrityError):
+        db.execute("INSERT INTO events (id, type) VALUES (1, 'duplicate')")
+    assert db.execute("SELECT id, type FROM events ORDER BY id").fetchall() == [
+        (1, "run_started"),
+        (2, "lead_received"),
+        (3, "auto_id"),
+    ]
+
+
 def test_other_tables_stay_updatable_and_deletable(db: sqlite3.Connection) -> None:
     db.execute("INSERT INTO blockers (id, lead_id) VALUES (1, 'a')")
     db.execute("UPDATE blockers SET lead_id = 'b' WHERE id = 1")
@@ -213,6 +234,8 @@ def test_recreating_events_restores_the_append_only_triggers(db: sqlite3.Connect
         db.execute("UPDATE events SET type = 'x' WHERE id = 1")
     with pytest.raises(sqlite3.DatabaseError, match="append-only"):
         db.execute("DELETE FROM events WHERE id = 1")
+    with pytest.raises(sqlite3.DatabaseError, match="append-only"):
+        db.execute("INSERT OR REPLACE INTO events (id, type) VALUES (1, 'x')")
     assert db.execute("SELECT id, type FROM events").fetchall() == [(1, "run_started")]
 
 
