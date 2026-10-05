@@ -54,6 +54,19 @@ def test_lead_008_is_noted_as_not_evaluated_on_the_two_pages_that_apply_to_every
             {"siding_classification": "D", "p_f": 0.50},
             ("requirement", "SD-4"),
         ),  # the board's "<= .50"
+        # I52: composition shingles replaced more than 20 years before 2026, at a fire probability above 0.15
+        (
+            {
+                "roof_replacement_year": 2005,
+                "p_f": 0.16,
+                "roof_material": "Asphalt Fiberglass Composite",
+            },
+            ("advisory", "RF-5"),
+        ),
+        (
+            {"roof_replacement_year": 2005, "p_f": 0.16, "roof_material": "Architecture Shingles"},
+            ("advisory", "RF-5"),
+        ),
         ({"replacement_cost": 1000000}, ("advisory", "RC-1")),
         ({"replacement_cost": 972222}, ("no_action", "RC-2")),  # 0.90 is at the estimate
         ({"replacement_cost": 972223}, ("advisory", "RC-1")),
@@ -97,3 +110,36 @@ def test_a_cut_page_that_applies_is_noted_and_one_that_does_not_is_not() -> None
         "pools",
         "protection_class_9_10",
     ]
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {
+            "roof_replacement_year": 2006,
+            "p_f": 0.16,
+            "roof_material": "Architecture Shingles",
+        },  # exactly 20 years is not more than 20
+        {
+            "roof_replacement_year": 2005,
+            "p_f": 0.15,
+            "roof_material": "Architecture Shingles",
+        },  # the fire probability is not above 0.15
+        {"roof_replacement_year": 2005, "p_f": 0.16, "roof_material": "Slate"},  # not composition
+        {"roof_replacement_year": 2005, "p_f": 0.16, "roof_material": "Standing Seam Metal"},
+    ],
+)
+def test_a_roof_that_is_not_an_old_composition_roof_takes_no_age_advisory(
+    changes: dict[str, JsonValue],
+) -> None:
+    assert ("advisory", "RF-5") not in outcomes(**changes)
+
+
+def test_the_age_advisory_waits_for_the_year_the_roof_was_replaced() -> None:
+    plan = run(
+        EvaluatePlaybookInput(
+            facts=lead_008(roof_material="Architecture Shingles", roof_replacement_year=None)
+        )
+    )
+
+    assert [(u.graph, u.waits_on) for u in plan.undecided] == [("roof", ["roof_age_years"])]

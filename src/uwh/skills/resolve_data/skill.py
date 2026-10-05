@@ -5,7 +5,7 @@ from typing import Literal
 from pydantic import JsonValue
 
 from uwh.providers.models import ProviderResult
-from uwh.rules.models import NotBuilt, StrictModel
+from uwh.rules.models import StrictModel
 
 # 9.3 step 4: the value taken when the provider does not find the field.
 ASSUMED_WHEN_NOT_FOUND: dict[str, JsonValue] = {"protection_class": "9"}
@@ -27,8 +27,8 @@ class ResolveDataOutput(StrictModel):
 
 
 def run(input: ResolveDataInput) -> ResolveDataOutput:
-    """A blocked lookup yields no fact: its missing inputs are asks of their own. Raises NotBuilt for an
-    answer the build does not handle and ValueError for an unavailable provider."""
+    """A blocked lookup yields no fact: its missing inputs are asks of their own. Raises ValueError for
+    a field with no default that the provider does not find and for an unavailable provider."""
     facts: list[ResolvedFact] = []
     for key, result in input.provider_results.items():
         if result.status == "found":
@@ -50,9 +50,7 @@ def run(input: ResolveDataInput) -> ResolveDataOutput:
                 )
             )
         elif result.status == "not_found":
-            raise NotBuilt(
-                f"{result.source} did not find {key}; the review that answers is not built"
-            )
+            raise ValueError(f"{result.source} did not find {key}")
         elif result.status == "unavailable":
             raise ValueError(f"the {result.source} provider is unavailable for {key}")
     return ResolveDataOutput(facts=facts)

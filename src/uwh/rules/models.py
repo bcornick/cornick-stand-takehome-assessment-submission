@@ -14,11 +14,6 @@ class StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid", json_schema_serialization_defaults_required=True)
 
 
-class NotBuilt(Exception):
-    """A lead needs something the build does not cover; the message says what. The step that raises it
-    stops the lead with a `data` blocker that carries the message."""
-
-
 # Section 9.2.
 class ValueStatus(StrEnum):
     present = "present"

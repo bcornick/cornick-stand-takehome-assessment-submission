@@ -405,7 +405,7 @@ The same validators run on values extracted from replies.
 
 ### 9.6 Decision graphs
 
-One YAML file per built detail page (seven files). Each declares `applies_when`. A small interpreter walks them. The five pages that are not built are listed in `graphs/_not_encoded.yaml`, each with its `applies_when`.
+One YAML file per built detail page (seven files). Each declares `applies_when`. A small interpreter walks them. The five pages that are not built, and the Animals criterion of the overview (I46), are listed in `graphs/_not_encoded.yaml`, each with its `applies_when`.
 
 **Node kinds**
 
@@ -442,7 +442,7 @@ Deadlines are a typed enum: `within_60_days`, `first_term`, `underwriting_period
 | Roof, Siding, Replacement Cost | always |
 | Post & Pier | `foundation_type` is Piers, Stilts or Pilings (I23) |
 
-The not-built pages apply as follows: Plumbing and Electrical always; Pools when `pool_type` is not "None"; Trusts when `residence_held_in_trust` is true; PC 9 & 10 when `protection_class` is "9" or "10". A lead a not-built page applies to carries a `not_evaluated` note naming the page; the page contributes no card, no decline and no question.
+The not-built pages apply as follows: Plumbing and Electrical always; Pools when `pool_type` is not "None"; Trusts when `residence_held_in_trust` is true; PC 9 & 10 when `protection_class` is "9" or "10"; Animals when `has_animals` is true. A lead a not-built page applies to carries a `not_evaluated` note naming the page; the page contributes no card, no decline and no question.
 
 When `applies_when` rests on an unknown fact, the graph is undecided and contributes nothing: no card, no decline, no catalogue question. Triage fetches or asks for the missing fact. On seed 42 this keeps leads 001 and 005, whose `p_f` lookup is blocked, off the Fire Simulation page on the first pass.
 
@@ -460,7 +460,7 @@ When `applies_when` rests on an unknown fact, the graph is undecided and contrib
 
 **Collecting catalogue questions.** A catalogue question is collected when the branch selections leading to its node are settled by usable facts and answered choices. Unfinished sibling branches do not hold it back. Nothing is collected beneath an unknown `test` or an unanswered choice.
 
-**Action plan.** Effects from all applicable graphs are collected, deduplicated by effect type and rule id, and kept with their rule trace. When one effect is both committed and possible, the interpreter keeps the committed copy. When any applicable graph's root is a decline, the plan is a proposed decline: no request goes out and the underwriter gets the decline notice draft to approve. If the underwriter rejects it, a ruling suppresses every rule id in the decline's trace, or in all its alternatives, for that lead. A suppressed decline outcome evaluates as decided with an advisory naming the overridden rule, and the registry asks go out. Rejecting a notice that came from `decline_lead` withdraws that ruling; rejecting one that followed an underwriter choice reopens the choice.
+**Action plan.** Effects from all applicable graphs are collected, deduplicated by effect type and rule id, and kept with their rule trace. When one effect is both committed and possible, the interpreter keeps the committed copy. When any applicable graph's root is a decline, the plan is a proposed decline: no request goes out and the underwriter gets the decline notice draft to approve. A proposed decline shows no choice card and asks no catalogue question. If the underwriter rejects it, a ruling suppresses every rule id in the decline's trace, or in all its alternatives, for that lead. A suppressed decline outcome evaluates as decided with an advisory naming the overridden rule, which is for the underwriter and is left out of the packet, and the registry asks go out. Rejecting a notice that came from `decline_lead` withdraws that ruling; rejecting one that followed an underwriter choice reopens the choice.
 
 `build_quote_packet` runs only when the plan holds no decline, no graph is undecided, no blocker is open and no ask remains. The workflow checks this before it calls the skill, and the skill refuses an input that breaks it.
 
@@ -825,7 +825,7 @@ Each payload is a Pydantic model named after the type. Graders import those mode
 
 All hashes are SHA-256 over canonical JSON (sorted keys, UTF-8, no insignificant whitespace).
 
-- **Lead revision:** an integer, incremented whenever an effective fact changes.
+- **Lead revision:** an integer, incremented whenever an effective fact changes or a ruling is recorded.
 - **Plan hash:** the action plan.
 - **Ruleset hash:** every file under `src/uwh/rules/data/`, in path order.
 - **Payload hash:** `{recipient, subject, body}`.
@@ -880,10 +880,9 @@ nodes:
       - {type: requirement, rule: RF-3, text: "Confirmation of a Class A roof or its replacement", deadline: first_term}
 ```
 
-- A graph with no `root` holds only its `applies_when`; a lead it applies to is stopped with a reason.
 - `applies_when` may be `{any: [...]}`: true when any member is true, otherwise unknown when any member is unknown, otherwise false.
 - Conditions use `equals`, `in`, `lt`, `lte`, `gt`, `gte`. A bound may be a literal or `{one_minus: I35.tolerance}` or `{one_plus: I35.tolerance}`, which are one minus and one plus a parameter of the named interpretation row.
-- A node is a `test` (a field and `cases`, each a condition and the node it leads to) or an `outcome` (its effects). A `test` may carry `interpretation: I18`.
+- A node is a `test` (a field and `cases`, each a condition and the node it leads to; the cases are `one_of`), a `producer_question` (a `test` on the catalogue answer `q:<id>`), an `underwriter_choice` (`choice`, `prompt`, `show` and `options`, each option leading to a node), an `all_of` (its `children`), a `ladder` (its `rungs`) or an `outcome` (its effects). A node may carry `interpretation: I18`. The load check refuses a graph that leads to a missing node, has a node no path reaches, names a choice or options the interpretation table does not, or has an outcome with two effects of one type for one rule.
 - A `test` whose cases are numeric bands must cover every number once: the graph file is refused at load when the bands leave a gap or overlap. A test on discrete values is not checked.
 - A `test` may name a **derived input** in place of a registry field. `derivations.yaml` declares the two that exist: `coverage_to_rce_ratio` (`coverage_a / replacement_cost`) and `roof_age_years` (the reference year minus `roof_replacement_year`). A derived input is unknown when any input is unknown or the divisor is zero. No general expression language exists.
 - Interpretation rows may carry `params` (a map of named numbers). The Replacement Cost graph bands `coverage_to_rce_ratio` at `1 - I35.tolerance`, `1 + I35.tolerance` and 1.5.
@@ -908,7 +907,7 @@ nodes:
 class Candidate(BaseModel):
     ask_id: str            # an ask id from the open intent: field name, catalogue id or validator id
     field: str             # the registry field or q: id the value is for; for a confirmation,
-                           # one of the fields its validator covers
+                           # one of the fields its question reports
     value: str | int | float | bool
     quote: str             # the reply text the value was read from, copied exactly; not empty
 

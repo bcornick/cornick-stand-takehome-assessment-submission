@@ -9,6 +9,7 @@ from typing import Annotated, Literal, Self
 from pydantic import Field, JsonValue, model_validator
 
 from uwh.rules.data_files import DATA_DIR, read_yaml
+from uwh.skills.vertical import REFERENCE_MORNING
 from uwh.rules.models import (
     AdvisoryEffect,
     Assumption,
@@ -255,16 +256,17 @@ def _holds(clause: str, operand: JsonValue, value: JsonValue) -> bool:
 def _derived_input(name: str, facts: Mapping[str, JsonValue]) -> JsonValue:
     """A derived input of `derivations.yaml`, or None when an input is unknown or the divisor is zero."""
     spec = read_yaml("derivations.yaml")["derived_inputs"][name]
-    if spec["operation"] != "ratio":
-        raise ValueError(f"the derived input operation {spec['operation']} is not built")
-    numerator, divisor = (facts.get(field) for field in spec["inputs"])
-    if (
-        not isinstance(numerator, int | float)
-        or not isinstance(divisor, int | float)
-        or divisor == 0
-    ):
+    values = [facts.get(field) for field in spec["inputs"]]
+    if not all(isinstance(value, int | float) for value in values):
         return None
-    return numerator / divisor
+    match spec["operation"]:
+        case "ratio":
+            numerator, divisor = values
+            return None if divisor == 0 else numerator / divisor  # type: ignore[operator]
+        case "years_before_reference":
+            return REFERENCE_MORNING.year - values[0]  # type: ignore[operator]
+        case operation:
+            raise ValueError(f"the derived input operation {operation} is unknown")
 
 
 def _value(field: str, facts: Mapping[str, JsonValue]) -> JsonValue:
@@ -358,6 +360,8 @@ class _Walker:
         node = self.graph.nodes[name]
         path += tuple(node.board_path)
         match node:
+            case Outcome() if not node.effects:
+                return Walk()
             case Outcome():
                 trace = RuleTrace(board_path=list(path), choice_ids=list(answered))
                 return Walk(effects=tuple(self._committed(e, trace) for e in node.effects))

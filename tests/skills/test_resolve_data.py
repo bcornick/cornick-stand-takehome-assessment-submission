@@ -3,7 +3,6 @@
 import pytest
 
 from uwh.providers.models import ProviderResult
-from uwh.rules.models import NotBuilt
 from uwh.skills.resolve_data.skill import ResolveDataInput, run
 
 
@@ -39,7 +38,7 @@ def test_a_lookup_becomes_a_fetched_fact_a_stated_default_or_nothing(
 
 
 def test_a_field_with_no_default_that_is_not_found_stops_the_lead() -> None:
-    with pytest.raises(NotBuilt, match="did not find replacement_cost"):
+    with pytest.raises(ValueError, match="did not find replacement_cost"):
         resolved("replacement_cost", result("not_found"))
 
 
