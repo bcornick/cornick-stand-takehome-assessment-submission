@@ -1,5 +1,5 @@
 # ABOUTME: The command layer of 7.4 and A.11: one entry point that takes the actor from the transport, applies the actor and class rules and the skill manifest, runs the handler and the lead's re-evaluation in one transaction, and writes `command_refused` for a refusal.
-# ABOUTME: Handlers exist for resolve_fact, edit_draft, record_ruling, and approve and reject of an observation, a draft, a delivery_unknown item or an event-raised review; every other command class raises NotImplementedError after the checks.
+# ABOUTME: Handlers exist for start_run, resolve_fact, edit_draft, record_ruling, and approve and reject of an observation, a draft, a delivery_unknown item or an event-raised review; every other command class raises NotImplementedError after the checks.
 import sqlite3
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
@@ -27,8 +27,9 @@ from uwh.runtime.facts import (
     reject_observation,
     resolve_fact,
 )
+from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
-from uwh.runtime.runs import command_context
+from uwh.runtime.runs import begin_run, command_context, current_run
 from uwh.runtime.send import (
     Intent,
     close_unsent,
@@ -56,8 +57,8 @@ _ROUND_REVIEW_CAUSES: tuple[ReviewCause, ...] = (
 @dataclass(frozen=True)
 class CommandEnvironment:
     """What the command layer needs from its caller: the run mode, the active ruleset hash, the ledger
-    rules and workflow steps a re-evaluation uses, the folder that holds the skills, the real clock and
-    the mailbox that dispatched drafts are posted to."""
+    rules and workflow steps a re-evaluation uses, the folder that holds the skills, the real clock,
+    the mailbox that dispatched drafts are posted to and the leadgen service a run start reads."""
 
     mode: RunMode
     ruleset_hash: str
@@ -66,6 +67,7 @@ class CommandEnvironment:
     skills_root: Path
     now: Callable[[], datetime]
     mailbox: MailboxClient
+    leadgen: LeadgenClient
 
 
 @dataclass(frozen=True)
@@ -80,7 +82,9 @@ class CommandResult:
 @dataclass(frozen=True)
 class _Outcome:
     event_id: int
-    lead_id: str
+    lead_id: (
+        str | None
+    )  # None for a command about no lead, which is neither re-evaluated nor dispatched
     recheck_intent_id: str | None = (
         None  # an `unknown` intent whose mailbox check the command asks for
     )
@@ -125,8 +129,10 @@ def submit_command(
             with unit_of_work(db):
                 context = _context(db, env, actor)
                 outcome = handler(db, context, env, payload)
-                _reevaluate(db, env, outcome.lead_id)
-            _send_after_commit(db, env, outcome)
+                if outcome.lead_id is not None:
+                    _reevaluate(db, env, outcome.lead_id)
+            if outcome.lead_id is not None:
+                _send_after_commit(db, env, outcome.lead_id, outcome.recheck_intent_id)
             return CommandResult(True, outcome.event_id, None)
         except _Refusal as refusal:
             reason = str(refusal)
@@ -147,13 +153,15 @@ def _context(db: sqlite3.Connection, env: CommandEnvironment, actor: Actor) -> E
     return command_context(db, actor, env.mode, env.ruleset_hash, env.now())
 
 
-def _send_after_commit(db: sqlite3.Connection, env: CommandEnvironment, outcome: _Outcome) -> None:
+def _send_after_commit(
+    db: sqlite3.Connection, env: CommandEnvironment, lead_id: str, recheck_intent_id: str | None
+) -> None:
     """Re-check the delivery an approval asked about, then dispatch every draft of the lead that can go.
     The sender builds each event's context when it writes the event, after its own post."""
     make_context = partial(_context, db, env, "workflow")
-    if outcome.recheck_intent_id is not None:
-        reconcile(db, env.mailbox, make_context, outcome.recheck_intent_id)
-    dispatch_ready(db, env.mailbox, make_context, outcome.lead_id)
+    if recheck_intent_id is not None:
+        reconcile(db, env.mailbox, make_context, recheck_intent_id)
+    dispatch_ready(db, env.mailbox, make_context, lead_id)
 
 
 def _gate(
@@ -241,6 +249,13 @@ def _nonempty_text(payload: Mapping[str, JsonValue], key: str) -> str:
     return value
 
 
+def _integer(payload: Mapping[str, JsonValue], key: str) -> int:
+    value = payload.get(key)
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise _Refusal(f"the payload needs {key}, an integer")
+    return value
+
+
 def _open_item(db: sqlite3.Connection, payload: Mapping[str, JsonValue]) -> Blocker:
     """The open blocker `item_id` names (A.11)."""
     item_id = payload.get("item_id")
@@ -263,6 +278,20 @@ def _draft_intent(db: sqlite3.Connection, intent_id: str) -> Intent:
 
 
 # ---- handlers -----------------------------------------------------------------------------------
+
+
+def _start_run(
+    db: sqlite3.Connection,
+    context: EventContext,
+    env: CommandEnvironment,
+    payload: Mapping[str, JsonValue],
+) -> _Outcome:
+    """Start a run (14). The first pass runs after this command commits, started by the caller."""
+    seed = _integer(payload, "seed")
+    run = current_run(db)
+    if run is not None and run.status == "processing":
+        raise _Refusal(f"run {run.run_id} is still processing")
+    return _Outcome(begin_run(db, context, env.leadgen, env.mailbox, seed), None)
 
 
 def _resolve_fact(
@@ -496,6 +525,7 @@ def _record_approval(
 # The one place that lists which command types have a handler; a type absent here raises
 # NotImplementedError in `submit_command`.
 _HANDLERS: dict[str, Handler] = {
+    "start_run": _start_run,
     "approve": partial(_settle, approve=True),
     "reject": partial(_settle, approve=False),
     "edit_draft": _edit_draft,

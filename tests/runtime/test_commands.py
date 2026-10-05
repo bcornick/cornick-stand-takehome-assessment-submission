@@ -31,6 +31,7 @@ from uwh.runtime.facts import (
     observe_late_reply,
     observe_reply,
 )
+from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
 from uwh.runtime.send import create_draft
 from uwh.runtime.store import open_store
@@ -112,9 +113,11 @@ def skills_root(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def env(passes: Passes, skills_root: Path, mailbox: MailboxClient) -> CommandEnvironment:
+def env(
+    passes: Passes, skills_root: Path, mailbox: MailboxClient, leadgen: LeadgenClient
+) -> CommandEnvironment:
     return CommandEnvironment(
-        "replay", RULESET, RULES, passes.steps, skills_root, lambda: NOW, mailbox
+        "replay", RULESET, RULES, passes.steps, skills_root, lambda: NOW, mailbox, leadgen
     )
 
 
@@ -947,14 +950,25 @@ def test_a_terminal_lead_is_not_re_evaluated(
 
 
 def test_a_failing_step_opens_the_data_blocker_and_the_commands_writes_commit(
-    path: str, db: sqlite3.Connection, skills_root: Path, mailbox: MailboxClient
+    path: str,
+    db: sqlite3.Connection,
+    skills_root: Path,
+    mailbox: MailboxClient,
+    leadgen: LeadgenClient,
 ) -> None:
     def fail(db: sqlite3.Connection, context: EventContext, lead_id: str) -> None:
         db.execute("UPDATE leads SET source = 'written by the step'")
         raise RuntimeError("provider is down")
 
     env = CommandEnvironment(
-        "replay", RULESET, RULES, (Step("evaluate", fail),), skills_root, lambda: NOW, mailbox
+        "replay",
+        RULESET,
+        RULES,
+        (Step("evaluate", fail),),
+        skills_root,
+        lambda: NOW,
+        mailbox,
+        leadgen,
     )
     payload = {"lead_id": LEAD, "key": "acreage", "value": 7, "reason": "x"}
 
@@ -974,7 +988,7 @@ def test_a_failing_step_opens_the_data_blocker_and_the_commands_writes_commit(
 
 
 def test_a_failing_step_rolls_back_the_whole_re_evaluation_and_the_command_still_commits(
-    db: sqlite3.Connection, skills_root: Path, mailbox: MailboxClient
+    db: sqlite3.Connection, skills_root: Path, mailbox: MailboxClient, leadgen: LeadgenClient
 ) -> None:
     def write(db: sqlite3.Connection, context: EventContext, lead_id: str) -> None:
         observe(db, context, lead_id, "stories", 2, "submitted", {}, RULES)
@@ -983,7 +997,9 @@ def test_a_failing_step_rolls_back_the_whole_re_evaluation_and_the_command_still
         raise RuntimeError("provider is down")
 
     steps = (Step("write", write), Step("evaluate", fail))
-    env = CommandEnvironment("replay", RULESET, RULES, steps, skills_root, lambda: NOW, mailbox)
+    env = CommandEnvironment(
+        "replay", RULESET, RULES, steps, skills_root, lambda: NOW, mailbox, leadgen
+    )
     payload = {"lead_id": LEAD, "key": "acreage", "value": 7, "reason": "x"}
 
     assert submit_command(db, env, "underwriter", "resolve_fact", payload).accepted
@@ -995,7 +1011,11 @@ def test_a_failing_step_rolls_back_the_whole_re_evaluation_and_the_command_still
 
 
 def test_the_command_and_its_re_evaluation_commit_together(
-    path: str, db: sqlite3.Connection, skills_root: Path, mailbox: MailboxClient
+    path: str,
+    db: sqlite3.Connection,
+    skills_root: Path,
+    mailbox: MailboxClient,
+    leadgen: LeadgenClient,
 ) -> None:
     other = open_store(path)
     seen_inside: list[list[EventType]] = []
@@ -1004,7 +1024,7 @@ def test_the_command_and_its_re_evaluation_commit_together(
         seen_inside.append([e.type for e in read_events(other)])
 
     env = CommandEnvironment(
-        "replay", RULESET, RULES, (Step("look", look),), skills_root, lambda: NOW, mailbox
+        "replay", RULESET, RULES, (Step("look", look),), skills_root, lambda: NOW, mailbox, leadgen
     )
     payload = {"lead_id": LEAD, "key": "acreage", "value": 7, "reason": "x"}
 
@@ -1021,6 +1041,7 @@ def test_the_events_of_a_command_take_their_timestamps_inside_its_transaction(
     passes: Passes,
     skills_root: Path,
     mailbox: MailboxClient,
+    leadgen: LeadgenClient,
     accepted: bool,
 ) -> None:
     in_transaction: list[bool] = []
@@ -1029,7 +1050,9 @@ def test_the_events_of_a_command_take_their_timestamps_inside_its_transaction(
         in_transaction.append(db.in_transaction)
         return NOW
 
-    env = CommandEnvironment("replay", RULESET, RULES, passes.steps, skills_root, now, mailbox)
+    env = CommandEnvironment(
+        "replay", RULESET, RULES, passes.steps, skills_root, now, mailbox, leadgen
+    )
     payload = {"lead_id": LEAD, "key": "acreage", "value": 7, "reason": "x"}
 
     submit_command(db, env, "underwriter" if accepted else "assistant", "resolve_fact", payload)

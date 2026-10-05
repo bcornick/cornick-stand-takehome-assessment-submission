@@ -9,7 +9,14 @@ from typing import Any
 import pytest
 
 from uwh.runtime.event_types import EventType, LeadReceived, RunStarted, SettingChanged
-from uwh.runtime.events import EventContext, append_event, format_timestamp, read_events
+from uwh.runtime.events import (
+    EventContext,
+    StaleRun,
+    append_event,
+    format_timestamp,
+    read_events,
+    require_current_run,
+)
 from uwh.runtime.store import open_store
 
 REAL = datetime(2026, 10, 5, 9, 30, 15, 123456, tzinfo=UTC)
@@ -215,3 +222,19 @@ def test_an_event_appended_later_with_an_earlier_timestamp_reads_in_id_order(
     )  # fmt: skip
     assert [e.id for e in read_events(db)] == [first, second]
     assert [e.id for e in read_events(db, lead_id="L-1")] == [first, second]
+
+
+def test_the_current_run_is_accepted_and_any_other_run_id_is_stale(db: sqlite3.Connection) -> None:
+    db.execute(
+        "INSERT INTO runs (run_id, seed, mode, started_at, status)"
+        " VALUES ('run-2', 42, 'replay', '2026-10-05T12:00:00.000000Z', 'processing')"
+    )
+
+    require_current_run(db, "run-2")
+    with pytest.raises(StaleRun, match="run-1"):
+        require_current_run(db, "run-1")
+
+
+def test_with_no_run_every_run_id_is_stale(db: sqlite3.Connection) -> None:
+    with pytest.raises(StaleRun, match="run-1"):
+        require_current_run(db, "run-1")

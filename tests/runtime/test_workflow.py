@@ -10,7 +10,7 @@ from typing import get_args
 import pytest
 
 from uwh.runtime.event_types import BlockerDetail, EventType, LeadReceived, Status
-from uwh.runtime.events import EventContext, read_events
+from uwh.runtime.events import EventContext, StaleRun, read_events
 from uwh.runtime.facts import (
     LedgerRules,
     ReplyValue,
@@ -23,6 +23,7 @@ from uwh.runtime.waits import close_blocker, open_blocker, open_blockers, primar
 from uwh.runtime.workflow import (
     Step,
     create_lead,
+    interrupted_leads,
     reevaluate,
     record_reply,
     run_is_settled,
@@ -533,6 +534,83 @@ def test_closing_the_last_blocker_of_a_first_pass_lead_leaves_a_runnable_step_th
     assert not run_is_settled(db, "run-1")
     run_steps(db, make_context, LEAD, [logging_step([], "triage")])
     assert run_is_settled(db, "run-1")
+
+
+# ---- a run that a start has replaced ----------------------------------------------------------------
+
+
+def replace_run(db: sqlite3.Connection) -> None:
+    db.execute("UPDATE runs SET run_id = 'run-2'")
+    db.commit()
+
+
+def test_a_pass_of_a_replaced_run_runs_no_step_and_opens_no_blocker(
+    db: sqlite3.Connection,
+) -> None:
+    replace_run(db)
+    events_before = len(read_events(db))
+    ran: list[str] = []
+
+    with pytest.raises(StaleRun):
+        run_steps(db, make_context, LEAD, [logging_step(ran, "triage"), failing_step("fetch")])
+
+    assert ran == []
+    assert status_of(db) == "received"
+    assert open_blockers(db, LEAD) == []
+    assert len(read_events(db)) == events_before
+
+
+def test_a_pass_whose_run_is_replaced_after_its_first_step_runs_no_further_step(
+    db: sqlite3.Connection,
+) -> None:
+    ran: list[str] = []
+
+    def replace_the_run(db: sqlite3.Connection, context: EventContext, lead_id: str) -> None:
+        ran.append("first")
+        db.execute("UPDATE runs SET run_id = 'run-2'")
+
+    with pytest.raises(StaleRun):
+        run_steps(
+            db, make_context, LEAD, [Step("first", replace_the_run), logging_step(ran, "second")]
+        )
+
+    assert ran == ["first"]
+    assert open_blockers(db, LEAD) == []
+
+
+# ---- leads whose pass a restart runs again ------------------------------------------------------
+
+
+def test_the_leads_a_restart_runs_again_are_received_or_triaged_with_no_blocker_or_only_a_step_failure(
+    db: sqlite3.Connection,
+) -> None:
+    add_lead(db, "L-triaged", "triaged")
+    add_lead(db, "L-failed", "received")
+    hold_blocker(db, "L-failed")
+    add_lead(db, "L-waiting", "received")
+    open_blocker(
+        db,
+        CONTEXT,
+        "L-waiting",
+        "producer_reply",
+        "producer",
+        BlockerDetail(resume_trigger="the producer replies", text="Waiting."),
+    )
+    add_lead(db, "L-other-data", "received")
+    open_blocker(
+        db,
+        CONTEXT,
+        "L-other-data",
+        "data",
+        "data_team",
+        BlockerDetail(resume_trigger="the data team answers", text="A lookup is pending."),
+    )
+    add_lead(db, "L-in-progress", "in_progress")
+    add_lead(db, "L-sent", "quote_sent")
+    add_lead(db, "L-declined", "declined")
+    db.commit()
+
+    assert interrupted_leads(db) == [LEAD, "L-triaged", "L-failed"]
 
 
 # ---- the pool -----------------------------------------------------------------------------------

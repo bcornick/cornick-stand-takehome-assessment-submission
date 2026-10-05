@@ -22,7 +22,7 @@ from uwh.runtime.event_types import (
     RequestKind,
     Status,
 )
-from uwh.runtime.events import EventContext, append_event
+from uwh.runtime.events import EventContext, append_event, require_current_run
 from uwh.runtime.hashing import payload_hash
 from uwh.runtime.mailbox_client import MailboxClient
 from uwh.runtime.policy import ApprovalBinding, autonomy_level, binding_changes
@@ -343,6 +343,7 @@ def _begin_dispatch(
         intent = read_intent(db, intent_id)
         if intent is None or intent.state != "draft":
             return "not_a_draft"
+        require_current_run(db, intent.run_id)
         _refuse_what_tier_one_holds(db, intent)
         item = _draft_item(db, intent)
         if autonomy_level(db, _class_of(intent.kind)) == "review" or item is not None:
@@ -380,7 +381,8 @@ def dispatch(
     approval does not hold against the current values returns to review and loses the approval; another intent of the lead in
     flight leaves the draft for a later pass. `make_context` builds the context of each event when it is
     written. Raises RuntimeError inside a transaction, ValueError when a lead's status does not allow the
-    move a packet or notice makes, and NotImplementedError where a hold is not built.
+    move a packet or notice makes, and NotImplementedError where a hold is not built. Raises StaleRun
+    when the draft's run has been replaced, before the post or after it; nothing is written then (14).
     """
     if db.in_transaction:
         raise RuntimeError(
@@ -457,6 +459,7 @@ def _record_sent(
     """Record the mailbox id, set `sent`, write `message_sent`, and apply what a sent message does: a
     request opens its round, a packet or a notice moves the lead (A.2, A.3)."""
     with unit_of_work(db):
+        require_current_run(db, intent.run_id)
         context = make_context()
         _record_faults(db, context, mailbox, intent.lead_id)
         db.execute(
@@ -494,6 +497,7 @@ def _record_unknown(
     """Set `unknown`, write `delivery_unknown` and open the underwriter's blocker; an intent already
     `unknown` has both."""
     with unit_of_work(db):
+        require_current_run(db, intent.run_id)
         context = make_context()
         _record_faults(db, context, mailbox, intent.lead_id)
         if intent.state == "unknown":
@@ -529,7 +533,8 @@ def reconcile(
     `delivery_unknown` written and its blocker opened when it was `dispatching`.
 
     A listing that fails raises and leaves the intent as it was. Raises RuntimeError inside a
-    transaction and ValueError for an intent in another state.
+    transaction, ValueError for an intent in another state and StaleRun, writing nothing, for an
+    intent of a replaced run.
     """
     if db.in_transaction:
         raise RuntimeError("a reconciliation lists the mailbox outside any transaction")

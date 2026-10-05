@@ -41,6 +41,20 @@ class EventContext:
                 raise ValueError(f"{name} needs a time zone")
 
 
+class StaleRun(Exception):
+    """Work carries the id of a run that a start has since replaced (14)."""
+
+
+def require_current_run(db: sqlite3.Connection, run_id: str) -> None:
+    """Raise StaleRun unless `run_id` is the run the `runs` table holds, which is the one current run.
+
+    Called inside the transaction that would write, which holds the write lock, so a run cannot be
+    replaced between the check and the commit.
+    """
+    if db.execute("SELECT 1 FROM runs WHERE run_id = ?", (run_id,)).fetchone() is None:
+        raise StaleRun(f"run {run_id} is not the current run")
+
+
 @dataclass(frozen=True)
 class StoredEvent:
     id: int

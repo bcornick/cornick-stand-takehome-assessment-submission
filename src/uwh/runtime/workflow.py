@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 
 from uwh.runtime.event_types import BlockerDetail, EventType, LeadReceived, Status
-from uwh.runtime.events import EventContext, append_event
+from uwh.runtime.events import EventContext, StaleRun, append_event, require_current_run
 from uwh.runtime.facts import (
     LedgerRules,
     ReplyValue,
@@ -150,8 +150,12 @@ def _run_step(
 ) -> None:
     """Run the step and the status moves after it. The last step also moves the lead to `in_progress`
     and closes its step-failure blocker, so a pass that ran every step leaves neither a stale status
-    nor a stale blocker."""
-    step.run(db, make_context(), lead_id)
+    nor a stale blocker.
+
+    Raises StaleRun, with nothing run or written, when the pass belongs to a replaced run."""
+    context = make_context()
+    require_current_run(db, context.run_id)
+    step.run(db, context, lead_id)
     if _status(db, lead_id) == "received":
         transition(db, lead_id, "triaged")
     if last:
@@ -177,6 +181,8 @@ def run_steps(
     (7.1, 8). Inside a caller's transaction the whole pass is one savepoint: a step that raises rolls
     back every step of the pass and its status moves, the blocker opens and `run_steps` returns, so
     the caller's own writes commit (A.11).
+
+    A pass of a run that a start has replaced raises StaleRun, writes nothing and opens no blocker (14).
     """
     step: Step | None = None
     try:
@@ -188,6 +194,8 @@ def run_steps(
             for position, step in enumerate(steps):
                 with unit_of_work(db):
                     _run_step(db, make_context, lead_id, step, last=position == len(steps) - 1)
+    except StaleRun:
+        raise
     except Exception as error:
         if step is None:
             raise
@@ -253,6 +261,24 @@ def run_is_settled(db: sqlite3.Connection, run_id: str) -> bool:
         (run_id, *_FIRST_PASS_STATUSES),
     ).fetchone()
     return row is None
+
+
+def interrupted_leads(db: sqlite3.Connection) -> list[str]:
+    """The leads whose pass a restart runs again (7.1): `received` or `triaged` with no open blocker,
+    or only a step-failure blocker, in the order they were received. Every other lead keeps its state."""
+    placeholders = ", ".join("?" for _ in _FIRST_PASS_STATUSES)
+    lead_ids = [
+        lead_id
+        for (lead_id,) in db.execute(
+            f"SELECT lead_id FROM leads WHERE status IN ({placeholders}) ORDER BY rowid",
+            _FIRST_PASS_STATUSES,
+        )
+    ]
+    return [
+        lead_id
+        for lead_id in lead_ids
+        if len(open_blockers(db, lead_id)) == len(_step_failure_blockers(db, lead_id))
+    ]
 
 
 def _run_lead(

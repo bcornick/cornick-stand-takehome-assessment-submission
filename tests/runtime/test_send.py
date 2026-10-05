@@ -17,10 +17,11 @@ from uwh.runtime.event_types import (
     MessageSent,
     RequestKind,
 )
-from uwh.runtime.events import EventContext, StoredEvent, read_events
+from uwh.runtime.events import EventContext, StaleRun, StoredEvent, read_events
 from uwh.runtime.facts import LedgerRules
 from uwh.runtime.faults import FaultPlan
 from uwh.runtime.hashing import payload_hash
+from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
 from uwh.runtime.send import (
     create_draft,
@@ -157,8 +158,10 @@ def duplicates(mailbox: MailboxClient) -> list[tuple[Any, ...]]:
 
 
 @pytest.fixture
-def env(tmp_path: Path, mailbox: MailboxClient) -> CommandEnvironment:
-    return CommandEnvironment("replay", RULESET, LedgerRules(), (), tmp_path, lambda: NOW, mailbox)
+def env(tmp_path: Path, mailbox: MailboxClient, leadgen: LeadgenClient) -> CommandEnvironment:
+    return CommandEnvironment(
+        "replay", RULESET, LedgerRules(), (), tmp_path, lambda: NOW, mailbox, leadgen
+    )
 
 
 # ---- creating a draft ---------------------------------------------------------------------------
@@ -536,6 +539,68 @@ def test_dispatching_committed_before_post(
     assert state_of(store, intent_id) == "sent"
 
 
+def replace_run(path: str) -> None:
+    other = sqlite3.connect(path, timeout=0)
+    other.execute("UPDATE runs SET run_id = 'run-2'")
+    other.commit()
+    other.close()
+
+
+def test_a_draft_of_a_replaced_run_is_not_posted(
+    store_path: str, store: sqlite3.Connection, mailbox: MailboxClient, make_context: Context
+) -> None:
+    intent_id = draft(store, make_context)
+    replace_run(store_path)
+
+    with pytest.raises(StaleRun):
+        dispatch(store, mailbox, make_context, intent_id)
+
+    assert messages(mailbox) == []
+    assert state_of(store, intent_id) == "draft"
+
+
+def test_the_result_of_a_post_is_not_recorded_once_the_run_is_replaced(
+    store_path: str,
+    store: sqlite3.Connection,
+    mailbox: MailboxClient,
+    faults: FaultPlan,
+    make_context: Context,
+) -> None:
+    intent_id = draft(store, make_context)
+    events_before = len(read_events(store))
+    faults.hold_in_flight = lambda: replace_run(store_path)
+
+    with pytest.raises(StaleRun):
+        dispatch(store, mailbox, make_context, intent_id)
+
+    assert state_of(store, intent_id) == "dispatching"
+    assert events_of(store, EventType.message_sent) == []
+    assert open_blockers(store, LEAD) == []
+    assert len(read_events(store)) == events_before
+
+
+def test_a_delivery_that_turns_out_unknown_after_the_run_is_replaced_writes_nothing(
+    store_path: str,
+    store: sqlite3.Connection,
+    mailbox: MailboxClient,
+    faults: FaultPlan,
+    make_context: Context,
+) -> None:
+    intent_id = draft(store, make_context)
+    events_before = len(read_events(store))
+    faults.fail_after_acceptance = True
+    faults.empty_while_in_flight = True
+    faults.hold_in_flight = lambda: replace_run(store_path)
+
+    with pytest.raises(StaleRun):
+        dispatch(store, mailbox, make_context, intent_id)
+
+    assert events_of(store, EventType.delivery_unknown) == []
+    assert events_of(store, EventType.message_sent) == []
+    assert open_blockers(store, LEAD) == []
+    assert len(read_events(store)) == events_before
+
+
 def test_message_sent_is_dated_after_the_post_began(
     store: sqlite3.Connection,
     mailbox: MailboxClient,
@@ -838,6 +903,7 @@ def test_a_draft_at_auto_built_in_a_command_is_posted_after_the_command_commits(
     faults: FaultPlan,
     make_context: Context,
     tmp_path: Path,
+    leadgen: LeadgenClient,
 ) -> None:
     during_step: list[list[str]] = []
 
@@ -854,6 +920,7 @@ def test_a_draft_at_auto_built_in_a_command_is_posted_after_the_command_commits(
         tmp_path,
         lambda: NOW,
         mailbox,
+        leadgen,
     )
     lock_free: list[bool] = []
 
@@ -879,7 +946,7 @@ def test_a_draft_at_auto_built_in_a_command_is_posted_after_the_command_commits(
 
 
 def test_a_draft_at_review_built_in_a_command_is_not_posted(
-    store: sqlite3.Connection, mailbox: MailboxClient, tmp_path: Path
+    store: sqlite3.Connection, mailbox: MailboxClient, tmp_path: Path, leadgen: LeadgenClient
 ) -> None:
     def build_draft(db: sqlite3.Connection, context: EventContext, lead_id: str) -> None:
         if db.execute("SELECT 1 FROM intents").fetchone() is None:
@@ -893,6 +960,7 @@ def test_a_draft_at_review_built_in_a_command_is_not_posted(
         tmp_path,
         lambda: NOW,
         mailbox,
+        leadgen,
     )
     payload = {"lead_id": LEAD, "key": "acreage", "value": 2, "reason": "call"}
 
