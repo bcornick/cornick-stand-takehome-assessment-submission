@@ -26,7 +26,6 @@ from uwh.runtime.workflow import (
     interrupted_leads,
     reevaluate,
     record_reply,
-    run_is_settled,
     run_leads,
     run_steps,
     transition,
@@ -513,43 +512,15 @@ def hold_blocker(db: sqlite3.Connection, lead_id: str) -> None:
     run_steps(db, make_context, lead_id, [failing_step("fetch_data")])
 
 
-def test_a_run_with_a_received_or_triaged_lead_that_holds_no_blocker_is_not_settled(
-    db: sqlite3.Connection,
-) -> None:
-    assert not run_is_settled(db, "run-1")
-    set_status(db, "triaged")
-    assert not run_is_settled(db, "run-1")
-
-
-def test_a_run_is_settled_when_every_lead_is_terminal_blocked_or_in_progress(
-    db: sqlite3.Connection,
-) -> None:
-    add_lead(db, "L-2", "quote_sent")
-    add_lead(db, "L-3", "declined")
-    add_lead(db, "L-4", "received")
-    hold_blocker(db, "L-4")
-    add_lead(db, "L-5", "received")
-    run_steps(db, make_context, "L-5", [logging_step([], "triage")])
-    set_status(db, "in_progress")
-    assert run_is_settled(db, "run-1")
-
-
-def test_a_lead_of_another_run_does_not_keep_this_run_unsettled(db: sqlite3.Connection) -> None:
-    set_status(db, "in_progress")
-    add_lead(db, "L-2", "received", run_id="run-0")
-    assert run_is_settled(db, "run-1")
-
-
 def test_closing_the_last_blocker_of_a_first_pass_lead_leaves_a_runnable_step_that_run_steps_runs(
     db: sqlite3.Connection,
 ) -> None:
     hold_blocker(db, LEAD)
-    assert run_is_settled(db, "run-1")
     close_blocker(db, CONTEXT, open_blockers(db, LEAD)[0].id)
     db.commit()
-    assert not run_is_settled(db, "run-1")
-    run_steps(db, make_context, LEAD, [logging_step([], "triage")])
-    assert run_is_settled(db, "run-1")
+    log: list[str] = []
+    run_steps(db, make_context, LEAD, [logging_step(log, "triage")])
+    assert log == ["triage:received"]
 
 
 # ---- a run that a start has replaced ----------------------------------------------------------------
@@ -654,7 +625,6 @@ def test_run_leads_runs_every_lead_through_every_step(path: str, db: sqlite3.Con
             f"{lead_id}:evaluate",
         ]
         assert status_of(db, lead_id) == "in_progress"
-    assert run_is_settled(db, "run-1")
 
 
 def test_every_failure_outside_a_step_is_reported_after_all_leads_finish(

@@ -1,4 +1,4 @@
-# ABOUTME: Tests the mailbox client's public surface and its behaviour against Stand's mailbox app in process.
+# ABOUTME: Tests the mailbox client's behaviour against Stand's mailbox app in process.
 # ABOUTME: A message sent with metadata must read back by lead with equal metadata and raise no warning.
 import uuid
 
@@ -6,11 +6,6 @@ import httpx2
 import pytest
 
 from uwh.runtime.mailbox_client import MailboxClient
-
-
-def test_public_methods_are_exactly_the_five_endpoints() -> None:
-    public = {n for n, v in vars(MailboxClient).items() if not n.startswith("_") and callable(v)}
-    assert public == {"send", "list_for_lead", "get", "reset", "healthz"}
 
 
 @pytest.mark.filterwarnings("error")

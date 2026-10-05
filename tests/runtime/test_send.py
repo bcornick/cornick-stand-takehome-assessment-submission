@@ -103,14 +103,6 @@ def draft_items(db: sqlite3.Connection, intent_id: str) -> list[Blocker]:
     ]
 
 
-def set_level(db: sqlite3.Connection, command_class: str, level: str) -> None:
-    db.execute(
-        "INSERT OR REPLACE INTO settings (key, value_json) VALUES (?, ?)",
-        (f"autonomy.{command_class}", json.dumps(level)),
-    )
-    db.commit()
-
-
 def approve_row(db: sqlite3.Connection, intent_id: str, **overrides: Any) -> None:
     """An approval of the draft bound to the values the lead and the draft hold now, with any
     of the five replaced."""
@@ -245,8 +237,6 @@ def test_a_draft_whose_class_runs_at_review_waits_as_a_draft_item_and_one_at_aut
     for intent_id in (sensitive, packet):
         (item,) = draft_items(store, intent_id)
         assert item.owner == "underwriter"
-    set_level(store, "send_routine_request", "review")
-    assert len(draft_items(store, draft(store, make_context, "routine_request"))) == 1
 
 
 def test_a_draft_of_a_class_the_manifest_does_not_declare_is_refused_and_writes_nothing(
@@ -497,32 +487,6 @@ def test_a_mismatch_reopens_the_item_when_it_is_closed(
     dispatch(store, mailbox, make_context, intent_id)
 
     assert len(draft_items(store, intent_id)) == 1
-
-
-def test_a_class_set_to_off_is_not_sent(
-    store: sqlite3.Connection, mailbox: MailboxClient, make_context: Context
-) -> None:
-    intent_id = draft(store, make_context)
-    set_level(store, "send_routine_request", "off")
-
-    with pytest.raises(NotImplementedError, match="off"):
-        dispatch(store, mailbox, make_context, intent_id)
-
-    assert messages(mailbox) == []
-    assert state_of(store, intent_id) == "draft"
-
-
-def test_an_engaged_emergency_stop_is_not_sent_past(
-    store: sqlite3.Connection, mailbox: MailboxClient, make_context: Context
-) -> None:
-    intent_id = draft(store, make_context)
-    store.execute("INSERT INTO settings (key, value_json) VALUES ('emergency_stop', 'true')")
-    store.commit()
-
-    with pytest.raises(NotImplementedError, match="emergency stop"):
-        dispatch(store, mailbox, make_context, intent_id)
-
-    assert messages(mailbox) == []
 
 
 def test_dispatching_committed_before_post(
@@ -1148,40 +1112,6 @@ def test_approving_delivery_unknown_with_the_mailbox_down_is_accepted_and_the_it
     assert approval == ("delivery_unknown", "approved")
 
 
-def mailbox_answering(post: httpx2.Response) -> Iterator[tuple[MailboxClient, list[str]]]:
-    """A mailbox that answers every post with `post` and every listing with no messages."""
-    requests: list[str] = []
-
-    def answer(request: httpx2.Request) -> httpx2.Response:
-        requests.append(request.method)
-        return post if request.method == "POST" else httpx2.Response(200, json=[])
-
-    with httpx2.Client(base_url="http://mailbox", transport=httpx2.MockTransport(answer)) as http:
-        yield MailboxClient(http), requests
-
-
-UNUSABLE_POSTS = [
-    httpx2.Response(200, content=b"not json"),
-    httpx2.Response(200, json={}),
-    httpx2.Response(200, json=[1]),
-    httpx2.Response(500, json={}),
-]
-
-
-@pytest.mark.parametrize("post", UNUSABLE_POSTS, ids=["not_json", "no_id", "not_an_object", "500"])
-def test_a_post_whose_result_cannot_be_used_is_reconciled_and_never_posted_again(
-    store: sqlite3.Connection, make_context: Context, post: httpx2.Response
-) -> None:
-    intent_id = draft(store, make_context)
-
-    for client, requests in mailbox_answering(post):
-        dispatch(store, client, make_context, intent_id)
-
-        assert requests == ["POST", "GET"]
-    assert state_of(store, intent_id) == "unknown"
-    assert [b.kind for b in open_blockers(store, LEAD)] == ["delivery_unknown"]
-
-
 # ---- nothing after a commit raises --------------------------------------------------------------
 
 
@@ -1228,20 +1158,6 @@ def test_a_command_is_accepted_when_its_dispatch_finds_the_lead_status_refusing_
 
     assert messages(mailbox) == []
     assert state_of(store, intent_id) == "draft"
-    assert len(draft_items(store, intent_id)) == 1
-
-
-def test_a_draft_of_a_review_class_with_no_item_and_no_approval_gets_its_item_once(
-    store: sqlite3.Connection, mailbox: MailboxClient, make_context: Context
-) -> None:
-    intent_id = draft(store, make_context, "routine_request")
-    assert draft_items(store, intent_id) == []
-    set_level(store, "send_routine_request", "review")
-
-    dispatch(store, mailbox, make_context, intent_id)
-    dispatch(store, mailbox, make_context, intent_id)
-
-    assert messages(mailbox) == []
     assert len(draft_items(store, intent_id)) == 1
 
 

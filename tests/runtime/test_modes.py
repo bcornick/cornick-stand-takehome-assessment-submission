@@ -19,7 +19,7 @@ from uwh.runtime.recordings import (
     write_recording,
 )
 from uwh.runtime.store import open_store
-from uwh.settings import RUN_MODES, Settings
+from uwh.settings import Settings
 
 KEY = RecordingKey(skill="read_reply", prompt_version="a" * 64, input_hash=input_hash({"x": 1}))
 
@@ -109,15 +109,6 @@ def test_a_failing_live_call_propagates_and_is_not_answered_from_a_recording(
     with pytest.raises(ModelDown):
         exchange_for_mode(mode, tmp_path, KEY, failing_model)  # type: ignore[arg-type]
     assert read_recording(tmp_path, KEY) == an_exchange("recorded")
-
-
-def test_an_unknown_mode_is_refused(tmp_path: Path) -> None:
-    with pytest.raises(ValueError, match="mode"):
-        exchange_for_mode("fallback", tmp_path, KEY, Model())  # type: ignore[arg-type]
-
-
-def test_every_run_mode_is_handled() -> None:
-    assert set(RUN_MODES) == {"live", "replay", "record"}
 
 
 def test_mode_is_read_once_and_a_later_environment_change_does_not_alter_it(

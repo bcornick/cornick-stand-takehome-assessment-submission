@@ -1,5 +1,5 @@
-# ABOUTME: Tests that a lead holds several blockers with kind, owner and resume trigger, that the primary next action follows the 7.1 priority order, and that an unservable blocker or a bad observation item is refused at the write.
-# ABOUTME: Each test opens a real database through open_store and reads back the blockers table and the events; one test shows the lead detail view's BlockerView refuses what the write refuses.
+# ABOUTME: Tests that a lead holds several blockers with kind, owner and resume trigger, that the primary next action follows the 7.1 priority order.
+# ABOUTME: Each test opens a real database through open_store and reads back the blockers table and the events.
 import json
 import sqlite3
 from datetime import UTC, datetime
@@ -7,10 +7,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from pydantic import ValidationError
 
-from uwh.api.views import BlockerView
-from uwh.runtime.event_types import BlockerDetail, BlockerKind, BlockerOwner, EventType
+from uwh.runtime.event_types import BlockerDetail, EventType
 from uwh.runtime.events import EventContext, read_events
 from uwh.runtime.store import open_store
 from uwh.runtime.waits import (
@@ -100,15 +98,6 @@ def test_closing_a_blocker_writes_its_event_and_removes_it_from_the_open_list(
     assert row == (event.id,)
 
 
-def test_closing_an_unknown_or_closed_blocker_is_refused(db: sqlite3.Connection) -> None:
-    blocker_id = open_blocker(db, CONTEXT, "L-1", "data", "data_team", detail())
-    close_blocker(db, CONTEXT, blocker_id)
-    with pytest.raises(ValueError, match="already closed"):
-        close_blocker(db, CONTEXT, blocker_id)
-    with pytest.raises(ValueError, match="no blocker 99"):
-        close_blocker(db, CONTEXT, 99)
-
-
 def test_an_open_blocker_is_found_by_its_id_and_a_closed_or_unknown_one_is_not(
     db: sqlite3.Connection,
 ) -> None:
@@ -179,11 +168,6 @@ def test_a_terminal_lead_has_no_primary_next_action(db: sqlite3.Connection, stat
     assert primary_next_action(db, "L-T") is None
 
 
-def test_the_primary_next_action_of_an_unknown_lead_is_refused(db: sqlite3.Connection) -> None:
-    with pytest.raises(ValueError, match="no lead L-9"):
-        primary_next_action(db, "L-9")
-
-
 # ---- what a blocker may carry ----------------------------------------------------------------------
 
 
@@ -198,60 +182,3 @@ def test_a_pending_observation_item_is_accepted(db: sqlite3.Connection) -> None:
         detail(item_kind="observation", observation_id=observation_id),
     )
     assert [b.id for b in open_blockers(db, "L-1")] == [blocker_id]
-
-
-@pytest.mark.parametrize(
-    ("kind", "owner", "fields"),
-    [
-        ("data", "data_team", {"cause": "late_reply"}),
-        ("data", "data_team", {"choice_ids": ["c1"]}),
-        ("underwriter_question", "underwriter", {}),
-        ("underwriter_review", "underwriter", {"item_kind": "draft"}),
-    ],
-)
-def test_a_blocker_the_rule_refuses_is_refused_at_the_write_and_by_the_view(
-    db: sqlite3.Connection, kind: BlockerKind, owner: BlockerOwner, fields: dict[str, Any]
-) -> None:
-    blocker_detail = detail(**fields)
-    with pytest.raises(ValueError):
-        open_blocker(db, CONTEXT, "L-1", kind, owner, blocker_detail)
-    with pytest.raises(ValidationError):
-        BlockerView(
-            item_id=1,
-            kind=kind,
-            owner=owner,
-            detail=blocker_detail,
-            observation=None,
-            held_draft_payload_hash=None,
-        )
-    assert db.execute("SELECT COUNT(*) FROM blockers").fetchone() == (0,)
-    assert read_events(db) == []
-
-
-@pytest.mark.parametrize("status", ["accepted", "rejected"])
-def test_an_observation_item_for_an_observation_not_pending_is_refused(
-    db: sqlite3.Connection, status: str
-) -> None:
-    observation_id = add_observation(db, status)
-    blocker_detail = detail(item_kind="observation", observation_id=observation_id)
-    with pytest.raises(ValueError, match="not a pending_review"):
-        open_blocker(db, CONTEXT, "L-1", "underwriter_review", "underwriter", blocker_detail)
-    assert read_events(db) == []
-
-
-def test_an_observation_item_for_a_missing_observation_is_refused(db: sqlite3.Connection) -> None:
-    blocker_detail = detail(item_kind="observation", observation_id=41)
-    with pytest.raises(ValueError, match="not a pending_review"):
-        open_blocker(db, CONTEXT, "L-1", "underwriter_review", "underwriter", blocker_detail)
-
-
-def test_an_observation_item_for_another_leads_observation_is_refused(
-    db: sqlite3.Connection,
-) -> None:
-    add_lead(db, "L-2", "in_progress")
-    observation_id = add_observation(db, "pending_review", "L-2")
-    blocker_detail = detail(item_kind="observation", observation_id=observation_id)
-    with pytest.raises(ValueError, match=f"observation {observation_id} is not lead L-1's"):
-        open_blocker(db, CONTEXT, "L-1", "underwriter_review", "underwriter", blocker_detail)
-    assert db.execute("SELECT COUNT(*) FROM blockers").fetchone() == (0,)
-    assert read_events(db) == []

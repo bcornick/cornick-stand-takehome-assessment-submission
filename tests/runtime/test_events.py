@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 
-from uwh.runtime.event_types import EventType, LeadReceived, RunStarted, SettingChanged
+from uwh.runtime.event_types import EventType, LeadReceived, RunStarted
 from uwh.runtime.events import (
     EventContext,
     StaleRun,
@@ -154,13 +154,6 @@ def test_events_read_back_in_id_order_with_typed_payloads(db: sqlite3.Connection
         append_event(
             db, context(actor="underwriter"), EventType.lead_received, received("b"), lead_id="L-1"
         ),
-        append_event(
-            db,
-            context(),
-            EventType.setting_changed,
-            SettingChanged(key="k", value=[1, "x"]),
-            lead_id=None,
-        ),
     ]
     assert ids == sorted(ids)
     events = read_events(db)
@@ -169,10 +162,8 @@ def test_events_read_back_in_id_order_with_typed_payloads(db: sqlite3.Connection
         EventType.lead_received,
         EventType.run_started,
         EventType.lead_received,
-        EventType.setting_changed,
     ]
     assert events[0].payload == received("a")
-    assert events[3].payload == SettingChanged(key="k", value=[1, "x"])
     assert events[2].actor == "underwriter"
     assert events[2].lead_id == "L-1"
     assert events[0].real_ts == REAL

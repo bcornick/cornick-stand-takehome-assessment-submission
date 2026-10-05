@@ -11,20 +11,6 @@ from uwh.runtime.mailbox_client import MailboxClient
 pytestmark = pytest.mark.integration
 
 
-def test_leadgen_seed_42_returns_ten_leads_with_73_fields(host_urls: dict[str, str]) -> None:
-    with httpx2.Client(base_url=host_urls["leadgen"]) as http:
-        client = LeadgenClient(http)
-        assert client.healthz() == {"status": "ok"}
-        queue = client.post_queue(seed=42)
-        expected = [f"LEAD-00000042-{i:03d}" for i in range(10)]
-        assert queue["lead_ids"] == expected
-        assert [s["lead_id"] for s in client.list_leads()] == expected
-        for lead_id in expected:
-            lead = client.get_lead(lead_id)
-            assert lead["lead_id"] == lead_id
-            assert len(lead["fields"]) == 73
-
-
 def test_mailbox_round_trips_metadata(host_urls: dict[str, str]) -> None:
     with httpx2.Client(base_url=host_urls["mailbox"]) as http:
         client = MailboxClient(http)

@@ -138,9 +138,7 @@ def test_the_pass_context_keeps_the_run_it_was_built_for(
 # ---- a start ------------------------------------------------------------------------------------
 
 
-def test_a_start_recreates_every_table_but_settings(
-    db: sqlite3.Connection, env: CommandEnvironment
-) -> None:
+def test_a_start_recreates_every_table(db: sqlite3.Connection, env: CommandEnvironment) -> None:
     ddl_before = schema(db)
     old = EventContext("old-run", "replay", "workflow", RULESET, NOW, NOW)
     db.execute(
@@ -149,10 +147,9 @@ def test_a_start_recreates_every_table_but_settings(
     )
     create_lead(db, old, "OLD-LEAD", "web", "2026-06-29T07:00:00Z")
     db.execute(
-        "INSERT INTO proposals (kind, payload_json, diff_hash, state, actor, event_id)"
-        " VALUES ('rule_change', '{}', 'h', 'open', 'underwriter', 1)"
+        "INSERT INTO proposals (payload_json, state, actor, event_id)"
+        " VALUES ('{}', 'open', 'assistant', 1)"
     )
-    db.execute("INSERT INTO settings (key, value_json) VALUES ('emergency_stop', 'true')")
     db.commit()
 
     # DELETE FROM events is refused by the append-only trigger, so only dropping the table works.
@@ -160,9 +157,6 @@ def test_a_start_recreates_every_table_but_settings(
 
     assert result.accepted
     assert schema(db) == ddl_before
-    assert db.execute("SELECT key, value_json FROM settings").fetchall() == [
-        ("emergency_stop", "true")
-    ]
     assert db.execute("SELECT run_id FROM runs").fetchall() == [(current_id(db),)]
     assert db.execute("SELECT count(*) FROM proposals").fetchone() == (0,)
     assert "OLD-LEAD" not in lead_ids(db)

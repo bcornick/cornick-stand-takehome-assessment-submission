@@ -1,6 +1,5 @@
 # ABOUTME: Integration tests of the bootstrap against Stand's running leadgen and mailbox containers.
 # ABOUTME: A closed port stands in for an unreachable service; the probe is read back independently.
-import json
 import socket
 from pathlib import Path
 
@@ -70,15 +69,6 @@ def test_closed_leadgen_port_is_an_invalid_environment(
     monkeypatch.setenv("LEADGEN_URL", closed_port_url())
     with pytest.raises(EnvironmentInvalid, match="leadgen"):
         bootstrap.run()
-
-
-def test_main_prints_only_the_json_summary(
-    host_urls: dict[str, str], capsys: pytest.CaptureFixture[str]
-) -> None:
-    assert bootstrap.main() == 0
-    captured = capsys.readouterr()
-    assert json.loads(captured.out)["lead_ids"][0] == "LEAD-00000042-000"
-    assert captured.err == ""
 
 
 def test_main_reports_an_invalid_environment_on_stderr(

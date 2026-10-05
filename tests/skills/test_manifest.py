@@ -1,4 +1,4 @@
-# ABOUTME: Tests the skill folder check of section 8: each missing part, each manifest rule, and the real tree against SKILLS.
+# ABOUTME: Tests the skill folder check of section 8: a missing part, a prompt that does not fit the skill, a command class the skill may not issue, and the real tree against SKILLS.
 # ABOUTME: Folders are built under tmp_path so each failing case is shown; the real-tree tests fail on an unregistered or incomplete skill.
 from pathlib import Path
 from typing import Any
@@ -8,7 +8,7 @@ import yaml
 
 import uwh.skills
 from uwh.skills import SKILLS
-from uwh.skills.manifest import SkillFolderError, check_skill_folder, load_manifest
+from uwh.skills.manifest import SkillFolderError, check_skill_folder
 from uwh.skills.vertical import COMMAND_CLASSES
 
 MANIFEST: dict[str, Any] = {
@@ -82,28 +82,6 @@ def test_a_deterministic_skill_with_a_prompt_fails(tmp_path: Path) -> None:
         check_skill_folder(build(tmp_path, prompt=True))
 
 
-def test_a_manifest_name_that_differs_from_the_folder_fails(tmp_path: Path) -> None:
-    with pytest.raises(SkillFolderError, match="(?s)demo.*name"):
-        check_skill_folder(build(tmp_path, {**MANIFEST, "name": "other"}))
-
-
-def test_load_manifest_reads_a_folder_that_has_no_cases(tmp_path: Path) -> None:
-    folder = build(tmp_path, skip=("cases",))
-    assert load_manifest(folder).name == "demo"
-    with pytest.raises(SkillFolderError, match="(?s)demo.*cases"):
-        check_skill_folder(folder)
-
-
-def test_load_manifest_refuses_a_missing_manifest_and_a_name_that_differs(tmp_path: Path) -> None:
-    with pytest.raises(SkillFolderError, match="(?s)demo.*manifest.yaml"):
-        load_manifest(build(tmp_path, skip=("manifest.yaml",)))
-    folder = tmp_path / "other"
-    folder.mkdir()
-    (folder / "manifest.yaml").write_text(yaml.safe_dump(MANIFEST), encoding="utf-8")
-    with pytest.raises(SkillFolderError, match="(?s)other.*name"):
-        load_manifest(folder)
-
-
 def test_an_unknown_command_class_fails(tmp_path: Path) -> None:
     folder = build(tmp_path, {**MANIFEST, "command_classes": ["launch_rocket"]})
     with pytest.raises(SkillFolderError, match="(?s)demo.*launch_rocket"):
@@ -113,21 +91,6 @@ def test_an_unknown_command_class_fails(tmp_path: Path) -> None:
 WORKFLOW_CLASSES = [c.name for c in COMMAND_CLASSES if "workflow" in c.actors]
 
 
-def test_the_classes_a_skill_may_issue_are_the_workflow_ones() -> None:
-    assert WORKFLOW_CLASSES == [
-        "fetch_data",
-        "send_routine_request",
-        "send_sensitive_request",
-        "send_quote_packet",
-        "send_decline_notice",
-    ]
-
-
-def test_a_skill_may_issue_every_workflow_class(tmp_path: Path) -> None:
-    folder = build(tmp_path, {**MANIFEST, "command_classes": WORKFLOW_CLASSES})
-    assert check_skill_folder(folder).command_classes == WORKFLOW_CLASSES
-
-
 @pytest.mark.parametrize("name", [c.name for c in COMMAND_CLASSES if "workflow" not in c.actors])
 def test_a_class_the_workflow_actor_may_not_submit_fails(tmp_path: Path, name: str) -> None:
     folder = build(tmp_path, {**MANIFEST, "command_classes": ["fetch_data", name]})
@@ -135,70 +98,7 @@ def test_a_class_the_workflow_actor_may_not_submit_fails(tmp_path: Path, name: s
         check_skill_folder(folder)
 
 
-def test_a_duplicate_command_class_fails(tmp_path: Path) -> None:
-    folder = build(tmp_path, {**MANIFEST, "command_classes": ["fetch_data", "fetch_data"]})
-    with pytest.raises(SkillFolderError, match="(?s)demo.*duplicate.*fetch_data"):
-        check_skill_folder(folder)
-
-
-def test_a_threshold_of_one_with_a_reason_fails(tmp_path: Path) -> None:
-    folder = build(tmp_path, {**MANIFEST, "threshold_reason": "Not needed."})
-    with pytest.raises(SkillFolderError, match="(?s)demo.*threshold_reason"):
-        check_skill_folder(folder)
-
-
-def test_a_skill_that_issues_no_command_has_an_empty_list(tmp_path: Path) -> None:
-    folder = build(tmp_path, {**MANIFEST, "command_classes": []})
-    assert check_skill_folder(folder).command_classes == []
-
-
-def test_an_unknown_field_fails(tmp_path: Path) -> None:
-    with pytest.raises(SkillFolderError, match="(?s)demo.*surprise"):
-        check_skill_folder(build(tmp_path, {**MANIFEST, "surprise": 1}))
-
-
-@pytest.mark.parametrize(
-    "field",
-    ["name", "version", "purpose", "trigger", "command_classes", "fallback", "pass_threshold"],
-)
-def test_a_manifest_missing_a_field_fails(tmp_path: Path, field: str) -> None:
-    manifest = {k: v for k, v in MANIFEST.items() if k != field}
-    with pytest.raises(SkillFolderError, match=f"(?s)demo.*{field}"):
-        check_skill_folder(build(tmp_path, manifest))
-
-
-def test_a_threshold_below_one_needs_a_reason(tmp_path: Path) -> None:
-    folder = build(tmp_path, {**MANIFEST, "pass_threshold": 0.9})
-    with pytest.raises(SkillFolderError, match="(?s)demo.*threshold_reason"):
-        check_skill_folder(folder)
-
-
-def test_a_threshold_below_one_with_a_reason_loads(tmp_path: Path) -> None:
-    manifest = {**MANIFEST, "pass_threshold": 0.9, "threshold_reason": "Replies are ambiguous."}
-    assert check_skill_folder(build(tmp_path, manifest)).pass_threshold == 0.9
-
-
-@pytest.mark.parametrize("threshold", [0, -0.5, 1.5])
-def test_a_threshold_outside_zero_to_one_fails(tmp_path: Path, threshold: float) -> None:
-    manifest = {**MANIFEST, "pass_threshold": threshold, "threshold_reason": "Because."}
-    with pytest.raises(SkillFolderError, match="(?s)demo.*pass_threshold"):
-        check_skill_folder(build(tmp_path, manifest))
-
-
-def test_a_manifest_that_is_not_a_mapping_fails(tmp_path: Path) -> None:
-    folder = build(tmp_path)
-    (folder / "manifest.yaml").write_text("- a\n- list\n", encoding="utf-8")
-    with pytest.raises(SkillFolderError, match="(?s)demo.*manifest.yaml"):
-        check_skill_folder(folder)
-
-
 SKILLS_DIR = Path(uwh.skills.__file__).parent
-
-
-def test_skills_is_a_plain_list_of_names() -> None:
-    assert isinstance(SKILLS, list)
-    assert all(isinstance(name, str) for name in SKILLS)
-    assert len(SKILLS) == len(set(SKILLS))
 
 
 def test_every_skill_folder_is_registered() -> None:

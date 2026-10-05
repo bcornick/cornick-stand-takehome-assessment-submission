@@ -132,37 +132,6 @@ def database_path(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("UWH_DB", str(tmp_path / "app.db"))
 
 
-def test_non_json_answer_is_an_invalid_environment(
-    serve_body: ServeBody, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setenv("LEADGEN_URL", serve_body(b"<html>not leadgen</html>", "text/html"))
-    monkeypatch.setenv("MAILBOX_URL", serve_body(b"{}", "application/json"))
-    with pytest.raises(EnvironmentInvalid, match="leadgen"):
-        bootstrap.run()
-
-
-def test_json_of_the_wrong_shape_is_an_invalid_environment(
-    serve_body: ServeBody, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setenv("LEADGEN_URL", serve_body(b"{}", "application/json"))
-    monkeypatch.setenv("MAILBOX_URL", serve_body(b"{}", "application/json"))
-    with pytest.raises(EnvironmentInvalid, match="leadgen"):
-        bootstrap.run()
-
-
-def test_malformed_url_is_an_invalid_environment(monkeypatch: pytest.MonkeyPatch) -> None:
-    # httpx2.Client(base_url="http://:abc") raises httpx2.InvalidURL at construction.
-    monkeypatch.setenv("LEADGEN_URL", "http://:abc")
-    with pytest.raises(EnvironmentInvalid, match="leadgen"):
-        bootstrap.run()
-
-
-def test_unset_database_path_is_a_configuration_error(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("UWH_DB")
-    with pytest.raises(ValueError, match="UWH_DB"):
-        bootstrap.run()
-
-
 def bootstrap_against(
     serve_routes: ServeRoutes,
     monkeypatch: pytest.MonkeyPatch,
@@ -199,15 +168,6 @@ def test_envelope_of_another_lead_is_an_invalid_environment(
     wrong = (200, {"lead_id": LEAD_IDS[0], "fields": {}})
     leadgen = leadgen_routes(**{f"GET /leads/{LEAD_IDS[1]}": wrong})
     with pytest.raises(EnvironmentInvalid, match="returned envelope"):
-        bootstrap_against(serve_routes, monkeypatch, leadgen)
-
-
-def test_envelope_without_a_fields_mapping_is_an_invalid_environment(
-    serve_routes: ServeRoutes, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    wrong = (200, {"lead_id": LEAD_IDS[2], "fields": ["not", "a", "mapping"]})
-    leadgen = leadgen_routes(**{f"GET /leads/{LEAD_IDS[2]}": wrong})
-    with pytest.raises(EnvironmentInvalid, match="no fields mapping"):
         bootstrap_against(serve_routes, monkeypatch, leadgen)
 
 

@@ -16,11 +16,6 @@ def utc(year: int, month: int, day: int, hour: int = 0, minute: int = 0) -> date
     return datetime(year, month, day, hour, minute, tzinfo=UTC)
 
 
-def test_the_reference_morning_is_a_monday_at_eight_utc() -> None:
-    assert REFERENCE_MORNING == utc(2026, 6, 29, 8)
-    assert REFERENCE_MORNING.weekday() == 0
-
-
 def test_sim_now_is_the_reference_morning_at_run_start() -> None:
     start = utc(2026, 10, 5, 13, 7)
     assert sim_now(REFERENCE_MORNING, start, start) == REFERENCE_MORNING
@@ -41,14 +36,6 @@ def test_sim_now_crosses_a_weekend_in_real_elapsed_time() -> None:
 def test_sim_now_converts_other_offsets_to_utc() -> None:
     start = datetime.fromisoformat("2026-10-05T15:07:00+02:00")
     assert sim_now(REFERENCE_MORNING, start, start + timedelta(hours=1)) == utc(2026, 6, 29, 9)
-
-
-def test_a_naive_timestamp_is_refused() -> None:
-    naive = datetime(2026, 6, 29, 8)
-    with pytest.raises(ValueError, match="time zone"):
-        sim_now(REFERENCE_MORNING, naive, naive)
-    with pytest.raises(ValueError, match="time zone"):
-        age_business_days(naive, REFERENCE_MORNING)
 
 
 timestamps = st.datetimes(

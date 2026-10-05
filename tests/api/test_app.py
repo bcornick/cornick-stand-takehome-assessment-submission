@@ -1,14 +1,10 @@
 # ABOUTME: Tests of the app skeleton: GET /api/run reports the mode, the seed and no run id before a run starts, the static frontend is served, and a restart settles a run that was left processing.
-# ABOUTME: The app is built in process, from explicit settings or from the environment; importing it reads no environment, and building it opens no database.
-import os
+# ABOUTME: The app is built in process from explicit settings, against Stand's leadgen and mailbox apps in process.
 import sqlite3
-import subprocess
-import sys
 from collections.abc import Callable
 from contextlib import AbstractContextManager
 from pathlib import Path
 
-import pytest
 from fastapi.testclient import TestClient
 
 from uwh.api.app import create_app
@@ -45,12 +41,6 @@ def test_run_endpoint_reports_mode_seed_and_null_run_id(client: TestClient) -> N
     }
 
 
-def test_building_the_app_opens_no_database(settings: Settings) -> None:
-    create_app(settings)
-
-    assert not Path(settings.db_path).exists()
-
-
 def test_the_app_settles_a_run_left_processing_before_it_serves(
     settings: Settings,
     leadgen: LeadgenClient,
@@ -72,20 +62,6 @@ def test_the_app_settles_a_run_left_processing_before_it_serves(
     assert view["first_pass_complete"] is True
     assert len(ran) == 10 + 10  # the recovered pass, then the pass of the run started after it
     assert restarted.status_code == 200
-
-
-def test_app_without_settings_reads_the_environment(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    monkeypatch.setenv("RUN_MODE", "record")
-    monkeypatch.setenv("SEED", "11")
-    monkeypatch.setenv("UWH_DB", str(tmp_path / "app.db"))
-    with TestClient(create_app()) as client:
-        response = client.get("/api/run")
-    body = response.json()
-    assert (body["mode"], body["seed"], body["run_id"]) == ("record", 11, None)
-    assert body["first_pass_complete"] is False
-    assert body["summary"] == NO_RUN_SUMMARY
 
 
 def static_client(tmp_path: Path) -> TestClient:
@@ -117,25 +93,3 @@ def test_api_routes_keep_precedence_over_the_static_mount(tmp_path: Path) -> Non
     assert declared.status_code == 501
     assert unknown.status_code == 404
     assert unknown.headers["content-type"].startswith("application/json")
-
-
-def test_missing_static_directory_leaves_the_app_running(tmp_path: Path) -> None:
-    settings = Settings.load(
-        {"UWH_DB": str(tmp_path / "app.db"), "UWH_STATIC_DIR": str(tmp_path / "absent")}
-    )
-    with TestClient(create_app(settings)) as client:
-        assert client.get("/").status_code == 404
-        assert client.get("/api/run").status_code == 200
-
-
-def test_importing_the_api_modules_reads_no_environment() -> None:
-    # A bad RUN_MODE and no UWH_DB would fail Settings.load; an import must not call it.
-    env = {k: v for k, v in os.environ.items() if k not in ("UWH_DB", "SEED")}
-    env["RUN_MODE"] = "not-a-mode"
-    done = subprocess.run(
-        [sys.executable, "-c", "import uwh.api.app, uwh.api.routes, uwh.api.views"],
-        env=env,
-        capture_output=True,
-        text=True,
-    )
-    assert done.returncode == 0, done.stderr

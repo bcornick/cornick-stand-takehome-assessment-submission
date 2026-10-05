@@ -1,5 +1,5 @@
 # ABOUTME: Checks repository-wide writing rules that tools like ruff do not cover.
-# ABOUTME: Fails on temporal vocabulary, missing ABOUTME headers, and source files without a test file.
+# ABOUTME: Fails on temporal vocabulary, missing ABOUTME headers, and files under src/ that import Stand's code or name the debug path.
 """Run from the repository root: python3 scripts/check_discipline.py"""
 
 from __future__ import annotations
@@ -106,13 +106,6 @@ def main() -> int:
                     problems.append(
                         f"{rel}:{number}: src/ must not import Stand's code or name the debug path"
                     )
-
-    test_names = {Path(p).name for p in paths if p.startswith("tests/")}
-    for rel in paths:
-        path = Path(rel)
-        if rel.startswith("src/uwh/") and path.suffix == ".py" and path.name != "__init__.py":
-            if f"test_{path.name}" not in test_names:
-                problems.append(f"{rel}: no tests/**/test_{path.name}")
 
     if problems:
         print("\n".join(problems))

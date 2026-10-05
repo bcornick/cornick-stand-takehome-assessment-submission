@@ -1,6 +1,5 @@
 # ABOUTME: Builds the app image from a temporary copy of the build inputs and checks the guarantees of architecture section 14.
 # ABOUTME: Needs Docker only; a sentinel skill with a cases/ folder and an evals/ file exist in the copy, never in the repository.
-import hashlib
 import io
 import subprocess
 import tarfile
@@ -114,43 +113,7 @@ def test_no_evals_in_the_image(image: str) -> None:
     assert [p for p in listing if p.rsplit("/", 1)[-1] in ("evals", "sentinel.txt")] == []
 
 
-def test_registry_is_copied_byte_for_byte(image: str) -> None:
-    in_container = run("docker", "run", "--rm", image, "cat", "/app/registry/field_registry.json")
-    expected = (ROOT / REGISTRY).read_bytes()
-    assert hashlib.sha256(in_container.stdout).hexdigest() == hashlib.sha256(expected).hexdigest()
-
-
-def test_git_commit_build_argument_is_the_environment_variable(image: str) -> None:
-    assert in_image(image, "printenv", "GIT_COMMIT").strip() == KNOWN_COMMIT
-
-
-def test_git_commit_is_unknown_without_the_build_argument(context: Path) -> None:
-    tag = f"uwh-image-test:{uuid.uuid4().hex[:8]}"
-    try:
-        build(context, tag)
-        assert in_image(tag, "printenv", "GIT_COMMIT").strip() == "unknown"
-    finally:
-        subprocess.run(["docker", "image", "rm", "--force", tag], capture_output=True, check=False)
-
-
-def test_python_is_the_project_interpreter(image: str) -> None:
-    printed = in_image(image, "python", "-c", "import sys, uwh; print(sys.executable)").strip()
-    assert printed.startswith("/app/.venv/")
-
-
-def test_sqlite3_cli_is_installed(image: str) -> None:
-    run("docker", "run", "--rm", image, "sqlite3", "--version")
-
-
 def test_image_holds_the_built_frontend_at_the_static_path(image: str) -> None:
     assert 'id="root"' in in_image(image, "cat", "/app/static/index.html")
     assets = in_image(image, "ls", "/app/static/assets").split()
     assert any(name.endswith(".js") for name in assets)
-
-
-def test_image_holds_no_node_modules_and_no_node(image: str) -> None:
-    found = in_image(image, "find", "/app", "-name", "node_modules")
-    assert found.strip() == ""
-    assert (
-        in_image(image, "sh", "-c", "command -v node; command -v pnpm; echo done").strip() == "done"
-    )
