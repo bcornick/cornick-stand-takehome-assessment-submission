@@ -4,14 +4,14 @@
     "milestone": 1,
     "description": "One integration test drives lead 008 from the posted queue to `quote_sent` against the leadgen and mailbox containers, with the reply read from a recording. Expect: all pass.",
     "command": "uv run pytest -m integration tests/integration/test_lead_008.py",
-    "passes": false
+    "passes": true
   },
   {
     "id": "M1-A2",
     "milestone": 1,
     "description": "After that run the mailbox holds exactly one request and one quote packet for lead 008. Expect: `1 1`.",
     "command": "curl -s http://localhost:8025/leads/LEAD-00000042-008/emails | jq -r '[(map(select(.metadata.kind == \"routine_request\" or .metadata.kind == \"sensitive_request\")) | length), (map(select(.metadata.kind == \"quote_packet\")) | length)] | join(\" \")'",
-    "passes": false
+    "passes": true
   },
   {
     "id": "M1-A3",
