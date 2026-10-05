@@ -429,10 +429,13 @@ def test_an_observation_blocker_refuses_a_missing_or_mismatched_observation(
         views.BlockerView.model_validate(bad)
 
 
-def held_blocker(cause: str, **changes: Any) -> dict[str, Any]:
+def held_blocker(
+    cause: str, detail: dict[str, Any] | None = None, **changes: Any
+) -> dict[str, Any]:
+    """A held draft's review; `detail` changes the default detail key by key."""
     return (
         blocker(
-            detail={"cause": cause, "intent_id": "intent-1"},
+            detail={"cause": cause, "intent_id": "intent-1"} | (detail or {}),
             held_draft_payload_hash="ab" * 32,
         )
         | changes
@@ -443,12 +446,10 @@ def held_blocker(cause: str, **changes: Any) -> dict[str, Any]:
 def test_a_held_draft_review_names_its_draft_and_the_hash_an_approve_carries(cause: str) -> None:
     view = views.BlockerView.model_validate(held_blocker(cause))
     assert (view.detail.intent_id, view.held_draft_payload_hash) == ("intent-1", "ab" * 32)
-    for bad in (
-        held_blocker(cause, held_draft_payload_hash=None),
-        held_blocker(cause, detail={"cause": cause, "intent_id": None}),
-    ):
-        with pytest.raises(ValidationError):
-            views.BlockerView.model_validate(bad)
+    with pytest.raises(ValidationError, match="held_draft_payload_hash"):
+        views.BlockerView.model_validate(held_blocker(cause, held_draft_payload_hash=None))
+    with pytest.raises(ValidationError, match="intent_id"):
+        views.BlockerView.model_validate(held_blocker(cause, detail={"intent_id": None}))
 
 
 def test_only_a_held_draft_review_carries_a_held_draft_hash() -> None:

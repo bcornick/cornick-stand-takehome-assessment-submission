@@ -804,3 +804,8 @@ def test_every_contract_model_forbids_unknown_fields() -> None:
     assert contract_classes()
     for cls in contract_classes():
         assert cls.model_config.get("extra") == "forbid", cls
+
+
+def test_a_resolved_observation_source_is_one_of_the_observation_sources() -> None:
+    sources = get_args(ResolvedObservation.model_fields["source"].annotation)
+    assert set(sources) <= set(get_args(event_types.ObservationSource))

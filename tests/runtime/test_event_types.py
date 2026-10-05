@@ -13,8 +13,8 @@ from uwh.runtime.event_types import (
     PAYLOAD_MODELS,
     AbstentionReason,
     Actor,
-    AutonomyLevel,
     ApprovalItemKind,
+    AutonomyLevel,
     BlockerDetail,
     BlockerKind,
     BlockerOwner,
@@ -492,7 +492,7 @@ def test_observation_status_is_a_closed_set() -> None:
 
 
 # The value sets written out from the architecture: 7.1 statuses and blocker kinds, A.1 owners,
-# intent kinds and item kinds, 7.3 sources, 7.4 actors, autonomy levels (section 7), A.11 review causes.
+# intent kinds and item kinds, 7.3 sources, 7.4 actors, autonomy levels (7.4), A.11 review causes.
 EXPECTED_VALUE_SETS = [
     (Status, ["received", "triaged", "in_progress", "quote_sent", "declined"]),
     (
