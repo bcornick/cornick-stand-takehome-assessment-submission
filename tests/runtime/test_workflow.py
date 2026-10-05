@@ -22,7 +22,6 @@ from uwh.runtime.facts import (
 from uwh.runtime.store import open_store
 from uwh.runtime.waits import close_blocker, open_blockers, primary_next_action
 from uwh.runtime.workflow import (
-    MAX_LEADS_IN_FLIGHT,
     Step,
     create_lead,
     reevaluate,
@@ -476,54 +475,58 @@ def test_every_failure_outside_a_step_is_reported_after_all_leads_finish(
     assert [e.__notes__ for e in raised.value.exceptions] == [["lead L-1"], ["lead L-2"]]
 
 
+# Every step holds the database's write lock for its whole unit of work, so step bodies of different
+# leads do not overlap. The bound of A.10 is on leads in flight: a lead is in flight from the start
+# of its pass (its thread opens its connection) to the end of its last step, including while it
+# waits for the lock between steps, so this test counts leads at pass level, not inside a step.
 @pytest.mark.slow
 def test_never_more_than_four_leads_are_in_flight_and_ten_leads_all_complete(
-    path: str, db: sqlite3.Connection
+    path: str, db: sqlite3.Connection, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     ids = [LEAD, *(f"L-{n}" for n in range(2, 11))]
     for lead_id in ids[1:]:
         create_lead(db, CONTEXT, lead_id, "web", "2026-06-29T07:00:00Z")
     db.commit()
     lock = threading.Lock()
-    four_together = threading.Barrier(MAX_LEADS_IN_FLIGHT, timeout=10)
-    all_ten_started = threading.Event()
-    started = 0
-    in_flight = 0
-    peak = 0
+    in_flight: set[int] = set()
+    peaks: list[int] = []
+    ran: dict[str, list[str]] = {lead_id: [] for lead_id in ids}
+    step_names = ["fetch_data", "resolve", "evaluate", "render"]
+    writes_per_step = 25
 
-    def wait_for_a_provider(db: sqlite3.Connection, context: EventContext, lead_id: str) -> None:
-        # The first four to arrive wait for each other: the barrier breaks if the pool holds fewer
-        # than four. They then stay in flight until all ten leads have started, which happens only
-        # if the pool admits a fifth, so the peak shows the bound.
-        nonlocal started, in_flight, peak
+    def open_store_for_a_pass(db_path: str) -> sqlite3.Connection:
+        # A lead's pass starts when its thread opens its connection.
         with lock:
-            started += 1
-            arrival = started
-            if started == len(ids):
-                all_ten_started.set()
-            in_flight += 1
-            peak = max(peak, in_flight)
-        if arrival <= MAX_LEADS_IN_FLIGHT:
-            four_together.wait()
-            all_ten_started.wait(timeout=1)
-        with lock:
-            in_flight -= 1
+            in_flight.add(threading.get_ident())
+            peaks.append(len(in_flight))
+        return open_store(db_path)
 
-    def write_facts(db: sqlite3.Connection, context: EventContext, lead_id: str) -> None:
-        for number in range(5):
-            observe(db, context, lead_id, f"k{number}", number, "submitted", {}, RULES)
+    monkeypatch.setattr("uwh.runtime.workflow.open_store", open_store_for_a_pass)
 
-    run_leads(
-        path,
-        make_context,
-        ids,
-        [Step("fetch_data", wait_for_a_provider), Step("write", write_facts)],
-    )
-    assert peak == MAX_LEADS_IN_FLIGHT == 4
+    def pass_step(name: str) -> Step:
+        def run(db: sqlite3.Connection, context: EventContext, lead_id: str) -> None:
+            with lock:
+                ran[lead_id].append(name)
+            for number in range(writes_per_step):
+                observe(db, context, lead_id, f"{name}.k{number}", number, "submitted", {}, RULES)
+            if name == step_names[-1]:
+                with lock:
+                    in_flight.remove(threading.get_ident())
+
+        return Step(name, run)
+
+    run_leads(path, make_context, ids, [pass_step(name) for name in step_names])
+    assert len(peaks) == len(ids)
+    assert max(peaks) <= 4
+    assert in_flight == set()
+    assert all(ran[lead_id] == step_names for lead_id in ids)
     assert [status_of(db, lead_id) for lead_id in ids] == ["in_progress"] * 10
-    assert db.execute("SELECT count(*) FROM observations").fetchone()[0] == 50
-    assert len(workflow_events(db, EventType.fact_observed)) == 50
-    assert all(len(effective_facts(db, lead_id)) == 5 for lead_id in ids)
+    writes = len(ids) * len(step_names) * writes_per_step
+    assert db.execute("SELECT count(*) FROM observations").fetchone()[0] == writes
+    assert len(workflow_events(db, EventType.fact_observed)) == writes
+    assert all(
+        len(effective_facts(db, lead_id)) == len(step_names) * writes_per_step for lead_id in ids
+    )
     assert all(open_blockers(db, lead_id) == [] for lead_id in ids)
 
 
