@@ -134,7 +134,7 @@ flowchart LR
     MCPC[MCP client] --> API
     API --> CMD --> RT --> SK
     SK --> RC
-    SK --> PR
+    RT --> PR
     SK --> CMD
     CMD --> MB
     RT --> LG
@@ -176,11 +176,11 @@ docs/                     this file, critique, plan, progress, brief, playbook
 
 ## 7. Runtime
 
-The runtime contains no insurance vocabulary. The vertical supplies status names, blocker kinds, transition rules, command classes and message kinds through one registration module (`src/uwh/skills/vertical.py`). The names in this section are the underwriting vertical's. A second vertical plugs in by registering its own names and skills; the runtime does not change.
+The runtime contains no insurance vocabulary. The vertical supplies status names, blocker kinds, transition rules, command classes and message kinds through one registration module (`src/uwh/skills/vertical.py`). The runtime knows roles only, and the vertical registers the name for each role: the three blocker kinds the runtime opens itself (delivery unknown, human review, data), the blocker owners it assigns (the human and the data owner), the item kinds it creates (draft, observation, delivery unknown, review) and the observation source of a human ruling. The vertical adds its own blocker kinds, owners and item kinds beside them. The names in this section are the underwriting vertical's. A second vertical plugs in by registering its own names and skills; the runtime does not change.
 
 ### 7.1 Lead workflow
 
-A lead has a **status** and a **set of open blockers**. Statuses supplied by the underwriting vertical: `received`, `triaged`, `in_progress`, `quote_sent`, `declined`. Blocker kinds: `producer_reply`, `underwriter_review`, `underwriter_question`, `data`, `delivery_unknown`.
+A lead has a **status** and a **set of open blockers**. Statuses supplied by the underwriting vertical: `received`, `triaged`, `in_progress`, `quote_sent`, `declined`. Blocker kinds: `producer_reply`, `underwriter_review`, `underwriter_question`, `data`, `delivery_unknown`. Three of them fill the runtime's roles: `delivery_unknown` is the delivery-unknown kind, `underwriter_review` the human-review kind and `data` the data kind; `producer_reply` and `underwriter_question` are the vertical's own.
 
 - A lead's steps run in order. Leads run concurrently with a bounded pool.
 - One waiting primitive: a blocker row with a kind, an owner and a resume trigger. A lead may hold several blockers at once.
@@ -234,9 +234,9 @@ Every state-changing action is a typed command. The workflow, UI, chat and MCP t
 | `change_setting`, `emergency_stop`, `start_run` | n/a | human only | underwriter |
 | `propose_command` | auto | no | assistant, mcp_client |
 
-- `assistant` and `mcp_client` can read and can propose. A proposal becomes a command card that the underwriter applies. They cannot approve.
+- `assistant` and `mcp_client` can read and can propose. A proposal becomes a command card that the underwriter applies. They cannot approve, and a proposal cannot carry `approve` or `reject`: asked to approve or reject, the assistant points the underwriter to the item instead.
 - **Emergency stop** blocks every new dispatch. It is checked immediately before each side effect. It cannot retract a message the mailbox already accepted. A dispatch refused by the stop, or by a class set to `off`, leaves the intent in `draft`, voids any approval of it and opens an `underwriter_review` blocker on the draft with the reason. Releasing the stop sends nothing; each held draft is sent when the underwriter approves it.
-- **Approval binds to a frozen artifact:** lead revision, action-plan hash, ruleset hash, recipient, and the exact message or packet hash. The dispatcher rechecks all five and the current policy immediately before sending. A mismatch returns the item to review. An `approve` carries the payload hash of the artifact the underwriter was shown; a hash that is not current is refused, so a stale browser cannot approve replaced content.
+- **Approval binds to a frozen artifact:** lead revision, action-plan hash, ruleset hash, recipient, and the exact message or packet hash. The dispatcher rechecks all five and the current policy immediately before sending. A mismatch returns the item to review. An `approve` of a draft, or of a review that holds a draft, carries the payload hash of the artifact the underwriter was shown; a hash that is missing or not current is refused, so a stale browser cannot approve replaced content.
 - **Demotion.** When reconciliation finds two mailbox messages for one intent, or a pre-send content check fails on an approved item, the command class drops to `review` and an event records why.
 
 ### 7.5 Sending
@@ -245,7 +245,7 @@ Sending is a runtime primitive, not a skill.
 
 An intent moves through `draft → dispatching → sent`, or `dispatching → unknown`.
 
-1. A message is created as an intent in state `draft`: run id, lead id, round, message kind, recipient, subject, body, ask ids, payload hash. `edit_draft` replaces the subject, body and payload hash of a draft and voids any approval of it.
+1. A message is created as an intent in state `draft`: run id, lead id, round, message kind, recipient, subject, body, ask ids, payload hash. `edit_draft` replaces the subject, body and payload hash of a draft and voids any approval of it. An edited `routine_request` becomes a `sensitive_request`, so it waits for approval; a quote packet or decline notice keeps its kind.
 2. Dispatch commits the state `dispatching` in its own transaction. The post starts only after that commit and runs outside any transaction. From the commit on, the intent is immutable.
 3. Post to the mailbox with the intent id, run id, kind, round and payload hash in `metadata`. Record the returned mailbox id and set the state to `sent`.
 4. On any ambiguous result, list `GET /leads/{id}/emails` and match the intent id. A match is recorded as `sent`. No match sets the state to `unknown` and opens a `delivery_unknown` blocker for the underwriter.
@@ -431,7 +431,7 @@ One YAML file per detail page (12 files). Each declares `applies_when`. A small 
 
 **Effects**
 
-`decline`, `requirement` (text, deadline), `surcharge` (percent, rule id), `exclusion_or_endorsement`, `coverage_adjustment` (field, proposed value; the submitted value is kept), `advisory`, `obligation` (post-bind, with owner and trigger, never executed), `no_action`.
+`decline`, `requirement` (text, deadline), `surcharge` (percent, rule id, optional deadline), `exclusion_or_endorsement`, `coverage_adjustment` (field, proposed value, optional deadline; the submitted value is kept), `advisory`, `obligation` (post-bind, with owner and trigger, never executed), `no_action`. A deadline on a surcharge or a coverage adjustment says how long the modification applies (I56).
 
 Deadlines are a typed enum: `within_60_days`, `first_term`, `underwriting_period`, `within_30_days_of_bind`, `duration_of_non_occupancy`. They are never converted to one another.
 
@@ -466,9 +466,9 @@ When `applies_when` rests on an unknown fact, the graph is undecided and contrib
 
 **Collecting catalogue questions.** A catalogue question is collected when the branch selections leading to its node are settled by usable facts and answered choices. Unfinished sibling branches do not hold it back. Nothing is collected beneath an unknown `test` or an unanswered choice.
 
-**Action plan.** Effects from all applicable graphs are collected, deduplicated by rule id, and kept with their rule trace. When any applicable graph's root is a decline, the plan is a proposed decline: no request goes out and the underwriter gets the decline notice draft to approve. If the underwriter rejects it, a ruling suppresses every rule id in the decline's trace, or in all its alternatives, for that lead. A suppressed decline outcome evaluates as decided with an advisory naming the overridden rule, and the registry asks go out. Rejecting a notice that came from `decline_lead` withdraws that ruling; rejecting one that followed an underwriter choice reopens the choice.
+**Action plan.** Effects from all applicable graphs are collected, deduplicated by effect type and rule id, and kept with their rule trace. When any applicable graph's root is a decline, the plan is a proposed decline: no request goes out and the underwriter gets the decline notice draft to approve. If the underwriter rejects it, a ruling suppresses every rule id in the decline's trace, or in all its alternatives, for that lead. A suppressed decline outcome evaluates as decided with an advisory naming the overridden rule, and the registry asks go out. Rejecting a notice that came from `decline_lead` withdraws that ruling; rejecting one that followed an underwriter choice reopens the choice.
 
-`build_quote_packet` runs only when the plan holds no decline, no graph is undecided, no blocker is open and no ask remains.
+`build_quote_packet` runs only when the plan holds no decline, no graph is undecided, no blocker is open and no ask remains. The workflow checks this before it calls the skill, and the skill refuses an input that breaks it.
 
 **Rule traces.** Each graph node carries `board_path`, the list of board boxes it stands for, in order (for example `[07:LIVING, 07:D1]` for the node that declines on living-area support). A rule trace is the concatenation of `board_path` values from root to outcome. A decline reached as `declines_on_every_branch` carries `alternatives`: one trace per branch, each with the value it assumed. The Rule trace grader compares the trace, or the set of alternatives.
 
@@ -588,7 +588,7 @@ These rulings are this submission's reading, not Stand's. Brett reviews every ro
 | Quote packet | producer or applicant | the action plan |
 | Decline notice | producer or applicant | a fixed template, sent after the underwriter approves the decline |
 
-A confirmation is rendered from a fixed neutral template and states no consequence, so it carries no more risk than a field request. The class a confirmation-only request takes is one registration value (`confirmation_only_class`, set to `routine`), so an underwriter who wants to see confirmations first changes one value.
+A confirmation is rendered from a fixed neutral template and states no consequence, so it carries no more risk than a field request. The class a confirmation-only request takes is one registration value (`confirmation_only_class`, which takes `routine_request` or `sensitive_request` and is set to `routine_request`), so an underwriter who wants to see confirmations first changes one value.
 
 One open request per lead. A second request is allowed only after a reply. A quote packet or decline notice may follow an open request and closes it. After two rounds the lead goes to the underwriter.
 
@@ -623,17 +623,19 @@ Then code:
 4. applies the source-authority rules of section 7.3;
 5. closes the round when the classification is `answers_all` or `answers_some`; `off_topic` and `declines_to_answer` leave the round open and raise an underwriter review.
 
+When `read_reply` abstains (A.10), the `reply_read` event records the abstention in place of a reading, the round stays open, and the reply goes to the underwriter unread as an underwriter review.
+
 Reply text is untrusted. It is length-capped, passed to the model as data, and cannot approve an action or change a setting. Accepted facts, round closure and re-evaluation commit in one transaction.
 
 **Classification cascade.** With a Jev key (`TYPESAFE_API_KEY`), Jev answers the classification as a choice question. The interface computes confidence from the returned probabilities, and when it is below the per-question threshold (default 0.7) the language model answers instead. Without a Jev key the language model answers every time, so the system works fully without Jev. Brett and Stand's reviewers both run with a Jev key; the path without Jev is the fallback.
 
 ### 10.5 Quote packet and decline notice
 
-The packet is built in code: coverages as submitted, coverage adjustments shown beside the submitted value, each surcharge on its own line with its rule, requirements with deadlines, exclusions and endorsements, advisories. No price. An internal copy lists assumptions, the rule trace and the approver. Every packet and every decline notice waits for underwriter approval.
+The packet is built in code: coverages as submitted, coverage adjustments shown beside the submitted value, each surcharge on its own line with its rule, requirements with deadlines, exclusions and endorsements, advisories, obligations, and a note for each page that is not evaluated. A surcharge or coverage adjustment that carries a deadline shows it on its line. No price. An internal copy lists assumptions, the rule trace and the approver. Every packet and every decline notice waits for underwriter approval.
 
 ## 11. Underwriter surface
 
-- **Queue.** One row per lead: status chip, primary next action, who it waits on, age against a two-business-day service level (Stand's distributor page promises estimates "inside two business days"; labelled as an assumed service level), effective date, ask count. Order: blocked on the underwriter, then waiting on data or producer, then finished; within a group, earliest effective date first, then lead id. A one-sentence summary heads the page with separate counts for quotes sent, follow-ups sent, declines approved, waiting on the underwriter, waiting on data, delivery unknown.
+- **Queue.** One row per lead: status chip, primary next action, who it waits on, age against a two-business-day service level (Stand's distributor page promises estimates "inside two business days"; labelled as an assumed service level), effective date, ask count. Order: blocked on the underwriter, then waiting on data or producer, then finished; within a group, earliest effective date first, then lead id. A one-sentence summary heads the page with separate counts for quotes sent, follow-ups sent, declines approved, waiting on the underwriter, waiting on the producer, waiting on data, delivery unknown. "Follow-ups sent" counts every request sent to a producer, in any round; the brief calls the first request a follow-up. The four waiting counts count each lead once, by its primary next action: an underwriter review or question, a producer reply, a data blocker, or an unknown delivery.
 - **Detail pane.** Next action (templated from the plan). Facts with source tags. Playbook path as a checklist with an exceptions-only toggle. The draft. Non-blocking notes. A "paste a reply" box. A "deliver fixture replies" control delivers every stored fixture reply for the run, so a default run exercises `read_reply` on several leads. Search and map links where the board calls for a human look.
 - **Items.** Review (approve, edit, reject; batchable). Question (equal buttons, no default, required reason; never batched across leads; all open choices on one lead share one card with the relevant values shown). What the system did automatically is read from the lead's event list; there is no separate notify item. The detail pane offers the actions for every open item on its lead.
 - **Rules and settings.** Autonomy level per command class with locked classes marked, emergency stop, pending rule proposals.
@@ -853,13 +855,13 @@ proposals(id INTEGER PRIMARY KEY, kind TEXT, payload_json TEXT, diff_hash TEXT, 
 settings(key TEXT PRIMARY KEY, value_json TEXT)   -- autonomy levels, emergency_stop
 ```
 
-`key` is a registry field name or a catalogue id prefixed `q:`. Blocker `owner` is `underwriter`, `producer` or `data_team`. `runs` holds one row, the current run. `settings` persists across runs.
+`key` is a registry field name or a catalogue id prefixed `q:`. Blocker `owner` is `underwriter`, `producer` or `data_team`. The value sets of `leads.status`, `blockers.kind`, `blockers.owner`, `intents.kind`, `approvals.item_kind` and `observations.source` are the registered vertical's: the store takes them from the registration, and the names written in this section are the underwriting vertical's (section 7). The runtime fixes only the sets that are its own mechanism: `intents.state`, `approvals.decision`, `runs.status`, `proposals.kind`, `proposals.state`, `observations.status` and the run mode. `runs` holds one row, the current run. `settings` persists across runs.
 
 ### A.2 Event types
 
 `run_started`, `replay_miss`, `draft_edited`, `proposal_created`, `lead_received`, `fact_observed`, `fact_selected`, `conflict_opened`, `conflict_closed`, `triage_completed`, `provider_called`, `plan_built`, `blocker_opened`, `blocker_closed`, `intent_created`, `message_sent`, `delivery_unknown`, `reply_received`, `reply_read`, `approval_recorded`, `ruling_recorded`, `command_refused`, `setting_changed`, `class_demoted`, `rule_change_applied`, `skill_fallback_used`, `model_called`, `fault_injected`.
 
-Each payload is a Pydantic model named after the type. Graders import those models.
+Each payload is a Pydantic model named after the type. Graders import those models. `draft_edited` carries the intent's kind after the edit (section 7.5). No event records the move to `dispatching` or the closing of a round; the `intents` table holds the state.
 
 ### A.3 Status transitions
 
@@ -873,7 +875,7 @@ All hashes are SHA-256 over canonical JSON (sorted keys, UTF-8, no insignificant
 - **Plan hash:** the action plan.
 - **Ruleset hash:** every file of the active ruleset, in path order: the directory `ruleset.active` names, or `src/uwh/rules/data/` when none is set.
 - **Payload hash:** `{recipient, subject, body}`.
-- **Skill digest:** every source file in the skill's folder except `cases/`, plus every Python source file under `src/uwh/` outside the skill folders, including the modules directly under `skills/` (one shared hash, so a change to the rules core, providers or runtime marks every skill `untested`), plus the hash of the image's `src/uwh/rules/data/`, plus the model id for model skills. Compiled files (`__pycache__`, `*.pyc`) are never hashed. After a rule change in a session the skills view shows "rules changed since the last eval" beside each status. The results row records the case-set id beside the digest.
+- **Skill digest:** every source file in the skill's folder except `cases/`, plus every Python source file under `src/uwh/` outside the skill folders, including the modules directly under `skills/` (one shared hash, so a change to the rules core, providers or runtime marks every skill `untested`), plus the hash of the image's `src/uwh/rules/data/`, plus the model id for model skills. Compiled files (`__pycache__`, `*.pyc`), hidden files and directories (a path part starting with `.`), `*~` and `*.swp` are never hashed, in the skill digest or in the ruleset hash, so a file an editor or an operating system leaves behind cannot change either. After a rule change in a session the skills view shows "rules changed since the last eval" beside each status. The results row records the case-set id beside the digest.
 
 ### A.5 Routes (app on port 8000)
 
@@ -994,7 +996,7 @@ Reply bodies are capped at 8,000 characters. The model id comes from `MODEL_ID`.
 
 - Lead concurrency: 4.
 - Skill pass threshold: 1.0 unless a manifest states another value with its reason.
-- `read_reply` sends a forced tool choice with `thinking` disabled, and `temperature` 0. The Anthropic SDK from 1.0 has no `temperature` argument, so the value goes in the call's `extra_body`. A tool input that fails validation repeats the call once; a second failure, or a `refusal` stop reason, maps to the skill's typed abstention. Stage 1 confirms with DeepSeek's documentation and a live call that `MODEL_ID` accepts the forced tool choice and the temperature; whether `temperature` 0 gives agreeing repeats is measured by the three-repeat check of the Reply reading grader.
+- `read_reply` sends a forced tool choice with `thinking` disabled, and `temperature` 0. The Anthropic SDK from 1.0 has no `temperature` argument, so the value goes in the call's `extra_body`. A tool input that fails validation repeats the call once; a second failure, or a `refusal` stop reason, maps to the skill's typed abstention. The abstention's reason is one of two codes, `invalid_tool_input` and `refusal`, and nothing else. Stage 1 confirms with DeepSeek's documentation and a live call that `MODEL_ID` accepts the forced tool choice and the temperature; whether `temperature` 0 gives agreeing repeats is measured by the three-repeat check of the Reply reading grader.
 - Rounds before the lead goes to the underwriter: 2.
 - Jev confidence threshold: 0.7 per question, in the skill manifest.
 - Reply-reading repeats in evals: 3.
@@ -1006,7 +1008,7 @@ Reply bodies are capped at 8,000 characters. The model id comes from `MODEL_ID`.
 
 | Type | Payload |
 |---|---|
-| `approve` | `{item_id, artifact_hash, reason}`; `artifact_hash` is the payload hash shown with a draft and is omitted for other item kinds |
+| `approve` | `{item_id, artifact_hash, reason}`; `artifact_hash` is the payload hash shown with the draft. It is required when the item is a draft or a review that holds a draft, and omitted otherwise |
 | `reject` | `{item_id, reason}`; `reason` required |
 | `edit_draft` | `{intent_id, subject, body, reason}` |
 | `record_ruling` | `{lead_id, choice_id, option, reason}` |
@@ -1018,7 +1020,7 @@ Reply bodies are capped at 8,000 characters. The model id comes from `MODEL_ID`.
 | `start_run` | `{seed}` |
 | `propose_rule_change` | `{row_id, param, value, reason}`; stores a proposal with its dry-run diff |
 | `apply_rule_change` | `{proposal_id, diff_hash}` |
-| `propose_command` | `{type, payload, rationale}`; stores a proposal card, executes nothing; the underwriter applies it by submitting the proposed command |
+| `propose_command` | `{type, payload, rationale}`; stores a proposal card, executes nothing; the underwriter applies it by submitting the proposed command. The proposed command is never `approve`, `reject` or `propose_command` |
 
 `item_id` is the id of an open blocker (`blockers.id`). What `approve` and `reject` do depends on the item:
 
@@ -1030,7 +1032,7 @@ Reply bodies are capped at 8,000 characters. The model id comes from `MODEL_ID`.
 | Pending observation | makes it the effective fact | marks it rejected; the existing value stays |
 | `delivery_unknown` | re-runs the mailbox check | closes the intent unsent; a fresh draft waits for approval |
 | No contact route | n/a; resolved with `resolve_fact` on `q:contact_email` | n/a |
-| A review raised by an event (a late or unread reply, an off-topic or declining reply, a draft held by the stop) | acknowledges it with a reason and closes it; when a reply raised it, the round closes too. A held draft is dispatched. | refused; the underwriter acts through `resolve_fact`, `record_ruling` or `decline_lead` |
+| A review raised by an event (a late or unread reply, an off-topic or declining reply, a draft held by the stop) | acknowledges it with a reason and closes it; when a reply raised it, the round closes too. A held draft is dispatched, and its approval carries the draft's payload hash; one whose hash is missing or not current is refused. | refused; the underwriter acts through `resolve_fact`, `record_ruling` or `decline_lead` |
 | A review whose cause persists (the round limit, a missing or unsupported identity score) | refused | refused. It closes when the cause is removed: `resolve_fact` supplies the fact, or `decline_lead` ends the lead. |
 
 Every item above is an `underwriter_review` blocker, except `delivery_unknown` (its own kind) and an open choice (`underwriter_question`). Each blocker in the lead detail response carries its kind and its item kind (the `approvals.item_kind` values in A.1), and each open choice carries its option ids. Every accepted command re-evaluates its lead in the same transaction.
