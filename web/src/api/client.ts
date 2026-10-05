@@ -1,4 +1,4 @@
-// ABOUTME: Typed fetch calls for the read routes: the run, the queue and one lead's detail.
+// ABOUTME: Typed fetch calls: the run, the queue and one lead's detail, and the three actions of the page: start the run, deliver the fixture replies and approve an item.
 // ABOUTME: A response that is not 2xx throws an ApiError that names the route and the status.
 import type { components } from '@/api/types'
 
@@ -16,13 +16,29 @@ class ApiError extends Error {
   }
 }
 
-async function getJson<T>(path: string): Promise<T> {
-  const response = await fetch(path)
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(path, init)
   if (!response.ok) throw new ApiError(path, response.status)
   return (await response.json()) as T
 }
 
-export const getRun = () => getJson<Schemas['RunView']>('/api/run')
-export const getLeads = () => getJson<Schemas['QueueRow'][]>('/api/leads')
+const post = <T>(path: string, body?: unknown) =>
+  request<T>(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
+
+export const getRun = () => request<Schemas['RunView']>('/api/run')
+export const getLeads = () => request<Schemas['QueueRow'][]>('/api/leads')
 export const getLead = (leadId: string) =>
-  getJson<Schemas['LeadDetail']>(`/api/leads/${encodeURIComponent(leadId)}`)
+  request<Schemas['LeadDetail']>(`/api/leads/${encodeURIComponent(leadId)}`)
+
+export const startRun = () => post<Schemas['RunView']>('/api/run/start?wait=true')
+export const deliverFixtureReplies = () =>
+  post<Schemas['FixtureRepliesResponse']>('/api/replies/fixtures')
+export const approve = (itemId: number, payloadHash: string) =>
+  post<Schemas['CommandResponse']>('/api/commands', {
+    type: 'approve',
+    payload: { item_id: itemId, artifact_hash: payloadHash, reason: 'Approved in the detail pane.' },
+  })

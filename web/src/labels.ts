@@ -1,4 +1,4 @@
-// ABOUTME: Human-readable labels for the API's value sets: statuses, blocker kinds, owners, sources, groups, pages and more.
+// ABOUTME: Human-readable labels for the API's value sets: statuses, blocker kinds, owners, sources, groups, message kinds and effects.
 // ABOUTME: One mapping module, so no screen carries its own string literals for these.
 import type { components } from '@/api/types'
 
@@ -8,8 +8,6 @@ type BlockerKind = Schemas['BlockerView']['kind']
 type Owner = Schemas['BlockerView']['owner']
 type Source = Schemas['FactView']['source']
 type Group = Schemas['QueueRow']['group']
-type Result = NonNullable<Schemas['PlaybookPage']['result']>
-type Applies = Schemas['PlaybookPage']['applies']
 type MessageKind = Schemas['DraftView']['kind']
 type DraftState = Schemas['DraftView']['state']
 type EffectType = Schemas['PlannedEffect']['effect']['type']
@@ -58,19 +56,6 @@ export const GROUP_LABELS: Record<Group, string> = {
   finished: 'Finished',
 }
 
-export const RESULT_LABELS: Record<Result, string> = {
-  decided: 'Decided',
-  undecided: 'Undecided',
-  declines_on_every_branch: 'Declines on every branch',
-  not_evaluated: 'Not evaluated',
-}
-
-export const APPLIES_LABELS: Record<Applies, string> = {
-  yes: 'Applies',
-  no: 'Does not apply',
-  unknown: 'Applicability unknown',
-}
-
 export const MESSAGE_KIND_LABELS: Record<MessageKind, string> = {
   routine_request: 'Routine request',
   sensitive_request: 'Sensitive request',
@@ -95,24 +80,4 @@ export const EFFECT_LABELS: Record<EffectType, string> = {
   advisory: 'Advisory',
   obligation: 'Obligation',
   no_action: 'No action',
-}
-
-const PAGE_LABELS: Record<string, string> = {
-  electrical: 'Electrical',
-  fire_simulation: 'Fire simulation',
-  occupancy: 'Occupancy',
-  pc_9_and_10: 'PC 9 & 10',
-  plumbing: 'Plumbing',
-  pools: 'Pools',
-  post_and_pier: 'Post & Pier',
-  profile: 'Profile',
-  replacement_cost: 'Replacement cost',
-  roof: 'Roof',
-  siding: 'Siding',
-  trusts: 'Trusts',
-}
-
-// A playbook page's graph id as a label; an id with no entry reads as its words.
-export function pageLabel(graph: string): string {
-  return PAGE_LABELS[graph] ?? graph.replace(/_/g, ' ')
 }

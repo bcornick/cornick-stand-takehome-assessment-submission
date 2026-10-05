@@ -1,4 +1,4 @@
-// ABOUTME: The queue page: the mode label, the one-sentence run summary and one table per queue group.
+// ABOUTME: The queue page: the mode label, the start control, the one-sentence run summary and one table per queue group.
 // ABOUTME: Rows keep the order the API returns; the page groups them under headings and never re-sorts.
 import type { components } from '@/api/types'
 import { Badge } from '@/components/ui/badge'
@@ -10,6 +10,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { startRun } from '@/api/client'
+import { ActionButton } from '@/components/ActionButton'
 import { MISSING } from '@/format'
 import {
   BLOCKER_KIND_LABELS,
@@ -27,6 +29,7 @@ type Props = {
   rows: QueueRow[]
   selectedLeadId: string | null
   onSelect: (leadId: string) => void
+  onChange: () => void
 }
 
 function summarySentence(summary: RunView['summary']): string {
@@ -39,7 +42,7 @@ function summarySentence(summary: RunView['summary']): string {
   )
 }
 
-export function QueuePage({ run, rows, selectedLeadId, onSelect }: Props) {
+export function QueuePage({ run, rows, selectedLeadId, onSelect, onChange }: Props) {
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-2">
@@ -48,6 +51,14 @@ export function QueuePage({ run, rows, selectedLeadId, onSelect }: Props) {
           <Badge variant="outline">{`Mode: ${run.mode}`}</Badge>
           <span>{run.run_id === null ? 'No run started' : `Run ${run.run_id}`}</span>
         </p>
+        <ActionButton
+          label="Start morning run"
+          act={async () => {
+            await startRun()
+            return null
+          }}
+          onDone={onChange}
+        />
         <p className="text-base">{summarySentence(run.summary)}</p>
       </header>
       {GROUP_ORDER.map((group) => {
@@ -100,6 +111,7 @@ function QueueRowView({ row, selected, onSelect }: RowProps) {
         >
           {row.lead_id}
         </button>
+        <p className="text-sm text-muted-foreground">{row.label}</p>
       </TableCell>
       <TableCell>
         <Badge variant="secondary">{STATUS_LABELS[row.status]}</Badge>
