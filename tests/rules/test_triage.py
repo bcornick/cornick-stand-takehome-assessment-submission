@@ -91,3 +91,46 @@ def test_a_field_in_an_open_conflict_is_verified_not_asked(registry: Registry) -
 
     assert triage["roof_replacement_year"].value_status == ValueStatus.conflicting
     assert triage["roof_replacement_year"].resolution == Resolution.verify
+
+
+# 9.2: is_gated_community is inactive when pool_type is known and not Inground or pool_security is
+# Fenced, active for an inground pool with a known security that is not Fenced, unknown otherwise.
+@pytest.mark.parametrize(
+    ("pool", "expected"),
+    [
+        ({"pool_type": "None"}, (Requirement.conditional_inactive, Resolution.not_required)),
+        (
+            {"pool_type": "Above Ground"},
+            (Requirement.conditional_inactive, Resolution.not_required),
+        ),
+        (
+            {"pool_type": "Inground", "pool_security": "Fenced"},
+            (Requirement.conditional_inactive, Resolution.not_required),
+        ),
+        ({"pool_security": "Fenced"}, (Requirement.conditional_inactive, Resolution.not_required)),
+        (
+            {"pool_type": "Inground", "pool_security": "Unfenced"},
+            (Requirement.conditional_active, Resolution.ask),
+        ),
+        (
+            {"pool_type": "Inground", "pool_security": "None"},
+            (Requirement.conditional_active, Resolution.ask),
+        ),
+        ({"pool_type": "Inground"}, (Requirement.conditional_unknown, Resolution.ask_follow_on)),
+        (
+            {"pool_security": "Unfenced"},
+            (Requirement.conditional_unknown, Resolution.ask_follow_on),
+        ),
+        ({}, (Requirement.conditional_unknown, Resolution.ask_follow_on)),
+    ],
+)
+def test_a_gated_community_is_asked_by_the_three_valued_pool_rule(
+    registry: Registry, pool: dict[str, JsonValue], expected: tuple[Requirement, Resolution]
+) -> None:
+    facts = lead_008_facts()
+    for name in ("is_gated_community", "pool_type", "pool_security"):
+        facts.pop(name, None)
+
+    triage = triage_fields(registry, {**facts, **pool}, set(), derived_from())["is_gated_community"]
+
+    assert (triage.requirement, triage.resolution) == expected

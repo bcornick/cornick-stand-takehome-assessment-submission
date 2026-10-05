@@ -27,6 +27,7 @@ from uwh.runtime.store import open_store
 from uwh.runtime.waits import open_blockers
 from uwh.settings import Settings
 from uwh.skills.read_reply import skill
+from uwh.skills.read_reply.skill import MAX_BODY_CHARACTERS
 
 FIXTURE_BODY = (FIXTURE_REPLIES / f"{LEAD_008}.txt").read_text(encoding="utf-8")
 ASKED = ["property_purchase_date", "electrical_panel_brand"]
@@ -281,43 +282,21 @@ def test_the_model_is_called_with_no_write_lock_held(
         db.close()
 
 
-def test_lead_008_goes_from_its_reply_to_a_sent_quote_packet(
-    app: TestClient, db: sqlite3.Connection, mailbox: MailboxClient
+def test_a_fixture_reply_over_the_body_limit_is_refused_and_the_others_are_delivered(
+    settings: Settings, leadgen: LeadgenClient, mailbox: MailboxClient, tmp_path: Path
 ) -> None:
-    delivered = app.post("/api/replies/fixtures").json()
-    assert [(r["lead_id"], r["accepted"]) for r in delivered["replies"]] == [(LEAD_008, True)]
-    (item,) = [b for b in open_blockers(db, LEAD_008) if b.detail.item_kind == "draft"]
-    (packet_id, shown_hash) = db.execute(
-        "SELECT id, payload_hash FROM intents WHERE lead_id = ? AND kind = 'quote_packet'",
-        (LEAD_008,),
-    ).fetchone()
-    assert item.detail.intent_id == packet_id
-
-    stale = app.post(
-        "/api/commands",
-        json={
-            "type": "approve",
-            "payload": {"item_id": item.id, "artifact_hash": "0" * 64, "reason": "ok"},
-        },
-    ).json()
-    assert stale["accepted"] is False
-    assert len(mailbox.list_for_lead(LEAD_008)) == 1
-
-    approved = app.post(
-        "/api/commands",
-        json={
-            "type": "approve",
-            "payload": {"item_id": item.id, "artifact_hash": shown_hash, "reason": "ok"},
-        },
-    ).json()
-
-    assert approved["accepted"] is True, approved
-    assert db.execute("SELECT status FROM leads WHERE lead_id = ?", (LEAD_008,)).fetchone() == (
-        "quote_sent",
+    fixtures = tmp_path / "fixtures"
+    fixtures.mkdir()
+    (fixtures / f"{LEAD_008}.txt").write_text(FIXTURE_BODY, encoding="utf-8")
+    (fixtures / "LEAD-00000042-004.txt").write_text(
+        "x" * (MAX_BODY_CHARACTERS + 1), encoding="utf-8"
     )
-    sent = mailbox.list_for_lead(LEAD_008)
-    assert sorted(m["metadata"]["kind"] for m in sent) == ["quote_packet", "routine_request"]
-    (packet,) = [m for m in sent if m["metadata"]["kind"] == "quote_packet"]
-    assert packet["metadata"]["intent_id"] == packet_id
-    assert packet["metadata"]["payload_hash"] == shown_hash
-    assert open_blockers(db, LEAD_008) == []
+    with first_pass(replace(settings, fixture_replies_dir=str(fixtures)), leadgen, mailbox) as app:
+        response = app.post("/api/replies/fixtures")
+
+        assert response.status_code == 200
+        assert [(r["lead_id"], r["accepted"]) for r in response.json()["replies"]] == [
+            ("LEAD-00000042-004", False),
+            (LEAD_008, True),
+        ]
+        assert "longer than" in response.json()["replies"][0]["reason"]

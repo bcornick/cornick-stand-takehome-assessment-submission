@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException
 from uwh.api.runtime import Runtime, RuntimeDependency
 from uwh.api.views import FixtureRepliesResponse, ReplyRequest, ReplyResponse
 from uwh.runtime.event_types import REQUEST_KINDS
+from uwh.skills.read_reply.skill import MAX_BODY_CHARACTERS
 
 router = APIRouter()
 
@@ -42,6 +43,13 @@ def _fixture_reply(runtime: Runtime, db: sqlite3.Connection, fixture: Path) -> R
             lead_id=lead_id,
         )
     body = fixture.read_text(encoding="utf-8")
+    if len(body) > MAX_BODY_CHARACTERS:
+        return ReplyResponse(
+            accepted=False,
+            event_id=None,
+            reason=f"the fixture reply is longer than {MAX_BODY_CHARACTERS} characters",
+            lead_id=lead_id,
+        )
     return _deliver(runtime, db, ReplyRequest(lead_id=lead_id, intent_id=row[0], body=body))
 
 

@@ -136,6 +136,18 @@ def test_lead_008_shows_its_waiting_request_then_the_packet_that_the_underwriter
         assert item["detail"]["item_kind"] == "draft"
         assert (item["detail"]["intent_id"], packet["state"]) == (packet["intent_id"], "draft")
 
+        stale = app.post(
+            "/api/commands",
+            json={
+                "type": "approve",
+                "payload": {"item_id": item["item_id"], "artifact_hash": "0" * 64, "reason": "ok"},
+            },
+        ).json()
+        assert stale["accepted"] is False
+        assert [m["metadata"]["kind"] for m in mailbox.list_for_lead(LEAD_008)] == [
+            "routine_request"
+        ]
+
         approved = app.post(
             "/api/commands",
             json={
@@ -158,6 +170,10 @@ def test_lead_008_shows_its_waiting_request_then_the_packet_that_the_underwriter
         sent = app.get(f"/api/leads/{LEAD_008}").json()
         assert [d["state"] for d in sent["drafts"]] == ["sent", "sent"]
         assert sent["blockers"] == []
+        packets = [
+            m for m in mailbox.list_for_lead(LEAD_008) if m["metadata"]["kind"] == "quote_packet"
+        ]
+        assert [m["metadata"]["payload_hash"] for m in packets] == [packet["payload_hash"]]
 
 
 def test_an_unknown_lead_is_not_found(client: TestClient) -> None:
