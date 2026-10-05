@@ -101,6 +101,29 @@ def test_compiled_files_are_never_hashed(tmp_path: Path) -> None:
     assert skill_digest(root, "demo") == base
 
 
+def test_hidden_files_and_editor_leftovers_leave_the_digest_unchanged(tmp_path: Path) -> None:
+    root = build(tmp_path)
+    base = skill_digest(root, "demo")
+    for rel in (
+        "skills/demo/.DS_Store",
+        "skills/demo/.hidden/helper.py",
+        "skills/demo/skill.py~",
+        "skills/demo/.skill.py.swp",
+        "skills/demo/skill.py.swp",
+        "rules/data/.DS_Store",
+        "rules/data/interpretation.yaml~",
+        "rules/data/interpretation.yaml.swp",
+        "rules/.DS_Store",
+        "rules/.hidden/mod.py",
+        "rules/core.py~",
+        "runtime/.DS_Store",
+        "runtime/store.py.swp",
+    ):
+        (root / rel).parent.mkdir(parents=True, exist_ok=True)
+        edit(root, rel, "junk\n")
+        assert skill_digest(root, "demo") == base, rel
+
+
 def test_an_edit_to_a_shared_module_changes_every_skills_digest(tmp_path: Path) -> None:
     for rel in ("rules/core.py", "providers/lookup.py", "runtime/store.py", "skills/vertical.py"):
         root = build(tmp_path / rel.replace("/", "_"))
@@ -110,7 +133,7 @@ def test_an_edit_to_a_shared_module_changes_every_skills_digest(tmp_path: Path) 
         assert all(after[s] != before[s] for s in before), rel
 
 
-def test_a_new_shared_module_changes_every_skills_digest(tmp_path: Path) -> None:
+def test_an_added_shared_module_changes_every_skills_digest(tmp_path: Path) -> None:
     root = build(tmp_path)
     before = {s: skill_digest(root, s) for s in ("demo", "other")}
     edit(root, "runtime/clock.py", "CLOCK = 1\n")
@@ -144,10 +167,13 @@ def test_an_edit_to_the_image_rules_data_changes_the_digest(tmp_path: Path) -> N
 
 
 def test_the_active_ruleset_leaves_the_digest_unchanged(tmp_path: Path) -> None:
+    # Holds by construction: the digest takes no settings and reads only under the source root.
+    # It states the A.4 clause that the digest covers `rules/data/` in the image, never the
+    # active ruleset.
     root = build(tmp_path)
     base = skill_digest(root, "demo")
     rulesets = tmp_path / "volume" / "rulesets"
-    active = active_ruleset_dir("abc123", rulesets, root / "rules" / "data")
+    active = active_ruleset_dir("ab" * 32, rulesets, root / "rules" / "data")
     active.mkdir(parents=True)
     edit(active, "interpretation.yaml", "I35: tolerance 0.2\n")
     assert skill_digest(root, "demo") == base

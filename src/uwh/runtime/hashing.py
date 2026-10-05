@@ -2,6 +2,7 @@
 # ABOUTME: Pure functions of values and paths; nothing here reads settings, the database or the environment.
 import hashlib
 import json
+import re
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
@@ -59,9 +60,17 @@ def payload_hash(recipient: str, subject: str, body: str) -> str:
     return hash_json({"recipient": recipient, "subject": subject, "body": body})
 
 
-def is_compiled(path: Path) -> bool:
-    """Compiled files (`__pycache__`, `*.pyc`) are never hashed."""
-    return "__pycache__" in path.parts or path.suffix == ".pyc"
+def is_unhashed(path: Path) -> bool:
+    """Compiled files (`__pycache__`, `*.pyc`), hidden files and directories (a path part
+    starting with `.`) and editor leftovers (`*~`, `*.swp`) are never hashed, so a stray file
+    on one machine cannot make a digest that a fresh clone cannot reproduce.
+    """
+    return (
+        "__pycache__" in path.parts
+        or path.suffix in (".pyc", ".swp")
+        or path.name.endswith("~")
+        or any(part.startswith(".") for part in path.parts)
+    )
 
 
 def file_entries(root: Path, files: Iterable[Path]) -> list[dict[str, str]]:
@@ -78,8 +87,8 @@ def file_entries(root: Path, files: Iterable[Path]) -> list[dict[str, str]]:
 
 
 def source_files(root: Path) -> list[Path]:
-    """Every file under `root` except compiled files."""
-    return [p for p in root.rglob("*") if p.is_file() and not is_compiled(p.relative_to(root))]
+    """Every file under `root` except those `is_unhashed` names."""
+    return [p for p in root.rglob("*") if p.is_file() and not is_unhashed(p.relative_to(root))]
 
 
 def ruleset_hash(directory: Path) -> str:
@@ -89,14 +98,17 @@ def ruleset_hash(directory: Path) -> str:
     return hash_json(file_entries(directory, source_files(directory)))
 
 
+_SHA256_HEX = re.compile(r"[0-9a-f]{64}")
+
+
 def active_ruleset_dir(active: str | None, rulesets_root: Path, image_data: Path) -> Path:
     """The directory the setting `ruleset.active` names, or the image's rules data when it is unset.
 
-    `active` is a ruleset hash and names `rulesets_root / active`. A value that could leave
-    `rulesets_root` raises ValueError.
+    `active` is a ruleset hash (64 lowercase hex characters, A.4) and names
+    `rulesets_root / active`. Any other value raises ValueError.
     """
     if active is None:
         return image_data
-    if active in ("", ".", "..") or "/" in active or "\\" in active:
+    if not _SHA256_HEX.fullmatch(active):
         raise ValueError(f"ruleset.active must be a ruleset hash, got {active!r}")
     return rulesets_root / active

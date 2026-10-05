@@ -178,6 +178,16 @@ def test_ruleset_hash_ignores_compiled_files(tmp_path: Path) -> None:
     assert ruleset_hash(tmp_path / "a") == ruleset_hash(tmp_path / "b")
 
 
+@pytest.mark.parametrize(
+    "stray",
+    [".DS_Store", "d/.DS_Store", ".hidden/x.yaml", "d/.cache/y.yaml", "a.yaml~", "d/b.yaml.swp"],
+)
+def test_ruleset_hash_ignores_hidden_files_and_editor_leftovers(tmp_path: Path, stray: str) -> None:
+    write(tmp_path / "a", {"a.yaml": "1", "d/b.yaml": "2"})
+    write(tmp_path / "b", {"a.yaml": "1", "d/b.yaml": "2", stray: "junk"})
+    assert ruleset_hash(tmp_path / "a") == ruleset_hash(tmp_path / "b")
+
+
 def test_ruleset_hash_of_a_missing_directory_raises(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError):
         ruleset_hash(tmp_path / "absent")
@@ -187,11 +197,15 @@ def test_active_ruleset_dir_is_the_named_directory_or_the_image_data(tmp_path: P
     rulesets = tmp_path / "volume" / "rulesets"
     image_data = tmp_path / "app" / "src" / "uwh" / "rules" / "data"
     assert active_ruleset_dir(None, rulesets, image_data) == image_data
-    assert active_ruleset_dir("abc123", rulesets, image_data) == rulesets / "abc123"
+    name = "0123456789abcdef" * 4
+    assert active_ruleset_dir(name, rulesets, image_data) == rulesets / name
 
 
-@pytest.mark.parametrize("bad", ["", "..", "a/b", "a\\b", "../x"])
-def test_active_ruleset_dir_rejects_a_value_that_is_not_a_hash_name(
+@pytest.mark.parametrize(
+    "bad",
+    ["", "..", "a/b", "a\\b", "../x", "abc123", "A" * 64, "a" * 63, "a" * 65, "g" * 64],
+)
+def test_active_ruleset_dir_rejects_a_value_that_is_not_a_sha256_hex_hash(
     tmp_path: Path, bad: str
 ) -> None:
     with pytest.raises(ValueError):

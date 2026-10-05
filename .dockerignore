@@ -7,3 +7,7 @@ web/dist
 .worktrees
 scratchpads
 **/__pycache__
+**/*.swp
+**/*~
+.DS_Store
+**/.DS_Store
