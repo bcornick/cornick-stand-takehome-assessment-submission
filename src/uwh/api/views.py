@@ -84,8 +84,10 @@ RunMode = Annotated[str, Vocabulary(RUN_MODES)]
 HTTP_COMMAND_TYPES = tuple(c.name for c in vertical.COMMAND_CLASSES if c.actors != ("workflow",))
 HttpCommandType = Annotated[str, Vocabulary(HTTP_COMMAND_TYPES)]
 
-# A.11: a proposal holds one of the other twelve HTTP commands, never another proposal.
-PROPOSABLE_COMMAND_TYPES = tuple(t for t in HTTP_COMMAND_TYPES if t != "propose_command")
+# A.11: a proposal holds one of ten HTTP commands: never approve, reject or another proposal.
+PROPOSABLE_COMMAND_TYPES = tuple(
+    t for t in HTTP_COMMAND_TYPES if t not in ("approve", "reject", "propose_command")
+)
 ProposableCommandType = Annotated[str, Vocabulary(PROPOSABLE_COMMAND_TYPES)]
 
 # A fact's reported value as a command carries it.
@@ -96,12 +98,18 @@ FactValue = str | int | float | bool
 
 
 class RunSummary(StrictModel):
-    """The one-sentence summary's six counts (section 11)."""
+    """The one-sentence summary's seven counts (section 11).
+
+    `follow_ups_sent` counts every request sent to a producer, in any round. The four waiting
+    counts count each lead once, by its primary next action: an underwriter review or question, a
+    producer reply, a data blocker, or an unknown delivery.
+    """
 
     quotes_sent: int
     follow_ups_sent: int
     declines_approved: int
     waiting_on_underwriter: int
+    waiting_on_producer: int
     waiting_on_data: int
     delivery_unknown: int
 
@@ -481,7 +489,14 @@ Item = Annotated[ReviewItem | QuestionItem, Field(discriminator="type")]
 
 class ApprovePayload(StrictModel):
     item_id: int
-    artifact_hash: str | None = None  # the payload hash shown with a draft; omitted for other items
+    artifact_hash: str | None = Field(
+        default=None,
+        description=(
+            "The payload hash shown with the draft. Required when the item is a draft or a "
+            "review that holds a draft, and omitted otherwise. Which item it is, is known to "
+            "the handler, so the schema leaves the field optional."
+        ),
+    )
     reason: str
 
 
@@ -552,10 +567,8 @@ class ApplyRuleChangePayload(StrictModel):
     diff_hash: str
 
 
-# The payload models of the twelve commands a proposal can hold, by command type (A.11).
+# The payload models of the ten commands a proposal can hold, by command type (A.11).
 PROPOSABLE_PAYLOADS: dict[str, type[StrictModel]] = {
-    "approve": ApprovePayload,
-    "reject": RejectPayload,
     "edit_draft": EditDraftPayload,
     "record_ruling": RecordRulingPayload,
     "resolve_fact": ResolveFactPayload,
@@ -569,9 +582,7 @@ PROPOSABLE_PAYLOADS: dict[str, type[StrictModel]] = {
 }
 
 ProposedPayload = (
-    ApprovePayload
-    | RejectPayload
-    | EditDraftPayload
+    EditDraftPayload
     | RecordRulingPayload
     | ResolveFactPayload
     | DeclineLeadPayload
@@ -585,9 +596,9 @@ ProposedPayload = (
 
 
 class ProposeCommandPayload(StrictModel):
-    """`{type, payload, rationale}` (A.11): `type` and `payload` together are one of the other twelve
-    HTTP commands. Some payload shapes fit two commands, so the payload is read as the model of
-    `type` before the union field sees it."""
+    """`{type, payload, rationale}` (A.11): `type` and `payload` together are one of the ten
+    proposable HTTP commands, never `approve`, `reject` or `propose_command`. The payload is read as
+    the model of `type` before the union field sees it."""
 
     type: ProposableCommandType
     payload: ProposedPayload
@@ -776,6 +787,10 @@ class ChatRequest(StrictModel):
 
 
 class ChatResponse(StrictModel):
+    """One answer. Asked to approve or reject, the assistant creates no card and points the
+    underwriter to the item instead (7.4, A.11): `item_ids` are the items the answer points to."""
+
     answer: str
     cited_event_ids: list[int]  # the events a read answer cites
     proposals: list[ProposalView]  # the `propose_command` cards the turn created
+    item_ids: list[int]  # the items (`blockers.id`) the answer points the underwriter to

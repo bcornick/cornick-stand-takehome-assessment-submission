@@ -6,10 +6,11 @@
   "first_pass_complete": true,
   "summary": {
     "quotes_sent": 0,
-    "follow_ups_sent": 0,
+    "follow_ups_sent": 9,
     "declines_approved": 0,
     "waiting_on_underwriter": 3,
-    "waiting_on_data": 7,
+    "waiting_on_producer": 7,
+    "waiting_on_data": 0,
     "delivery_unknown": 0
   }
 }

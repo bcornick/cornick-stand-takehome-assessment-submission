@@ -177,6 +177,7 @@
                 "type": "null"
               }
             ],
+            "description": "The payload hash shown with the draft. Required when the item is a draft or a review that holds a draft, and omitted otherwise. Which item it is, is known to the handler, so the schema leaves the field optional.",
             "title": "Artifact Hash"
           },
           "item_id": {
@@ -511,6 +512,7 @@
       },
       "ChatResponse": {
         "additionalProperties": false,
+        "description": "One answer. Asked to approve or reject, the assistant creates no card and points the\nunderwriter to the item instead (7.4, A.11): `item_ids` are the items the answer points to.",
         "properties": {
           "answer": {
             "title": "Answer",
@@ -521,6 +523,13 @@
               "type": "integer"
             },
             "title": "Cited Event Ids",
+            "type": "array"
+          },
+          "item_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Item Ids",
             "type": "array"
           },
           "proposals": {
@@ -534,7 +543,8 @@
         "required": [
           "answer",
           "cited_event_ids",
-          "proposals"
+          "proposals",
+          "item_ids"
         ],
         "title": "ChatResponse",
         "type": "object"
@@ -1750,16 +1760,10 @@
       },
       "ProposeCommandPayload": {
         "additionalProperties": false,
-        "description": "`{type, payload, rationale}` (A.11): `type` and `payload` together are one of the other twelve\nHTTP commands. Some payload shapes fit two commands, so the payload is read as the model of\n`type` before the union field sees it.",
+        "description": "`{type, payload, rationale}` (A.11): `type` and `payload` together are one of the ten\nproposable HTTP commands, never `approve`, `reject` or `propose_command`. The payload is read as\nthe model of `type` before the union field sees it.",
         "properties": {
           "payload": {
             "anyOf": [
-              {
-                "$ref": "#/components/schemas/ApprovePayload"
-              },
-              {
-                "$ref": "#/components/schemas/RejectPayload"
-              },
               {
                 "$ref": "#/components/schemas/EditDraftPayload"
               },
@@ -1800,8 +1804,6 @@
           "type": {
             "enum": [
               "deliver_reply",
-              "approve",
-              "reject",
               "edit_draft",
               "resolve_fact",
               "decline_lead",
@@ -2549,7 +2551,7 @@
       },
       "RunSummary": {
         "additionalProperties": false,
-        "description": "The one-sentence summary's six counts (section 11).",
+        "description": "The one-sentence summary's seven counts (section 11).\n\n`follow_ups_sent` counts every request sent to a producer, in any round. The four waiting\ncounts count each lead once, by its primary next action: an underwriter review or question, a\nproducer reply, a data blocker, or an unknown delivery.",
         "properties": {
           "declines_approved": {
             "title": "Declines Approved",
@@ -2571,6 +2573,10 @@
             "title": "Waiting On Data",
             "type": "integer"
           },
+          "waiting_on_producer": {
+            "title": "Waiting On Producer",
+            "type": "integer"
+          },
           "waiting_on_underwriter": {
             "title": "Waiting On Underwriter",
             "type": "integer"
@@ -2581,6 +2587,7 @@
           "follow_ups_sent",
           "declines_approved",
           "waiting_on_underwriter",
+          "waiting_on_producer",
           "waiting_on_data",
           "delivery_unknown"
         ],

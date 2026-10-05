@@ -11,12 +11,13 @@ from fastapi.testclient import TestClient
 from uwh.api.app import create_app
 from uwh.settings import Settings
 
-# Section 11: the summary's six counts are zero before a run starts.
+# Section 11: the summary's seven counts are zero before a run starts.
 NO_RUN_SUMMARY = {
     "quotes_sent": 0,
     "follow_ups_sent": 0,
     "declines_approved": 0,
     "waiting_on_underwriter": 0,
+    "waiting_on_producer": 0,
     "waiting_on_data": 0,
     "delivery_unknown": 0,
 }

@@ -1,4 +1,4 @@
-// ABOUTME: Tests the queue page against the ui fixtures: row order, group boundaries, the six-count summary and the mode label.
+// ABOUTME: Tests the queue page against the ui fixtures: row order, group boundaries, the seven-count summary and the mode label.
 // ABOUTME: Row order is the order received; the page never re-sorts.
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -56,33 +56,37 @@ describe('QueuePage', () => {
     expect(screen.getByRole('heading', { name: 'Finished' })).toBeInTheDocument()
   })
 
-  it('heads the page with one sentence holding all six counts, zeros included', () => {
+  it('heads the page with one sentence holding all seven counts, zeros included', () => {
     renderQueue()
     const s = run.summary
     expect(s.quotes_sent).toBe(0)
+    expect(s.follow_ups_sent).toBe(9)
+    expect(s.waiting_on_producer).toBe(7)
     expect(
       screen.getByText(
         `${s.quotes_sent} quotes sent, ${s.follow_ups_sent} follow-ups sent, ` +
           `${s.declines_approved} declines approved, ${s.waiting_on_underwriter} waiting on the underwriter, ` +
-          `${s.waiting_on_data} waiting on data, ${s.delivery_unknown} delivery unknown.`,
+          `${s.waiting_on_producer} waiting on the producer, ${s.waiting_on_data} waiting on data, ${s.delivery_unknown} delivery unknown.`,
       ),
     ).toBeInTheDocument()
   })
 
-  it('puts each of six distinct counts beside its own label', () => {
+  it('puts each of seven distinct counts beside its own label', () => {
     const summary = {
       quotes_sent: 11,
       follow_ups_sent: 22,
       declines_approved: 33,
       waiting_on_underwriter: 44,
-      waiting_on_data: 55,
-      delivery_unknown: 66,
+      waiting_on_producer: 55,
+      waiting_on_data: 66,
+      delivery_unknown: 77,
     }
     renderQueue({ run: { ...run, summary } })
     expect(
       screen.getByText(
         '11 quotes sent, 22 follow-ups sent, 33 declines approved, ' +
-          '44 waiting on the underwriter, 55 waiting on data, 66 delivery unknown.',
+          '44 waiting on the underwriter, 55 waiting on the producer, 66 waiting on data, ' +
+          '77 delivery unknown.',
       ),
     ).toBeInTheDocument()
   })

@@ -334,18 +334,18 @@ def item_problems(items: list[Any], details: dict[str, LeadDetail]) -> list[str]
 
 
 def follow_ups_sent(events: dict[str, LeadEvents]) -> int:
-    """Messages sent for a request of round 2 or later."""
+    """Messages sent for a request of any round (section 11: the brief calls the first request a follow-up)."""
     count = 0
     for lead_events in events.values():
-        rounds = {
-            e.payload["intent_id"]: e.payload["round"]
+        request_ids = {
+            e.payload["intent_id"]
             for e in lead_events.events
             if e.type.value == "intent_created" and e.payload["kind"] in REQUEST_KINDS
         }
         count += sum(
             1
             for e in lead_events.events
-            if e.type.value == "message_sent" and int(rounds[e.payload["intent_id"]]) >= 2  # type: ignore[call-overload]
+            if e.type.value == "message_sent" and e.payload["intent_id"] in request_ids
         )
     return count
 
@@ -356,15 +356,18 @@ def run_problems(
     details: dict[str, LeadDetail],
     events: dict[str, LeadEvents],
 ) -> list[str]:
+    # Section 11: the four waiting counts count each lead once, by its primary next action.
+    def waiting_on(*kinds: str) -> int:
+        return sum(r.primary_next_action in kinds for r in rows)
+
     expected = {
         "quotes_sent": sum(r.status == "quote_sent" for r in rows),
         "follow_ups_sent": follow_ups_sent(events),
         "declines_approved": sum(r.status == "declined" for r in rows),
-        "waiting_on_underwriter": sum(r.group == "blocked_on_underwriter" for r in rows),
-        "waiting_on_data": sum(r.group == "waiting_on_data_or_producer" for r in rows),
-        "delivery_unknown": sum(
-            any(b.kind == "delivery_unknown" for b in d.blockers) for d in details.values()
-        ),
+        "waiting_on_underwriter": waiting_on("underwriter_review", "underwriter_question"),
+        "waiting_on_producer": waiting_on("producer_reply"),
+        "waiting_on_data": waiting_on("data"),
+        "delivery_unknown": waiting_on("delivery_unknown"),
     }
     return [
         f"run summary {key} is {getattr(run.summary, key)}, the leads give {value}"
@@ -427,6 +430,16 @@ def change_a_count(run: Any) -> None:
     run["summary"]["waiting_on_underwriter"] += 1
 
 
+def count_only_later_rounds_as_follow_ups(run: Any) -> None:
+    # The count a definition of follow-ups as round 2 or later would give: every lead has had round 1 only.
+    run["summary"]["follow_ups_sent"] = 0
+
+
+def count_producer_waits_as_data(run: Any) -> None:
+    run["summary"]["waiting_on_data"] = run["summary"]["waiting_on_producer"]
+    run["summary"]["waiting_on_producer"] = 0
+
+
 def change_a_payload_hash(detail: Any) -> None:
     detail["drafts"][0]["payload_hash"] = "0" * 64
 
@@ -445,6 +458,8 @@ BREAKS: list[tuple[str, Callable[[Any], None], str]] = [
     ("leads.json", swap_the_first_rows, "section 11 order"),
     ("items.json", drop_an_item, "differ from open item blockers"),
     ("run.json", change_a_count, "waiting_on_underwriter"),
+    ("run.json", count_only_later_rounds_as_follow_ups, "follow_ups_sent"),
+    ("run.json", count_producer_waits_as_data, "waiting_on_producer"),
     (f"lead/{LEAD_IDS[0]}.json", change_a_payload_hash, "payload_hash"),
     (f"events/{LEAD_IDS[0]}.json", move_an_event, "is for"),
 ]

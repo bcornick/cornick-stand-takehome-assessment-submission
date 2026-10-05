@@ -329,7 +329,10 @@ export interface components {
         };
         /** ApprovePayload */
         ApprovePayload: {
-            /** Artifact Hash */
+            /**
+             * Artifact Hash
+             * @description The payload hash shown with the draft. Required when the item is a draft or a review that holds a draft, and omitted otherwise. Which item it is, is known to the handler, so the schema leaves the field optional.
+             */
             artifact_hash?: string | null;
             /** Item Id */
             item_id: number;
@@ -454,12 +457,18 @@ export interface components {
             /** Message */
             message: string;
         };
-        /** ChatResponse */
+        /**
+         * ChatResponse
+         * @description One answer. Asked to approve or reject, the assistant creates no card and points the
+         *     underwriter to the item instead (7.4, A.11): `item_ids` are the items the answer points to.
+         */
         ChatResponse: {
             /** Answer */
             answer: string;
             /** Cited Event Ids */
             cited_event_ids: number[];
+            /** Item Ids */
+            item_ids: number[];
             /** Proposals */
             proposals: components["schemas"]["ProposalView"][];
         };
@@ -910,20 +919,20 @@ export interface components {
         };
         /**
          * ProposeCommandPayload
-         * @description `{type, payload, rationale}` (A.11): `type` and `payload` together are one of the other twelve
-         *     HTTP commands. Some payload shapes fit two commands, so the payload is read as the model of
-         *     `type` before the union field sees it.
+         * @description `{type, payload, rationale}` (A.11): `type` and `payload` together are one of the ten
+         *     proposable HTTP commands, never `approve`, `reject` or `propose_command`. The payload is read as
+         *     the model of `type` before the union field sees it.
          */
         ProposeCommandPayload: {
             /** Payload */
-            payload: components["schemas"]["ApprovePayload"] | components["schemas"]["RejectPayload"] | components["schemas"]["EditDraftPayload"] | components["schemas"]["RecordRulingPayload"] | components["schemas"]["ResolveFactPayload"] | components["schemas"]["DeclineLeadPayload"] | components["schemas"]["ReplyRequest"] | components["schemas"]["ChangeSettingPayload"] | components["schemas"]["EmergencyStopPayload"] | components["schemas"]["StartRunPayload"] | components["schemas"]["ProposeRuleChangePayload"] | components["schemas"]["ApplyRuleChangePayload"];
+            payload: components["schemas"]["EditDraftPayload"] | components["schemas"]["RecordRulingPayload"] | components["schemas"]["ResolveFactPayload"] | components["schemas"]["DeclineLeadPayload"] | components["schemas"]["ReplyRequest"] | components["schemas"]["ChangeSettingPayload"] | components["schemas"]["EmergencyStopPayload"] | components["schemas"]["StartRunPayload"] | components["schemas"]["ProposeRuleChangePayload"] | components["schemas"]["ApplyRuleChangePayload"];
             /** Rationale */
             rationale: string;
             /**
              * Type
              * @enum {string}
              */
-            type: "deliver_reply" | "approve" | "reject" | "edit_draft" | "resolve_fact" | "decline_lead" | "record_ruling" | "propose_rule_change" | "apply_rule_change" | "change_setting" | "emergency_stop" | "start_run";
+            type: "deliver_reply" | "edit_draft" | "resolve_fact" | "decline_lead" | "record_ruling" | "propose_rule_change" | "apply_rule_change" | "change_setting" | "emergency_stop" | "start_run";
         };
         /** ProposeRuleChangeCommand */
         ProposeRuleChangeCommand: {
@@ -1166,7 +1175,11 @@ export interface components {
         };
         /**
          * RunSummary
-         * @description The one-sentence summary's six counts (section 11).
+         * @description The one-sentence summary's seven counts (section 11).
+         *
+         *     `follow_ups_sent` counts every request sent to a producer, in any round. The four waiting
+         *     counts count each lead once, by its primary next action: an underwriter review or question, a
+         *     producer reply, a data blocker, or an unknown delivery.
          */
         RunSummary: {
             /** Declines Approved */
@@ -1179,6 +1192,8 @@ export interface components {
             quotes_sent: number;
             /** Waiting On Data */
             waiting_on_data: number;
+            /** Waiting On Producer */
+            waiting_on_producer: number;
             /** Waiting On Underwriter */
             waiting_on_underwriter: number;
         };

@@ -115,19 +115,21 @@ def test_queue_groups_are_the_section_11_order() -> None:
 # ---- the run (A.5, section 11) ---------------------------------------------------------------
 
 RUN_FIELDS = {"run_id", "mode", "seed", "sim_now", "first_pass_complete", "summary"}
-SUMMARY_COUNTS = {
+# Section 11, in the order the sentence gives them.
+SUMMARY_COUNTS = [
     "quotes_sent",
     "follow_ups_sent",
     "declines_approved",
     "waiting_on_underwriter",
+    "waiting_on_producer",
     "waiting_on_data",
     "delivery_unknown",
-}
+]
 
 
 def test_run_view_carries_a5_fields_and_section_11_counts() -> None:
     assert set(views.RunView.model_fields) == RUN_FIELDS
-    assert set(views.RunSummary.model_fields) == SUMMARY_COUNTS
+    assert list(views.RunSummary.model_fields) == SUMMARY_COUNTS
 
 
 # ---- the lead detail (A.5, A.11, section 11) --------------------------------------------------
@@ -915,22 +917,21 @@ def test_the_http_command_schema_omits_the_workflow_only_classes() -> None:
     assert accepted == {c.name for c in vertical.COMMAND_CLASSES} - workflow_only
 
 
-def test_a_proposed_command_names_one_of_the_other_twelve_http_types() -> None:
+def test_a_proposed_command_names_one_of_the_ten_proposable_http_types() -> None:
+    # A.11: the proposed command is never approve, reject or propose_command.
     proposed = command_variants()["propose_command"]["properties"]["type"]
     workflow_only = {c.name for c in vertical.COMMAND_CLASSES if c.actors == ("workflow",)}
     assert not set(proposed["enum"]) & workflow_only
-    assert "propose_command" not in proposed["enum"]
-    assert set(proposed["enum"]) == set(A11_PAYLOADS) - {"propose_command"}
-    assert len(proposed["enum"]) == 12
+    assert not set(proposed["enum"]) & {"approve", "reject", "propose_command"}
+    assert set(proposed["enum"]) == set(A11_PAYLOADS) - {"approve", "reject", "propose_command"}
+    assert len(proposed["enum"]) == 10
 
 
-def test_a_proposed_command_payload_is_a_union_of_the_twelve_payload_models() -> None:
+def test_a_proposed_command_payload_is_a_union_of_the_ten_payload_models() -> None:
     doc = document()
     inner = command_variants()["propose_command"]["properties"]["payload"]
     refs = {m["$ref"].rsplit("/", 1)[1] for m in inner["anyOf"]}
     assert refs == {
-        "ApprovePayload",
-        "RejectPayload",
         "EditDraftPayload",
         "RecordRulingPayload",
         "ResolveFactPayload",
@@ -946,6 +947,15 @@ def test_a_proposed_command_payload_is_a_union_of_the_twelve_payload_models() ->
 
 
 command = TypeAdapter(views.Command)
+
+
+def test_the_approve_hash_rule_is_in_the_openapi_description() -> None:
+    # A.11: the schema stays optional; the handler knows which item it is.
+    node = schema("ApprovePayload")
+    assert "artifact_hash" not in node["required"]
+    description = node["properties"]["artifact_hash"]["description"]
+    assert "Required when the item is a draft or a review that holds a draft" in description
+    assert "and omitted otherwise" in description
 
 
 def test_approve_carries_the_artifact_hash_it_echoes() -> None:
@@ -1003,22 +1013,40 @@ def test_a_proposed_command_holds_a_valid_inner_command() -> None:
 
 
 def test_a_proposed_command_is_checked_by_its_type_not_by_the_shape_alone() -> None:
-    # {item_id, reason} fits approve and reject; the type picks reject, whose reason is required.
-    rejected = {"item_id": 7, "reason": "wrong recipient"}
-    parsed = command.validate_python(proposal("reject", rejected))
-    assert isinstance(parsed.payload.payload, views.RejectPayload)  # type: ignore[union-attr]
-    approved = command.validate_python(proposal("approve", rejected))
-    assert isinstance(approved.payload.payload, views.ApprovePayload)  # type: ignore[union-attr]
+    # The type picks the payload model, whose own rules apply: a decline's reason is required.
+    declined = {"lead_id": LEAD, "reason": "the roof is past repair"}
+    parsed = command.validate_python(proposal("decline_lead", declined))
+    assert isinstance(parsed.payload.payload, views.DeclineLeadPayload)  # type: ignore[union-attr]
     with pytest.raises(ValidationError):
-        command.validate_python(proposal("reject", {"item_id": 7, "reason": ""}))
+        command.validate_python(proposal("decline_lead", {"lead_id": LEAD, "reason": ""}))
 
 
 def test_a_proposed_command_built_from_models_cannot_pair_a_type_with_another_payload() -> None:
-    with pytest.raises(ValidationError, match="reject"):
+    with pytest.raises(ValidationError, match="decline_lead"):
         views.ProposeCommandPayload(
-            type="reject",
-            payload=views.ApprovePayload(item_id=7, reason="x"),
+            type="decline_lead",
+            payload=views.ResolveFactPayload(lead_id=LEAD, key="k", value="v", reason="x"),
             rationale="r",
+        )
+
+
+@pytest.mark.parametrize(
+    ("command_type", "payload"),
+    [
+        ("approve", {"item_id": 7, "artifact_hash": "ab" * 32, "reason": "ok"}),
+        ("reject", {"item_id": 7, "reason": "wrong recipient"}),
+    ],
+)
+def test_a_proposal_never_holds_an_approve_or_a_reject(
+    command_type: str, payload: dict[str, Any]
+) -> None:
+    # A.11: the same payload is a valid command of its own and is refused inside a proposal.
+    command.validate_python({"type": command_type, "payload": payload})
+    with pytest.raises(ValidationError):
+        command.validate_python(proposal(command_type, payload))
+    with pytest.raises(ValidationError):
+        views.ProposeCommandPayload.model_validate(
+            {"type": command_type, "payload": payload, "rationale": "r"}
         )
 
 
@@ -1034,9 +1062,9 @@ def test_a_proposed_command_survives_a_json_round_trip() -> None:
         # a proposal does not nest a proposal
         proposal("propose_command", proposal("resolve_fact", RESOLVE_FACT)["payload"]),
         # the inner payload must be valid for the inner type
-        proposal("approve", {"nonsense": True}),
+        proposal("resolve_fact", {"nonsense": True}),
         proposal("resolve_fact", {"lead_id": LEAD}),
-        proposal("approve", RESOLVE_FACT),
+        proposal("decline_lead", RESOLVE_FACT),
         # a workflow-only class is not a command over HTTP, so it is not proposed either
         proposal("fetch_data", {}),
         proposal("send_quote_packet", {}),
@@ -1044,7 +1072,7 @@ def test_a_proposed_command_survives_a_json_round_trip() -> None:
         proposal("notify", {}),
     ],
 )
-def test_a_proposed_command_that_is_not_one_of_the_other_twelve_is_refused(
+def test_a_proposed_command_that_is_not_one_of_the_ten_proposable_is_refused(
     bad: dict[str, Any],
 ) -> None:
     with pytest.raises(ValidationError):
@@ -1112,7 +1140,26 @@ def test_proposal_view_follows_the_a1_proposals_columns() -> None:
 
 def test_chat_answers_cite_event_ids_and_a_directive_becomes_a_proposal() -> None:
     assert set(views.ChatRequest.model_fields) == {"message"}
-    assert set(views.ChatResponse.model_fields) == {"answer", "cited_event_ids", "proposals"}
+    assert set(views.ChatResponse.model_fields) == {
+        "answer",
+        "cited_event_ids",
+        "proposals",
+        "item_ids",
+    }
+
+
+def test_a_chat_answer_points_to_items_when_asked_to_approve_or_reject() -> None:
+    # 7.4, A.11: no proposal card, and the underwriter is pointed to the item.
+    answer = views.ChatResponse(
+        answer="Item 7 is the decline notice; approve it from the lead's page.",
+        cited_event_ids=[],
+        proposals=[],
+        item_ids=[7],
+    )
+    assert answer.item_ids == [7]
+    assert "item" in (schema("ChatResponse")["description"])
+    with pytest.raises(ValidationError):
+        views.ChatResponse(answer="a", cited_event_ids=[], proposals=[])  # type: ignore[call-arg]
 
 
 def event_row(event_type: str, payload: dict[str, Any]) -> dict[str, Any]:

@@ -27,6 +27,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 follow_ups_sent=0,
                 declines_approved=0,
                 waiting_on_underwriter=0,
+                waiting_on_producer=0,
                 waiting_on_data=0,
                 delivery_unknown=0,
             ),
