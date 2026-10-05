@@ -236,6 +236,27 @@ def test_rule_1_resolve_fact_closes_the_conflict_of_a_pair_it_rules_one_field_of
     assert validators(db) == []
 
 
+def test_rule_1_an_underwriter_value_that_still_trips_a_validator_opens_no_conflict(
+    db: sqlite3.Connection,
+) -> None:
+    submit(db, "year_built", 2000)
+    submit(db, "roof_replacement_year", 1990)
+    assert validators(db) == ["roof_before_home"]
+    resolve_fact(db, UNDERWRITER, LEAD, "roof_replacement_year", 1995, "the invoice", RULES)
+    assert validators(db) == []
+    submit(db, "bedrooms", 2)  # another change re-runs the validators
+    assert validators(db) == []
+
+
+def test_rule_1_a_later_reply_changing_the_other_field_of_the_pair_opens_the_conflict_again(
+    db: sqlite3.Connection,
+) -> None:
+    submit(db, "roof_replacement_year", 1990)
+    resolve_fact(db, UNDERWRITER, LEAD, "roof_replacement_year", 1995, "the invoice", RULES)
+    reply(db, "year_built", 2000)  # the missing field is filled, and now the pair disagrees
+    assert validators(db) == ["roof_before_home"]
+
+
 def test_rule_1_resolve_fact_rejects_the_pending_observations_on_its_key_only(
     db: sqlite3.Connection,
 ) -> None:

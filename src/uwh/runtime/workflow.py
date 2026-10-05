@@ -100,6 +100,11 @@ def _status(db: sqlite3.Connection, lead_id: str) -> Status:
     return status
 
 
+def is_terminal(db: sqlite3.Connection, lead_id: str) -> bool:
+    """Whether the lead is `quote_sent` or `declined`. Raises ValueError for a lead that does not exist."""
+    return _status(db, lead_id) in TERMINAL_STATUSES
+
+
 def lead_revision_and_plan_hash(db: sqlite3.Connection, lead_id: str) -> tuple[int, str | None]:
     """The lead's revision and action-plan hash now; the hash is None until a plan exists. Raises
     ValueError for a lead that does not exist."""
@@ -242,7 +247,7 @@ def reevaluate(
 
     The command layer calls this for every accepted command, in the command's transaction (A.11).
     """
-    if _status(db, lead_id) in TERMINAL_STATUSES:
+    if is_terminal(db, lead_id):
         return
     run_steps(db, make_context, lead_id, steps)
 
@@ -259,7 +264,7 @@ def record_reply(
 ) -> None:
     """Record a reply in the ledger. A reply to a terminal lead is recorded `pending_review` and
     raises a `reply_after_terminal_status` review, and the status stays (A.3). The caller commits."""
-    if _status(db, lead_id) in TERMINAL_STATUSES:
+    if is_terminal(db, lead_id):
         observe_late_reply(
             db,
             context,

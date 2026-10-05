@@ -7,14 +7,11 @@ from fastapi import APIRouter, HTTPException
 from uwh.api.views import (
     ChatRequest,
     ChatResponse,
-    FixtureRepliesResponse,
     Item,
     LeadDetail,
     LeadEvents,
     ProposalView,
     QueueRow,
-    ReplyRequest,
-    ReplyResponse,
 )
 
 router = APIRouter()
@@ -42,16 +39,6 @@ def get_lead_events(id: str) -> LeadEvents:
 @router.get("/api/items")
 def list_items() -> list[Item]:
     not_implemented("GET /api/items")
-
-
-@router.post("/api/replies")
-def deliver_reply(reply: ReplyRequest) -> ReplyResponse:
-    not_implemented("POST /api/replies")
-
-
-@router.post("/api/replies/fixtures")
-def deliver_fixture_replies() -> FixtureRepliesResponse:
-    not_implemented("POST /api/replies/fixtures")
 
 
 @router.get("/api/proposals")

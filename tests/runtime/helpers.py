@@ -11,6 +11,7 @@ from uwh.runtime.facts import LedgerRules
 from uwh.runtime.hashing import payload_hash
 from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
+from uwh.runtime.model import ModelAccess
 from uwh.runtime.runs import RunEnvironment
 from uwh.runtime.send import create_draft, dispatch
 from uwh.runtime.workflow import Step
@@ -89,7 +90,16 @@ def command_environment(
     now: Callable[[], datetime] = lambda: NOW,
 ) -> RunEnvironment:
     return RunEnvironment(
-        "replay", RULESET, LedgerRules(), steps, skills_root or tmp_path, now, mailbox, leadgen
+        "replay",
+        RULESET,
+        LedgerRules(),
+        {},
+        ModelAccess("replay", tmp_path, None),
+        steps,
+        skills_root or tmp_path,
+        now,
+        mailbox,
+        leadgen,
     )
 
 

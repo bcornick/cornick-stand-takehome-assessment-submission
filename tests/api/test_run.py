@@ -3,7 +3,7 @@
 import logging
 import sqlite3
 import threading
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Mapping
 from contextlib import AbstractContextManager, contextmanager
 from datetime import datetime
 
@@ -11,7 +11,10 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tests.api.helpers import WAIT_SECONDS, first_pass_complete, wait_for
+from uwh.api.runtime import FirstPass, Runtime
 from uwh.api.views import RunView
+from pydantic import JsonValue
+from uwh.runtime.commands import CommandResult
 from uwh.runtime.event_types import BlockerDetail, EventType
 from uwh.runtime.events import EventContext, read_events
 from uwh.runtime.runs import command_context
@@ -100,6 +103,37 @@ def test_a_start_returns_at_once_with_the_run_id_while_the_pass_runs(
     db = open_store(settings.db_path)
     assert {status for (status,) in db.execute("SELECT status FROM leads")} == {"in_progress"}
     db.close()
+
+
+def test_a_waited_start_that_a_later_start_replaced_reports_its_own_run_and_not_the_later_one(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    original = Runtime.submit_as_underwriter
+    later_runs: list[str] = []
+
+    def start_then_replace(
+        self: Runtime, db: sqlite3.Connection, command_type: str, payload: Mapping[str, JsonValue]
+    ) -> tuple[CommandResult, FirstPass | None]:
+        result, first = original(self, db, command_type, payload)
+        if not later_runs:
+            # The first pass settles, and a later start lands before the response is built.
+            assert first is not None
+            first.future.result()
+            with self.database() as other:
+                _, later = original(self, other, "start_run", {"seed": 7})
+            assert later is not None
+            later_runs.append(later.run.run_id)
+        return result, first
+
+    monkeypatch.setattr(Runtime, "submit_as_underwriter", start_then_replace)
+
+    response = client.post("/api/run/start?wait=true")
+
+    (later_run,) = later_runs
+    assert response.status_code == 409
+    assert "was replaced by a later start" in response.json()["detail"]
+    assert later_run not in response.text
+    assert client.get("/api/run").json()["run_id"] == later_run
 
 
 def test_a_start_while_the_run_is_processing_is_refused(

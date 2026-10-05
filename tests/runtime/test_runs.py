@@ -20,6 +20,7 @@ from tests.runtime.helpers import (
     RUN_START,
     command_environment,
     events_of,
+    insert_dispatching,
     insert_run,
     send_nothing,
 )
@@ -27,7 +28,6 @@ from uwh.runtime.commands import CommandResult, submit_command
 from uwh.runtime.event_types import BlockerDetail, EventType, RunStarted
 from uwh.runtime.events import EventContext, StaleRun, format_timestamp, read_events
 from uwh.runtime.facts import submitted_values
-from uwh.runtime.faults import FaultPlan
 from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
 from uwh.runtime.runs import (
@@ -39,7 +39,7 @@ from uwh.runtime.runs import (
     resume_after_restart,
     run_first_pass,
 )
-from uwh.runtime.send import create_draft, dispatch
+from uwh.runtime.send import create_draft
 from uwh.runtime.store import open_store
 from uwh.runtime.waits import open_blocker, open_blockers
 from uwh.runtime.workflow import Step, create_lead, run_leads, run_steps
@@ -239,6 +239,54 @@ def test_a_start_after_the_run_settled_replaces_the_run(
     assert {e.run_id for e in read_events(db)} == {current_id(db)}
 
 
+def test_a_start_is_refused_while_a_message_is_being_sent(
+    db: sqlite3.Connection, store_path: str, env: RunEnvironment
+) -> None:
+    start(db, env)
+    first_pass(db, store_path, env)
+    run_id = current_id(db)
+    insert_dispatching(db, "in-flight", round_=1, lead_id=lead_ids(db)[0])
+
+    second = start(db, env, seed=7)
+
+    assert not second.accepted
+    assert "being sent" in str(second.reason)
+    assert (current_id(db), db.execute("SELECT seed FROM runs").fetchone()) == (run_id, (SEED,))
+
+
+def test_item_ids_continue_above_those_of_the_run_a_start_replaces(
+    db: sqlite3.Connection, store_path: str, env: RunEnvironment
+) -> None:
+    def open_review() -> int:
+        return open_blocker(
+            db,
+            command_context(db, "workflow", "replay", RULESET, NOW),
+            lead_ids(db)[0],
+            "underwriter_review",
+            "underwriter",
+            BlockerDetail(
+                item_kind="review", cause="unread_reply", resume_trigger="a person", text="held"
+            ),
+        )
+
+    start(db, env)
+    first_pass(db, store_path, env)
+    old_item = open_review()
+    db.commit()
+    start(db, env, seed=7)
+    new_item = open_review()
+    db.commit()
+
+    stale_tab = submit_command(
+        db, env, "underwriter", "approve", {"item_id": old_item, "reason": "seen"}
+    )
+
+    assert new_item > old_item
+    assert not stale_tab.accepted
+    assert f"item {old_item} is not an open item" in str(stale_tab.reason)
+    assert [b.id for b in open_blockers(db, lead_ids(db)[0])] == [new_item]
+
+
 # ---- the first pass -----------------------------------------------------------------------------
 
 
@@ -297,26 +345,13 @@ def started_and_passed(
 
 
 def test_stale_run_writes_nothing(
-    db: sqlite3.Connection, store_path: str, env: RunEnvironment, faults: FaultPlan
+    db: sqlite3.Connection, store_path: str, env: RunEnvironment
 ) -> None:
-    first_run, first_leads, stale = started_and_passed(db, store_path, env)
-    intent_id = create_draft(
-        db, stale(), ASKER, first_leads[0], "routine_request", RECIPIENT, "S", "B", ["acreage"]
-    )
-    db.commit()
-
-    # A start replaces the run while the post of a dispatch of the first run is in flight.
-    def replace_the_run() -> None:
-        assert start(db, env, seed=7).accepted
-
-    faults.hold_in_flight = replace_the_run
-    with pytest.raises(StaleRun):
-        dispatch(db, env.mailbox, stale, intent_id)
-    faults.hold_in_flight = None
+    first_run, _, stale = started_and_passed(db, store_path, env)
+    assert start(db, env, seed=7).accepted
 
     second_run = current_id(db)
     assert second_run != first_run
-    assert events_of(db, EventType.message_sent) == []
     assert {e.run_id for e in read_events(db)} == {second_run}
     events_before = len(read_events(db))
 

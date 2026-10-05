@@ -564,14 +564,12 @@ def resolve_fact(
 ) -> int:
     """Rule 10 and rule 1: record an underwriter observation, which becomes the effective fact, and return the id of its `fact_observed` event.
 
-    It closes the open conflicts on its key, which a validator does not open again on the same
-    values, and rejects the pending observations on its key. The caller commits.
+    No conflict on its key stays open, even one the value trips: the ruling closes it, and a validator
+    does not open it again on the same values. A later change to the other field of a pair opens one
+    again. It rejects the pending observations on its key. The caller commits.
     """
     ledger = _Pass(db, context, lead_id, rules)
     observation_id = ledger.record(key, value, "underwriter", {"reason": reason}, "accepted")
-    for conflict in open_conflicts(db, lead_id):
-        if key in conflict.fields:
-            ledger.close_conflict(conflict, observation_id)
     pending = db.execute(
         "SELECT id FROM observations WHERE lead_id = ? AND key = ? AND status = 'pending_review'",
         (lead_id, key),
@@ -583,6 +581,9 @@ def resolve_fact(
             close_blocker(db, context, blocker_id)
     ledger.select(observation_id)
     ledger.finish()
+    for conflict in open_conflicts(db, lead_id):
+        if key in conflict.fields:
+            ledger.close_conflict(conflict, observation_id)
     (event_id,) = db.execute(
         "SELECT event_id FROM observations WHERE id = ?", (observation_id,)
     ).fetchone()

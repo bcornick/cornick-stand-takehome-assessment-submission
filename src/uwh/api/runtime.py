@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
 
+import anthropic
 import httpx2
 from fastapi import Depends, Request
 from pydantic import JsonValue
@@ -26,12 +27,16 @@ from uwh.runtime.facts import LedgerRules
 from uwh.runtime.hashing import ruleset_hash
 from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
-from uwh.runtime.runs import RunEnvironment, current_run, pass_context, run_first_pass
+from uwh.runtime.model import ModelAccess, anthropic_call
+from uwh.runtime.runs import Run, RunEnvironment, current_run, pass_context, run_first_pass
 from uwh.runtime.store import open_store
 from uwh.settings import Settings
 from uwh.skills.steps import build_steps
 
 logger = logging.getLogger(__name__)
+
+# How long one model call may take before it is abandoned.
+MODEL_TIMEOUT_SECONDS = 60.0
 
 # The image's rules data: the ruleset every run uses (A.4).
 IMAGE_RULES_DATA = Path(uwh.rules.__file__).parent / "data"
@@ -50,6 +55,14 @@ def ledger_rules(registry: Registry) -> LedgerRules:
 
 
 @dataclass(frozen=True)
+class FirstPass:
+    """The run a start began and the future of its first pass."""
+
+    run: Run
+    future: Future[None]
+
+
+@dataclass(frozen=True)
 class Runtime:
     settings: Settings
     env: RunEnvironment
@@ -64,16 +77,22 @@ class Runtime:
 
     def submit_as_underwriter(
         self, db: sqlite3.Connection, command_type: str, payload: Mapping[str, JsonValue]
-    ) -> tuple[CommandResult, Future[None] | None]:
+    ) -> tuple[CommandResult, FirstPass | None]:
         """Submit the command as the underwriter, the actor the REST transport binds. An accepted
-        `start_run` also launches the first pass of its run on the worker; the future of that pass is
-        returned for a caller that waits for it, and is None for every other result."""
+        `start_run` also launches the first pass of its run on the worker; the run and the future of
+        that pass are returned for a caller that waits for it, and None for every other result."""
         result = submit_command(db, self.env, "underwriter", command_type, payload)
         if result.accepted and command_type == "start_run":
             return result, self._launch_first_pass(db)
         return result, None
 
-    def _launch_first_pass(self, db: sqlite3.Connection) -> Future[None]:
+    def submit_as_inbound(
+        self, db: sqlite3.Connection, command_type: str, payload: Mapping[str, JsonValue]
+    ) -> CommandResult:
+        """Submit the command as the inbound actor, the one the reply endpoints bind."""
+        return submit_command(db, self.env, "inbound", command_type, payload)
+
+    def _launch_first_pass(self, db: sqlite3.Connection) -> FirstPass:
         """Run the first pass of the current run on the worker. A failure is logged with the run id, and
         the pass has settled the run by then."""
         run = current_run(db)
@@ -88,7 +107,7 @@ class Runtime:
             env.mailbox,
         )
         future.add_done_callback(lambda done: _log_failure(run.run_id, done))
-        return future
+        return FirstPass(run, future)
 
 
 def _log_failure(run_id: str, future: Future[None]) -> None:
@@ -112,10 +131,23 @@ def open_runtime(
             mailbox = MailboxClient(stack.enter_context(http))
         registry = load_registry(settings.registry_path)
         rules = ledger_rules(registry)
+        live = None
+        if settings.model_api_key is not None:
+            # No retries: each one is another billed call.
+            model_client = anthropic.Anthropic(
+                base_url=settings.model_base_url,
+                api_key=settings.model_api_key,
+                max_retries=0,
+                timeout=MODEL_TIMEOUT_SECONDS,
+            )
+            stack.callback(model_client.close)
+            live = anthropic_call(model_client, settings.model_id)
         env = RunEnvironment(
             settings.run_mode,
             ruleset_hash(IMAGE_RULES_DATA),
             rules,
+            registry,
+            ModelAccess(settings.run_mode, Path(settings.recordings_dir), live),
             build_steps(registry, StandInProviders.for_seed(settings.seed), rules),
             Path(uwh.skills.__file__).parent,
             lambda: datetime.now(UTC),

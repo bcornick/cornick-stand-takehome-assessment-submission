@@ -198,7 +198,7 @@ Two layers.
 
 - **Observations.** One row per reported value: field or catalogue question id, value, source (`submitted`, `fetched`, `derived`, `assumed`, `reply`, `underwriter`), evidence (quoted span, provider name, derivation id, interpretation row id), status (`accepted`, `pending_review`, `rejected`).
 - **Effective facts.** The selected value per field, pointing at its observation. Selection follows source authority:
-  1. An underwriter ruling outranks everything. `resolve_fact` closes the open conflicts on its key, and a validator does not reopen a conflict on the same values; `resolve_fact` also rejects the open `pending_review` observations on its key, so an older reply value cannot replace the ruling.
+  1. An underwriter ruling outranks everything. `resolve_fact` leaves no conflict open on its key, even one its value trips, and a validator does not reopen a conflict on the same values (a later change to the other field of a pair opens one again); `resolve_fact` also rejects the open `pending_review` observations on its key, so an older reply value cannot replace the ruling.
   2. A reply value fills a missing producer-editable field directly, and replaces an `assumed` value the same way.
   3. A reply value that differs from an existing submitted, fetched or underwriter value is `pending_review` and raises an underwriter review; the existing value stays in force until the underwriter approves or rejects. A value that also trips a validator follows this rule and opens no conflict.
   4. A reply never sets a system-owned field.
@@ -594,14 +594,14 @@ When both pass, the rewritten body is the intent's body, the payload hash is tak
 Then code:
 
 1. finds each candidate's quote in the stored reply and records its offsets, taking the first occurrence when the quote occurs more than once; a candidate whose quote does not occur verbatim is dropped and the drop is recorded, because a quote that is not in the reply is an invented answer;
-2. coerces values to the registry's types and option strings;
+2. coerces values to the registry's types and option strings; a candidate for a field that was not asked, or whose value does not fit the field's type or options, is dropped and the drop is recorded, as for an unlocated quote;
 3. runs the conflict validators;
-4. applies the source-authority rules of section 7.3;
+4. applies the source-authority rules of section 7.3, for a reply classified `answers_all` or `answers_some` only;
 5. closes the round when the classification is `answers_all` or `answers_some`; `off_topic` and `declines_to_answer` leave the round open and raise an underwriter review.
 
 When `read_reply` abstains (A.10), the `reply_read` event records the abstention in place of a reading, the round stays open, and the reply goes to the underwriter unread as an underwriter review.
 
-Reply text is untrusted. It is length-capped, passed to the model as data, and cannot approve an action. Accepted facts, round closure and re-evaluation commit in one transaction.
+Reply text is untrusted. It is length-capped, passed to the model as data, and cannot approve an action. The model call runs outside any database transaction; then accepted facts, round closure and re-evaluation commit in one short transaction. A reply is refused unless its intent is `sent`, and a body already delivered for the intent is refused. With no key in live mode the reply is recorded unread and raises an underwriter review.
 
 **Classification cascade.** With a Jev key (`TYPESAFE_API_KEY`), Jev answers the classification as a choice question. The interface computes confidence from the returned probabilities, and when it is below the per-question threshold (default 0.7) the language model answers instead. Without a Jev key the language model answers every time, so the system works fully without Jev. Brett and Stand's reviewers both run with a Jev key; the path without Jev is the fallback.
 
@@ -707,11 +707,11 @@ A reference run passes everything. Each broken variant must be failed by its nam
 | `leadgen-eval`, `mailbox-eval` | `eval` | same Dockerfiles | none | separate named volumes |
 | `eval` | `eval` | the app image plus `evals/`, every `src/uwh/skills/*/cases/` folder, and `sim-harness/leadgen` with `sim-harness/shared` (for regenerating Stand's key in process) | none | writes `evals/results.jsonl` through a bind mount; `recordings/` mounted read-only, and read-write only under `make record` |
 
-- The app stage copies `src/` selectively and leaves out every `cases/` folder. It copies `docs/brief/field_registry.json` to `/app/registry/field_registry.json`; the setting `UWH_REGISTRY` names that path. The commit hash reaches the images as the build argument `GIT_COMMIT`, since `.git` is outside the build context. The make targets set it from `git rev-parse HEAD`. With plain `docker compose up` it is unset and the images carry `unknown`, which is fine for running the app; eval runs go through `make eval`, and a run row with commit `unknown` fails its check. A root `.dockerignore` keeps `.env`, `.git`, `.venv`, `web/node_modules` and `web/dist` out of the build context.
+- The app stage copies `src/` selectively and leaves out every `cases/` folder. It copies `docs/brief/field_registry.json` to `/app/registry/field_registry.json`; the setting `UWH_REGISTRY` names that path. It copies `fixtures/replies/` to `/app/fixtures/replies` (`UWH_FIXTURE_REPLIES`); `recordings/` is mounted at `/app/recordings` (`UWH_RECORDINGS`). The commit hash reaches the images as the build argument `GIT_COMMIT`, since `.git` is outside the build context. The make targets set it from `git rev-parse HEAD`. With plain `docker compose up` it is unset and the images carry `unknown`, which is fine for running the app; eval runs go through `make eval`, and a run row with commit `unknown` fails its check. A root `.dockerignore` keeps `.env`, `.git`, `.venv`, `web/node_modules` and `web/dist` out of the build context.
 - Stand's code and Dockerfiles are unmodified. Stand's own `docker-compose.yml` stays in place, unused; ours keeps Stand's documented host ports.
 - Database paths are set through `LEADGEN_DB` and `MAILBOX_DB`. `DEBUG` passes through as `${DEBUG:-false}`, so a reviewer can switch the answer key on for their own use; the application client has no debug method either way.
 - Inside the network the app calls `http://leadgen:8080` and `http://mailbox:8080`.
-- "Start morning run" recreates every app table, resets the interactive mailbox and posts the queue for `SEED` (default 42), count 10. A start is refused while a run is still processing. Every commit and dispatch checks that its run id is the current one, so work left over from a replaced run writes nothing.
+- "Start morning run" recreates every app table, resets the interactive mailbox and posts the queue for `SEED` (default 42), count 10. A start is refused while a run is still processing or a message is being sent. Every commit and dispatch checks that its run id is the current one, so work left over from a replaced run writes nothing.
 - Replay mode uses its own app database and a `replay` run id; it writes to the interactive mailbox after a reset.
 - `.env` must exist: the README's first step is `cp .env.example .env`. It is passed into the app and eval services explicitly, along with `LEADGEN_URL` and `MAILBOX_URL` (defaults `http://leadgen:8080` and `http://mailbox:8080`; the eval overrides them). `.env.example` documents `MODEL_API_KEY` (a DeepSeek key), `MODEL_BASE_URL` (default `https://api.deepseek.com/anthropic`), `MODEL_ID` (default `deepseek-flash`), `TYPESAFE_API_KEY` (optional), `RUN_MODE`, `SEED`, `DEBUG`.
 - `.gitattributes` sets `eol=lf`. The frontend builds inside the container. Images build for linux/amd64 and linux/arm64.
@@ -790,7 +790,7 @@ observations(id INTEGER PRIMARY KEY, lead_id TEXT, key TEXT, value_json TEXT, so
              evidence_json TEXT, status TEXT, event_id INTEGER)
 effective_facts(lead_id TEXT, key TEXT, observation_id INTEGER, confirmed INTEGER,
                 PRIMARY KEY (lead_id, key))
-blockers(id INTEGER PRIMARY KEY, lead_id TEXT, kind TEXT, owner TEXT, detail_json TEXT,
+blockers(id INTEGER PRIMARY KEY AUTOINCREMENT, lead_id TEXT, kind TEXT, owner TEXT, detail_json TEXT,
          opened_event_id INTEGER, closed_event_id INTEGER)
 intents(id TEXT PRIMARY KEY, run_id TEXT, lead_id TEXT, round INTEGER, kind TEXT,
         recipient TEXT, subject TEXT, body TEXT, ask_ids_json TEXT, payload_hash TEXT,
@@ -809,7 +809,7 @@ proposals(id INTEGER PRIMARY KEY, payload_json TEXT, state TEXT, actor TEXT, eve
           -- each row is a proposed command; state: open | applied | dismissed
 ```
 
-`key` is a registry field name or a catalogue id prefixed `q:`. Blocker `owner` is `underwriter`, `producer` or `data_team`. The store enforces every value set this section and section 7 name: `leads.status`, `blockers.kind`, `blockers.owner`, `intents.kind`, `intents.state`, `approvals.item_kind`, `approvals.decision`, `observations.source`, `observations.status`, `runs.status`, `proposals.state` and the run mode. `runs` holds one row, the current run.
+`key` is a registry field name or a catalogue id prefixed `q:`. Blocker `owner` is `underwriter`, `producer` or `data_team`. The store enforces every value set this section and section 7 name: `leads.status`, `blockers.kind`, `blockers.owner`, `intents.kind`, `intents.state`, `approvals.item_kind`, `approvals.decision`, `observations.source`, `observations.status`, `runs.status`, `proposals.state` and the run mode. `runs` holds one row, the current run. A start recreates the tables with `blockers.id` continuing above the last id of the run it replaces, so an item id never repeats across runs.
 
 ### A.2 Event types
 
@@ -836,7 +836,7 @@ All hashes are SHA-256 over canonical JSON (sorted keys, UTF-8, no insignificant
 | Method and path | Purpose |
 |---|---|
 | `GET /api/run` | Run id, mode, seed, simulated time, summary counts |
-| `POST /api/run/start` | Reset and ingest the queue. Returns at once with the run id; with `?wait=true` it returns when the run has settled, meaning no lead has a runnable workflow step. `GET /api/run` reports the same condition as `first_pass_complete`. A settled run has every lead terminal or blocked. The UI uses the waited form. |
+| `POST /api/run/start` | Reset and ingest the queue. Returns at once with the run id; with `?wait=true` it returns when the run has settled, meaning no lead has a runnable workflow step. `GET /api/run` reports the same condition as `first_pass_complete`. A settled run has every lead terminal or blocked. The UI uses the waited form. The response reports the run this request started, or answers 409 when a later start replaced it. |
 | `GET /api/leads` | Queue rows in display order |
 | `GET /api/leads/{id}` | Lead detail: facts, plan, rule trace, notes; blockers with their `item_id`, and `intent_id` when the blocker is a draft review; drafts with `intent_id` and `payload_hash`; open choices with their `choice_id` |
 | `GET /api/leads/{id}/events` | Event log for a lead |
@@ -939,6 +939,7 @@ class LocatedCandidate(Candidate):
 `ReplyReading` is what the model returns: its JSON schema is the input schema of the forced tool, and it holds no offsets. Code then locates each candidate's `quote` in the reply body:
 
 - The quote must occur verbatim in the body. A candidate whose quote is not found is dropped and yields no observation; the drop is recorded on the `reply_read` event with the candidate as the model returned it.
+- A candidate whose field was not asked, or whose value does not fit the field's type or options, is dropped the same way and recorded in the same list.
 - When the quote occurs more than once, the first occurrence is taken.
 - A found candidate becomes a `LocatedCandidate`. The stored output of `read_reply` is the classification with the located candidates, so everything downstream that shows a span reads `span_start` and `span_end` from it.
 

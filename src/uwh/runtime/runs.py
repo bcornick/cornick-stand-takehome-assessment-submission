@@ -8,6 +8,7 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 from pathlib import Path
 
+from uwh.rules.registry import Registry
 from uwh.runtime.bootstrap import LEAD_COUNT
 from uwh.runtime.clock import sim_now
 from uwh.runtime.event_types import Actor, EventType, RunStarted, RunStatus
@@ -15,6 +16,7 @@ from uwh.runtime.events import EventContext, MakeContext, append_event, format_t
 from uwh.runtime.facts import LedgerRules, observe_submitted
 from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
+from uwh.runtime.model import ModelAccess
 from uwh.runtime.send import dispatch_ready, reconcile_dispatching
 from uwh.runtime.store import create_tables, open_store, table_ddl
 from uwh.runtime.workflow import Step, create_lead, interrupted_leads, run_leads
@@ -31,13 +33,15 @@ _RUN_TABLES = list(table_ddl())
 @dataclass(frozen=True)
 class RunEnvironment:
     """What a run and its commands need from their caller: the run mode, the active ruleset hash, the
-    ledger rules and workflow steps a pass and a re-evaluation use, the folder that holds the skills,
-    the real clock, the mailbox that dispatched drafts are posted to and the leadgen service a run
-    start reads."""
+    ledger rules and workflow steps a pass and a re-evaluation use, the registry a reply is read
+    against, the model skills call, the folder that holds the skills, the real clock, the mailbox
+    that dispatched drafts are posted to and the leadgen service a run start reads."""
 
     mode: RunMode
     ruleset_hash: str
     ledger_rules: LedgerRules
+    registry: Registry
+    model: ModelAccess
     steps: Sequence[Step]
     skills_root: Path
     now: Callable[[], datetime]
@@ -105,16 +109,20 @@ def begin_run(
 ) -> int:
     """Start a run and return the id of its `run_started` event. The caller commits.
 
-    Recreates every table, writes the `runs` row as `processing` with the real time
+    Recreates every table, with the item ids (`blockers.id`) continuing above those of the run it
+    replaces so that a browser tab holding an old item id finds no open item, writes the `runs` row as `processing` with the real time
     of `context` as its start, writes `run_started`, posts the queue for `seed`, ingests its leads as
     `received`, each with `lead_received` and its submitted fields as observations, and resets the
     mailbox last, after everything that can fail has succeeded. `context` names who started the run; the leads are received by the workflow.
     A failure raises and the caller's rollback restores every table; it restores neither the mailbox
     nor the leadgen queue.
     """
+    (last_item_id,) = db.execute("SELECT COALESCE(MAX(id), 0) FROM blockers").fetchone()
     for name in _RUN_TABLES:
         db.execute(f"DROP TABLE IF EXISTS {name}")
     create_tables(db, _RUN_TABLES)
+    # AUTOINCREMENT numbers the next row above this sequence value.
+    db.execute("INSERT INTO sqlite_sequence (name, seq) VALUES ('blockers', ?)", (last_item_id,))
     run_id = uuid.uuid4().hex
     started = replace(context, run_id=run_id, sim_ts=REFERENCE_MORNING)
     db.execute(

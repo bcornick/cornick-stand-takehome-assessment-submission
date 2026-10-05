@@ -1,4 +1,4 @@
-# ABOUTME: GET /api/run and POST /api/run/start (A.5): the run's id, mode, seed, simulated time, summary counts and whether its first pass is complete, and the start that submits start_run as the underwriter.
+# ABOUTME: GET /api/run and POST /api/run/start (A.5): the run's id, mode, seed, simulated time, summary counts and whether its first pass is complete, and the start that submits start_run as the underwriter and reports the run it started, or answers 409 when a later start replaced it.
 # ABOUTME: A start returns at once while the first pass runs in the background, or after the run has settled with `wait`; `first_pass_complete` is true when the run's status is `settled`.
 import sqlite3
 
@@ -76,7 +76,13 @@ def start_run(runtime: RuntimeDependency, wait: bool = False) -> RunView:
     if not result.accepted:
         raise HTTPException(status_code=409, detail=result.reason)
     assert first_pass is not None  # an accepted start launches its first pass
-    if wait and (failure := first_pass.exception()) is not None:
+    if wait and (failure := first_pass.future.exception()) is not None:
         raise HTTPException(status_code=500, detail="the first pass failed") from failure
     with runtime.database() as db:
+        run = current_run(db)
+        if run is None or run.run_id != first_pass.run.run_id:
+            raise HTTPException(
+                status_code=409,
+                detail=f"run {first_pass.run.run_id} was replaced by a later start",
+            )
         return _run_view(db, runtime)

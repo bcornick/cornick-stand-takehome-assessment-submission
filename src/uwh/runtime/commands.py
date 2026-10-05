@@ -1,5 +1,5 @@
 # ABOUTME: The command layer of 7.4 and A.11: one entry point that takes the actor from the transport, applies the actor and class rules and the skill manifest, runs the handler and the lead's re-evaluation in one transaction, and writes `command_refused` for a refusal.
-# ABOUTME: The handlers are start_run, resolve_fact, edit_draft, record_ruling, and approve and reject of an observation, a draft, a delivery_unknown item or an event-raised review; a command class with no handler raises NotImplementedError after the checks.
+# ABOUTME: The handlers are start_run, deliver_reply, resolve_fact, edit_draft, record_ruling, and approve and reject of an observation, a draft, a delivery_unknown item or an event-raised review; a command class with no handler raises NotImplementedError after the checks.
 import sqlite3
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
@@ -11,19 +11,29 @@ from uwh.runtime.event_types import (
     Actor,
     ApprovalDecision,
     ApprovalRecorded,
+    BlockerDetail,
     CommandRefused,
     EventType,
     IntentState,
+    ModelCalled,
+    ReplayMiss,
+    ReplyRead,
+    ReplyReceived,
+    ReviewCause,
     RulingRecorded,
+    SkillFallbackUsed,
 )
-from uwh.runtime.events import EventContext, MakeContext, StaleRun, append_event
+from uwh.runtime.events import EventContext, MakeContext, StaleRun, append_event, read_events
 from uwh.runtime.facts import (
     LATE_REPLY_CAUSES,
+    ReplyValue,
     approve_observation,
     reject_late_reply_values,
     reject_observation,
     resolve_fact,
 )
+from uwh.runtime.hashing import sha256_hex
+from uwh.runtime.modes import RecordingMiss
 from uwh.runtime.policy import manifest_refusal
 from uwh.runtime.runs import RunEnvironment, begin_run, command_context, current_run, pass_context
 from uwh.runtime.send import (
@@ -36,9 +46,23 @@ from uwh.runtime.send import (
     reconcile,
     void_approvals,
 )
-from uwh.runtime.waits import Blocker, close_blocker, open_blocker_by_id, open_blockers
-from uwh.runtime.workflow import lead_revision_and_plan_hash, reevaluate, unit_of_work
+from uwh.runtime.recordings import Exchange
+from uwh.runtime.waits import (
+    Blocker,
+    close_blocker,
+    open_blocker,
+    open_blocker_by_id,
+    open_blockers,
+)
+from uwh.runtime.workflow import (
+    is_terminal,
+    lead_revision_and_plan_hash,
+    record_reply,
+    reevaluate,
+    unit_of_work,
+)
 from uwh.skills.manifest import SkillFolderError, load_manifest
+from uwh.skills.read_reply import skill as read_reply
 from uwh.skills.vertical import ROUND_REVIEW_CAUSES, command_class
 
 
@@ -87,7 +111,8 @@ def submit_command(
     lead's drafts that can go are dispatched, as the run the command ran in; when a start has replaced
     that run, nothing is sent and the command is still accepted (A.11, 14). A refusal rolls back whatever the handler wrote
     and commits one `command_refused` event. A command type with no handler raises
-    NotImplementedError after the checks, writing nothing.
+    NotImplementedError after the checks, writing nothing. A `deliver_reply` reads the reply with the
+    model before its transaction opens, so no model call holds the write lock.
     """
     if db.in_transaction:
         raise RuntimeError(
@@ -95,10 +120,8 @@ def submit_command(
         )
     reason = _gate(env, actor, skill, command_type, payload)
     if reason is None:
-        handler = _HANDLERS.get(command_type)
-        if handler is None:
-            raise NotImplementedError(f"the {command_type} command has no handler")
         try:
+            handler = _handler_for(db, env, actor, command_type, payload)
             with unit_of_work(db):
                 context = _context(db, env, actor)
                 outcome = handler(db, context, env, payload)
@@ -272,7 +295,218 @@ def _start_run(
     run = current_run(db)
     if run is not None and run.status == "processing":
         raise _Refusal(f"run {run.run_id} is still processing")
+    if db.execute("SELECT 1 FROM intents WHERE state = 'dispatching'").fetchone() is not None:
+        raise _Refusal("a message is being sent; a run starts when its delivery is settled")
     return _Outcome(begin_run(db, context, env.leadgen, env.mailbox, seed, env.ledger_rules), None)
+
+
+# ---- replies ------------------------------------------------------------------------------------
+
+_REVIEW_TEXT: dict[ReviewCause, str] = {
+    "unread_reply": "A reply arrived and was not read.",
+    "off_topic_reply": "A reply arrived that does not answer the request.",
+    "declining_reply": "A reply arrived that declines to answer.",
+}
+
+
+def _reply_target(db: sqlite3.Connection, payload: Mapping[str, JsonValue]) -> Intent:
+    """The sent request a reply answers. Refuses an intent that is not `sent`, one of another lead,
+    and a body already delivered for it (10.4)."""
+    lead_id, body = _text(payload, "lead_id"), _text(payload, "body")
+    intent = _intent_in_state(db, _text(payload, "intent_id"), "sent")
+    if intent.lead_id != lead_id:
+        raise _Refusal(f"intent {intent.id} is not a message to lead {lead_id}")
+    body_hash = sha256_hex(body.encode())
+    for event in read_events(db, lead_id=lead_id):
+        if (
+            isinstance(event.payload, ReplyReceived)
+            and event.payload.intent_id == intent.id
+            and event.payload.body_hash == body_hash
+        ):
+            raise _Refusal(f"this reply to intent {intent.id} is already delivered")
+    return intent
+
+
+# What `read_reply` returned and the exchanges it made; None when the model is not available.
+type _ReplyReading = tuple[read_reply.Reading | read_reply.Abstention, list[Exchange]] | None
+
+
+def _read_reply_first(
+    db: sqlite3.Connection,
+    env: RunEnvironment,
+    actor: Actor,
+    payload: Mapping[str, JsonValue],
+) -> Handler:
+    """Read the reply with the model, outside any transaction, and return the handler that records it.
+    A replay with no recording for the reply records the miss and refuses (7.7)."""
+    intent = _reply_target(db, payload)
+    reading: _ReplyReading = None
+    if env.model.available:
+        asks = read_reply.open_asks(intent.ask_ids, env.registry)
+        try:
+            reading = read_reply.run(
+                read_reply.ReadReplyInput(body=_text(payload, "body"), asks=asks), env.model
+            )
+        except RecordingMiss as miss:
+            with unit_of_work(db):
+                append_event(
+                    db,
+                    _context(db, env, actor),
+                    EventType.replay_miss,
+                    ReplayMiss(
+                        skill=miss.key.skill,
+                        prompt_version=miss.key.prompt_version,
+                        input_hash=miss.key.input_hash,
+                    ),
+                    lead_id=intent.lead_id,
+                )
+            raise _Refusal(str(miss)) from miss
+    return partial(_record_reply, reading=reading)
+
+
+def _record_reply_events(
+    db: sqlite3.Connection,
+    context: EventContext,
+    env: RunEnvironment,
+    intent: Intent,
+    body_hash: str,
+    reading: _ReplyReading,
+) -> None:
+    """The events of the reading: each model call, then the reading or the abstention. With no model
+    available the skill's fallback is used and nothing was read."""
+    if reading is None:
+        fallback = load_manifest(env.skills_root / "read_reply").fallback
+        append_event(
+            db,
+            context,
+            EventType.skill_fallback_used,
+            SkillFallbackUsed(skill="read_reply", status="unavailable", fallback=fallback),
+            lead_id=intent.lead_id,
+        )
+        return
+    result, exchanges = reading
+    for exchange in exchanges:
+        append_event(
+            db,
+            context,
+            EventType.model_called,
+            ModelCalled(
+                skill=exchange.skill,
+                prompt_version=exchange.prompt_version,
+                input_hash=exchange.input_hash,
+                tokens_in=exchange.tokens_in,
+                tokens_out=exchange.tokens_out,
+                stop_reason=exchange.stop_reason,
+            ),
+            lead_id=intent.lead_id,
+            model_id=exchange.model_id,
+            request_id=exchange.request_id or None,
+            prompt_versions={exchange.skill: exchange.prompt_version},
+        )
+    if isinstance(result, read_reply.Abstention):
+        read = ReplyRead(
+            intent_id=intent.id,
+            body_hash=body_hash,
+            classification=None,
+            abstention=result.reason,
+            candidates=[],
+            dropped=[],
+        )
+    else:
+        read = ReplyRead(
+            intent_id=intent.id,
+            body_hash=body_hash,
+            classification=result.classification,
+            abstention=None,
+            candidates=result.candidates,
+            dropped=result.dropped,
+        )
+    append_event(db, context, EventType.reply_read, read, lead_id=intent.lead_id)
+
+
+def _record_reply(
+    db: sqlite3.Connection,
+    context: EventContext,
+    env: RunEnvironment,
+    payload: Mapping[str, JsonValue],
+    *,
+    reading: _ReplyReading,
+) -> _Outcome:
+    """Record the reply and its reading, apply the values it answers by the ledger's rules and settle
+    the round (10.4). A reply to a closed round or a final lead only raises a late-reply review. An
+    unread reply, an off-topic one and a declining one leave the round open for the underwriter."""
+    intent = _reply_target(db, payload)
+    lead_id, body = intent.lead_id, _text(payload, "body")
+    body_hash = sha256_hex(body.encode())
+    event_id = append_event(
+        db,
+        context,
+        EventType.reply_received,
+        ReplyReceived(intent_id=intent.id, body=body, body_hash=body_hash),
+        lead_id=lead_id,
+    )
+    _record_reply_events(db, context, env, intent, body_hash, reading)
+    result = None if reading is None else reading[0]
+    answered = (
+        result
+        if isinstance(result, read_reply.Reading)
+        and result.classification in ("answers_all", "answers_some")
+        else None
+    )
+    values = (
+        []
+        if answered is None
+        else [
+            ReplyValue(
+                c.field,
+                c.value,
+                {"quote": c.quote, "span_start": c.span_start, "span_end": c.span_end},
+            )
+            for c in answered.candidates
+        ]
+    )
+    round_item = next(
+        (
+            b
+            for b in open_blockers(db, lead_id)
+            if b.kind == "producer_reply" and b.detail.intent_id == intent.id
+        ),
+        None,
+    )
+    if round_item is None or is_terminal(db, lead_id):
+        record_reply(
+            db,
+            context,
+            lead_id,
+            values,
+            env.ledger_rules,
+            round_closed=round_item is None,
+            intent_id=intent.id,
+        )
+    elif answered is not None:
+        record_reply(
+            db, context, lead_id, values, env.ledger_rules, round_closed=False, intent_id=intent.id
+        )
+        close_blocker(db, context, round_item.id)
+    else:
+        cause: ReviewCause = "unread_reply"
+        if isinstance(result, read_reply.Reading):
+            cause = "off_topic_reply" if result.classification == "off_topic" else "declining_reply"
+        open_blocker(
+            db,
+            context,
+            lead_id,
+            "underwriter_review",
+            "underwriter",
+            BlockerDetail(
+                item_kind="review",
+                cause=cause,
+                resume_trigger="an underwriter acknowledges the reply",
+                intent_id=intent.id,
+                text=_REVIEW_TEXT[cause],
+            ),
+        )
+    return _Outcome(event_id, lead_id)
 
 
 def _resolve_fact(
@@ -497,7 +731,32 @@ def _record_approval(
     return event_id
 
 
-# The one place that lists which command types have a handler; a type absent here raises
+# A command whose handler needs something fetched before its transaction opens is built by a
+# preparer, which does the fetch and returns the handler.
+_PREPARERS: dict[
+    str, Callable[[sqlite3.Connection, RunEnvironment, Actor, Mapping[str, JsonValue]], Handler]
+] = {"deliver_reply": _read_reply_first}
+
+
+def _handler_for(
+    db: sqlite3.Connection,
+    env: RunEnvironment,
+    actor: Actor,
+    command_type: str,
+    payload: Mapping[str, JsonValue],
+) -> Handler:
+    """The handler of the command, prepared where it needs a fetch. Raises NotImplementedError for a
+    type with no handler."""
+    prepare = _PREPARERS.get(command_type)
+    if prepare is not None:
+        return prepare(db, env, actor, payload)
+    handler = _HANDLERS.get(command_type)
+    if handler is None:
+        raise NotImplementedError(f"the {command_type} command has no handler")
+    return handler
+
+
+# The command types that have a handler apart from the preparers above; a type in neither raises
 # NotImplementedError in `submit_command`.
 _HANDLERS: dict[str, Handler] = {
     "start_run": _start_run,

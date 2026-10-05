@@ -50,7 +50,7 @@ def table_ddl() -> dict[str, str]:
             lead_id TEXT, key TEXT, observation_id INTEGER, confirmed INTEGER,
             PRIMARY KEY (lead_id, key))""",
         "blockers": f"""CREATE TABLE IF NOT EXISTS blockers (
-            id INTEGER PRIMARY KEY, lead_id TEXT, kind TEXT, owner TEXT, detail_json TEXT,
+            id INTEGER PRIMARY KEY AUTOINCREMENT, lead_id TEXT, kind TEXT, owner TEXT, detail_json TEXT,
             opened_event_id INTEGER, closed_event_id INTEGER,
             {_in_set("kind", get_args(BlockerKind))},
             {_in_set("owner", get_args(BlockerOwner))})""",
