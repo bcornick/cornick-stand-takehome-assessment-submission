@@ -83,9 +83,11 @@ def _require_pending_observation(
     if observation_id is None:
         raise ValueError("an observation item names its observation: observation_id")
     row = db.execute(
-        "SELECT status FROM observations WHERE id = ? AND lead_id = ?", (observation_id, lead_id)
+        "SELECT lead_id, status FROM observations WHERE id = ?", (observation_id,)
     ).fetchone()
-    if row is None or row[0] != "pending_review":
+    if row is not None and row[0] != lead_id:
+        raise ValueError(f"observation {observation_id} is not lead {lead_id}'s")
+    if row is None or row[1] != "pending_review":
         raise ValueError(f"observation {observation_id} is not a pending_review observation")
 
 

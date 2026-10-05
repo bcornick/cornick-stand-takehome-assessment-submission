@@ -381,7 +381,7 @@ def test_an_observation_item_for_another_leads_observation_is_refused(
     add_lead(db, "L-2", "in_progress")
     observation_id = add_observation(db, "pending_review", "L-2")
     blocker_detail = detail(item_kind="observation", observation_id=observation_id)
-    with pytest.raises(ValueError, match="not a pending_review"):
+    with pytest.raises(ValueError, match=f"observation {observation_id} is not lead L-1's"):
         open_blocker(db, CONTEXT, "L-1", "underwriter_review", "underwriter", blocker_detail)
     assert db.execute("SELECT COUNT(*) FROM blockers").fetchone() == (0,)
     assert read_events(db) == []

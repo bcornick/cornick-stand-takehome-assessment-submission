@@ -192,7 +192,11 @@ class _Pass:
         return RevisionChange(before, before + 1)
 
     def _recompute_derived_facts(self) -> None:
-        """9.3 step 2: a derivation with its inputs present selects its value over any source but an underwriter's."""
+        """9.3 step 2: a derivation with its inputs present selects its value over any source but an underwriter's.
+
+        The only derived facts are the roof and siding classes, both system-owned, which is why a
+        derivation may outrank every source but the underwriter.
+        """
         for derivation in self.rules.derivations:
             facts = effective_facts(self.db, self.lead_id)
             if any(name not in facts for name in derivation.inputs):
