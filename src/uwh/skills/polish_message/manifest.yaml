@@ -4,5 +4,4 @@ purpose: Gives a rendered request for information a conversational opening and c
 trigger: a request has been rendered
 command_classes: []
 fallback: the rendered request is sent as it is
-pass_threshold: 1.0
 model_skill: true

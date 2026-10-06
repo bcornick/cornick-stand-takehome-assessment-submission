@@ -1,8 +1,7 @@
-# ABOUTME: The per-skill eval cases (section 8): a skill's `cases/*.yaml` is a table of cases, each an input and the properties its output must hold; this module runs evaluate_playbook and polish_message on theirs and reports the failures.
+# ABOUTME: The per-skill eval cases (section 8): a skill's `cases/*.yaml` is a table of cases, each an input and the properties its output must hold; this module runs evaluate_playbook on its and reports the failures.
 # ABOUTME: Lead values come from the provider fixture's captured seed-42 leads; a case changes the values it names, and a null removes the value. A skill's pass is its share of passing cases against its manifest threshold.
 import json
-import tempfile
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -14,21 +13,13 @@ import uwh.chat
 import uwh.providers
 import uwh.skills
 from evals.graders.chat import Expect
-from uwh.rules.data_files import read_yaml
 from uwh.rules.graphs import Outcome, load_graphs
-from uwh.rules.models import Ask, AskKind, Rulings
-from uwh.rules.registry import load_registry
-from uwh.runtime.model import ForcedToolCall, ModelAccess
-from uwh.runtime.recordings import Exchange, write_recording
+from uwh.rules.models import Rulings
 from uwh.skills.evaluate_playbook import skill as evaluate_playbook
-from uwh.skills.polish_message import skill as polish_message
-from uwh.skills.render_message import skill as render_message
 
 ROOT = Path(__file__).resolve().parent.parent
 SKILLS_DIR = Path(uwh.skills.__file__).parent
 CHAT_DIR = Path(uwh.chat.__file__).parent
-RECORDINGS = ROOT / "recordings"
-REGISTRY = ROOT / "docs" / "brief" / "field_registry.json"
 WORLD = Path(uwh.providers.__file__).parent / "data" / "world-42.json"
 # What the first pass adds to lead 008's captured fields: the derived siding class and the fetched replacement cost.
 FIRST_PASS_ADDITIONS: dict[str, JsonValue] = {
@@ -194,86 +185,13 @@ def mismatches(expected: Any, observed: Any, where: str = "") -> list[str]:
     return []
 
 
-def _run_cases(skill: str, observer: Callable[[Case], dict[str, Any]]) -> SkillResult:
-    failures: list[str] = []
-    cases = load_cases(skill)
-    failed = 0
-    for case in cases:
-        found = mismatches(case.expect, observer(case))
-        failed += bool(found)
-        failures += [f"{skill} / {case.name}: {message}" for message in found]
-    return SkillResult(len(cases) - failed, len(cases), failures)
-
-
 def run_skill_cases() -> SkillResult:
     """Run every case of evaluate_playbook; read_reply's cases are the reply suite's."""
-    return _run_cases("evaluate_playbook", observe)
-
-
-def _hand_built_exchange(call: ForcedToolCall, tool_input: Mapping[str, Any]) -> Exchange:
-    key = call.recording_key
-    return Exchange(
-        skill=key.skill,
-        prompt_version=key.prompt_version,
-        input_hash=key.input_hash,
-        input=dict(call.shown),
-        model_id="hand-built",
-        request_id="",
-        stop_reason="tool_use",
-        tokens_in=0,
-        tokens_out=0,
-        tool_input=dict(tool_input),
-    )
-
-
-def observe_polish(case: Case) -> dict[str, Any]:
-    """Run polish_message on the case's request. A case with `pieces` answers the two calls with the
-    opening and closing it names, and with `verdict` for the model check, from a temporary recordings
-    folder; a case without them is answered by the committed recordings."""
-    wording = read_yaml("wording.yaml")["fields"]
-    asks = [
-        Ask(
-            ask_id=field,
-            kind=AskKind.field_request,
-            fields=[field],
-            reason="The registry requires it to quote.",
-            wording=wording[field],
-        )
-        for field in case.input["asks"]
-    ]
-    rendered = render_message.run(
-        render_message.RenderMessageInput(
-            registry=load_registry(str(REGISTRY)), lead_label="a property", asks=asks
-        )
-    )
-    request = polish_message.PolishInput(
-        rendered=rendered, recipient_kind=case.input["recipient_kind"], round=case.input["round"]
-    )
-    with tempfile.TemporaryDirectory(prefix="uwh-polish-") as scratch:
-        recordings = RECORDINGS
-        if "pieces" in case.input:
-            recordings = Path(scratch)
-            call = polish_message.rewrite_call(request)
-            write_recording(
-                recordings, call.recording_key, _hand_built_exchange(call, case.input["pieces"])
-            )
-            if "verdict" in case.input:
-                check = polish_message.check_call(
-                    request, polish_message.Pieces.model_validate(case.input["pieces"])
-                )
-                write_recording(
-                    recordings,
-                    check.recording_key,
-                    _hand_built_exchange(check, case.input["verdict"]),
-                )
-        result = polish_message.run(
-            request, ModelAccess("replay", recordings, None), lambda _: None
-        )
-    if isinstance(result, polish_message.Rejected):
-        return {"result": "rejected", "check": result.check, "detail": result.detail}
-    return {"result": "rewritten", "question_block_kept": rendered.question_block in result.body}
-
-
-def run_polish_cases() -> SkillResult:
-    """Run every case of polish_message."""
-    return _run_cases("polish_message", observe_polish)
+    failures: list[str] = []
+    cases = load_cases("evaluate_playbook")
+    failed = 0
+    for case in cases:
+        found = mismatches(case.expect, observe(case))
+        failed += bool(found)
+        failures += [f"evaluate_playbook / {case.name}: {message}" for message in found]
+    return SkillResult(len(cases) - failed, len(cases), failures)

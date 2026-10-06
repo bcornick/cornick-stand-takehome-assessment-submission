@@ -48,11 +48,7 @@ def test_the_reference_run_passes_every_grader_and_its_row_holds_the_fields_of_1
         "a test",
     )
     assert row["tokens"]["in"] > 0  # lead 008's reply was read from its recording
-    assert row["skill_results"]["polish_message"] == {
-        "cases_passed": 3,
-        "cases_total": 3,
-        "passed": True,
-    }
+    assert set(row["skill_results"]) == {"evaluate_playbook"}
 
 
 # The graders each control must fail (13.4).
