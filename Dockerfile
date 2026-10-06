@@ -60,5 +60,6 @@ COPY src/uwh/skills ./src/uwh/skills
 COPY src/uwh/chat ./src/uwh/chat
 COPY sim-harness/shared ./sim-harness/shared
 COPY sim-harness/leadgen ./sim-harness/leadgen
+COPY docs/brief/field_registry.json ./docs/brief/field_registry.json
 COPY evals ./evals
 ENTRYPOINT ["python", "-m", "evals.run"]
