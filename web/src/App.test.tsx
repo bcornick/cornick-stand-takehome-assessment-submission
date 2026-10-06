@@ -1,4 +1,4 @@
-// ABOUTME: Tests the page against fetch stubbed at the boundary: the queue in the order served with its next action, the waiting packet with an Approve that posts the item id and the payload hash, and the fixture-reply control in the queue header.
+// ABOUTME: Tests the page against fetch stubbed at the boundary: the queue in the order served with its next action, the open items with a link to their lead, the waiting packet with an Approve that posts the item id and the payload hash, and the fixture-reply control in the queue header.
 // ABOUTME: The stubbed responses are typed objects of the generated API types, so a shape the backend does not serve fails the type check.
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -119,6 +119,15 @@ const lead: Schemas['LeadDetail'] = {
   drafts: [packet],
 }
 
+const items: Schemas['Item'][] = [
+  {
+    item_id: 17,
+    lead_id: row.lead_id,
+    kind: 'underwriter_review',
+    detail: lead.blockers[0]!.detail,
+  },
+]
+
 function respond(body: unknown): Response {
   return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } })
 }
@@ -135,7 +144,11 @@ function stubApi() {
       if (init?.body !== undefined) bodies.push(JSON.parse(String(init.body)))
       if (path === '/api/run') return respond(run)
       if (path === '/api/leads') return respond(rows)
+      if (path === '/api/items') return respond(items)
       if (path === `/api/leads/${lead.lead_id}`) return respond(lead)
+      if (path === `/api/leads/${lead.lead_id}/events`) {
+        return respond({ lead_id: lead.lead_id, events: [] })
+      }
       if (path === '/api/commands') return respond({ accepted: true, event_id: 9, reason: null })
       if (path === '/api/replies/fixtures') return respond({ replies: [] })
       return new Response('{}', { status: 404 })
@@ -168,7 +181,7 @@ describe('App', () => {
     render(<App />)
     await userEvent.click(await screen.findByRole('button', { name: row.lead_id }))
     const pane = await screen.findByRole('article')
-    expect(within(pane).getByText(/Coverage A \(Dwelling\): \$875,000/)).toBeInTheDocument()
+    expect(within(pane).getByText(/Coverage A \(Dwelling\): \$875,000/, { selector: 'pre' })).toBeInTheDocument()
 
     await userEvent.click(within(pane).getByRole('button', { name: 'Approve' }))
 
@@ -179,6 +192,18 @@ describe('App', () => {
     })
     // The queue and the lead are fetched again after the action.
     await vi.waitFor(() => expect(calls.filter((c) => c === 'GET /api/leads')).toHaveLength(2))
+  })
+
+  it('lists the open items and opens the lead of an item', async () => {
+    stubApi()
+    render(<App />)
+    const section = await screen.findByRole('region', { name: 'Open items' })
+    expect(within(section).getByText('The quote packet is ready to send.')).toBeInTheDocument()
+
+    await userEvent.click(within(section).getByRole('button', { name: `Open ${row.lead_id}` }))
+
+    const pane = await screen.findByRole('article')
+    expect(within(pane).getByRole('heading', { name: row.lead_id })).toBeInTheDocument()
   })
 
   it('delivers the fixture replies from the queue header, and the detail pane has no such control', async () => {

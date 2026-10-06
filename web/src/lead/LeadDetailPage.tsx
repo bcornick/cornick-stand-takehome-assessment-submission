@@ -12,5 +12,5 @@ export function LeadDetailPage({ leadId, refresh, onChange }: Props) {
   if (lead.state === 'error') {
     return <p role="alert">{`Could not load ${leadId}: ${lead.message}.`}</p>
   }
-  return <DetailPane lead={lead.data} onChange={onChange} />
+  return <DetailPane lead={lead.data} refresh={refresh} onChange={onChange} />
 }

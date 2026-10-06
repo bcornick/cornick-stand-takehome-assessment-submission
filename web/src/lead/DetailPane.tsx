@@ -1,8 +1,6 @@
-// ABOUTME: The lead detail pane: what the lead waits on with the Approve button of a waiting draft, its facts with source tags, its plan, and its messages.
+// ABOUTME: The lead detail pane: what the lead waits on with the actions of each item, the actions on the whole lead, its messages, plan, facts with source tags, and the events of what the system did.
 // ABOUTME: Shows one LeadDetail; the plan is the internal view, so rule ids appear here and never in a message.
-import { approve } from '@/api/client'
 import type { components } from '@/api/types'
-import { ActionButton } from '@/components/ActionButton'
 import { Badge } from '@/components/ui/badge'
 import {
   Table,
@@ -14,22 +12,23 @@ import {
 } from '@/components/ui/table'
 import { formatValue } from '@/format'
 import {
-  BLOCKER_KIND_LABELS,
   DRAFT_STATE_LABELS,
   EFFECT_LABELS,
   MESSAGE_KIND_LABELS,
-  OWNER_LABELS,
   SOURCE_LABELS,
   STATUS_LABELS,
 } from '@/labels'
+import { EventList } from './EventList'
+import { Blockers } from './ItemActions'
+import { LeadActions } from './LeadActions'
 
 type Schemas = components['schemas']
 type LeadDetail = Schemas['LeadDetail']
 type Plan = Schemas['ActionPlan']
 
-type Props = { lead: LeadDetail; onChange: () => void }
+type Props = { lead: LeadDetail; refresh: number; onChange: () => void }
 
-export function DetailPane({ lead, onChange }: Props) {
+export function DetailPane({ lead, refresh, onChange }: Props) {
   return (
     <article className="flex flex-col gap-6">
       <header className="flex flex-col gap-1">
@@ -42,6 +41,9 @@ export function DetailPane({ lead, onChange }: Props) {
       <Section title="Waiting on">
         <Blockers lead={lead} onChange={onChange} />
       </Section>
+      <Section title="Lead actions">
+        <LeadActions lead={lead} onChange={onChange} />
+      </Section>
       <Section title="Messages">
         <Drafts drafts={lead.drafts} />
       </Section>
@@ -50,6 +52,9 @@ export function DetailPane({ lead, onChange }: Props) {
       </Section>
       <Section title="Facts">
         <Facts facts={lead.facts} />
+      </Section>
+      <Section title="What the system did">
+        <EventList leadId={lead.lead_id} refresh={refresh} />
       </Section>
     </article>
   )
@@ -69,35 +74,6 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function Empty({ children }: { children: string }) {
   return <p className="text-sm text-muted-foreground">{children}</p>
-}
-
-function Blockers({ lead, onChange }: Props) {
-  if (lead.blockers.length === 0) return <Empty>Nothing is waiting.</Empty>
-  return (
-    <ul className="flex flex-col gap-3">
-      {lead.blockers.map((blocker) => {
-        const draft = lead.drafts.find((d) => d.intent_id === blocker.detail.intent_id)
-        return (
-          <li key={blocker.item_id} className="flex flex-col gap-2">
-            <p className="flex flex-wrap items-baseline gap-2">
-              <Badge variant="outline">{BLOCKER_KIND_LABELS[blocker.kind]}</Badge>
-              <span className="text-sm text-muted-foreground">
-                {`Waits on ${OWNER_LABELS[blocker.owner].toLowerCase()}`}
-              </span>
-              <span>{blocker.detail.text}</span>
-            </p>
-            {blocker.detail.item_kind === 'draft' && draft !== undefined && (
-              <ActionButton
-                label="Approve"
-                act={async () => (await approve(blocker.item_id, draft.payload_hash)).reason}
-                onDone={onChange}
-              />
-            )}
-          </li>
-        )
-      })}
-    </ul>
-  )
 }
 
 function Drafts({ drafts }: { drafts: LeadDetail['drafts'] }) {
