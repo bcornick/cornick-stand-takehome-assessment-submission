@@ -123,6 +123,6 @@
     "milestone": 6,
     "description": "The reviewer and the cross-review report no blocker, and the README holds the run command, the architecture overview, the eval loop, the skills table and \"Cut and why\". Expect: `5`.",
     "command": "grep -c -E '^## (Run it|Architecture|The eval loop|Skills|Cut and why)' README.md",
-    "passes": false
+    "passes": true
   }
 ]

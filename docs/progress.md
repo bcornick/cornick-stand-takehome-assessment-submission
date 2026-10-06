@@ -441,3 +441,25 @@ Brett's decisions carried into milestone 1: an underwriter's value that still tr
 **Open with Brett:** the label signatures; the default `RUN_MODE`; any item on his presentation list beyond the pass above.
 
 **Next:** milestone 5: the Jev adapter (ask Brett before the first live Jev call), then `polish_message`.
+
+## Milestone 5: Jev and the email rewrite (c9a8b3d)
+
+**Done:** M5-A1 (the reply suite passes with Jev answering first and with no Jev key), M5-A2 (a routine request in the mailbox carries the rendered question block unchanged inside a rewritten opening and closing) and M5-A3 (a rewrite that fails a check sends the rendered request) pass, run by the lead.
+- The Jev adapter (`runtime/jev_client.py`, `read_reply/jev.py`): one choice question per reply over the body with the four classifications as options, record and replay under `recordings/jev/`, no retries; confidence over three outcomes (on-topic as `answers_all` + `answers_some`, since code decides all versus some; `off_topic`; `declines_to_answer`), threshold 0.7; a Jev error or a missing recording falls back to the model and is logged; each Jev call is a `model_called` event under its model id. Jev classifies seven of the eight reply fixtures at 1.0; the off-topic reply (006, Jev 0.64) goes to the model.
+- `polish_message`: two calls per request (the rewrite, then the judge), the body as opening + the rendered question block byte for byte + closing, the rendered request on any failure with the rejecting check logged. The prompt claims nothing about what anyone has done and the judge fails a claim about what was done or a promise about what will be asked. Two of nine round-1 rewrites are rejected by the judge.
+
+**Live calls:** polish record run 18 calls, 8,479 in / 1,489 out; the demo record run 24 polish + 9 `read_reply` calls, 9,846 in / 4,141 out on DeepSeek, and 9 Jev questions, 4,771 in / 468 out. The stored `tokens_in` is the provider's `input_tokens` alone and leaves out cached input, so every input total in this log undercounts.
+
+**Checks:** `make check` clean, run by the lead; integration 27 passed; the reviewer read the milestone once: no blocker on the rewrite path; the Jev replay miss became a fallback.
+
+**Decisions:** a missing Jev recording falls back to the model (§7.7, §10.4); the polish calls run before the step's unit of work; `polish_message` has no case table (the plan names two skills with cases); a rejected rewrite is recorded as `rejected`; the Jev interface was built from TypeSafe's published docs and verified by the first live calls.
+
+## Milestone 6: Submission (4b6e0ab)
+
+**Done:** M6-A1 (a keyless fresh clone runs: `tools/fresh_clone.py`), M6-A2 (replay reproduces the demo with no `replay_miss`) and M6-A3 (the README with the five sections; the reviewer and the cross-review report no blocker on a seed-42 path, no double post, no unapproved send, no live call from replay) pass, run by the lead. Replay is the default mode; `live` and `record` are set on purpose. The removal pass: skill status (nothing read it), unread proposal-card fields, six duplicate or shape-only test files; one seed-42 pass shared across the API and eval tests, `make check` from about 103 to 34 seconds; the chat's `lead_events` tool returns the page's summaries (chat re-recorded: 8 calls, 4,229 in / 753 out). Tests collected 825 → 770; Python lines `src/` 9,189 → 9,139, `tests/` 12,431 → 11,923: the test tree stays larger than `src/`, and what remains is the send-safety, fact-rule, playbook-outcome, command-effect, reply-reading and grader tests.
+
+**Known limits, from the two reviews and left as they are (a proof of concept, by Brett's direction):** a chat turn that finishes after a new run started writes its proposal into the new run; proposal-card ids restart with a run (blocker ids do not); an edited draft is not checked for pricing, decline reasons or internal notes before sending (§10.2 names the check; the underwriter approves every edited draft); the Asks graders read the stored ask ids, not the delivered body; a round-2 rewrite runs inside the command's transaction; the runtime does not gate a skill on its eval status; `Reply facts` is scored beside the nine graders; dismissing a proposal card writes outside the command layer; the chat panel cannot answer in the replay demo (its recordings predate the first pass); a post in flight when a run is replaced can reach the mailbox; the paths no seed-42 lead reaches stop with a stated `data` blocker.
+
+**Open with Brett:** the ten label signatures (`reviewed_by` in `evals/labels/seed42/*.yaml`).
+
+**Next:** Brett's review of the submission.
