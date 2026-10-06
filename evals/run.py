@@ -8,7 +8,7 @@ import sqlite3
 import sys
 import tempfile
 import uuid
-from collections.abc import Callable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
@@ -20,16 +20,24 @@ import yaml
 from pydantic import JsonValue
 
 import uwh
-from evals.cases import SKILLS_DIR, OBSERVERS, run_skill_cases
+from evals.cases import (
+    OBSERVERS,
+    SKILLS_DIR,
+    ReplyCase,
+    SkillResult,
+    load_reply_cases,
+    run_skill_cases,
+)
 from evals.controls import Control, applied, mailbox_client
 from evals.graders import answer_key
 from evals.graders.delivery import asks, coverage, forbidden_asks, one_open_request, packet_fidelity
 from evals.graders.evidence import Evidence, Expectations, Result
 from evals.graders.plan import rule_trace
+from evals.graders.reply import reply_reading
 from evals.graders.safety import FaultRun, critical_errors, send_safety
 from uwh.api.runtime import Runtime, open_runtime
 from uwh.runtime.bootstrap import TIMEOUT_SECONDS, EnvironmentInvalid, check_services
-from uwh.runtime.commands import submit_command
+from uwh.runtime.commands import CommandResult, submit_command
 from uwh.runtime.event_types import REQUEST_KINDS, EventType, FaultInjected, ModelCalled
 from uwh.runtime.events import read_events
 from uwh.runtime.faults import FaultPlan
@@ -47,6 +55,7 @@ EVALS_DIR = ROOT / "evals"
 RESULTS_PATH = EVALS_DIR / "results.jsonl"
 SEED = 42
 LABELS_DIR = EVALS_DIR / "labels" / f"seed{SEED}"
+REPLY_LABELS_DIR = EVALS_DIR / "labels" / "replies"
 # The lead the fault runs and nothing else use (13.1): it reaches a sent request with one ask round.
 FAULT_LEAD = "LEAD-00000042-008"
 # The faults of each fault run, in the order the send primitive records them.
@@ -129,6 +138,23 @@ def _draft_item(db: sqlite3.Connection, lead_id: str, kind: str) -> tuple[int, s
     return None
 
 
+def _deliver(
+    runtime: Runtime, db: sqlite3.Connection, lead_id: str, round_: int, body: str
+) -> CommandResult | None:
+    """Deliver `body` as the producer's reply to the lead's sent request of the round; None when the
+    lead has no such request."""
+    row = db.execute(
+        "SELECT id FROM intents WHERE lead_id = ? AND round = ? AND state = 'sent'"
+        f" AND kind IN ({', '.join('?' for _ in REQUEST_KINDS)})",
+        (lead_id, round_, *REQUEST_KINDS),
+    ).fetchone()
+    if row is None:
+        return None
+    return runtime.submit_as_inbound(
+        db, "deliver_reply", {"lead_id": lead_id, "intent_id": row[0], "body": body}
+    )
+
+
 def _play(
     runtime: Runtime, db: sqlite3.Connection, lead_id: str, actions: Sequence[Mapping[str, Any]]
 ) -> list[str]:
@@ -161,18 +187,12 @@ def _play(
             )
         else:  # deliver_reply
             (round_,) = re.findall(r"round (\d+) request", action["intent"])
-            row = db.execute(
-                "SELECT id FROM intents WHERE lead_id = ? AND round = ? AND state = 'sent'"
-                f" AND kind IN ({', '.join('?' for _ in REQUEST_KINDS)})",
-                (lead_id, int(round_), *REQUEST_KINDS),
-            ).fetchone()
-            if row is None:
+            body = (ROOT / action["fixture"]).read_text(encoding="utf-8")
+            delivered = _deliver(runtime, db, lead_id, int(round_), body)
+            if delivered is None:
                 failures.append(f"{lead_id}: no sent {action['intent']}")
                 continue
-            body = (ROOT / action["fixture"]).read_text(encoding="utf-8")
-            result = runtime.submit_as_inbound(
-                db, "deliver_reply", {"lead_id": lead_id, "intent_id": row[0], "body": body}
-            )
+            result = delivered
         if not result.accepted:
             failures.append(f"{lead_id}: {name} was refused: {result.reason}")
     return failures
@@ -277,61 +297,68 @@ def _evaluator_hash() -> str:
     )
 
 
-def _case_set_id() -> str:
+def _case_set_id(labels_dir: Path, skills: Iterable[str]) -> str:
+    """The hash of the labels and of the cases of the skills."""
     return hash_json(
         {
-            "labels": file_entries(LABELS_DIR, source_files(LABELS_DIR)),
+            "labels": file_entries(labels_dir, source_files(labels_dir)),
             "cases": {
                 skill: file_entries(
                     SKILLS_DIR / skill / "cases", source_files(SKILLS_DIR / skill / "cases")
                 )
-                for skill in OBSERVERS
+                for skill in skills
             },
         }
     )
 
 
+def _skill_result(skill: str, outcome: SkillResult) -> dict[str, JsonValue]:
+    """A skill's cases against its manifest threshold, as `skill_results` of the run row holds them."""
+    threshold = load_manifest(SKILLS_DIR / skill).pass_threshold
+    assert threshold is not None, f"{skill} has cases and no pass_threshold"
+    for failure in outcome.failures:
+        print(f"case failed: {failure}", file=sys.stderr)
+    return {
+        "cases_passed": outcome.cases_passed,
+        "cases_total": outcome.cases_total,
+        "passed": outcome.passed(threshold),
+    }
+
+
 def _skill_results() -> dict[str, JsonValue]:
-    """`skill_results` of the run row: each skill's cases against its manifest threshold. A skill with
-    no table of cases here (read_reply's are the reply suite's) has no result."""
-    results: dict[str, JsonValue] = {}
-    for skill in OBSERVERS:
-        outcome = run_skill_cases(skill)
-        threshold = load_manifest(SKILLS_DIR / skill).pass_threshold
-        assert threshold is not None, f"{skill} has cases and no pass_threshold"
-        results[skill] = {
-            "cases_passed": outcome.cases_passed,
-            "cases_total": outcome.cases_total,
-            "passed": outcome.passed(threshold),
-        }
-        for failure in outcome.failures:
-            print(f"case failed: {failure}", file=sys.stderr)
-    return results
+    """`skill_results` of a seed42 run row: each skill with a table of cases here. read_reply's cases
+    are the reply suite's."""
+    return {skill: _skill_result(skill, run_skill_cases(skill)) for skill in OBSERVERS}
 
 
-def evaluate_seed42(
+def _tokens(measurements: Mapping[str, Mapping[str, float]]) -> dict[str, float]:
+    return {key: sum(m[f"tokens_{key}"] for m in measurements.values()) for key in ("in", "out")}
+
+
+def _evaluate(
+    suite: str,
+    case_set_id: str,
     settings: Settings,
     leadgen_http: httpx2.Client,
     mailbox_http: httpx2.Client,
-    *,
     control: Control | None,
     hypothesis: str | None,
+    score: Callable[[Callable[[str], Settings], LeadgenClient], dict[str, Any]],
 ) -> dict[str, Any]:
-    """Run the seed-42 suite against the services behind the two clients and return the `run` row.
-
-    The row is `invalid`, with no scores, when a service fails its health or bootstrap check.
-    """
+    """The `run` row of a suite. The row is `invalid`, with no scores, when a service fails its health
+    or bootstrap check; otherwise `score` is given a function that makes the settings of a database of
+    its own, and the leadgen client, and returns the scored fields of the row."""
     leadgen = LeadgenClient(leadgen_http)
     row: dict[str, Any] = {
         "kind": "run",
         "run_id": uuid.uuid4().hex,
         "recorded_at": datetime.now(UTC).isoformat(),
-        "suite": "seed42",
+        "suite": suite,
         "control": None if control is None else control.value,
         "mode": settings.run_mode,
         "commit": settings.git_commit,
         "evaluator_hash": _evaluator_hash(),
-        "case_set_id": _case_set_id(),
+        "case_set_id": case_set_id,
         "skill_digests": {
             skill: skill_digest(
                 Path(uwh.__file__).parent,
@@ -347,13 +374,27 @@ def evaluate_seed42(
     except EnvironmentInvalid as error:
         return row | {"status": "invalid", "reason": str(error)}
 
-    labels = load_labels()
-    scores: dict[str, Score] = {}
     with tempfile.TemporaryDirectory(prefix="uwh-eval-") as scratch, applied(control):
 
         def per_run(name: str) -> Settings:
             return replace(settings, db_path=str(Path(scratch) / f"{name}.db"), seed=SEED)
 
+        return row | {"status": "scored"} | score(per_run, leadgen)
+
+
+def evaluate_seed42(
+    settings: Settings,
+    leadgen_http: httpx2.Client,
+    mailbox_http: httpx2.Client,
+    *,
+    control: Control | None,
+    hypothesis: str | None,
+) -> dict[str, Any]:
+    """Run the seed-42 suite against the services behind the two clients and return the `run` row."""
+    labels = load_labels()
+    scores: dict[str, Score] = {}
+
+    def score(per_run: Callable[[str], Settings], leadgen: LeadgenClient) -> dict[str, Any]:
         critical, measurements = _reference_run(
             per_run("reference"),
             leadgen,
@@ -370,17 +411,112 @@ def evaluate_seed42(
             critical += errors
         scores["Send safety"] = Score()
         scores["Send safety"].add(FIRST_PASS, send_safety(fault_runs))
+        return {
+            "scores": {name: score.row() for name, score in scores.items()},
+            "critical_errors": [*dict.fromkeys(critical)],
+            "skill_results": _skill_results(),
+            "tokens": _tokens(measurements),
+            "cost_usd": 0.0,  # a replay makes no billed call
+            "measurements": {"per_lead": measurements},
+        }
 
-    tokens = {key: sum(m[f"tokens_{key}"] for m in measurements.values()) for key in ("in", "out")}
-    return row | {
-        "status": "scored",
-        "scores": {name: score.row() for name, score in scores.items()},
-        "critical_errors": [*dict.fromkeys(critical)],
-        "skill_results": _skill_results(),
-        "tokens": tokens,
-        "cost_usd": 0.0,  # a replay makes no billed call
-        "measurements": {"per_lead": measurements},
-    }
+    return _evaluate(
+        "seed42",
+        _case_set_id(LABELS_DIR, OBSERVERS),
+        settings,
+        leadgen_http,
+        mailbox_http,
+        control,
+        hypothesis,
+        score,
+    )
+
+
+def read_replies(
+    runtime: Runtime, db: sqlite3.Connection, cases: Sequence[ReplyCase]
+) -> tuple[Evidence, list[str]]:
+    """Run seed 42's first pass, deliver each case's reply to its lead's first request and return the
+    evidence after, with a message for each delivery that was not accepted."""
+    result, first_pass = runtime.submit_as_underwriter(db, "start_run", {"seed": SEED})
+    assert result.accepted and first_pass is not None, result.reason
+    first_pass.future.result()
+    earlier = frozenset(
+        m["metadata"]["intent_id"] for held in _evidence(runtime, db).mail.values() for m in held
+    )
+    refused: list[str] = []
+    for case in cases:
+        delivery = _deliver(runtime, db, case.lead, 1, case.body)
+        if delivery is None:
+            refused.append(f"{case.lead}: no sent first request")
+        elif not delivery.accepted:
+            refused.append(f"{case.lead}: the reply was refused: {delivery.reason}")
+    return _evidence(runtime, db, earlier), refused
+
+
+def evaluate_replies(
+    settings: Settings,
+    leadgen_http: httpx2.Client,
+    mailbox_http: httpx2.Client,
+    *,
+    control: Control | None,
+    hypothesis: str | None,
+) -> dict[str, Any]:
+    """Run the reply suite (13.2): deliver every fixture reply of read_reply's cases, held ones
+    included, to its lead's first request in a seed-42 run, and grade the readings. In replay the
+    readings come from the recordings."""
+    cases = load_reply_cases()
+
+    def score(per_run: Callable[[str], Settings], leadgen: LeadgenClient) -> dict[str, Any]:
+        with (
+            open_runtime(
+                per_run("replies"), leadgen, mailbox_client(control, mailbox_http)
+            ) as runtime,
+            runtime.database() as db,
+        ):
+            ev, refused = read_replies(runtime, db, cases)
+            by_case = {
+                c.lead: reply_reading(ev, {c.lead: c.label}).failures
+                + [r for r in refused if r.startswith(c.lead)]
+                for c in cases
+            }
+            outcome = Score()
+            outcome.add(
+                FIRST_PASS,
+                Result(
+                    [f for failures in by_case.values() for f in failures],
+                    reply_reading(ev, {}).measures,
+                ),
+            )
+            measurements = _measurements(db)
+            critical = critical_errors(ev)
+        return {
+            "scores": {"Reply reading": outcome.row()},
+            "critical_errors": [*dict.fromkeys(critical)],
+            "skill_results": {
+                "read_reply": _skill_result(
+                    "read_reply",
+                    SkillResult(
+                        sum(not failures for failures in by_case.values()),
+                        len(cases),
+                        outcome.failures,
+                    ),
+                )
+            },
+            "tokens": _tokens(measurements),
+            "cost_usd": 0.0,  # a replay makes no billed call
+            "measurements": {"per_lead": measurements},
+        }
+
+    return _evaluate(
+        "replies",
+        _case_set_id(REPLY_LABELS_DIR, ["read_reply"]),
+        settings,
+        leadgen_http,
+        mailbox_http,
+        control,
+        hypothesis,
+        score,
+    )
 
 
 def failed(row: Mapping[str, Any]) -> list[str]:
@@ -398,7 +534,7 @@ def failed(row: Mapping[str, Any]) -> list[str]:
     )
 
 
-SUITES = {"seed42": evaluate_seed42}
+SUITES = {"seed42": evaluate_seed42, "replies": evaluate_replies}
 
 
 @contextmanager
@@ -419,7 +555,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     # Each run opens a database of its own, so the path the settings need is a placeholder.
     settings = Settings.load({**os.environ, "UWH_DB": "per run"})
     if settings.run_mode != "replay":
-        parser.error("the seed42 suite replays recordings: set RUN_MODE=replay")
+        parser.error("the suites replay recordings: set RUN_MODE=replay")
     if settings.git_commit == "unknown":
         parser.error("the build has no commit: run through `make eval`")
     with _clients(settings) as (leadgen_http, mailbox_http):

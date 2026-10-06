@@ -15,6 +15,7 @@ from uwh.rules.graphs import Outcome, load_graphs
 from uwh.rules.models import Rulings
 from uwh.skills.evaluate_playbook import skill as evaluate_playbook
 
+ROOT = Path(__file__).resolve().parent.parent
 SKILLS_DIR = Path(uwh.skills.__file__).parent
 WORLD = Path(uwh.providers.__file__).parent / "data" / "world-42.json"
 # What the first pass adds to lead 008's captured fields: the derived siding class and the fetched replacement cost.
@@ -42,6 +43,31 @@ class SkillResult:
 
     def passed(self, threshold: float) -> bool:
         return self.cases_total > 0 and self.cases_passed / self.cases_total >= threshold
+
+
+@dataclass(frozen=True)
+class ReplyCase:
+    """A fixture reply, the lead whose first request it answers, and the label of its expected reading."""
+
+    lead: str
+    body: str
+    label: dict[str, Any]
+
+
+def load_reply_cases() -> list[ReplyCase]:
+    """The cases of read_reply's `cases/` folder, files in name order. Each file names the lead, the
+    reply fixture and the label by their paths from the repository root."""
+    cases: list[ReplyCase] = []
+    for path in sorted((SKILLS_DIR / "read_reply" / "cases").glob("*.yaml")):
+        case = yaml.safe_load(path.read_text(encoding="utf-8"))
+        cases.append(
+            ReplyCase(
+                case["lead"],
+                (ROOT / case["fixture"]).read_text(encoding="utf-8"),
+                yaml.safe_load((ROOT / case["label"]).read_text(encoding="utf-8")),
+            )
+        )
+    return cases
 
 
 def lead_facts(lead_id: str, changes: Mapping[str, JsonValue]) -> dict[str, JsonValue]:

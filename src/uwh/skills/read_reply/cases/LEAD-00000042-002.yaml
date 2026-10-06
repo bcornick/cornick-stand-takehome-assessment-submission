@@ -1,0 +1,5 @@
+# ABOUTME: One reply case of read_reply: the fixture reply delivered to the lead's first request, and the label of what its reading must hold.
+# ABOUTME: The suite that runs it is `--suite replies` (13.2, 13.3); the label is the expected reading and the lead's state after.
+lead: LEAD-00000042-002
+fixture: fixtures/replies/held/LEAD-00000042-002.txt
+label: evals/labels/replies/held/LEAD-00000042-002.yaml
