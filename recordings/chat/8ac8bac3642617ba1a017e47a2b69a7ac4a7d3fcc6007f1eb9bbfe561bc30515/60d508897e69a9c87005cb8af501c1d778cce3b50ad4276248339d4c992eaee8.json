@@ -1,0 +1,61 @@
+{
+  "input": {
+    "history": [],
+    "lead_id": null,
+    "message": "Which leads are waiting on me, and why?",
+    "steps": [
+      {
+        "action": "queue_summary",
+        "lead_id": null,
+        "result": {
+          "open_items": [
+            {
+              "kind": "underwriter_review",
+              "lead_id": "LEAD-00000042-000",
+              "ref": 1,
+              "text": "Review this decline notice before it is sent."
+            },
+            {
+              "kind": "underwriter_question",
+              "lead_id": "LEAD-00000042-003",
+              "ref": 2,
+              "text": "The fire simulation failed: decline, or continue under legacy underwriting? The legacy checklist values are shown."
+            },
+            {
+              "kind": "underwriter_question",
+              "lead_id": "LEAD-00000042-006",
+              "ref": 3,
+              "text": "The fire simulation failed: decline, or continue under legacy underwriting? The legacy checklist values are shown."
+            }
+          ],
+          "summary": {
+            "declines_approved": 0,
+            "delivery_unknown": 0,
+            "follow_ups_sent": 9,
+            "quotes_sent": 0,
+            "waiting_on_data": 0,
+            "waiting_on_producer": 7,
+            "waiting_on_underwriter": 3
+          }
+        }
+      }
+    ]
+  },
+  "input_hash": "60d508897e69a9c87005cb8af501c1d778cce3b50ad4276248339d4c992eaee8",
+  "model_id": "deepseek-flash",
+  "prompt_version": "8ac8bac3642617ba1a017e47a2b69a7ac4a7d3fcc6007f1eb9bbfe561bc30515",
+  "request_id": "",
+  "skill": "chat",
+  "stop_reason": "tool_use",
+  "tokens_in": 303,
+  "tokens_out": 191,
+  "tool_input": {
+    "action": "answer",
+    "answer": "Three leads are waiting on you:\n\n- LEAD-00000042-000: a decline notice needs your review before it is sent.\n- LEAD-00000042-003: the fire simulation failed — you must decide whether to decline or continue under legacy underwriting (the legacy checklist values are shown).\n- LEAD-00000042-006: same situation — fire simulation failed, decline or continue under legacy underwriting.\n\nThe rest of the day's run: 9 follow-ups sent, 7 leads waiting on the producer, none waiting on data, no quotes sent, no declines approved.",
+    "citations": [
+      1,
+      2,
+      3
+    ]
+  }
+}

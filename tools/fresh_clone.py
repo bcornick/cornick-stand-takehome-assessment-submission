@@ -1,5 +1,6 @@
-# ABOUTME: The fresh-clone rehearsal (14): clones HEAD into a temporary directory, copies .env.example to .env with no keys, brings the stack up in replay mode under its own compose project and host ports, runs the demo's first pass and the fixture replies, then removes the stack and the clone.
+# ABOUTME: The fresh-clone rehearsal (14): clones HEAD into a temporary directory, copies .env.example to .env with no keys, brings the stack up in replay mode under its own compose project and host ports, runs the demo's first pass, asks the example prompts and delivers the fixture replies, then removes the stack and the clone.
 # ABOUTME: Prints one line per step and exits 0; a failing step prints its output and exits 1. Only committed files are cloned, so commit before rehearsing.
+import json
 import os
 import shutil
 import socket
@@ -74,6 +75,22 @@ def first_pass(app_url: str) -> str:
     return f"{len(leads)} leads, first pass complete, mode replay"
 
 
+def example_prompts(app_url: str) -> str:
+    """Ask each example prompt first in the queue conversation; replay answers it from its recording."""
+    prompts = httpx2.get(f"{app_url}/api/run", timeout=10).json()["example_prompts"]
+    for prompt in prompts:
+        stream = httpx2.post(f"{app_url}/api/chat", json={"message": prompt}, timeout=60).text
+        events = [
+            json.loads(line.removeprefix("data: "))
+            for line in stream.splitlines()
+            if line.startswith("data: ")
+        ]
+        closing = events[-1] if events else {}
+        if closing.get("type") != "answer" or not closing["citations"]:
+            raise StepFailed(f"{prompt!r} did not close with a cited answer: {closing}")
+    return f"{len(prompts)} example prompts answered from recordings, each with citations"
+
+
 def fixture_replies(app_url: str, clone: Path) -> str:
     response = httpx2.post(f"{app_url}/api/replies/fixtures", timeout=START_TIMEOUT_SECONDS)
     delivered = response.json()["replies"]
@@ -111,6 +128,7 @@ def rehearse(workdir: Path, project: str) -> None:
         step("docker compose up --build", bring_up)
         step("health", lambda: wait_for_health(app_url))
         step("run start", lambda: first_pass(app_url))
+        step("example prompts", lambda: example_prompts(app_url))
         step("fixture replies", lambda: fixture_replies(app_url, clone))
     finally:
         # Runs whether the steps held or not, so no container, volume or image is left behind.

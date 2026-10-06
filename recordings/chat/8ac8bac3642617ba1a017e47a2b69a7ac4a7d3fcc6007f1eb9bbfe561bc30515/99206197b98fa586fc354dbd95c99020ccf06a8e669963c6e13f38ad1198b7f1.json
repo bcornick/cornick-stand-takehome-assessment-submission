@@ -1,0 +1,39 @@
+{
+  "input": {
+    "history": [],
+    "lead_id": null,
+    "message": "What did we ask the producer on lead 008?",
+    "steps": [
+      {
+        "action": "messages",
+        "lead_id": "008",
+        "result": {
+          "replies": [],
+          "requests": [
+            {
+              "body": "Thank you for sending over your client's property submission. We're glad to have it, and a few more details will help us complete the quote.\n\nProperty\n1. When was the property purchased?\n\nConstruction\n2. What brand is the electrical panel?\n\nA single reply covering all of the items above is ideal. Please let us know if anything is unclear.",
+              "kind": "routine_request",
+              "ref": 1,
+              "subject": "Information needed for your quote: 8924 Lakeview Blvd"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "input_hash": "99206197b98fa586fc354dbd95c99020ccf06a8e669963c6e13f38ad1198b7f1",
+  "model_id": "deepseek-flash",
+  "prompt_version": "8ac8bac3642617ba1a017e47a2b69a7ac4a7d3fcc6007f1eb9bbfe561bc30515",
+  "request_id": "",
+  "skill": "chat",
+  "stop_reason": "tool_use",
+  "tokens_in": 198,
+  "tokens_out": 111,
+  "tool_input": {
+    "action": "answer",
+    "answer": "We sent one routine request, \"Information needed for your quote: 8924 Lakeview Blvd\". It asked two things: when the property was purchased, and what brand the electrical panel is. No reply has come back yet.",
+    "citations": [
+      1
+    ]
+  }
+}

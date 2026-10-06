@@ -1,0 +1,233 @@
+{
+  "input": {
+    "history": [],
+    "lead_id": null,
+    "message": "Why is lead 000 a proposed decline?",
+    "steps": [
+      {
+        "action": "lead_summary",
+        "lead_id": "000",
+        "result": {
+          "facts": [
+            {
+              "key": "acreage",
+              "ref": 1,
+              "source": "submitted",
+              "value": 0.32
+            },
+            {
+              "key": "broker_tier",
+              "ref": 2,
+              "source": "fetched",
+              "value": "Tier 1"
+            },
+            {
+              "key": "coverage_a",
+              "ref": 3,
+              "source": "submitted",
+              "value": 1075000
+            },
+            {
+              "key": "coverage_e",
+              "ref": 4,
+              "source": "submitted",
+              "value": "100000"
+            },
+            {
+              "key": "coverage_f",
+              "ref": 5,
+              "source": "submitted",
+              "value": "1000"
+            },
+            {
+              "key": "dist_to_nearest_fire_hydrant",
+              "ref": 6,
+              "source": "submitted",
+              "value": 130
+            },
+            {
+              "key": "dwelling_type",
+              "ref": 7,
+              "source": "submitted",
+              "value": "Owner Occupied Single Family Residence"
+            },
+            {
+              "key": "dwelling_use_type",
+              "ref": 8,
+              "source": "submitted",
+              "value": "Primary"
+            },
+            {
+              "key": "effective_date",
+              "ref": 9,
+              "source": "submitted",
+              "value": "2026-07-23"
+            },
+            {
+              "key": "foundation_type",
+              "ref": 10,
+              "source": "submitted",
+              "value": "Piers"
+            },
+            {
+              "key": "has_knob_and_tube_wiring",
+              "ref": 11,
+              "source": "submitted",
+              "value": false
+            },
+            {
+              "key": "has_primary_policy_with_stand",
+              "ref": 12,
+              "source": "fetched",
+              "value": false
+            },
+            {
+              "key": "heating_source",
+              "ref": 13,
+              "source": "submitted",
+              "value": "Central Gas"
+            },
+            {
+              "key": "is_gated_community",
+              "ref": 14,
+              "source": "submitted",
+              "value": false
+            },
+            {
+              "key": "is_rental",
+              "ref": 15,
+              "source": "submitted",
+              "value": "No"
+            },
+            {
+              "key": "listed_for_sale",
+              "ref": 16,
+              "source": "submitted",
+              "value": false
+            },
+            {
+              "key": "months_unoccupied",
+              "ref": 17,
+              "source": "submitted",
+              "value": 8
+            },
+            {
+              "key": "occupation",
+              "ref": 18,
+              "source": "submitted",
+              "value": "Teacher"
+            },
+            {
+              "key": "owner_email",
+              "ref": 19,
+              "source": "submitted",
+              "value": "owner@example.com"
+            },
+            {
+              "key": "owner_phone_number",
+              "ref": 20,
+              "source": "submitted",
+              "value": "+1-555-0128"
+            },
+            {
+              "key": "p_f",
+              "ref": 21,
+              "source": "submitted",
+              "value": 0.13
+            },
+            {
+              "key": "plumbing_age_years",
+              "ref": 22,
+              "source": "submitted",
+              "value": 20
+            },
+            {
+              "key": "post_pier_supports_living_area",
+              "ref": 23,
+              "source": "submitted",
+              "value": true
+            },
+            {
+              "key": "residence_held_in_trust",
+              "ref": 24,
+              "source": "submitted",
+              "value": false
+            },
+            {
+              "key": "roof_classification",
+              "ref": 25,
+              "source": "derived",
+              "value": "Class A"
+            },
+            {
+              "key": "roof_material",
+              "ref": 26,
+              "source": "submitted",
+              "value": "Architecture Shingles"
+            },
+            {
+              "key": "siding_classification",
+              "ref": 27,
+              "source": "derived",
+              "value": "B"
+            },
+            {
+              "key": "siding_material",
+              "ref": 28,
+              "source": "submitted",
+              "value": "Stucco"
+            },
+            {
+              "key": "slope_angle_deg",
+              "ref": 29,
+              "source": "submitted",
+              "value": 10.1
+            },
+            {
+              "key": "square_feet",
+              "ref": 30,
+              "source": "submitted",
+              "value": 3900
+            },
+            {
+              "key": "structure_type",
+              "ref": 31,
+              "source": "submitted",
+              "value": "Single Family"
+            },
+            {
+              "key": "water_heater_type",
+              "ref": 32,
+              "source": "submitted",
+              "value": "Tankless"
+            }
+          ],
+          "label": "LEAD-00000042-000",
+          "lead_id": "LEAD-00000042-000",
+          "open_choices": [],
+          "open_items": [
+            {
+              "kind": "underwriter_review",
+              "lead_id": "LEAD-00000042-000",
+              "ref": 33,
+              "text": "Review this decline notice before it is sent."
+            }
+          ],
+          "status": "in_progress"
+        }
+      }
+    ]
+  },
+  "input_hash": "a6e89a442031539dd3eba811f0e3e4e20746e8f4754b02bd31e7ff9767bfae12",
+  "model_id": "deepseek-flash",
+  "prompt_version": "8ac8bac3642617ba1a017e47a2b69a7ac4a7d3fcc6007f1eb9bbfe561bc30515",
+  "request_id": "",
+  "skill": "chat",
+  "stop_reason": "tool_use",
+  "tokens_in": 1111,
+  "tokens_out": 51,
+  "tool_input": {
+    "action": "playbook_path",
+    "lead_id": "000"
+  }
+}
