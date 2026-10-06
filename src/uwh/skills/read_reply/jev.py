@@ -59,7 +59,11 @@ def classify(body: str, jev: JevAccess) -> JevAnswer | JevFailure:
     probabilities: dict[str, float] = exchange.tool_input["probabilities"]
     # Jev's confidence is over three outcomes: an on-topic reply is one outcome, since code decides
     # `answers_all` or `answers_some` from the asks. The on-topic option Jev leans to stands for it.
-    on_topic = max(("answers_all", "answers_some"), key=lambda option: probabilities[option])
+    on_topic: ReplyClassification = (
+        "answers_all"
+        if probabilities["answers_all"] >= probabilities["answers_some"]
+        else "answers_some"
+    )
     outcomes: dict[ReplyClassification, float] = {
         on_topic: probabilities["answers_all"] + probabilities["answers_some"],
         "declines_to_answer": probabilities["declines_to_answer"],

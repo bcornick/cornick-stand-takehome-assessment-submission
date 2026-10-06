@@ -71,8 +71,7 @@ def read_proposal(db: sqlite3.Connection, proposal_id: int) -> Proposal | None:
 def open_proposals(db: sqlite3.Connection) -> list[Proposal]:
     """The cards still open, oldest first."""
     rows = db.execute(
-        "SELECT id, payload_json, state FROM proposals"
-        " WHERE state = 'open' ORDER BY id"
+        "SELECT id, payload_json, state FROM proposals WHERE state = 'open' ORDER BY id"
     ).fetchall()
     return [_proposal(row) for row in rows]
 
