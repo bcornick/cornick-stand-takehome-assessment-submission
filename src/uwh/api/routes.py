@@ -5,11 +5,8 @@ from typing import NoReturn
 from fastapi import APIRouter, HTTPException
 
 from uwh.api.views import (
-    ChatRequest,
-    ChatResponse,
     Item,
     LeadEvents,
-    ProposalView,
 )
 
 router = APIRouter()
@@ -27,13 +24,3 @@ def get_lead_events(id: str) -> LeadEvents:
 @router.get("/api/items")
 def list_items() -> list[Item]:
     not_implemented("GET /api/items")
-
-
-@router.get("/api/proposals")
-def list_proposals() -> list[ProposalView]:
-    not_implemented("GET /api/proposals")
-
-
-@router.post("/api/chat")
-def chat(request: ChatRequest) -> ChatResponse:
-    not_implemented("POST /api/chat")

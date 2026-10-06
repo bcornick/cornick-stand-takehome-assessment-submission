@@ -1,4 +1,4 @@
-# ABOUTME: The app factory: its lifespan opens the runtime, recovers an interrupted run before serving, and serves the routes of run.py, commands.py, replies.py, leads.py and routes.py and the built frontend.
+# ABOUTME: The app factory: its lifespan opens the runtime, recovers an interrupted run before serving, and serves the routes of run.py, commands.py, replies.py, leads.py, chat.py and routes.py and the built frontend.
 # ABOUTME: The factory reads settings when called, never at import, and opens no database and no service client until the app starts.
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -7,7 +7,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from uwh.api import commands, leads, replies, run
+from uwh.api import chat, commands, leads, replies, run
 from uwh.api.routes import router
 from uwh.api.runtime import open_runtime
 from uwh.runtime.leadgen_client import LeadgenClient
@@ -39,6 +39,7 @@ def create_app(
     app.include_router(commands.router)
     app.include_router(replies.router)
     app.include_router(leads.router)
+    app.include_router(chat.router)
     app.include_router(router)
     # Mounted last so the API routes match first; absent in a checkout without a build.
     if Path(settings.static_dir).is_dir():
