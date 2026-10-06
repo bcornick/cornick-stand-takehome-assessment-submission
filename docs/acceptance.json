@@ -46,20 +46,20 @@
     "milestone": 3,
     "description": "The reference eval run passes every grader and appends one `run` row. Expect: exit 0, then `true`.",
     "command": "make eval ARGS='--suite seed42' && tail -n 1 evals/results.jsonl | jq -e '.kind == \"run\" and .suite == \"seed42\" and (.scores | to_entries | all(.value.passed)) and (.critical_errors | length == 0)'",
-    "passes": false
+    "passes": true
   },
   {
     "id": "M3-A2",
     "milestone": 3,
     "description": "Each control is caught by its named grader: do nothing by Coverage, email everything by Forbidden asks and Asks, send twice by Send safety. Expect: three lines naming the failed graders, each containing the named grader.",
     "command": "for c in do_nothing email_everything send_twice; do make eval ARGS=\"--suite seed42 --control $c\" >/dev/null; tail -n 1 evals/results.jsonl | jq -r '[.control, ([.scores | to_entries[] | select(.value.passed | not) | .key] | join(\",\"))] | join(\": \")'; done",
-    "passes": false
+    "passes": true
   },
   {
     "id": "M3-A3",
     "milestone": 3,
     "description": "The results log shows one improvement cycle on reply reading: a run with a failing reply case and a hypothesis, a rerun that passes, and a decision row that keeps it. Expect: `true`.",
     "command": "jq -s -e '[.[] | select(.kind == \"run\" and .suite == \"replies\")] as $r | ($r | map(select(.hypothesis != null and (.scores | to_entries | any(.value.passed | not)))) | length >= 1) and ($r | map(select(.hypothesis != null and (.scores | to_entries | all(.value.passed)))) | length >= 1) and ([.[] | select(.kind == \"decision\" and .keep == true)] | length >= 1)' evals/results.jsonl",
-    "passes": false
+    "passes": true
   }
 ]
