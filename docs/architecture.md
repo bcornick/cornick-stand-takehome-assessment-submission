@@ -88,7 +88,7 @@ Not built:
 
 ## 5. Scenarios
 
-Seed-42 leads, read from the stored queue. Expected first-pass results are fixed by the labels written in stage 3; this table is orientation.
+Seed-42 leads, read from the stored queue. Expected first-pass results are fixed by the labels under `evals/labels/seed42/`; this table is orientation.
 
 | Lead | Notable facts | Expected first pass |
 |---|---|---|
@@ -278,17 +278,9 @@ Rules:
 
 - The skill list is a plain list in code. A test fails when a folder lacks any part. `cases/` is a part only of a skill whose manifest has a `pass_threshold`; the other skills are covered by plain unit tests and the seed-42 graders.
 - A write that issues a command class refuses one the issuing skill's manifest does not declare: `create_draft` for the send classes, the resolve step for `fetch_data`.
-- **Status** is one of `untested`, `passing`, `failing`, `unavailable`. The eval runner writes `skill_results.<name>: {cases_passed, cases_total, passed}` into each `run` row, computed from the skill's `cases/` against its manifest threshold, for the two skills that have one. A skill's status is read from the latest `run` row that has `status: scored`, no `control`, a digest matching the skill's current digest (appendix A.4) and a result for that skill. Control runs and invalid runs are ignored. A changed skill with cases is `untested` until evaluated. A skill with no `pass_threshold` has no eval status: the status reader returns none for it, dispatch runs it as `passing` and the lead shows no "unevaluated skill" note, and the README's skills table shows a dash in its status column. Evals do not run at startup. `evals/results.jsonl` is mounted read-only into the app container; labels are not.
-- Status precedence: `unavailable`, then `failing`, `untested`, `passing`. Rows from live, record and replay mode count toward a model skill's status; a replay row scores the recorded live exchanges.
-- Dispatch by status:
-  - `passing`: runs.
-  - `untested`: runs, and the lead shows "unevaluated skill". It never falls back silently.
-  - `failing`: a model skill uses its declared fallback and the lead shows that it did; a deterministic skill stops the lead with a `data` blocker.
-  - `unavailable` (no key, provider down): same as `failing`.
-- The eval runner dispatches every skill whatever its stored status, so a failing skill can be re-evaluated.
+- **Status.** The eval runner writes `skill_results.<name>: {cases_passed, cases_total, passed}` into each `run` row, computed from the skill's `cases/` against its manifest threshold, for the skills that have cases. A model skill uses its fallback when the model is missing, a recording is missing in replay, or its answer is rejected; the runtime does not read the results log.
 - `unavailable` applies in live mode with no key. Replay mode needs no key and runs model skills from recordings.
-- A release check fails when any skill with cases is `untested` or `failing` at the tagged commit. The Jev adapter is part of `read_reply`; with no Jev key it is inactive and `read_reply` is evaluated on its language-model path.
-- **What makes this a harness:** a skill added with a manifest, cases and a threshold is dispatched, permission-checked and gated by its evals with no runtime change.
+- **What makes this a harness:** a skill added with a manifest, and cases with a threshold where it has them, is dispatched and permission-checked with no runtime change, and the eval runner scores its cases on every run.
 
 | Skill | Model | Fires when | Fallback |
 |---|---|---|---|
@@ -691,7 +683,7 @@ A reference run passes everything. Each broken variant must be failed by its nam
 
 ### 13.5 Results log and loop
 
-`evals/results.jsonl`, committed and append-only. A `run` row per run: run id, commit, evaluator hash, case-set id, skill digests, scores, critical errors, tokens and cost, hypothesis, and the suite, control, mode and status (`scored`, or `invalid` with its reason and no scores). A `decision` row, written by a person after reading the run, names the run id and says keep or discard with a reason. Skill status reads from it. The submission includes one real cycle on reply reading: a failing held-back reply case, the diagnosis, one prompt change, the rerun, the keep decision.
+`evals/results.jsonl`, committed and append-only. A `run` row per run: run id, commit, evaluator hash, case-set id, skill digests, scores, critical errors, tokens and cost, hypothesis, and the suite, control, mode and status (`scored`, or `invalid` with its reason and no scores). A `decision` row, written by a person after reading the run, names the run id and says keep or discard with a reason. The submission includes one real cycle on reply reading: a failing held-back reply case, the diagnosis, one prompt change, the rerun, the keep decision.
 
 ## 14. Dependencies and packaging
 
@@ -701,7 +693,7 @@ A reference run passes everything. Each broken variant must be failed by its nam
 | `mailbox` | default | `sim-harness/mailbox/Dockerfile`, context `./sim-harness` | 8025 | named volume |
 | `app` | default | `Dockerfile` (multi-stage: frontend build, then Python) | 8000 | named volume |
 | `leadgen-eval`, `mailbox-eval` | `eval` | same Dockerfiles | none | separate named volumes |
-| `eval` | `eval` | the app image plus `evals/`, every `src/uwh/skills/*/cases/` folder, and `sim-harness/leadgen` with `sim-harness/shared` (for regenerating Stand's key in process) | none | writes `evals/results.jsonl` through a bind mount; `recordings/` mounted read-only, and read-write only under `make record` |
+| `eval` | `eval` | the app image plus `evals/`, every `src/uwh/skills/*/cases/` folder, and `sim-harness/leadgen` with `sim-harness/shared` (for regenerating Stand's key in process) | none | writes `evals/results.jsonl` through a bind mount; `recordings/` mounted read-only, and read-write only when `RECORDINGS_ACCESS=rw` is set for a record run |
 
 - The app stage copies `src/` selectively and leaves out every `cases/` folder. It copies `docs/brief/field_registry.json` to `/app/registry/field_registry.json`; the setting `UWH_REGISTRY` names that path. It copies `fixtures/replies/` to `/app/fixtures/replies` (`UWH_FIXTURE_REPLIES`); `recordings/` is mounted at `/app/recordings` (`UWH_RECORDINGS`). The commit hash reaches the images as the build argument `GIT_COMMIT`, since `.git` is outside the build context. The make targets set it from `git rev-parse HEAD`. With plain `docker compose up` it is unset and the images carry `unknown`, which is fine for running the app; eval runs go through `make eval`, and a run row with commit `unknown` fails its check. A root `.dockerignore` keeps `.env`, `.git`, `.venv`, `web/node_modules` and `web/dist` out of the build context.
 - Stand's code and Dockerfiles are unmodified. Stand's own `docker-compose.yml` stays in place, unused; ours keeps Stand's documented host ports.
@@ -717,7 +709,7 @@ A reference run passes everything. Each broken variant must be failed by its nam
 
 ## 15. Open issues
 
-1. Stand's compose behaviour under our service definitions is unverified until stage 1 runs it.
+1. Stand's compose behaviour under our service definitions is verified by `tools/fresh_clone.py`.
 2. Jev's access and live output shape are unverified until a key exists.
 3. Interpretation rows are our reading. Rows marked U interrupt the underwriter on every matching lead until a ruling turns them into A rows.
 4. The generator draws six states; Stand writes in two. No eligibility rule by state is invented.
@@ -751,7 +743,7 @@ Dispositions of `docs/critique.md` findings.
 | C23 answer-key grader | Accepted. | 13.3 |
 | C24 contacts keyed per lead | Accepted. | 10.3 |
 | C25 crash recovery | Accepted. | 7.5 step 5 |
-| C26 hit list and real providers | Accepted. | 9.4; README at stage 13 |
+| C26 hit list and real providers | Accepted. | 9.4; README |
 | C27 three-state objective | Accepted. | 1 |
 | C28 values a builder would guess | Accepted. | Appendix A |
 

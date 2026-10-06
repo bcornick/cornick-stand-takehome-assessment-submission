@@ -4,7 +4,7 @@ Brett Cornick's submission for the Stand Insurance take-home (`docs/brief/agenti
 
 ## Run it
 
-Prerequisites: Docker with Compose 2.20 or later, and `uv`. The frontend builds inside the image. `make check` also needs `jq`, Node 22 and pnpm (`corepack enable`).
+Prerequisites: Docker with Compose 2.20 or later, and `uv`. The frontend builds inside the image. `make check` also needs Node 22 and pnpm (`corepack enable`); the acceptance commands in `docs/acceptance.json` use `jq`.
 
 ```
 cp .env.example .env
@@ -26,7 +26,7 @@ Leads 000, 003 and 006 need the underwriter on the first pass: 000 is a proposed
 
 `RUN_MODE` in `.env` picks the mode, and the page always shows it.
 
-- `replay` (the default): every model and Jev exchange is served from `recordings/`. No key is needed and no model host is called. A request with no recording fails closed with a visible error; a Jev miss falls back to the language model.
+- `replay` (the default): every model and Jev exchange is served from `recordings/`. No key is needed and no model host is called. A request with no recording fails closed with a visible error; a Jev miss falls back to the language model. The chat panel cannot answer in the replay demo: its recordings are of a run before the first pass, and a run's event ids and times differ from them; a `live` or `record` run answers it.
 - `live`: calls DeepSeek with `MODEL_API_KEY`. Nothing reads or writes a recording.
 - `record`: as live, and each exchange is written to `recordings/`. Also set `RECORDINGS_ACCESS=rw`, because the folder is mounted read-only otherwise.
 
@@ -61,7 +61,7 @@ Stand's mailbox <-- send path <-- command layer <-- underwriter UI, chat, workfl
 
 **The send path's promise.** An intent moves `draft`, `dispatching`, `sent` (or `unknown`). The state `dispatching` commits before the mailbox post, and the post runs outside any transaction. After an ambiguous result the system lists the lead's emails and matches the intent id; with no match it opens a `delivery_unknown` item. The one promise is that nothing resends automatically after an ambiguous delivery. The mailbox has no idempotency key, so exactly-once delivery is not claimed. A lead with an open `delivery_unknown` sends nothing automatically.
 
-**Skills as workflow steps.** A skill is a folder with a manifest (purpose, trigger, command classes it may issue, fallback), an entry point, and cases or a prompt where it has them. Seven steps are code and two use the language model (`polish_message`, `read_reply`). The model never writes a question: code renders every request from the ask plan, and the model writes only an opening and a closing that two checks hold to adding no consequence, price, deadline or request. A command that sends refuses a class the issuing skill's manifest does not declare. There is no agent framework and no model-driven control flow outside the chat.
+**Skills as workflow steps.** A skill is a folder with a manifest (purpose, trigger, command classes it may issue, fallback), an entry point, and cases or a prompt where it has them. Six skills are code and two use the language model (`polish_message`, `read_reply`); five of them run as the workflow's steps. The model never writes a question: code renders every request from the ask plan, and the model writes only an opening and a closing that two checks hold to adding no consequence, price, deadline or request. A command that sends refuses a class the issuing skill's manifest does not declare. There is no agent framework and no model-driven control flow outside the chat.
 
 **The chat is a second client.** It answers from the event log and cites event ids, and it can only propose: a directive becomes a card the underwriter previews and applies. A directive to approve, reject or send is refused, and the answer points to the lead's open item.
 
@@ -74,7 +74,7 @@ For the rest (rules core, the interpretation table, ledger rules, message classe
 `make eval` replays the recorded model answers against the eval containers' own leadgen and mailbox and appends a row to `evals/results.jsonl`. Three suites exist:
 
 - `seed42`: the ten leads against the ten labels in `evals/labels/seed42/`, graded at the settle point and again after scripted underwriter actions. The labels were written from the playbook, the registry and the data files without reading the rules code.
-- `replies`: nine reply fixtures (three held back under `fixtures/replies/held/`) read by `read_reply`, graded against `evals/labels/replies/`.
+- `replies`: eight reply fixtures (three held back under `fixtures/replies/held/`; lead 008's reply, the ninth, is the demo's) read by `read_reply`, graded against `evals/labels/replies/`.
 - `chat`: three cases with eight recordings; a question causes zero commands, and a refused directive stays refused when reworded.
 
 **The nine graders.**
@@ -95,18 +95,18 @@ The runner also grades reply facts and chat, and four critical errors fail a run
 
 **Stand's answer key.** The grader checks every record of the generator's debug history for seed 42, outside `src/`. Allowed disagreements are counted and pinned in `evals/labels/seed42/exemptions.yaml`: 26 records exempt because lead 000 is a proposed decline, and 0 exempt as blocked. The run counts 190 agreeing records, 5 inactive conditionals, 1 field set again by a conflict injection and 0 disagreements. One record is decided by this submission's reading of the registry, not Stand's; it is counted apart.
 
-**The results log.** `evals/results.jsonl` is append-only. A `run` row holds the suite, control, mode, commit, evaluator hash, case-set id, skill digests, scores, critical errors, tokens, cost and the hypothesis. A `decision` row, written by a person after reading a run, names keep or discard and the reason.
+**The results log.** `evals/results.jsonl` is append-only. A `run` row holds the suite, control, mode, commit, evaluator hash, case-set id, skill digests, scores, critical errors, tokens, cost and the hypothesis. A `decision` row, written by a person or the lead after reading a run, names keep or discard and the reason.
 
-**The one improvement cycle.** On the held-back reply for lead 005 the model returned the state as "Colorado", and the `replies` suite failed it. One prompt clause (return the shortest conventional form) made the rerun return the short form; the remaining classification misses were not a prompt fault, so code now decides `answers_all` from the open asks, and the final run read 8 of 8 fixtures. Brett's `decision` row keeps the change; two earlier rows run on an uncommitted tree carry decision rows that discard them.
+**The one improvement cycle.** On the held-back reply for lead 005 the model returned the state as "Colorado", and the `replies` suite failed it. One prompt clause (return the shortest conventional form) made the rerun return the short form; the classification misses that remained were not a prompt fault: code decides `answers_all` from the open asks, and the final run read 8 of 8 fixtures. Brett's `decision` row keeps the change; two rows run on an uncommitted tree carry decision rows that discard them.
 
 **What to iterate on next.**
 
 1. `polish_message` has no cases and no repeat check. Its judge call decides whether an opening and closing add a consequence; measure its consistency across repeats and build a case table of rewrites it should reject.
-2. Reply reading on confirmations and catalogue questions. The reply suite's nine fixtures are mostly field answers; add fixtures where the producer restates, corrects or partly answers a confirmation, and extend the held-back set.
+2. Reply reading on confirmations and catalogue questions. The reply suite's eight fixtures are mostly field answers; add fixtures where the producer restates, corrects or partly answers a confirmation, and extend the held-back set.
 3. Jev's confidence. The 0.7 threshold is the architecture's default, applied to three outcomes (on topic, off topic, declines to answer). The nine Jev recordings exercise the cascade in replay, where Jev classifies seven of the eight reply fixtures and the model the other; record more replies and set the threshold from their probabilities.
-4. Lead 008's recorded `read_reply` call reports 391 input tokens on its second recording against 1,165 on the first, for the same input. The cause is unexplained.
+4. Token counts. `tokens_in` on an event is the provider's `input_tokens` alone; DeepSeek reports cached input separately, so the stored input counts undercount what a call read (lead 008's reading shows 135 input tokens for a prompt longer than that). Count cached input too and compare the totals with the provider's billing page.
 
-Live-call totals recorded in `docs/progress.md` through milestone 4: 27,506 input and 6,896 output tokens on `deepseek-flash` across `read_reply` and the chat recordings.
+Live-call totals are recorded per milestone in `docs/progress.md`; the project used about 50,000 reported input tokens and 13,000 output tokens on `deepseek-flash`, and 4,771 input and 468 output on Jev, with the undercount above.
 
 ## Skills
 
