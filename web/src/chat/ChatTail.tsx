@@ -1,7 +1,10 @@
 // ABOUTME: The typed messages of one conversation with what came back, and the open proposal cards that sit on its lead.
 // ABOUTME: A turn shows its lookups as they happen, then its answer with citation chips, its card or its error.
 import type { components } from '@/api/types'
-import type { PanelTarget, Turn } from '@/surface'
+import { Chip } from '@/components/Chip'
+import { leadName } from '@/format'
+import { QUEUE, type PanelTarget, type Turn } from '@/surface'
+import { ProposalCard } from './ProposalCard'
 
 type Props = {
   turns: Turn[]
@@ -12,12 +15,66 @@ type Props = {
   onChange: () => void
 }
 
-export function ChatTail({ turns }: Props) {
+export function ChatTail({ turns, proposals, leadId, onOpen, onSelect, onChange }: Props) {
   return (
-    <ol>
-      {turns.map((turn, index) => (
-        <li key={index}>{turn.message}</li>
-      ))}
-    </ol>
+    <div className="flex flex-col gap-4">
+      {turns.length > 0 && (
+        <ol className="flex flex-col gap-4">
+          {turns.map((turn, index) => {
+            const { closing } = turn
+            return (
+              <li key={index} className="flex flex-col gap-2">
+                <p className="max-w-[80%] self-end rounded-md bg-muted px-3 py-1.5 text-sm">{turn.message}</p>
+                {turn.steps.length > 0 && (
+                  <details open={closing === null} className="text-xs text-muted-foreground">
+                    <summary className="cursor-pointer">What I looked at</summary>
+                    <ul>
+                      {turn.steps.map((step, stepIndex) => (
+                        <li key={stepIndex}>{step}</li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
+                {closing === null && <p className="text-xs text-accent">Working…</p>}
+                {closing?.type === 'answer' && (
+                  <div className="flex flex-col gap-1">
+                    <p className="text-sm">{closing.answer}</p>
+                    <p className="flex gap-1">
+                      {closing.citations.map((citation) => (
+                        <Chip
+                          key={citation.number}
+                          label={citation.number}
+                          opens={`Open ${citation.kind} ${citation.id} of ${leadName(citation.lead_id)}`}
+                          onClick={() => onOpen({ kind: citation.kind, lead_id: citation.lead_id, id: citation.id })}
+                        />
+                      ))}
+                    </p>
+                  </div>
+                )}
+                {closing?.type === 'error' && (
+                  <p role="alert" className="text-sm text-destructive">{`Could not get an answer: ${closing.reason}.`}</p>
+                )}
+                {closing?.type === 'proposal' && closing.lead_id !== leadId && (
+                  <button
+                    type="button"
+                    onClick={() => onSelect(closing.lead_id ?? QUEUE)}
+                    className="self-start text-sm underline"
+                  >
+                    {closing.lead_id === null ? 'Proposed on the queue' : `Proposed on ${leadName(closing.lead_id)}`}
+                  </button>
+                )}
+              </li>
+            )
+          })}
+        </ol>
+      )}
+      {proposals.length > 0 && (
+        <ul aria-label="Proposals" className="flex flex-col gap-2">
+          {proposals.map((proposal) => (
+            <ProposalCard key={proposal.proposal_id} proposal={proposal} onDone={onChange} />
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }

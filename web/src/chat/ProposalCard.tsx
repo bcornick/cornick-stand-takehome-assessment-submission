@@ -20,10 +20,6 @@ function inWords(type: string, payload: Record<string, unknown>): string {
       return `Choose ${String(payload.option).replace(/_/g, ' ')} for ${payload.choice_id} on lead ${payload.lead_id}`
     case 'edit_draft':
       return `Edit the draft ${payload.intent_id}`
-    case 'deliver_reply':
-      return `Record the producer's reply on lead ${payload.lead_id}`
-    case 'start_run':
-      return `Start a run with seed ${payload.seed}`
     default:
       return type.replace(/_/g, ' ')
   }
