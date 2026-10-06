@@ -643,7 +643,7 @@ Faults are injected through one documented hook on the mailbox client (`FaultPla
   The grader has its own evaluation of the registry's six condition forms. For the two producer-editable conditional fields with no registry condition it encodes the section 9.2 table: `listed_for_sale` is always active, `is_gated_community` uses the three-valued pool condition, and `opening_protection` is never asked. Records decided by that table are counted separately, because that reading is this submission's, not Stand's (seed 42 has one, on lead 002).
 
   Two classes of disagreement are allowed and counted: a conditional field whose condition is inactive, and a field the perturbation pass nulled that a conflict injection set again. The residual outside those classes must be zero on seed 42. The run row also reports how many ask-expecting records were exempt because the lead was a proposed decline or the field was blocked; those two exemptions are decided by the system under test, so the counts are shown, and the seed-42 counts are pinned in the labels. The key is the one check whose expectations Stand wrote.
-- **Labelling function.** Expected per-field resolution = f(final lead, registry, provider fixture, interpretation table). It shares the interpretation table with the rules core, so it certifies consistency with our reading, not the reading itself.
+- **Field resolution.** The labels' asks, a proposed decline's suppressed asks included, are the fields the triage must ask for, and the labels' `not_asked` map names every other missing field. The grader compares them with the latest triage of each lead. The labels are written without the rules code, so it checks the triage against an independent reading.
 - **Per-page cases.** One table of hand-written cases per page: one row per outcome node, plus every boundary named in section 9.7.
 - **Seed-42 labels.** Expected first-pass state and message asks for the ten leads. The runner grades these at the settle point, before any scripted underwriter action. It then plays the label's `underwriter_actions` and grades the expectations held under the label's `after_actions` key with the same graders (Coverage, One open request, Asks, Rule trace). Each score records the phase, `first_pass` or `after_actions`, in which a failure occurred.
 - **Reply fixtures.** Full, partial, contradicting, and instruction-bearing, each with expected facts and state. Producer answers are hand-written. Reply bodies live in `fixtures/replies/` at the repository root and ship in the app image for the fixture-reply control; their expected results live in `evals/labels/` and do not.
@@ -668,8 +668,8 @@ Plain functions over the mailbox, event log and fact ledger.
 | Forbidden asks | No ask for a system-owned, bind-only, or inactive conditional field |
 | Rule trace | Every decline and every requirement has a rule trace; the path matches the expected path |
 | Packet fidelity | Every effect in the plan appears in the delivered packet |
-| Field resolution | Precision and recall against the labelling function, each required to be 1.0 on seed 42 |
-| Escalation | Precision and recall, each required to be 1.0 on seed 42; positive class is "expected to need the underwriter". The escalation rate (leads needing the underwriter on the first pass, with the reason per lead) is a headline number with a stated target of at most 4 of 10 on seed 42. |
+| Field resolution | Precision and recall of the fields the triage asks for against the labelled asks, each required to be 1.0 on seed 42 |
+| Escalation | Precision and recall, each required to be 1.0 on seed 42; positive class is "expected to need the underwriter". The escalation rate (leads needing the underwriter on the first pass, with the reason per lead) is a headline number, and the grader fails above its target of at most 4 of 10 on seed 42. |
 | Send safety | Crash after mailbox acceptance, and query-empty-while-in-flight, each yield no second message. A fault run with no `fault_injected` event fails. |
 | Approval binding | An `approve` carrying a payload hash that is not the draft's current hash is refused and nothing is sent. The five-way recheck at dispatch is pinned by the stage 4 unit test. |
 | Policy | An `approve` submitted by `assistant` is refused; a proposal never carries `approve` or `reject` |
@@ -695,7 +695,7 @@ A reference run passes everything. Each broken variant must be failed by its nam
 
 ### 13.5 Results log and loop
 
-`evals/results.jsonl`, committed and append-only. A `run` row per run: run id, commit, evaluator hash, case-set id, skill digests, scores, critical errors, tokens and cost, hypothesis. A `decision` row, written by a person after reading the run, names the run id and says keep or discard with a reason. Skill status reads from it. The submission includes one real cycle on reply reading: a failing held-back reply case, the diagnosis, one prompt change, the rerun, the keep decision.
+`evals/results.jsonl`, committed and append-only. A `run` row per run: run id, commit, evaluator hash, case-set id, skill digests, scores, critical errors, tokens and cost, hypothesis, and the suite, control, mode and status (`scored`, or `invalid` with its reason and no scores). A `decision` row, written by a person after reading the run, names the run id and says keep or discard with a reason. Skill status reads from it. The submission includes one real cycle on reply reading: a failing held-back reply case, the diagnosis, one prompt change, the rerun, the keep decision.
 
 ## 14. Dependencies and packaging
 
