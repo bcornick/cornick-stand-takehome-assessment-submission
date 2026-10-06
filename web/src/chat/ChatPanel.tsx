@@ -1,13 +1,12 @@
-// ABOUTME: The chat panel: a message box, each answer with the event ids it cites, and the open proposal cards with Apply and Dismiss.
+// ABOUTME: The chat panel: a message box, each turn's steps as they happen, then its answer with numbered citations, and the open proposal cards with Apply and Dismiss.
 // ABOUTME: A message goes to the open lead when one is selected. The cards come from the server, so a card outlives a reload; applying one tells the page to refetch.
 import { useState, type FormEvent } from 'react'
-import { getProposals, sendChat } from '@/api/client'
-import type { components } from '@/api/types'
+import { getProposals, streamChat, type ChatEvent } from '@/api/client'
 import { useRemote } from '@/api/useRemote'
 import { ProposalCard } from './ProposalCard'
 
-type Answer = components['schemas']['ChatResponse']
-type Exchange = { message: string; outcome: Answer | { error: string } }
+type Closing = Exclude<ChatEvent, { type: 'step' }>
+type Exchange = { message: string; steps: string[]; closing: Closing | null }
 
 type Props = { leadId: string | null; onChange: () => void }
 
@@ -18,18 +17,28 @@ export function ChatPanel({ leadId, onChange }: Props) {
   const [cardsVersion, setCardsVersion] = useState(0)
   const cards = useRemote('proposals', getProposals, cardsVersion)
 
+  // Changes the exchange of the turn in flight, which is always the last one.
+  const updateTurn = (change: (turn: Exchange) => Exchange) =>
+    setExchanges((past) => [...past.slice(0, -1), change(past[past.length - 1])])
+
   async function send(event: FormEvent) {
     event.preventDefault()
     const text = message.trim()
     if (text === '') return
     setSending(true)
+    setMessage('')
+    setExchanges((past) => [...past, { message: text, steps: [], closing: null }])
     try {
-      const answer = await sendChat(text, leadId)
-      setExchanges((past) => [...past, { message: text, outcome: answer }])
-      setMessage('')
+      await streamChat({ message: text, lead_id: leadId, history: [] }, (chatEvent) =>
+        updateTurn((turn) =>
+          chatEvent.type === 'step'
+            ? { ...turn, steps: [...turn.steps, chatEvent.summary] }
+            : { ...turn, closing: chatEvent },
+        ),
+      )
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error)
-      setExchanges((past) => [...past, { message: text, outcome: { error: reason } }])
+      updateTurn((turn) => ({ ...turn, closing: { type: 'error', reason } }))
     } finally {
       setSending(false)
       setCardsVersion((version) => version + 1)
@@ -48,16 +57,26 @@ export function ChatPanel({ leadId, onChange }: Props) {
         {exchanges.map((exchange, index) => (
           <li key={index} className="flex flex-col gap-1">
             <p className="text-sm font-medium">{exchange.message}</p>
-            {'error' in exchange.outcome ? (
-              <p role="alert" className="text-sm text-destructive">{`Could not get an answer: ${exchange.outcome.error}.`}</p>
-            ) : (
+            {exchange.steps.length > 0 && (
+              <ul aria-label="Steps" className="text-xs text-muted-foreground">
+                {exchange.steps.map((step, stepIndex) => (
+                  <li key={stepIndex}>{step}</li>
+                ))}
+              </ul>
+            )}
+            {exchange.closing === null && <p className="text-xs text-muted-foreground">Working…</p>}
+            {exchange.closing?.type === 'error' && (
+              <p role="alert" className="text-sm text-destructive">{`Could not get an answer: ${exchange.closing.reason}.`}</p>
+            )}
+            {exchange.closing?.type === 'proposal' && <p className="text-sm">Proposed. Review the card below.</p>}
+            {exchange.closing?.type === 'answer' && (
               <>
-                <p className="text-sm">{exchange.outcome.answer}</p>
-                {exchange.outcome.cited_event_ids.length > 0 && (
-                  <p className="font-mono text-xs text-muted-foreground">
-                    {`Events ${exchange.outcome.cited_event_ids.join(', ')}`}
-                  </p>
-                )}
+                <p className="text-sm">{exchange.closing.answer}</p>
+                <p className="flex gap-1 font-mono text-xs text-muted-foreground">
+                  {exchange.closing.citations.map((citation) => (
+                    <span key={citation.number}>{`[${citation.number}]`}</span>
+                  ))}
+                </p>
               </>
             )}
           </li>

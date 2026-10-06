@@ -1,4 +1,4 @@
-// ABOUTME: Tests the chat panel against fetch stubbed at the boundary: a message posts with the open lead and its answer shows the cited event ids, a proposal card shows its command, Apply submits that card, and Dismiss closes it.
+// ABOUTME: Tests the chat panel against fetch stubbed at the boundary: a message posts with the open lead and its answer shows numbered citations, a proposal card shows its command, Apply submits that card, and Dismiss closes it.
 // ABOUTME: The stubbed responses are typed objects of the generated API types, so a shape the backend does not serve fails the type check.
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -18,12 +18,14 @@ const card: Schemas['ProposalView'] = {
   },
 }
 
+const sse = (...events: unknown[]) => events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join('')
+
 function respond(body: unknown): Response {
   return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } })
 }
 
 // Answers the chat routes; `proposals` is what GET /api/proposals serves now, `apply` what Apply returns.
-function stubApi(options: { proposals: Schemas['ProposalView'][]; answer?: Schemas['ChatResponse']; apply?: Schemas['CommandResponse'] }) {
+function stubApi(options: { proposals: Schemas['ProposalView'][]; answer?: string; apply?: Schemas['CommandResponse'] }) {
   const calls: string[] = []
   const bodies: unknown[] = []
   let proposals = options.proposals
@@ -34,7 +36,7 @@ function stubApi(options: { proposals: Schemas['ProposalView'][]; answer?: Schem
       calls.push(`${init?.method ?? 'GET'} ${path}`)
       if (init?.body !== undefined) bodies.push(JSON.parse(String(init.body)))
       if (path === '/api/proposals') return respond(proposals)
-      if (path === '/api/chat') return respond(options.answer)
+      if (path === '/api/chat') return new Response(options.answer, { status: 200, headers: { 'Content-Type': 'text/event-stream' } })
       if (path === '/api/proposals/4/apply') {
         if (options.apply?.accepted) proposals = []
         return respond(options.apply)
@@ -54,10 +56,20 @@ afterEach(() => {
 })
 
 describe('ChatPanel', () => {
-  it('posts the message with the open lead and shows the answer with the event ids it cites', async () => {
+  it('posts the message with the open lead and shows the answer with numbered citations', async () => {
     const { bodies } = stubApi({
       proposals: [],
-      answer: { answer: 'It arrived by web.', cited_event_ids: [12, 15], proposal: null },
+      answer: sse(
+        { type: 'step', summary: 'Read the lead.' },
+        {
+          type: 'answer',
+          answer: 'It arrived by web.',
+          citations: [
+            { number: 1, lead_id: 'LEAD-1', kind: 'event', id: 12 },
+            { number: 2, lead_id: 'LEAD-1', kind: 'event', id: 15 },
+          ],
+        },
+      ),
     })
     render(<ChatPanel leadId="LEAD-1" onChange={() => {}} />)
 
@@ -65,8 +77,33 @@ describe('ChatPanel', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Send' }))
 
     expect(await screen.findByText('It arrived by web.')).toBeInTheDocument()
-    expect(screen.getByText('Events 12, 15')).toBeInTheDocument()
-    expect(bodies[0]).toEqual({ message: 'How did it arrive?', lead_id: 'LEAD-1' })
+    expect(screen.getByText('[1]')).toBeInTheDocument()
+    expect(screen.getByText('[2]')).toBeInTheDocument()
+    expect(screen.queryByText('Working…')).toBeNull()
+    expect(bodies[0]).toEqual({ message: 'How did it arrive?', lead_id: 'LEAD-1', history: [] })
+  })
+
+  it('shows the steps of a turn before its closing event arrives', async () => {
+    const encoder = new TextEncoder()
+    let stream!: ReadableStreamDefaultController<Uint8Array>
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) =>
+      String(input) === '/api/proposals'
+        ? respond([])
+        : new Response(new ReadableStream<Uint8Array>({ start: (controller) => { stream = controller } }), { status: 200 })))
+    render(<ChatPanel leadId={null} onChange={() => {}} />)
+
+    await userEvent.type(screen.getByRole('textbox', { name: 'Message' }), 'hello')
+    await userEvent.click(screen.getByRole('button', { name: 'Send' }))
+    await vi.waitFor(() => expect(stream).toBeDefined())
+    stream.enqueue(encoder.encode(sse({ type: 'step', summary: 'Read the queue.' })))
+
+    expect(await screen.findByText('Read the queue.')).toBeInTheDocument()
+    expect(screen.getByText('Working…')).toBeInTheDocument()
+
+    stream.enqueue(encoder.encode(sse({ type: 'proposal', proposal_id: 4, lead_id: null })))
+    stream.close()
+    expect(await screen.findByText('Proposed. Review the card below.')).toBeInTheDocument()
+    expect(screen.queryByText('Working…')).toBeNull()
   })
 
   it('shows a card with its command and applies it, then tells the page to refetch', async () => {

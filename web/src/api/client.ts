@@ -95,8 +95,50 @@ export const deliverReply = async (leadId: string, intentId: string, body: strin
     }),
   )
 
-export const sendChat = (message: string, leadId: string | null) =>
-  post<Schemas['ChatResponse']>('/api/chat', { message, lead_id: leadId })
+export type ChatEvent =
+  | Schemas['StepEvent']
+  | Schemas['AnswerEvent']
+  | Schemas['ProposalEvent']
+  | Schemas['ErrorEvent']
+
+// The `data:` payload of one server-sent event, or null for a block of comment lines only.
+function eventOf(block: string): ChatEvent | null {
+  const data = block
+    .split('\n')
+    .filter((line) => line.startsWith('data:'))
+    .map((line) => line.slice('data:'.length).trimStart())
+    .join('\n')
+  return data === '' ? null : (JSON.parse(data) as ChatEvent)
+}
+
+// Posts one chat turn and hands each event of the answering stream to `onEvent` as it arrives.
+export async function streamChat(
+  chatRequest: Schemas['ChatRequest'],
+  onEvent: (event: ChatEvent) => void,
+): Promise<void> {
+  const path = '/api/chat'
+  const response = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(chatRequest),
+  })
+  if (!response.ok) throw new ApiError(path, response.status, await detailOf(response))
+  if (response.body === null) throw new ApiError(path, response.status, 'The answer had no body.')
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  for (;;) {
+    const { done, value } = await reader.read()
+    buffer += decoder.decode(value, { stream: !done }).replace(/\r\n/g, '\n')
+    const blocks = buffer.split('\n\n')
+    buffer = done ? '' : (blocks.pop() ?? '')
+    for (const block of blocks) {
+      const event = eventOf(block)
+      if (event !== null) onEvent(event)
+    }
+    if (done) return
+  }
+}
 export const getProposals = () => request<Schemas['ProposalView'][]>('/api/proposals')
 export const applyProposal = (proposalId: number) =>
   post<Schemas['CommandResponse']>(`/api/proposals/${proposalId}/apply`)
