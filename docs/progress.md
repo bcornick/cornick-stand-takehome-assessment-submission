@@ -523,6 +523,6 @@ Brett's decisions carried into milestone 1: an underwriter's value that still tr
 
 **Friction:** five client builders ran in isolated worktrees against a compiling skeleton with fixed props; none needed a prop changed. A module named `narrative.ts` beside `Narrative.tsx` breaks imports on a case-insensitive filesystem; the module is `narrate.ts`.
 
-**Brett's ruling on the branding:** the name STAND in capitals, as text, stands in for the wordmark, and Stand's favicon is fetched from standinsurance.com at his request (`web/public/favicon.svg`: one rectangle and one path, no script or link); the specification's branding lines and a README line say so.
+**Brett's ruling on the branding:** the name STAND in capitals, as text, stands in for the wordmark, and Stand's favicon is fetched from standinsurance.com at his request (`web/public/favicon.svg`: one rectangle and one path, no script or link); the specification's branding lines and a README line say so. At his request the buttons follow those of standinsurance.com, read from its stylesheet: a pill in ink (#131311) that lightens to #4a4842 on hover, or an outlined pill (#b5b3ac) whose border darkens, both pressing in slightly; the accent no longer colours the primary button. The two styles are defined once, in `web/src/index.css`.
 
 **Next:** Brett's review of the surface.

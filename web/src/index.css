@@ -19,6 +19,8 @@
     --color-secondary: var(--secondary);
     --color-primary-foreground: var(--primary-foreground);
     --color-primary: var(--primary);
+    --color-primary-hover: var(--primary-hover);
+    --color-border-strong: var(--border-strong);
     --color-accent: var(--accent);
     --color-foreground: var(--foreground);
     --color-background: var(--background);
@@ -29,9 +31,12 @@
 :root {
     --background: oklch(1 0 0);
     --foreground: oklch(0.145 0 0);
-    /* The one accent: the primary button, the selected lead, citation chips and the working indicator. */
+    /* The one accent: the selected lead, citation chips and the working indicator. */
     --accent: #601421;
-    --primary: var(--accent);
+    /* The ink, its hover and the outline of the buttons on standinsurance.com. */
+    --primary: #131311;
+    --primary-hover: #4a4842;
+    --border-strong: #b5b3ac;
     --primary-foreground: oklch(0.985 0 0);
     --secondary: oklch(0.97 0 0);
     --secondary-foreground: oklch(0.205 0 0);
@@ -73,5 +78,19 @@
   button:not(:disabled),
   summary {
     @apply cursor-pointer;
+    }
+}
+
+/* The buttons of standinsurance.com: a pill in ink that lightens on hover, or an outlined pill whose border darkens; both press in slightly. */
+@layer components {
+  .button-primary,
+  .button-outline {
+    @apply inline-flex items-center justify-center rounded-full border px-4 py-1.5 text-sm font-semibold whitespace-nowrap transition-[background-color,color,border-color,transform] duration-150 enabled:active:scale-[0.97] disabled:opacity-50;
+    }
+  .button-primary {
+    @apply border-primary bg-primary text-primary-foreground enabled:hover:border-primary-hover enabled:hover:bg-primary-hover;
+    }
+  .button-outline {
+    @apply border-border-strong bg-transparent text-foreground enabled:hover:border-primary;
     }
 }

@@ -36,7 +36,7 @@ export function Panel({ target, refresh, onOpen, onClose, onChange }: Props) {
     >
       <header className="flex items-center justify-between">
         <h2 className="text-base font-semibold">{TITLES[target.kind]}</h2>
-        <button type="button" onClick={onClose} className="rounded-md border px-2 py-1 text-sm">
+        <button type="button" onClick={onClose} className="button-outline">
           Close
         </button>
       </header>

@@ -13,7 +13,7 @@ export function ActionButton({ label, act, onDone }: Props) {
         type="button"
         disabled={busy}
         onClick={() => run(act)}
-        className="rounded-md border bg-primary px-3 py-1.5 text-sm text-primary-foreground disabled:opacity-50"
+        className="button-primary"
       >
         {label}
       </button>

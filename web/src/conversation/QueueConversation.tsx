@@ -38,7 +38,7 @@ export function QueueConversation({ items, ...shared }: Props) {
                 <button
                   key={prompt}
                   type="button"
-                  className="rounded-md border px-3 py-1 text-left text-sm hover:bg-muted disabled:opacity-50"
+                  className="button-outline"
                   disabled={chat.running}
                   onClick={() => chat.send(QUEUE, prompt)}
                 >

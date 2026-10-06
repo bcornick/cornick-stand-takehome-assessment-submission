@@ -171,7 +171,7 @@ function QuestionCard({ lead, blocker, onChange }: Props & { blocker: Blocker })
                 type="button"
                 disabled={busy || reason.trim() === ''}
                 onClick={() => answer(choice.choice_id, option)}
-                className="rounded-md border px-3 py-1.5 text-sm disabled:opacity-50"
+                className="button-outline"
               >
                 {option.replace(/_/g, ' ')}
               </button>

@@ -59,7 +59,7 @@ export function DemoPanel({ run, onChange }: Props) {
             <button
               type="button"
               onClick={() => setConfirming(false)}
-              className="rounded-md border px-3 py-1.5 text-sm"
+              className="button-outline"
             >
               Cancel
             </button>
@@ -71,7 +71,7 @@ export function DemoPanel({ run, onChange }: Props) {
         <button
           type="button"
           onClick={() => setConfirming(true)}
-          className="rounded-md border bg-primary px-3 py-1.5 text-sm text-primary-foreground"
+          className="button-primary"
         >
           Load today's leads
         </button>

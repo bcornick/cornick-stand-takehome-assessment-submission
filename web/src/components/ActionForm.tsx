@@ -72,11 +72,7 @@ export function ActionForm({ label, fields, act, onDone, destructive = false }: 
         <button
           type="submit"
           disabled={busy || !complete}
-          className={
-            destructive
-              ? 'rounded-md border px-3 py-1.5 text-sm disabled:opacity-50'
-              : 'rounded-md border bg-primary px-3 py-1.5 text-sm text-primary-foreground disabled:opacity-50'
-          }
+          className={destructive ? 'button-outline' : 'button-primary'}
         >
           {label}
         </button>
