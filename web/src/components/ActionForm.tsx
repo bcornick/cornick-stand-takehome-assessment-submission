@@ -1,5 +1,5 @@
 // ABOUTME: A form of required text or choice fields with one submit button; it shows the reason when the action is refused or fails, and tells the page to refetch when the action is done.
-// ABOUTME: The button stays disabled until every field has text, so a reason cannot be skipped; the fields return to their initial text after an accepted action.
+// ABOUTME: The button stays disabled until every field has text, so a reason cannot be skipped; the fields return to their initial text after an accepted action. A destructive action's button is a neutral outline.
 import { useState } from 'react'
 import { useAction } from './useAction'
 
@@ -17,11 +17,12 @@ type Props = {
   fields: FormField[]
   act: (values: Record<string, string>) => Promise<string | null>
   onDone: () => void
+  destructive?: boolean
 }
 
 const inputClass = 'rounded-md border px-2 py-1 text-sm'
 
-export function ActionForm({ label, fields, act, onDone }: Props) {
+export function ActionForm({ label, fields, act, onDone, destructive = false }: Props) {
   const initial = Object.fromEntries(fields.map((field) => [field.name, field.initial ?? '']))
   const [values, setValues] = useState<Record<string, string>>(initial)
   const { busy, message, run } = useAction(onDone)
@@ -71,7 +72,11 @@ export function ActionForm({ label, fields, act, onDone }: Props) {
         <button
           type="submit"
           disabled={busy || !complete}
-          className="rounded-md border bg-primary px-3 py-1.5 text-sm text-primary-foreground disabled:opacity-50"
+          className={
+            destructive
+              ? 'rounded-md border px-3 py-1.5 text-sm disabled:opacity-50'
+              : 'rounded-md border bg-primary px-3 py-1.5 text-sm text-primary-foreground disabled:opacity-50'
+          }
         >
           {label}
         </button>

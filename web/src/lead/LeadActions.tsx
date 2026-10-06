@@ -70,6 +70,7 @@ export function LeadActions({ lead, onChange }: Props) {
           />
           <ActionForm
             label="Decline lead"
+            destructive
             fields={[REASON]}
             act={({ reason }) => declineLead(lead.lead_id, reason!)}
             onDone={onChange}
