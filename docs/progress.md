@@ -491,3 +491,36 @@ Brett's decisions carried into milestone 1: an underwriter's value that still tr
 **Friction:** a builder in a worktree cannot commit (the worktree guard refuses its git writes), so the lead applies each builder's patch and commits it. Five builders ran in isolated worktrees; two returned no report text and the lead read their diffs.
 
 **Next:** chat surface 2, the client.
+
+## Chat surface 2: Client (06a5c06)
+
+**Done:** the client half of `docs/chat-surface.md`. C2-A1 (the page test: lead 008 from "Load today's leads" to an approved packet inside its conversation, the cards of leads 000 and 003 in the queue conversation, a chip opening the panel), C2-A2 (`make check`) and C2-A3 (the fresh-clone rehearsal) pass, run by the lead. The lead also walked lead 008's path in a real browser against the running app in replay: load, the timeline, the delivered reply, Approve on the inline card, "Quote sent"; an example question answered with chips, and a chip opened the playbook page in the panel.
+- Shell: the lead list (summary sentence, "Queue", three groups), the conversation, the drill-down panel and the demo controls in one grid; polling every five seconds that leaves a turn alone.
+- Narrative (`web/src/conversation/`): assistant messages with a chip per bullet, bubbles for sent messages and replies, cards at the event that opened them, resolved cards as one line.
+- Chat tail (`web/src/chat/`): turns by run and conversation in memory, the last four exchanges as history, live steps, numbered chips, cards on the lead they target, "Proposed on lead B", the composer.
+- Panel (`web/src/panel/`): fact, event, message, reply, playbook page and the full lead view (waiting on, read-only; facts; plan; messages; the three lead actions).
+- Demo controls: "Load today's leads" with a confirm when a run exists, "Deliver the producers' replies", the mode, seed and run id, minimisable.
+- Server additions the client needed: `RunView.example_prompts`, `LeadDetail.pages`, `EventRow.choice_ids`.
+- The replay attempt: the three example prompts were recorded once on the day as first loaded and replay cleanly in the keyless fresh clone, so replay answers an example asked first in the queue conversation and the buttons work in replay; the rehearsal asks all three. The composer stays disabled in replay.
+- Documentation: architecture section 11, the proposals sentence and the `POST /api/chat` row; server-sent events leave the cut lists; the README walkthrough, run modes, cuts, limits and next steps.
+- Deleted: `QueuePage.tsx`, `LeadDetailPage.tsx`, `ItemsSection.tsx`, `EventList.tsx`, `ChatPanel.tsx`; their tests are rehomed as the specification's table says.
+
+**Not done:** Stand's wordmark and favicon. Fetching them from standinsurance.com into the repository was refused by the lead's permission system, so the left column shows the text "Stand" and the README has no line about the mark. Brett adds the two files or allows the fetch.
+
+**Live calls:** one record run of the three example prompts on `deepseek-flash`: 7 calls, 2,877 in / 653 out. Jev: none. Chat-surface total with milestone 1: 27 calls, 25,447 in / 2,588 out.
+
+**Checks:** at 06a5c06, `make check` is clean (766 fast Python tests, 107 web tests) and `tools/fresh_clone.py` passes with no keys (10 leads, the three example prompts answered from recordings with citations, 6 fixture replies accepted); `make test-slow` passed 33 at a7803ca. The reviewer read the milestone once: a failed poll cleared the chat tails (they are kept by run), one assertion of the replay test could not fail (the rule is the message alone; the lead and the history are in the recording key), and the demo confirm closed before its start answered; all three fixed, with its removals (a duplicate `leadId` prop, two exports, wording that named the replaced pages).
+
+**Readings, where the specification is silent:**
+- `EventRow.item_id` is set only for an underwriter's item, so a `blocker_opened` row with one is a card and a wait on the producer is a bullet; `choice_ids` matches a closed question card to its ruling.
+- The plan is grouped by page on the server (`LeadDetail.pages`), which the page view and the playbook lookup share.
+- In the narrative, what the system did with a reply (written under the `inbound` actor) joins the assistant's message; only the underwriter's rows stand apart. A run of more than three fact rows folds into "Recorded N facts". A resolved card absorbs the approval or ruling that closed it.
+- A lead row and a conversation title show the short name ("Lead 008"); a chip in the timeline shows its event id.
+- A bubble folds its body under its first line.
+- The conversation column is 672px wide, so it stays clear of the demo controls at 1280px.
+- In replay an example answers once per page load: a second question in the same conversation carries history, which has no recording.
+- A click by element reference from the browser tool did not reach the example button; a click by position did. The page test clicks it through the DOM.
+
+**Friction:** five client builders ran in isolated worktrees against a compiling skeleton with fixed props; none needed a prop changed. A module named `narrative.ts` beside `Narrative.tsx` breaks imports on a case-insensitive filesystem; the module is `narrate.ts`.
+
+**Next:** Brett's review of the surface; the wordmark and favicon.

@@ -151,20 +151,20 @@
     "milestone": "chat-surface 2",
     "description": "The page test drives the surface against fetch stubbed at the boundary: lead 008 goes from \"Load today's leads\" to an approved packet entirely in its conversation, the queue conversation shows the cards of leads 000 and 003 inline, and a citation chip opens the panel on what it cites. Expect: all pass.",
     "command": "pnpm --dir web exec vitest run src/App.test.tsx",
-    "passes": false
+    "passes": true
   },
   {
     "id": "C2-A2",
     "milestone": "chat-surface 2",
     "description": "`make check` is clean. Expect: exit 0.",
     "command": "make check",
-    "passes": false
+    "passes": true
   },
   {
     "id": "C2-A3",
     "milestone": "chat-surface 2",
     "description": "The fresh-clone rehearsal passes with no keys: the three services come up healthy in replay and a waited run start settles. Expect: exit 0.",
     "command": "uv run python tools/fresh_clone.py",
-    "passes": false
+    "passes": true
   }
 ]
