@@ -75,22 +75,59 @@ def test_each_control_is_caught_by_its_named_graders(
     assert failed(row)
 
 
-def test_an_unreachable_service_gives_an_invalid_row_and_a_non_zero_exit(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    log = tmp_path / "results.jsonl"
+def unreachable_services(log: Path, monkeypatch: pytest.MonkeyPatch, jev_key: str | None) -> None:
+    """The environment of a replay run whose services are unreachable, so the row is invalid but still
+    says whether Jev was on."""
     monkeypatch.setattr(run, "RESULTS_PATH", log)
-    for name, value in {
+    env = {
         "UWH_DB": "per run",
         "RUN_MODE": "replay",
         "GIT_COMMIT": "0123abc",
         "LEADGEN_URL": "http://127.0.0.1:9",
         "MAILBOX_URL": "http://127.0.0.1:9",
-    }.items():
+    }
+    for name, value in env.items():
         monkeypatch.setenv(name, value)
+    if jev_key is None:
+        monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
+    else:
+        monkeypatch.setenv("TYPESAFE_API_KEY", jev_key)
+
+
+def test_an_unreachable_service_gives_an_invalid_row_and_a_non_zero_exit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    log = tmp_path / "results.jsonl"
+    unreachable_services(log, monkeypatch, None)
 
     assert run.main(["--suite", "seed42"]) == 1
 
     (row,) = [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()]
     assert row["status"] == "invalid" and "scores" not in row
     assert "health check" in row["reason"]
+
+
+@pytest.mark.parametrize(("flags", "jev"), [(["--jev"], True), ([], False)])
+def test_the_jev_flag_alone_turns_jev_on_when_the_key_is_set(
+    flags: list[str], jev: bool, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    log = tmp_path / "results.jsonl"
+    unreachable_services(log, monkeypatch, "not-used")
+
+    run.main(["--suite", "replies", *flags])
+
+    (row,) = [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()]
+    assert row["jev"] is jev
+
+
+def test_the_jev_flag_without_a_key_is_an_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    log = tmp_path / "results.jsonl"
+    unreachable_services(log, monkeypatch, None)
+
+    with pytest.raises(SystemExit):
+        run.main(["--suite", "replies", "--jev"])
+
+    assert "TYPESAFE_API_KEY" in capsys.readouterr().err
+    assert not log.exists()

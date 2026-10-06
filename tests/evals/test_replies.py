@@ -4,6 +4,7 @@ import json
 import sqlite3
 from collections.abc import Iterator
 from copy import deepcopy
+from dataclasses import replace
 from typing import Any
 
 import httpx2
@@ -45,6 +46,21 @@ def test_the_reply_suite_reads_every_fixture_and_its_row_holds_the_grader_and_th
     assert cases["cases_total"] == 8 and cases["cases_passed"] <= 8
     assert row["tokens"]["in"] > 0 and row["tokens"]["out"] > 0
     assert row["cost_usd"] == 0.0
+    assert row["jev"] is False
+
+
+def test_the_row_says_jev_when_a_jev_key_is_set(
+    settings: Settings, stand_leadgen_client: httpx2.Client, stand_mailbox_client: httpx2.Client
+) -> None:
+    row = evaluate_replies(
+        replace(settings, typesafe_api_key="not-used"),
+        stand_leadgen_client,
+        stand_mailbox_client,
+        control=None,
+        hypothesis=None,
+    )
+
+    assert row["jev"] is True
 
 
 @pytest.fixture
