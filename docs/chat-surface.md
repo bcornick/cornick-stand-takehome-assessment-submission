@@ -34,29 +34,30 @@ The shape of the surface is also settled. It is desktop only, with no drawer or 
 
 ### Shell
 
-- **Left column.** The name STAND in capitals, the run summary sentence (`summarySentence`, from `web/src/queue/QueuePage.tsx`), then the lead list. A "Queue" entry at the top of the list opens the queue-level conversation.
+- **Left column.** The name STAND in capitals, then the lead list. A "Queue" entry at the top of the list opens the queue-level conversation, whose greeting carries the run's counts.
 - **Lead groups.** Waiting on the underwriter; waiting on the producer or data; finished. The groups and their order are the `group` field and the row order `GET /api/leads` returns. `GROUP_LABELS` in `web/src/labels.ts` carries the two relabelled names. The middle group includes data waits, so its label names them.
-- **Lead row.** Lead id, address or "no address", status chip, one line for the next action, and a second line with effective date and age. A row shows "no address" when its `label` equals its lead id, which is what `lead_label` in `src/uwh/skills/steps.py` returns for a lead with no address.
+- **Lead row.** The lead's short name ("Lead 008"), address or "no address", and a chip that says what differs between leads: "Needs your decision", "Waiting on producer", "Waiting on data", "Quote sent" or "Declined". A second line reads "Effective Jul 21 · 2 days in queue", with the age in whole business days ("in queue today" under half a day) and "Past service level" when breached. A row shows "no address" when its `label` equals its lead id, which is what `lead_label` in `src/uwh/skills/steps.py` returns for a lead with no address.
 - **Centre column.** The conversation, fluid width. Its header names the lead and holds the "Full detail" link.
 - **Right panel.** The drill-down panel, collapsed until opened.
 - **Polling.** The refetch keeps running during a turn and does not touch the turn's state. A closing `proposal` event triggers a refetch.
 
 ### Narrative
 
-The centre column for a lead is its persisted timeline, oldest first, followed by the chat tail.
+The centre column for a lead leads with the answer: one assistant message written by code (`LeadDetail.summary`, from `src/uwh/api/summary.py`: what the underwriter must do, then what the system waits on, or a finished lead's outcome and date), the open cards right after it, then the event-by-event timeline, oldest first, folded under "Show the work (N steps)", then the chat tail. The column is centred at 720px; assistant messages carry a small "Assistant" label and vertical spacing; bubbles and cards fill the column. Two text sizes: `text-sm` for content, `text-xs` for labels and meta.
 
-- **Wording.** Code writes the timeline from the lead's events. `event_summary` in `src/uwh/api/event_summary.py` is rewritten once, server side, into plain sentences that name the fact, the result and the consequence. The narrative reads it through `GET /api/leads/{id}/events`, and so does the assistant's event lookup. A field is named by its key. `SUMMARY_LIMIT` in `src/uwh/api/leads.py` goes with `EVENT_LIMIT`: sentences are not cut. For example:
+- **Wording.** Code writes the timeline from the lead's events. `event_summary` in `src/uwh/api/event_summary.py` is rewritten once, server side, into plain sentences that name the fact, the result and the consequence. The narrative reads it through `GET /api/leads/{id}/events`, and so does the assistant's event lookup. A sentence names a field by its key; wherever a human reads one (the narrative, the cards, the facts table, the panel) the client replaces the key with the registry's label (`labelKeys`, `fieldLabel` in `web/src/format.ts`): "Fire probability 0.79", not `p_f`. `SUMMARY_LIMIT` in `src/uwh/api/leads.py` goes with `EVENT_LIMIT`: sentences are not cut. For example:
   - "Triaged the fields: 2 missing"
   - "Fetched the fire probability: 0.79"
   - "The fire simulation failed, so you need to choose"
-- **Grouping.** Consecutive events with the `workflow` actor form one assistant message with bullets. A message bubble, a card or an event of another actor breaks the group. Each bullet carries a citation chip to its event.
+- **Grouping.** Consecutive system events (the `workflow` actor, and the `inbound` actor's handling of a reply) form one assistant message with bullets; the underwriter's events stand apart. A message bubble, a card or the underwriter's event breaks the group. Within a message a run of fact events longer than three folds into "Recorded N facts", a run of provider lookups merges into one line ("Looked up 5 providers: 2 found, 3 blocked on city and zip", from `EventRow.lookup`) and repeated triage lines keep the last. Model calls, the rewrite checks, replay misses and injected faults are not narrated. A citation chip appears only where the panel shows more than the line: on a fact bullet and on a bubble; chips are numbered 1, 2, 3 within a message.
 - **Bubbles.** A message the system sent (`message_sent`) and a reply it read (`reply_received`) render as bubbles. A bubble shows the subject where the event carries one, and folds the body.
 - **Cards.** Workflow-raised items render inline at their `blocker_opened` event. They use the components in `web/src/lead/ItemActions.tsx` with their labels:
-  - draft review with Approve, Edit and Reject, and "Withdraw decline and send the asks" on a decline notice;
-  - question, with the playbook's options as equal buttons and a required reason;
+  Every card has one shape: its summary line; for a draft, a folded preview ("Preview the notice" or "Preview the packet") holding the text and, inside it, Edit; the choices as enabled buttons; and, once a choice is clicked, one reason field with a confirm that repeats the choice. Nothing is submitted without a reason.
+  - draft review with Approve and Reject, and "Withdraw decline and send the asks" on a decline notice;
+  - question, with the playbook's options as equal buttons;
   - pending observation, delivery unknown, event-raised review (Acknowledge) and persistent review.
 - **Resolved cards.** A resolved card stays in place as one read-only line: the sentence and actor of the `approval_recorded` event naming its item, or of the `ruling_recorded` event whose `choice_id` is among the card's choices. A card closed with neither, such as a draft superseded on re-evaluation or a delivery re-checked, shows "Closed" and nothing else.
-- **Hidden events.** Events with the `assistant` actor and `model_called` events with the skill `chat` are not narrated: a turn's `proposal_created` and `command_refused` are shown by the card and the answer in the chat tail instead.
+- **Hidden events.** Events with the `assistant` actor are not narrated: a turn's `proposal_created` and `command_refused` are shown by the card and the answer in the chat tail instead.
 - **Confidence.** A reply reading shows Jev's confidence with its meaning. The threshold is the one `threshold()` in `src/uwh/skills/read_reply/jev.py` returns. A reading the model classified shows no confidence.
   - "Jev classified this reply (0.83, at or above the 0.70 threshold)"
 
@@ -64,7 +65,7 @@ The centre column for a lead is its persisted timeline, oldest first, followed b
 
 - **Content.** Below the timeline sit the underwriter's typed messages and the assistant's answers for this lead. They are held in browser memory, keyed by `RunView.run_id`, lead id and "Queue", and lost on reload by design. A new run clears them, because event ids restart with each run.
 - **Proposal cards.** A card sits in the tail of the lead it targets. `ProposalView` gains `lead_id`, read from the card's `proposal_created` event through `proposals.event_id`; the `proposals` table has no lead column. `_lead_named` in `src/uwh/runtime/commands.py` resolves an `intent_id` to its lead, so an `edit_draft` card lands on its lead. Open cards are fetched from `GET /api/proposals`. A card with no lead sits in the queue conversation.
-- **Queue conversation.** The run summary is its first assistant message. The open items across all leads follow as cards; each card loads its lead's detail, which the card components take. The empty state offers three fixed example prompts as buttons. Each prompt is a question, so none can propose:
+- **Queue conversation.** Its first assistant message is the greeting "3 leads need you. 7 are waiting on producers." (and "2 quotes sent." when any are), built from the run's counts. The open items across all leads follow as cards; each card loads its lead's detail, which the card components take. While nothing has been asked, three fixed example prompts sit beside the composer as buttons. Each prompt is a question, so none can propose:
   - "Which leads are waiting on me, and why?"
   - "Why is lead 000 a proposed decline?"
   - "What did we ask the producer on lead 008?"
