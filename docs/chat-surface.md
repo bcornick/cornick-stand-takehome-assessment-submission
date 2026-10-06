@@ -148,7 +148,8 @@ The panel opens on a citation chip or on a card's "details" link. One click clos
 
 ### Branding
 
-- The name STAND sits top left in capitals, as text; the surface carries neither Stand's wordmark nor its favicon. The page title in `web/index.html` is "Stand Underwriting".
+- The name STAND sits top left in capitals, as text, in place of Stand's wordmark. Stand's favicon, taken from standinsurance.com, is served from `web/public/`. The page title in `web/index.html` is "Stand Underwriting".
+- The README says in one line that the favicon is Stand's, used for the submission only.
 - One accent token colours the primary button, the selected lead, citation chips and the working indicator. Destructive buttons are neutral outlines. Text is black on white with Tailwind greys otherwise. Geist stays.
 
 ## Behaviour the tests pin

@@ -176,7 +176,7 @@ What the reviews found and what is left as it is in this proof of concept.
 ## Where things are
 
 - `src/uwh/`: the application. `runtime/` (event log, ledger, commands, send path, workflow), `rules/` (registry loader, validators, graph interpreter, reviewed data files), `skills/` (one folder each), `providers/` (stand-in lookups from captured world files), `chat/`, `api/` (FastAPI routes).
-- `web/`: the React surface: the lead list, the conversation with its cards and chat, the drill-down panel and the demo controls.
+- `web/`: the React surface: the lead list, the conversation with its cards and chat, the drill-down panel and the demo controls. The favicon in `web/public/` is Stand's mark, taken from standinsurance.com and used for this submission only.
 - `evals/`: the runner, graders, controls, labels and `results.jsonl`.
 - `recordings/`: committed model exchanges; `fixtures/replies/`: producer replies for the fixture control.
 - `tests/`: fast, slow and integration tests; `tools/` and `scripts/`: the fresh-clone rehearsal, type generation and the discipline check.
