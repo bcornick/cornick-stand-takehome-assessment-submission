@@ -5,14 +5,14 @@ import sqlite3
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import anthropic
 from anthropic.types import ToolParam
 from pydantic import ValidationError
 
 from uwh.rules.models import StrictModel
-from uwh.runtime.event_types import EventType, ModelCalled, ReplayMiss
+from uwh.runtime.event_types import EventType, ModelCalled, ReplayMiss, SkillFallbackUsed
 from uwh.runtime.events import EventContext, append_event
 from uwh.runtime.jev_client import JevAccess
 from uwh.runtime.modes import RecordingMiss, exchange_for_mode
@@ -174,5 +174,27 @@ def append_replay_miss(
             prompt_version=miss.key.prompt_version,
             input_hash=miss.key.input_hash,
         ),
+        lead_id=lead_id,
+    )
+
+
+def append_fallback(
+    db: sqlite3.Connection,
+    context: EventContext,
+    lead_id: str | None,
+    skill: str,
+    status: Literal["unavailable", "rejected"],
+    fallback: str,
+    miss: RecordingMiss | None = None,
+) -> None:
+    """Write the `skill_fallback_used` event of a model answer that was not used, after the
+    `replay_miss` event when `miss` is the reason. The caller commits."""
+    if miss is not None:
+        append_replay_miss(db, context, lead_id, miss)
+    append_event(
+        db,
+        context,
+        EventType.skill_fallback_used,
+        SkillFallbackUsed(skill=skill, status=status, fallback=fallback),
         lead_id=lead_id,
     )

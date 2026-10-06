@@ -62,7 +62,7 @@ def with_jev(model: ModelAccess, access: JevAccess | None) -> ModelAccess:
 
 def read(tmp_path: Path, access: JevAccess | None) -> Reading:
     model = with_jev(model_returning(tmp_path / "model", MODEL_READING), access)
-    result, _ = skill.run(INPUT, model)
+    result = skill.run(INPUT, model).result
     assert isinstance(result, Reading)
     return result
 
@@ -123,20 +123,34 @@ def test_the_model_classifies_when_jev_is_unavailable(tmp_path: Path) -> None:
     )
 
 
-def test_a_replay_with_no_jev_recording_fails_closed(tmp_path: Path) -> None:
+def test_a_replay_with_no_jev_recording_uses_the_model_and_returns_the_miss(
+    tmp_path: Path,
+) -> None:
     model = with_jev(
         model_returning(tmp_path / "model", MODEL_READING),
         JevAccess("replay", tmp_path / "empty", lambda question, state, key: pytest.fail("called")),
     )
 
-    with pytest.raises(RecordingMiss):
-        skill.run(INPUT, model)
+    run = skill.run(INPUT, model)
+
+    assert isinstance(run.result, Reading)
+    assert (run.result.classification, run.result.classified_by) == ("off_topic", "model")
+    assert isinstance(run.jev_failure, RecordingMiss)
+    assert [e.model_id for e in run.exchanges] == ["deepseek-flash"]
+
+
+def test_jevs_exchange_comes_first_among_the_exchanges_when_it_answers(tmp_path: Path) -> None:
+    access = jev_returning(tmp_path / "jev", table(answers_some=0.9, answers_all=0.1))
+    model = with_jev(model_returning(tmp_path / "model", MODEL_READING), access)
+
+    run = skill.run(INPUT, model)
+
+    assert [e.model_id for e in run.exchanges] == ["jev-1.13.0", "deepseek-flash"]
+    assert run.jev_failure is None
 
 
 def test_a_model_abstention_stands_whatever_jev_says(tmp_path: Path) -> None:
     access = jev_returning(tmp_path / "jev", table(answers_all=1.0))
     model = with_jev(model_returning(tmp_path / "model", None), access)
 
-    result, _ = skill.run(INPUT, model)
-
-    assert isinstance(result, Abstention)
+    assert isinstance(skill.run(INPUT, model).result, Abstention)

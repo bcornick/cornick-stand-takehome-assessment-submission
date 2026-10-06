@@ -216,6 +216,28 @@ def test_a_draft_holds_the_a1_fields_and_writes_intent_created(
     )
 
 
+def test_a_draft_says_whether_the_model_wrote_its_opening_and_closing(
+    store: sqlite3.Connection, make_context: MakeContext
+) -> None:
+    for rewritten in (True, False):
+        create_draft(
+            store,
+            make_context(),
+            ASKER,
+            LEAD,
+            "routine_request",
+            RECIPIENT,
+            "Subject",
+            "Body",
+            ["acreage"],  # type: ignore[arg-type]
+            rewritten_by_model=rewritten,
+        )
+        store.execute("UPDATE intents SET state = 'closed_unsent'")
+
+    created = [e.payload for e in events_of(store, EventType.intent_created)]
+    assert [c.rewritten_by_model for c in created] == [True, False]  # type: ignore[attr-defined]
+
+
 def test_rounds_number_requests_only_and_a_packet_carries_the_last_request_round(
     store: sqlite3.Connection, make_context: MakeContext
 ) -> None:

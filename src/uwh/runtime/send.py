@@ -178,7 +178,12 @@ def _open_draft_item(
 
 
 def _insert_draft(
-    db: sqlite3.Connection, context: EventContext, intent: Intent, *, waits_for_approval: bool
+    db: sqlite3.Connection,
+    context: EventContext,
+    intent: Intent,
+    *,
+    waits_for_approval: bool,
+    rewritten_by_model: bool = False,
 ) -> str:
     """Insert the intent, which is in state `draft`, with its `intent_created` event, and open the
     item that holds it when it waits for approval. Returns the intent id."""
@@ -213,6 +218,7 @@ def _insert_draft(
             body=intent.body,
             ask_ids=intent.ask_ids,
             payload_hash=intent.payload_hash,
+            rewritten_by_model=rewritten_by_model,
         ),
         lead_id=intent.lead_id,
     )
@@ -231,8 +237,11 @@ def create_draft(
     subject: str,
     body: str,
     ask_ids: list[str],
+    *,
+    rewritten_by_model: bool = False,
 ) -> str:
     """Insert an intent in state `draft`, write `intent_created` and return the intent id.
+    `rewritten_by_model` records that the model wrote the request's opening and closing.
 
     `manifest` is the issuing skill's; it must declare the send class of the kind (8). A draft whose
     class does not run at `auto`, and a draft for a round whose earlier intent was closed after an
@@ -262,7 +271,13 @@ def create_draft(
     waits_for_approval = autonomy_level(_class_of(kind)) != "auto" or _round_had_unknown_delivery(
         db, lead_id, round_
     )
-    return _insert_draft(db, context, intent, waits_for_approval=waits_for_approval)
+    return _insert_draft(
+        db,
+        context,
+        intent,
+        waits_for_approval=waits_for_approval,
+        rewritten_by_model=rewritten_by_model,
+    )
 
 
 def void_approvals(db: sqlite3.Connection, intent_id: str) -> None:

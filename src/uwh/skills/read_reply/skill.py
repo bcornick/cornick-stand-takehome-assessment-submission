@@ -1,6 +1,7 @@
-# ABOUTME: The read_reply skill (10.4, A.9, A.10): one forced tool call reads a producer's reply against the asks of the open request, and code then locates each quote in the reply and drops what was not asked or does not fit the field.
-# ABOUTME: The output is a reading or a typed abstention. A tool input that fails validation repeats the call once; a second failure, or a refusal, abstains.
+# ABOUTME: The read_reply skill (10.4, A.9, A.10): Jev classifies the reply when it is available and confident; one forced tool call reads the reply against the open asks, and code locates each quote and drops what was not asked or does not fit the field.
+# ABOUTME: The output is a reading or a typed abstention, with each call made and Jev's failure if it gave no answer. A tool input that fails validation repeats the call once; a second failure, or a refusal, abstains.
 from collections.abc import Mapping
+from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -210,21 +211,35 @@ def forced_call(input: ReadReplyInput) -> ForcedToolCall:
     )
 
 
-def run(input: ReadReplyInput, model: ModelAccess) -> tuple[Reading | Abstention, list[Exchange]]:
+@dataclass(frozen=True)
+class ReplyRun:
+    """What `run` made of a reply: the reading or the abstention, the exchange of each call (Jev's
+    first, when it answered) and the failure that left Jev without an answer."""
+
+    result: Reading | Abstention
+    exchanges: list[Exchange]
+    jev_failure: jev.JevFailure | None
+
+
+def run(input: ReadReplyInput, model: ModelAccess) -> ReplyRun:
     """Read the reply. Jev, when the model access holds it, is asked the classification first; its
-    answer replaces the model's when its confidence reaches the manifest threshold. Returns the reading
-    or the abstention with the exchange of each model call made."""
+    answer replaces the model's when its confidence reaches the manifest threshold. When Jev gives
+    no answer the model's classification stands."""
     answer = None if model.jev is None else jev.classify(input.body, model.jev)
+    jev_answer = answer if isinstance(answer, jev.JevAnswer) else None
+    failure = None if isinstance(answer, jev.JevAnswer) else answer
     reading, exchanges = read_tool_input(model, forced_call(input), ReplyReading)
+    if jev_answer is not None:
+        exchanges = [jev_answer.exchange, *exchanges]
     if reading is None:
         refused = exchanges[-1].stop_reason == "refusal"
-        return Abstention(reason="refusal" if refused else "invalid_tool_input"), exchanges
+        abstention = Abstention(reason="refusal" if refused else "invalid_tool_input")
+        return ReplyRun(abstention, exchanges, failure)
     read = interpret(reading, input)
-    if answer is None:
-        return read, exchanges
-    read = read.model_copy(update={"jev_confidence": answer.confidence})
-    if answer.confidence >= jev.threshold():
-        read = read.model_copy(
-            update={"classification": answer.classification, "classified_by": "jev"}
-        )
-    return read, exchanges
+    if jev_answer is not None:
+        read = read.model_copy(update={"jev_confidence": jev_answer.confidence})
+        if jev_answer.confidence >= jev.threshold():
+            read = read.model_copy(
+                update={"classification": jev_answer.classification, "classified_by": "jev"}
+            )
+    return ReplyRun(read, exchanges, failure)

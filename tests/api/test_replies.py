@@ -13,9 +13,10 @@ from fastapi.testclient import TestClient
 from tests.api.helpers import FIXTURE_REPLIES, LEAD_008, RECORDINGS, REGISTRY, first_pass
 from uwh.api import runtime
 from uwh.rules.registry import load_registry
-from uwh.runtime.event_types import EventType, ReplyRead
+from uwh.runtime.event_types import EventType, ReplyRead, SkillFallbackUsed
 from uwh.runtime.events import read_events
 from uwh.runtime.facts import effective_facts
+from uwh.runtime.jev_client import JevUnavailable
 from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
 from uwh.runtime.recordings import (
@@ -360,14 +361,77 @@ def test_with_a_jev_key_the_reply_is_classified_from_the_jev_recording(
         db.close()
 
 
-def test_with_a_jev_key_and_no_jev_recording_the_reply_fails_closed(
+def test_with_a_jev_key_and_no_jev_recording_the_model_classifies_and_the_miss_is_logged(
     settings: Settings, leadgen: LeadgenClient, mailbox: MailboxClient, tmp_path: Path
 ) -> None:
     with first_pass(jev_settings(settings, tmp_path, None), leadgen, mailbox) as app:
         db = open_store(settings.db_path)
 
-        answer = deliver(app, request_intent_id(db))
+        assert deliver(app, request_intent_id(db))["accepted"] is True
 
-        assert answer["accepted"] is False and "no recording" in answer["reason"]
-        assert [e.type for e in read_events(db) if e.type is EventType.reply_read] == []
+        (read,) = [e.payload for e in read_events(db) if e.type is EventType.reply_read]
+        assert isinstance(read, ReplyRead)
+        assert (read.classified_by, read.jev_confidence) == ("model", None)
+        misses = [e for e in read_events(db) if e.type is EventType.replay_miss]
+        assert len(misses) == 1 and misses[0].payload.skill == "read_reply"  # type: ignore[attr-defined]
+        (fallback,) = [
+            e.payload
+            for e in read_events(db)
+            if e.type is EventType.skill_fallback_used and e.payload.skill == "read_reply"  # type: ignore[attr-defined]
+        ]
+        assert isinstance(fallback, SkillFallbackUsed)
+        assert (fallback.skill, fallback.status) == ("read_reply", "unavailable")
+        assert fallback.fallback == f"Jev gave no answer; {jev.FALLBACK}"
+        db.close()
+
+
+def test_a_jev_outage_leaves_a_fallback_event_and_the_model_classifies(
+    settings: Settings,
+    leadgen: LeadgenClient,
+    mailbox: MailboxClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def model_call(call: Any, key: RecordingKey) -> Exchange:
+        recorded = read_recording(RECORDINGS, key)
+        assert recorded is not None
+        return recorded
+
+    def jev_down(question: Any, state: str, key: RecordingKey) -> Exchange:
+        raise JevUnavailable("down")
+
+    monkeypatch.setattr(runtime, "anthropic_call", lambda client, model_id: model_call)
+    monkeypatch.setattr(runtime, "jev_call", lambda http: jev_down)
+    keyed = replace(
+        settings, run_mode="live", model_api_key="not-used", typesafe_api_key="not-used"
+    )
+    with first_pass(keyed, leadgen, mailbox) as client:
+        db = open_store(settings.db_path)
+
+        assert deliver(client, request_intent_id(db))["accepted"] is True
+
+        (read,) = [e.payload for e in read_events(db) if e.type is EventType.reply_read]
+        assert isinstance(read, ReplyRead) and read.classified_by == "model"
+        (fallback,) = [
+            e.payload
+            for e in read_events(db)
+            if e.type is EventType.skill_fallback_used and e.payload.skill == "read_reply"  # type: ignore[attr-defined]
+        ]
+        assert isinstance(fallback, SkillFallbackUsed)
+        assert fallback.fallback == f"Jev gave no answer; {jev.FALLBACK}"
+        assert [e for e in read_events(db) if e.type is EventType.replay_miss] == []
+        db.close()
+
+
+def test_jevs_call_is_a_model_called_event_under_its_own_model_id_with_its_usage(
+    settings: Settings, leadgen: LeadgenClient, mailbox: MailboxClient, tmp_path: Path
+) -> None:
+    probabilities = {option: 0.0 for option in jev.QUESTION.options} | {"answers_all": 1.0}
+    with first_pass(jev_settings(settings, tmp_path, probabilities), leadgen, mailbox) as app:
+        db = open_store(settings.db_path)
+
+        assert deliver(app, request_intent_id(db))["accepted"] is True
+
+        by_model = {e.model_id: e.payload for e in reply_reads(db)}
+        assert set(by_model) == {"jev-1.13.0", "deepseek-flash"}
+        assert (by_model["jev-1.13.0"].tokens_in, by_model["jev-1.13.0"].tokens_out) == (1, 1)
         db.close()

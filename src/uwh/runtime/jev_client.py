@@ -42,10 +42,10 @@ class ChoiceQuestion:
 
 
 # Makes the live call for the question about `state`, to be stored under `key`.
-type LiveCall = Callable[[ChoiceQuestion, str, RecordingKey], Exchange]
+type JevLiveCall = Callable[[ChoiceQuestion, str, RecordingKey], Exchange]
 
 
-def jev_call(http: httpx2.Client) -> LiveCall:
+def jev_call(http: httpx2.Client) -> JevLiveCall:
     """The live call: one POST to the systemone endpoint, never retried. `http` carries the base URL,
     the bearer key and the timeout. The probabilities are stored as the exchange's `tool_input`."""
 
@@ -94,7 +94,7 @@ class JevAccess:
 
     mode: RunMode
     recordings: Path
-    live: LiveCall
+    live: JevLiveCall
 
     def ask(self, question: ChoiceQuestion, state: str) -> Exchange:
         """The exchange for the question about `state`, by the run mode. Raises RecordingMiss in replay

@@ -166,10 +166,55 @@ def test_a_summary_is_one_plain_sentence(event_type: EventType) -> None:
             EventType.intent_created,
             "Drafted a routine request to p@example.com with the subject Questions.",
         ),
-        (EventType.reply_read, "The reply answers every question asked; 0 answers found."),
+        (
+            EventType.reply_read,
+            "The reply answers every question asked, classified by the model; 0 answers found.",
+        ),
         (EventType.approval_recorded, 'Approved a draft with the reason "fine".'),
         (EventType.command_refused, "Refused resolve fact. not a field."),
     ],
 )
 def test_a_summary_says_what_happened_in_words(event_type: EventType, expected: str) -> None:
     assert event_summary(PAYLOADS[event_type]) == expected
+
+
+def test_a_reply_classified_by_jev_names_jev_and_its_confidence() -> None:
+    read = ReplyRead(
+        intent_id="i",
+        body_hash="h",
+        classification="off_topic",
+        classified_by="jev",
+        jev_confidence=0.91,
+        abstention=None,
+        candidates=[],
+        dropped=[],
+    )
+
+    assert (
+        event_summary(read) == "The reply is off topic, classified by Jev at 0.91; 0 answers found."
+    )
+
+
+def test_a_rewrite_the_model_wrote_is_said_in_the_summary_of_the_draft() -> None:
+    created = PAYLOADS[EventType.intent_created].model_copy(update={"rewritten_by_model": True})  # type: ignore[attr-defined]
+
+    assert event_summary(created) == (
+        "Drafted a routine request to p@example.com with the subject Questions. "
+        "The opening and closing were written by the model."
+    )
+
+
+def test_a_rejected_rewrite_says_which_check_rejected_it_and_that_the_rendered_request_is_used() -> (
+    None
+):
+    rejected = SkillFallbackUsed(
+        skill="polish_message",
+        status="rejected",
+        fallback="The rewrite of the request was rejected by the model check (it adds a deadline); "
+        "the rendered request is used",
+    )
+
+    assert event_summary(rejected) == (
+        "The rewrite of the request was rejected by the model check (it adds a deadline); "
+        "the rendered request is used."
+    )

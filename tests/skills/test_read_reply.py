@@ -133,9 +133,8 @@ def test_the_fixture_reply_of_lead_008_is_read_from_its_recording() -> None:
     body = (FIXTURE_REPLIES / "LEAD-00000042-008.txt").read_text(encoding="utf-8")
     asks = asks_for("property_purchase_date", "electrical_panel_brand")
 
-    result, exchanges = skill.run(
-        ReadReplyInput(body=body, asks=asks), ModelAccess("replay", RECORDINGS, None)
-    )
+    run = skill.run(ReadReplyInput(body=body, asks=asks), ModelAccess("replay", RECORDINGS, None))
+    result, exchanges = run.result, run.exchanges
 
     assert isinstance(result, Reading) and result.classification == "answers_all"
     assert result.dropped == []
@@ -151,7 +150,8 @@ def test_the_fixture_reply_of_lead_008_is_read_from_its_recording() -> None:
 def test_an_invalid_tool_input_repeats_the_call_once_then_abstains(tmp_path: Path) -> None:
     model = model_returning(tmp_path, {"classification": "maybe", "candidates": []})
 
-    result, exchanges = skill.run(INPUT, model)
+    run = skill.run(INPUT, model)
+    result, exchanges = run.result, run.exchanges
 
     assert result == Abstention(reason="invalid_tool_input")
     assert len(exchanges) == 2
@@ -160,7 +160,8 @@ def test_an_invalid_tool_input_repeats_the_call_once_then_abstains(tmp_path: Pat
 def test_a_refusal_abstains_without_a_repeat(tmp_path: Path) -> None:
     model = model_returning(tmp_path, None)
 
-    result, exchanges = skill.run(INPUT, model)
+    run = skill.run(INPUT, model)
+    result, exchanges = run.result, run.exchanges
 
     assert result == Abstention(reason="refusal")
     assert len(exchanges) == 1

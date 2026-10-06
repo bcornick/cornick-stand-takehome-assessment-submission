@@ -10,7 +10,7 @@ from uwh.runtime.jev_client import (
     ChoiceQuestion,
     JevAccess,
     JevUnavailable,
-    LiveCall,
+    JevLiveCall,
     jev_call,
 )
 from uwh.runtime.modes import RecordingMiss
@@ -98,7 +98,7 @@ def test_replay_with_no_recording_for_the_question_and_text_fails_closed(
     assert live.calls == 0
 
 
-def transport_answering(status: int, body: object, seen: list[httpx2.Request]) -> LiveCall:
+def transport_answering(status: int, body: object, seen: list[httpx2.Request]) -> JevLiveCall:
     def handle(request: httpx2.Request) -> httpx2.Response:
         seen.append(request)
         return httpx2.Response(status, json=body)

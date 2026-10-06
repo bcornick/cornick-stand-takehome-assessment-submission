@@ -200,6 +200,7 @@ class IntentCreated(StrictModel):
     body: str
     ask_ids: list[str]
     payload_hash: str
+    rewritten_by_model: bool = False  # the request's opening and closing were written by the model
 
 
 class MessageSent(StrictModel):
@@ -330,7 +331,7 @@ class CommandRefused(StrictModel):
 
 class SkillFallbackUsed(StrictModel):
     skill: str
-    status: SkillStatus
+    status: Literal["unavailable", "rejected"]  # no answer was given, or the answer was rejected
     fallback: str
 
 

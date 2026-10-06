@@ -1,14 +1,16 @@
 # ABOUTME: Jev's part of read_reply (10.4): the classification put to Jev as a choice question, and the confidence the interface computes from the returned probabilities.
-# ABOUTME: Jev unavailable is logged and answers nothing; a replay with no recording raises RecordingMiss through, as for the model.
-import logging
+# ABOUTME: Jev unavailable, and a replay with no Jev recording, answer nothing and are returned as the failure; the language model then classifies the reply.
 from dataclasses import dataclass
 from pathlib import Path
 
 from uwh.runtime.event_types import ReplyClassification
 from uwh.runtime.jev_client import ChoiceQuestion, JevAccess, JevUnavailable
+from uwh.runtime.modes import RecordingMiss
+from uwh.runtime.recordings import Exchange
 from uwh.skills.manifest import load_manifest
 
-logger = logging.getLogger(__name__)
+# What a reply is read with when Jev gives no answer; the text of the `skill_fallback_used` event.
+FALLBACK = "the language model classifies the reply"
 
 # The options are the four classifications of the model's tool schema.
 QUESTION = ChoiceQuestion(
@@ -32,6 +34,11 @@ class JevAnswer:
 
     classification: ReplyClassification
     confidence: float
+    exchange: Exchange  # the call that answered, for the `model_called` event
+
+
+# Why Jev gave no answer: nothing is recorded for the reply in replay, or the live call got none.
+type JevFailure = RecordingMiss | JevUnavailable
 
 
 def threshold() -> float:
@@ -41,15 +48,18 @@ def threshold() -> float:
     return value
 
 
-def classify(body: str, jev: JevAccess) -> JevAnswer | None:
-    """Jev's answer for the reply body, or None when Jev is unavailable."""
+def classify(body: str, jev: JevAccess) -> JevAnswer | JevFailure:
+    """Jev's answer for the reply body, or the failure that left it without one."""
     try:
         exchange = jev.ask(QUESTION, body)
-    except JevUnavailable:
-        logger.warning("Jev is unavailable; the language model classifies the reply", exc_info=True)
-        return None
+    except (RecordingMiss, JevUnavailable) as failure:
+        return failure
     assert exchange.tool_input is not None  # a Jev exchange always holds its probabilities
     probabilities: dict[str, float] = exchange.tool_input["probabilities"]
     top = max(QUESTION.options, key=lambda option: probabilities[option])
     # `top` is one of the four classifications: the live call returns a probability for each option.
-    return JevAnswer(classification=top, confidence=probabilities[top])  # type: ignore[arg-type]
+    return JevAnswer(
+        classification=top,  # type: ignore[arg-type]
+        confidence=probabilities[top],
+        exchange=exchange,
+    )

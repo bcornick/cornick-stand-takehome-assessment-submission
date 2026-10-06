@@ -2,7 +2,7 @@
 # ABOUTME: The handlers are start_run, deliver_reply, resolve_fact, edit_draft, record_ruling, decline_lead, propose_command, and approve and reject of an observation, a draft, a delivery_unknown item or an event-raised review; a command type with no handler raises NotImplementedError after the checks.
 import sqlite3
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import partial
 
 import anthropic
@@ -21,7 +21,6 @@ from uwh.runtime.event_types import (
     ReplyRead,
     ReplyReceived,
     ReviewCause,
-    SkillFallbackUsed,
 )
 from uwh.runtime.events import EventContext, MakeContext, StaleRun, append_event, read_events
 from uwh.runtime.facts import (
@@ -35,7 +34,7 @@ from uwh.runtime.facts import (
     usable_facts,
 )
 from uwh.runtime.hashing import sha256_hex
-from uwh.runtime.model import append_model_calls, append_replay_miss
+from uwh.runtime.model import append_fallback, append_model_calls, append_replay_miss
 from uwh.runtime.modes import RecordingMiss
 from uwh.runtime.runs import RunEnvironment, begin_run, command_context, current_run, pass_context
 from uwh.runtime.proposals import create_proposal, is_proposable
@@ -50,7 +49,6 @@ from uwh.runtime.send import (
     reconcile,
     void_approvals,
 )
-from uwh.runtime.recordings import Exchange
 from uwh.runtime.waits import (
     Blocker,
     close_blocker,
@@ -67,6 +65,7 @@ from uwh.runtime.workflow import (
     unit_of_work,
 )
 from uwh.skills.manifest import load_manifest
+from uwh.skills.read_reply import jev
 from uwh.skills.read_reply import skill as read_reply
 from uwh.skills.triage_fields import skill as triage_fields
 from uwh.skills.vertical import ROUND_REVIEW_CAUSES, command_class
@@ -316,8 +315,8 @@ def _reply_target(db: sqlite3.Connection, payload: Mapping[str, JsonValue]) -> I
     return intent
 
 
-# What `read_reply` returned and the exchanges it made; None when the model is not available.
-type _ReplyReading = tuple[read_reply.Reading | read_reply.Abstention, list[Exchange]] | None
+# What `read_reply` made of the reply; None when the model is not available.
+type _ReplyReading = read_reply.ReplyRun | None
 
 
 def _triage_with_reply(
@@ -342,7 +341,7 @@ def _read_reply_first(
 ) -> Handler:
     """Read the reply with the model, outside any transaction, and return the handler that records it.
     A replay with no recording for the reply records the miss and refuses (7.7); a provider error leaves
-    the reply unread."""
+    the reply unread. A Jev failure never refuses: the model classifies and the event records it."""
     intent = _reply_target(db, payload)
     reading: _ReplyReading = None
     if env.model.available:
@@ -355,13 +354,13 @@ def _read_reply_first(
             reading = read_reply.run(
                 read_reply.ReadReplyInput(body=_text(payload, "body"), asks=asks), env.model
             )
-            if isinstance(reading[0], read_reply.Reading):
-                reading = (
-                    read_reply.decide_classification(
-                        reading[0], asks, _triage_with_reply(db, env, intent.lead_id, reading[0])
-                    ),
-                    reading[1],
+            if isinstance(reading.result, read_reply.Reading):
+                decided = read_reply.decide_classification(
+                    reading.result,
+                    asks,
+                    _triage_with_reply(db, env, intent.lead_id, reading.result),
                 )
+                reading = replace(reading, result=decided)
         except RecordingMiss as miss:
             with unit_of_work(db):
                 append_replay_miss(db, _context(db, env, actor), intent.lead_id, miss)
@@ -382,19 +381,25 @@ def _record_reply_events(
     reading: _ReplyReading,
 ) -> None:
     """The events of the reading: each model call, then the reading or the abstention. With no model
-    available the skill's fallback is used and nothing was read."""
+    available the skill's fallback is used and nothing was read. A Jev call is a `model_called` event
+    like the model's, under Jev's model id; a Jev failure is the fallback event that follows."""
     if reading is None:
         fallback = load_manifest(env.skills_root / "read_reply").fallback
-        append_event(
+        append_fallback(db, context, intent.lead_id, "read_reply", "unavailable", fallback)
+        return
+    result = reading.result
+    append_model_calls(db, context, intent.lead_id, reading.exchanges)
+    if reading.jev_failure is not None:
+        miss = reading.jev_failure if isinstance(reading.jev_failure, RecordingMiss) else None
+        append_fallback(
             db,
             context,
-            EventType.skill_fallback_used,
-            SkillFallbackUsed(skill="read_reply", status="unavailable", fallback=fallback),
-            lead_id=intent.lead_id,
+            intent.lead_id,
+            "read_reply",
+            "unavailable",
+            f"Jev gave no answer; {jev.FALLBACK}",
+            miss,
         )
-        return
-    result, exchanges = reading
-    append_model_calls(db, context, intent.lead_id, exchanges)
     if isinstance(result, read_reply.Abstention):
         read = ReplyRead(
             intent_id=intent.id,
@@ -514,7 +519,7 @@ def _record_reply(
         lead_id=intent.lead_id,
     )
     _record_reply_events(db, context, env, intent, body_hash, reading)
-    result = None if reading is None else reading[0]
+    result = None if reading is None else reading.result
     _settle_round(db, context, env, intent, result, _answers(result))
     return _Outcome(event_id, intent.lead_id)
 

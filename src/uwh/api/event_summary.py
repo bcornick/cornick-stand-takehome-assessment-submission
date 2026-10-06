@@ -100,24 +100,38 @@ def event_summary(payload: StrictModel) -> str:
             return f"Waiting on {_OWNERS[owner]}. {_sentence(detail.text)}"
         case BlockerClosed(kind=kind):
             return f"The {_words(kind)} wait is over."
-        case IntentCreated(kind=kind, recipient=recipient, subject=subject):
-            return f"Drafted a {_words(kind)} to {recipient} with the subject {subject}."
+        case IntentCreated(
+            kind=kind, recipient=recipient, subject=subject, rewritten_by_model=rewritten
+        ):
+            drafted = f"Drafted a {_words(kind)} to {recipient} with the subject {subject}."
+            if rewritten:
+                return f"{drafted} The opening and closing were written by the model."
+            return drafted
         case MessageSent():
             return "The message was posted to the mailbox."
         case DeliveryUnknown():
             return "The mailbox did not confirm the message, so it may not have been delivered."
         case ReplyReceived(body=body):
             return f"The producer replied in {len(body)} characters."
-        case ReplyRead(classification=classification, abstention=abstention, candidates=found):
+        case ReplyRead(
+            classification=classification,
+            classified_by=classified_by,
+            jev_confidence=confidence,
+            abstention=abstention,
+            candidates=found,
+        ):
             if classification is None:
                 return f"The reply could not be read ({_words(str(abstention))})."
-            return f"The reply {_READINGS[classification]}; {len(found)} answers found."
+            by = f"Jev at {confidence}" if classified_by == "jev" else "the model"
+            return f"The reply {_READINGS[classification]}, classified by {by}; {len(found)} answers found."
         case ApprovalRecorded(decision=decision, item_kind=kind, reason=reason):
             return f'{decision.capitalize()} a {_words(kind)} with the reason "{reason.strip()}".'
         case RulingRecorded(kind=kind, reason=reason):
             return f"Recorded a {_words(kind)} ruling. {_sentence(reason)}"
         case CommandRefused(command_type=command, reason=reason):
             return f"Refused {_words(command)}. {_sentence(reason)}"
+        case SkillFallbackUsed(status="rejected", fallback=fallback):
+            return _sentence(fallback)
         case SkillFallbackUsed(skill=skill, fallback=fallback):
             return f"The {_words(skill)} skill was unavailable, so the fallback applied. {_sentence(fallback)}"
         case ModelCalled(skill=skill, tokens_in=tokens_in, tokens_out=tokens_out):
