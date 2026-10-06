@@ -136,7 +136,7 @@ describe('QueueConversation', () => {
     expect(onSelect).toHaveBeenCalledWith(lead.lead_id)
   })
 
-  it('shows nothing for an item the lead no longer holds', async () => {
+  it('shows nothing for an item its lead does not hold', async () => {
     stubLead({ ...lead, blockers: [] })
     renderQueue()
 
