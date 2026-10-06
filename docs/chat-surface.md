@@ -16,7 +16,6 @@ This is a take-home submission for an Agentic Engineer role, graded on clean cod
 | Exchanges sent with each message | the last 4 of the open conversation |
 | Refetch interval | 5 seconds (`REFRESH_MILLISECONDS` in `web/src/App.tsx`) |
 | Accent token | #601421 |
-| Wordmark viewBox | 0 0 131 28 |
 
 ## Decisions already made
 
@@ -35,7 +34,7 @@ The shape of the surface is also settled. It is desktop only, with no drawer or 
 
 ### Shell
 
-- **Left column.** The Stand wordmark, the run summary sentence (`summarySentence`, from `web/src/queue/QueuePage.tsx`), then the lead list. A "Queue" entry at the top of the list opens the queue-level conversation.
+- **Left column.** The name STAND in capitals, the run summary sentence (`summarySentence`, from `web/src/queue/QueuePage.tsx`), then the lead list. A "Queue" entry at the top of the list opens the queue-level conversation.
 - **Lead groups.** Waiting on the underwriter; waiting on the producer or data; finished. The groups and their order are the `group` field and the row order `GET /api/leads` returns. `GROUP_LABELS` in `web/src/labels.ts` carries the two relabelled names. The middle group includes data waits, so its label names them.
 - **Lead row.** Lead id, address or "no address", status chip, one line for the next action, and a second line with effective date and age. A row shows "no address" when its `label` equals its lead id, which is what `lead_label` in `src/uwh/skills/steps.py` returns for a lead with no address.
 - **Centre column.** The conversation, fluid width. Its header names the lead and holds the "Full detail" link.
@@ -149,9 +148,8 @@ The panel opens on a citation chip or on a card's "details" link. One click clos
 
 ### Branding
 
-- The Stand wordmark sits top left as inline SVG, taken from the wordmark on standinsurance.com. Stand's favicon is served from `web/public/`. The page title in `web/index.html` is "Stand Underwriting".
+- The name STAND sits top left in capitals, as text; the surface carries neither Stand's wordmark nor its favicon. The page title in `web/index.html` is "Stand Underwriting".
 - One accent token colours the primary button, the selected lead, citation chips and the working indicator. Destructive buttons are neutral outlines. Text is black on white with Tailwind greys otherwise. Geist stays.
-- The README says in one line that the mark is Stand's, used for the submission only.
 
 ## Behaviour the tests pin
 

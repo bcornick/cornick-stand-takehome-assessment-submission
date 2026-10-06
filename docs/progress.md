@@ -523,4 +523,6 @@ Brett's decisions carried into milestone 1: an underwriter's value that still tr
 
 **Friction:** five client builders ran in isolated worktrees against a compiling skeleton with fixed props; none needed a prop changed. A module named `narrative.ts` beside `Narrative.tsx` breaks imports on a case-insensitive filesystem; the module is `narrate.ts`.
 
-**Next:** Brett's review of the surface; the wordmark and favicon.
+**Brett's ruling on the branding:** the name STAND in capitals, as text, stands in for the wordmark; the specification's branding lines say so, and no wordmark, favicon or README line about the mark is added.
+
+**Next:** Brett's review of the surface.

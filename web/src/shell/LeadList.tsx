@@ -1,4 +1,4 @@
-// ABOUTME: The left column: the product name, the run summary sentence, the "Queue" entry and the leads in their groups.
+// ABOUTME: The left column: the name STAND in capitals, the run summary sentence, the "Queue" entry and the leads in their groups.
 // ABOUTME: Rows keep the order the API returns.
 import type { components } from '@/api/types'
 import { Badge } from '@/components/ui/badge'
@@ -56,7 +56,7 @@ export function LeadList({ run, rows, selected, onSelect }: Props) {
   return (
     <nav aria-label="Leads" className="h-full overflow-y-auto border-r">
       <div className="px-4 py-3">
-        <h1 className="text-lg font-semibold">Stand</h1>
+        <h1 className="text-lg font-semibold tracking-wide">STAND</h1>
         <p className="text-xs text-muted-foreground">{summarySentence(run.summary)}</p>
       </div>
       <button
