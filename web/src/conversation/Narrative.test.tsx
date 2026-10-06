@@ -22,6 +22,7 @@ function event(id: number, type: Event['type'], extra: Partial<Event> = {}): Eve
     choice_ids: [],
     fact_key: null,
     message: null,
+    lookup: null,
     ...extra,
   }
 }

@@ -20,6 +20,7 @@ function event(id: number, fields: Partial<Schemas['EventRow']>): Schemas['Event
     fact_key: null,
     item_id: null,
     message: null,
+    lookup: null,
     mode: 'live',
     ...fields,
   }

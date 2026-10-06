@@ -167,6 +167,7 @@ function event(id: number, type: Schemas['EventRow']['type'], summary: string, m
     choice_ids: [],
     fact_key: null,
     message: null,
+    lookup: null,
     ...more,
   }
 }

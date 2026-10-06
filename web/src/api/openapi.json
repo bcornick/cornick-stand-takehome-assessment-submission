@@ -814,7 +814,7 @@
       },
       "EventRow": {
         "additionalProperties": false,
-        "description": "One of a lead's events: its id, type, run mode, actor, simulated time and a summary of its payload.\n`item_id` is the underwriter's item a blocker or approval event names (a wait on the producer or on\ndata is no item), `choice_ids` the choices a question card opened with or the one a ruling\nanswers, `fact_key` the key a fact event records and `message` the words of a sent request or a\nreply; each is None or empty where the event has none.",
+        "description": "One of a lead's events: its id, type, run mode, actor, simulated time and a summary of its payload.\n`item_id` is the underwriter's item a blocker or approval event names (a wait on the producer or on\ndata is no item), `choice_ids` the choices a question card opened with or the one a ruling\nanswers, `fact_key` the key a fact event records, `message` the words of a sent request or a\nreply, and `lookup` how a `provider_called` row's lookup went; each is None or empty where the\nevent has none.",
         "properties": {
           "actor": {
             "enum": [
@@ -859,6 +859,16 @@
             ],
             "title": "Item Id"
           },
+          "lookup": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LookupView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "message": {
             "anyOf": [
               {
@@ -900,7 +910,8 @@
           "item_id",
           "choice_ids",
           "fact_key",
-          "message"
+          "message",
+          "lookup"
         ],
         "title": "EventRow",
         "type": "object"
@@ -1234,6 +1245,35 @@
           "events"
         ],
         "title": "LeadEvents",
+        "type": "object"
+      },
+      "LookupView": {
+        "additionalProperties": false,
+        "description": "How a provider lookup went: its status and, when blocked, the inputs it lacked.",
+        "properties": {
+          "missing_inputs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing Inputs",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "found",
+              "not_found",
+              "blocked",
+              "unavailable"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "missing_inputs"
+        ],
+        "title": "LookupView",
         "type": "object"
       },
       "NoActionEffect": {

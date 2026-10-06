@@ -11,6 +11,7 @@ from uwh.rules.models import (
     RuleTrace,
     StrictModel,
 )
+from uwh.providers.models import ProviderStatus
 from uwh.rules.registry import FactField
 from uwh.runtime.event_types import (
     Actor,
@@ -189,12 +190,20 @@ class EventMessage(StrictModel):
     body: str
 
 
+class LookupView(StrictModel):
+    """How a provider lookup went: its status and, when blocked, the inputs it lacked."""
+
+    status: ProviderStatus
+    missing_inputs: list[str]
+
+
 class EventRow(StrictModel):
     """One of a lead's events: its id, type, run mode, actor, simulated time and a summary of its payload.
     `item_id` is the underwriter's item a blocker or approval event names (a wait on the producer or on
     data is no item), `choice_ids` the choices a question card opened with or the one a ruling
-    answers, `fact_key` the key a fact event records and `message` the words of a sent request or a
-    reply; each is None or empty where the event has none."""
+    answers, `fact_key` the key a fact event records, `message` the words of a sent request or a
+    reply, and `lookup` how a `provider_called` row's lookup went; each is None or empty where the
+    event has none."""
 
     id: int
     type: EventType
@@ -206,6 +215,7 @@ class EventRow(StrictModel):
     choice_ids: list[str]
     fact_key: str | None
     message: EventMessage | None
+    lookup: LookupView | None
 
 
 class LeadEvents(StrictModel):

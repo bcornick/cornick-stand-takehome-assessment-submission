@@ -18,6 +18,7 @@ from uwh.api.views import (
     Item,
     LeadDetail,
     LeadEvents,
+    LookupView,
     QueueGroup,
     QueueRow,
 )
@@ -32,6 +33,7 @@ from uwh.runtime.event_types import (
     BlockerOpened,
     FactObserved,
     MessageSent,
+    ProviderCalled,
     ReplyReceived,
     RulingRecorded,
 )
@@ -234,6 +236,11 @@ def _event_row(db: sqlite3.Connection, event: StoredEvent) -> EventRow:
         choice_ids=_choice_ids(payload),
         fact_key=payload.key if isinstance(payload, FactObserved) else None,
         message=_event_message(db, payload),
+        lookup=LookupView(
+            status=payload.result.status, missing_inputs=payload.result.missing_inputs
+        )
+        if isinstance(payload, ProviderCalled)
+        else None,
     )
 
 
