@@ -33,7 +33,7 @@ class OpenAsk(StrictModel):
     ask_id: str
     field: str  # the fact key the answer is for
     wording: str
-    answer_type: str  # the registry's type kind
+    answer_type: str  # the registry's type kind, or the catalogue's for a catalogue question
     options: list[str]  # the option strings of a select; empty otherwise
 
 
@@ -86,7 +86,7 @@ def open_asks(
                     ask_id=ask_id,
                     field=f"q:{ask_id}",
                     wording=catalogue[ask_id]["wording"],
-                    answer_type="toggle",
+                    answer_type=catalogue[ask_id]["answer_type"],
                     options=[],
                 )
             )

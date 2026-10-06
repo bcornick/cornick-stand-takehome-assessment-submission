@@ -61,3 +61,24 @@ def test_the_asks_are_numbered_through_the_section_groups_with_confirmations_las
         "no_residents_in_primary_home",
     ]
     assert rendered.subject == "Information needed for your quote: 14 Oak St"
+
+
+def test_the_wording_of_a_request_to_the_applicant_says_you_and_your() -> None:
+    asks = [
+        field_request("insured_dob", "What is the applicant's date of birth?"),
+        field_request("first_name", "Would the applicant be willing to mitigate?"),
+    ]
+
+    def body(*, to_applicant: bool) -> str:
+        return run(
+            RenderMessageInput(
+                registry=load_registry(str(REGISTRY)),
+                lead_label="14 Oak St",
+                asks=asks,
+                to_applicant=to_applicant,
+            )
+        ).body
+
+    assert "What is your date of birth?" in body(to_applicant=True)
+    assert "Would you be willing to mitigate?" in body(to_applicant=True)
+    assert "What is the applicant's date of birth?" in body(to_applicant=False)

@@ -172,7 +172,7 @@ def _open_draft_item(
             item_kind="draft",
             intent_id=intent.id,
             resume_trigger="an underwriter approves the draft",
-            text=text or f"Review this {intent.kind} before it is sent.",
+            text=text or f"Review this {intent.kind.replace('_', ' ')} before it is sent.",
         ),
     )
 

@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from uwh.api.app import create_app
 from uwh.rules.models import ActionPlan
-from uwh.runtime.event_types import EventType, PlanBuilt
+from uwh.runtime.event_types import EventType, PlanBuilt, TriageCompleted
 from uwh.runtime.events import read_events
 from uwh.runtime.hashing import hash_json
 from uwh.runtime.leadgen_client import LeadgenClient
@@ -77,6 +77,29 @@ def test_lead_008_has_its_plan_stored_with_the_two_pages_not_evaluated(
         e for e in read_events(first_pass, lead_id=LEAD_008) if e.type == EventType.plan_built
     ]
     assert built.payload == PlanBuilt(plan=plan.model_dump(mode="json"), plan_hash=plan_hash)
+
+
+def test_the_request_to_a_web_applicant_speaks_to_them_and_one_to_a_broker_does_not(
+    first_pass: sqlite3.Connection, mailbox: MailboxClient
+) -> None:
+    (web,) = mailbox.list_for_lead("LEAD-00000042-003")
+    (broker,) = mailbox.list_for_lead("LEAD-00000042-006")
+
+    assert "What is your date of birth?" in web["body"]
+    assert "applicant" not in web["body"]
+    assert "What is the applicant's last name?" in broker["body"]
+
+
+def test_the_latest_triage_of_a_lead_is_the_one_taken_after_its_lookups(
+    first_pass: sqlite3.Connection,
+) -> None:
+    triages = [
+        e.payload.fields
+        for e in read_events(first_pass, lead_id=LEAD_008)
+        if e.type == EventType.triage_completed and isinstance(e.payload, TriageCompleted)
+    ]
+
+    assert [t["replacement_cost"]["resolution"] for t in triages] == ["fetch", "none"]
 
 
 def plan_of(db: sqlite3.Connection, lead_id: str) -> ActionPlan:

@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from dataclasses import dataclass
 
+from uwh.rules.models import ActionPlan
 from uwh.runtime.event_types import BlockerDetail, EventType, LeadReceived, Status
 from uwh.runtime.events import (
     EventContext,
@@ -114,6 +115,14 @@ def lead_revision_and_plan_hash(db: sqlite3.Connection, lead_id: str) -> tuple[i
     if row is None:
         raise ValueError(f"there is no lead {lead_id}")
     return int(row[0]), row[1]
+
+
+def stored_plan(db: sqlite3.Connection, lead_id: str) -> ActionPlan:
+    """The action plan the lead's evaluation stored. Raises ValueError for a lead with no plan yet."""
+    row = db.execute("SELECT plan_json FROM leads WHERE lead_id = ?", (lead_id,)).fetchone()
+    if row is None or row[0] is None:
+        raise ValueError(f"lead {lead_id} has no plan")
+    return ActionPlan.model_validate_json(row[0])
 
 
 def transition_refusal(db: sqlite3.Connection, lead_id: str, target: Status) -> str | None:

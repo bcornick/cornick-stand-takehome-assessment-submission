@@ -1,11 +1,11 @@
 # ABOUTME: The producer catalogue: the questions and the one document request that no registry field covers.
 # ABOUTME: `row` is the interpretation row each question comes from.
 
-# Answer types: yes_no, choice (with `options`), text, document (a document request, not a question).
+# Answer types are the registry's (a yes or no is `toggle`), or `document` for a document request, which is not a question.
 questions:
   willing_to_mitigate:
-    wording: "Is the applicant willing to mitigate greater distance?"
-    answer_type: yes_no
+    wording: "Would the applicant be willing to mitigate greater distance?"
+    answer_type: toggle
     row: I17
   rce_documentation:
     wording: "Please send documentation supporting the Coverage A amount requested, for example the current declarations page."

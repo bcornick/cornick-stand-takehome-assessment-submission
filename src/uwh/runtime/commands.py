@@ -33,7 +33,6 @@ from uwh.runtime.facts import (
     reject_observation,
     resolve_fact,
 )
-from uwh.rules.models import ActionPlan
 from uwh.runtime.hashing import sha256_hex
 from uwh.runtime.modes import RecordingMiss
 from uwh.runtime.runs import RunEnvironment, begin_run, command_context, current_run, pass_context
@@ -61,6 +60,7 @@ from uwh.runtime.workflow import (
     lead_revision_and_plan_hash,
     record_reply,
     reevaluate,
+    stored_plan,
     unit_of_work,
 )
 from uwh.skills.manifest import load_manifest
@@ -541,26 +541,20 @@ def _record_ruling(
 ) -> _Outcome:
     lead_id, choice_id = _text(payload, "lead_id"), _text(payload, "choice_id")
     option, reason = _text(payload, "option"), _nonempty_text(payload, "reason")
-    _lead_binding(db, lead_id)
+    if not _lead_exists(db, lead_id):
+        raise _Refusal(f"there is no lead {lead_id}")
     if not any(
         b.kind == "underwriter_question" and choice_id in b.detail.choice_ids
         for b in open_blockers(db, lead_id)
     ):
         raise _Refusal(f"{choice_id} is not an open choice of lead {lead_id}")
-    (choice,) = [c for c in _plan_of(db, lead_id).open_choices if c.choice_id == choice_id]
+    (choice,) = [c for c in stored_plan(db, lead_id).open_choices if c.choice_id == choice_id]
     if option not in choice.options:
         raise _Refusal(f"{option} is not an option of {choice_id}: {', '.join(choice.options)}")
     event_id = write_ruling(
         db, context, lead_id, "choice", reason, choice_id=choice_id, option=option
     )
     return _Outcome(event_id, lead_id)
-
-
-def _plan_of(db: sqlite3.Connection, lead_id: str) -> ActionPlan:
-    (plan_json,) = db.execute(
-        "SELECT plan_json FROM leads WHERE lead_id = ?", (lead_id,)
-    ).fetchone()
-    return ActionPlan.model_validate_json(plan_json)
 
 
 def _decline_lead(
@@ -648,14 +642,15 @@ def _reject_decline(
     db: sqlite3.Connection, context: EventContext, lead_id: str, reason: str
 ) -> None:
     """Rejecting a decline notice overrides what proposed the decline (A.11): the underwriter's own
-    decline is withdrawn, a choice that led to a decline is reopened, and every other declining rule
-    is suppressed for this lead (9.6)."""
+    decline is withdrawn, a choice whose option led straight to a decline is reopened, and every
+    other declining rule is suppressed for this lead (9.6)."""
     active = active_rulings(db, lead_id)
     decline_event = next((i for i, r in active.items() if r.kind == "decline"), None)
     if decline_event is not None:
         write_ruling(db, context, lead_id, "withdrawal", reason, refers_to_event_id=decline_event)
-        return
-    reopened = {choice for _, choices in declines_of(_plan_of(db, lead_id)) for choice in choices}
+    reopened = {
+        choice for _, choices in declines_of(stored_plan(db, lead_id)) for choice in choices
+    }
     for choice_id in sorted(reopened):
         (ruling_event,) = [
             i for i, r in active.items() if r.kind == "choice" and r.choice_id == choice_id
@@ -669,7 +664,7 @@ def _reject_decline(
             choice_id=choice_id,
             refers_to_event_id=ruling_event,
         )
-    suppressed = [rule for rule, choices in declines_of(_plan_of(db, lead_id)) if not choices]
+    suppressed = [rule for rule, choices in declines_of(stored_plan(db, lead_id)) if not choices]
     if suppressed:
         write_ruling(db, context, lead_id, "suppression", reason, suppressed_rule_ids=suppressed)
 

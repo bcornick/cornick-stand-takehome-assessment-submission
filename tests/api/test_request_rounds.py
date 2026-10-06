@@ -67,7 +67,7 @@ def test_a_lead_with_asks_open_after_two_rounds_goes_to_the_underwriter_and_gets
         "round_limit",
         True,
     )
-    assert "acreage" in review.detail.text
+    assert review.detail.text == "2 requests have been sent and these are still open: Lot Acreage."
     assert db.execute(
         "SELECT COUNT(*) FROM intents WHERE lead_id = ? AND kind = 'routine_request'", (LEAD_009,)
     ).fetchone() == (2,)
@@ -93,3 +93,40 @@ def test_the_round_limit_review_is_not_opened_twice_and_closes_when_the_fact_is_
     assert [(b.detail.item_kind, b.detail.cause) for b in open_blockers(db, LEAD_009)] == [
         ("draft", None)
     ]
+
+
+def test_declining_a_lead_at_the_round_limit_closes_the_review_and_the_notice_ends_the_lead(
+    app: TestClient, db: sqlite3.Connection
+) -> None:
+    after_two_unanswered_rounds(db)
+    reevaluate(app, "occupation", "Teacher")
+
+    declined = app.post(
+        "/api/commands",
+        json={
+            "type": "decline_lead",
+            "payload": {"lead_id": LEAD_009, "reason": "no answer after two requests"},
+        },
+    ).json()
+
+    assert declined["accepted"] is True
+    (notice,) = open_blockers(db, LEAD_009)
+    assert (notice.detail.item_kind, notice.detail.text) == (
+        "draft",
+        "Review this decline notice before it is sent.",
+    )
+    (payload_hash,) = db.execute(
+        "SELECT payload_hash FROM intents WHERE id = ?", (notice.detail.intent_id,)
+    ).fetchone()
+    approved = app.post(
+        "/api/commands",
+        json={
+            "type": "approve",
+            "payload": {"item_id": notice.id, "artifact_hash": payload_hash, "reason": "agreed"},
+        },
+    ).json()
+    assert approved["accepted"] is True
+    assert open_blockers(db, LEAD_009) == []
+    assert db.execute("SELECT status FROM leads WHERE lead_id = ?", (LEAD_009,)).fetchone() == (
+        "declined",
+    )

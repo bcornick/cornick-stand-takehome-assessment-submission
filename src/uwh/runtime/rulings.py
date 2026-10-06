@@ -67,12 +67,12 @@ def rulings_in_force(db: sqlite3.Connection, lead_id: str) -> Rulings:
 
 
 def declines_of(plan: ActionPlan) -> list[tuple[str, list[str]]]:
-    """Each decline of the plan: its rule id and the underwriter choices answered on its path."""
+    """Each decline of the plan: its rule id and the choice whose option leads straight to it, if any."""
     declines = [
         (p.effect.rule, p.trace.choice_ids)
         for p in plan.effects
         if p.committed and isinstance(p.effect, DeclineEffect)
     ]
     for trace in plan.declines_on_every_branch:
-        declines += [(branch.rule, trace.choice_ids) for branch in trace.alternatives]
+        declines += [(branch.rule, []) for branch in trace.alternatives]
     return declines

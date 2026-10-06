@@ -58,9 +58,20 @@ def kinds(db: sqlite3.Connection, lead_id: str) -> list[tuple[str, str | None]]:
 def notice_item(app: TestClient, lead_id: str) -> tuple[int, str]:
     """The item that reviews the lead's decline notice and the hash an approval echoes."""
     detail = app.get(f"/api/leads/{lead_id}").json()
-    (draft,) = [d for d in detail["drafts"] if d["kind"] == "decline_notice"]
+    (draft,) = [
+        d for d in detail["drafts"] if d["kind"] == "decline_notice" and d["state"] == "draft"
+    ]
     (item,) = [b for b in detail["blockers"] if b["detail"]["intent_id"] == draft["intent_id"]]
     return item["item_id"], draft["payload_hash"]
+
+
+def test_the_card_asks_the_choice_in_plain_words(app: TestClient, db: sqlite3.Connection) -> None:
+    (card,) = [b for b in open_blockers(db, LEAD_003) if b.kind == "underwriter_question"]
+
+    assert card.detail.text == (
+        "The fire simulation failed: decline, or continue under legacy underwriting? "
+        "The legacy checklist values are shown."
+    )
 
 
 def test_answering_legacy_underwriting_replaces_the_card_and_asks_the_mitigation_question_later(
@@ -162,6 +173,65 @@ def test_rejecting_a_decline_that_followed_a_choice_reopens_the_choice(
     assert rulings_in_force(db, LEAD_006).choices == {}
     assert kinds(db, LEAD_006) == [("producer_reply", None), ("underwriter_question", None)]
     assert len(mailbox.list_for_lead(LEAD_006)) == 1
+
+
+def test_rejecting_a_decline_under_legacy_underwriting_reopens_only_the_choice_that_led_to_it(
+    app: TestClient, db: sqlite3.Connection
+) -> None:
+    rule_fire(app, LEAD_003, "legacy_underwriting")
+    command(
+        app,
+        "record_ruling",
+        lead_id=LEAD_003,
+        choice_id="I16.distance",
+        option="too_close",
+        reason="14 feet is too close",
+    )
+    item_id, _ = notice_item(app, LEAD_003)
+
+    command(app, "reject", item_id=item_id, reason="the neighbour is a shed")
+
+    rulings = rulings_in_force(db, LEAD_003)
+    assert rulings.choices == {"I13.fire_fail": "legacy_underwriting"}
+    assert rulings.suppressed_rules == []
+    (card,) = [b for b in open_blockers(db, LEAD_003) if b.kind == "underwriter_question"]
+    assert card.detail.choice_ids == ["I16.distance"]
+
+
+def test_rejecting_a_decline_the_legacy_checklist_reached_suppresses_it_instead_of_reopening_a_loop(
+    app: TestClient, db: sqlite3.Connection
+) -> None:
+    rule_fire(app, LEAD_003, "legacy_underwriting")
+    command(
+        app,
+        "resolve_fact",
+        lead_id=LEAD_003,
+        key="road_access",
+        value="Limited / Dead-end / No Turnaround",
+        reason="the map shows a dead end",
+    )
+    item_id, _ = notice_item(app, LEAD_003)
+
+    command(app, "reject", item_id=item_id, reason="the dead end has a turn-around")
+
+    rulings = rulings_in_force(db, LEAD_003)
+    assert rulings.choices == {"I13.fire_fail": "legacy_underwriting"}
+    assert rulings.suppressed_rules == ["FS-3"]
+    assert app.get(f"/api/leads/{LEAD_003}").json()["plan"]["proposed_decline"] is False
+
+
+def test_rejecting_the_notice_of_a_decline_the_rules_also_make_withdraws_the_ruling_and_suppresses_the_rule(
+    app: TestClient, db: sqlite3.Connection
+) -> None:
+    command(app, "decline_lead", lead_id=LEAD_000, reason="the applicant is known to us")
+    item_id, _ = notice_item(app, LEAD_000)
+
+    command(app, "reject", item_id=item_id, reason="the underwriter thought again")
+
+    rulings = rulings_in_force(db, LEAD_000)
+    assert rulings.decline_reason is None
+    assert rulings.suppressed_rules == ["PP-1"]
+    assert app.get(f"/api/leads/{LEAD_000}").json()["plan"]["proposed_decline"] is False
 
 
 def test_the_underwriters_own_decline_waits_as_a_notice_and_rejecting_it_withdraws_the_ruling(

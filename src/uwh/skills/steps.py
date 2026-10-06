@@ -11,7 +11,7 @@ from pydantic import JsonValue
 import uwh.skills
 from uwh.providers.stand_in import StandInProviders
 from uwh.rules.data_files import read_yaml
-from uwh.rules.models import ActionPlan, FieldTriage
+from uwh.rules.models import ActionPlan, Ask, FieldTriage
 from uwh.rules.registry import Registry
 from uwh.runtime.event_types import (
     BlockerDetail,
@@ -34,7 +34,7 @@ from uwh.runtime.policy import manifest_refusal
 from uwh.runtime.rulings import rulings_in_force
 from uwh.runtime.send import create_draft, replace_stale_drafts, rounds_used
 from uwh.runtime.waits import Blocker, close_blocker, open_blocker, open_blockers
-from uwh.runtime.workflow import Step
+from uwh.runtime.workflow import Step, stored_plan
 from uwh.skills.build_quote_packet import skill as build_quote_packet
 from uwh.skills.evaluate_playbook import skill as evaluate_playbook
 from uwh.skills.plan_asks import skill as plan_asks
@@ -70,6 +70,8 @@ def _triage(db: sqlite3.Connection, lead_id: str, registry: Registry) -> dict[st
 def _triage_step(
     registry: Registry, db: sqlite3.Connection, context: EventContext, lead_id: str
 ) -> None:
+    """Record the triage of the lead's facts as they are now. The latest `triage_completed` of a lead
+    is its current triage."""
     triage = _triage(db, lead_id, registry)
     append_event(
         db,
@@ -81,7 +83,7 @@ def _triage_step(
 
 
 def _pass_triage(db: sqlite3.Connection, lead_id: str) -> dict[str, FieldTriage]:
-    """The triage the pass's first step recorded, which says what to fetch."""
+    """The triage the pass's first step recorded, before anything is fetched: it says what to fetch."""
     (payload,) = db.execute(
         "SELECT payload_json FROM events WHERE lead_id = ? AND type = ? ORDER BY id DESC LIMIT 1",
         (lead_id, EventType.triage_completed.value),
@@ -100,8 +102,8 @@ def _resolve_step(
     context: EventContext,
     lead_id: str,
 ) -> None:
-    """Look up each field the pass's triage says to fetch, record the lookup, and observe what the skill resolves.
-    Raises ValueError when the manifest of resolve_data does not declare `fetch_data` (7.4)."""
+    """Look up each field the pass's triage says to fetch, record the lookup, observe what the skill
+    resolves and record the triage again, now that the fetched facts are in. Raises ValueError when the manifest of resolve_data does not declare `fetch_data` (7.4)."""
     refusal = manifest_refusal(load_manifest(_SKILLS_ROOT / "resolve_data"), "fetch_data")
     if refusal is not None:
         raise ValueError(refusal)
@@ -125,14 +127,7 @@ def _resolve_step(
     resolved = resolve_data.run(resolve_data.ResolveDataInput(provider_results=results))
     for fact in resolved.facts:
         observe(db, context, lead_id, fact.key, fact.value, fact.source, fact.evidence, rules)
-
-
-def _stored_plan(db: sqlite3.Connection, lead_id: str) -> ActionPlan:
-    """The action plan the pass's evaluation stored on the lead."""
-    (plan_json,) = db.execute(
-        "SELECT plan_json FROM leads WHERE lead_id = ?", (lead_id,)
-    ).fetchone()
-    return ActionPlan.model_validate_json(plan_json)
+    _triage_step(registry, db, context, lead_id)
 
 
 def _sync_underwriter_question(
@@ -156,7 +151,7 @@ def _sync_underwriter_question(
             BlockerDetail(
                 choice_ids=choice_ids,
                 resume_trigger="an underwriter answers the choices",
-                text=f"The playbook leaves {', '.join(choice_ids)} to the underwriter.",
+                text=" ".join(choice.prompt for choice in plan.open_choices),
             ),
         )
 
@@ -187,9 +182,15 @@ def _evaluate_step(db: sqlite3.Connection, context: EventContext, lead_id: str) 
     _sync_underwriter_question(db, context, lead_id, plan)
 
 
+def _source(db: sqlite3.Connection, lead_id: str) -> str:
+    """The channel the lead came in by. The applicant is the recipient of a `direct_web` lead (10.3)."""
+    (source,) = db.execute("SELECT source FROM leads WHERE lead_id = ?", (lead_id,)).fetchone()
+    return str(source)
+
+
 def _recipient(db: sqlite3.Connection, lead_id: str, facts: dict[str, JsonValue]) -> str:
     """10.3: the directory's address for an agent portal or a broker, the applicant's own address for a web lead."""
-    (source,) = db.execute("SELECT source FROM leads WHERE lead_id = ?", (lead_id,)).fetchone()
+    source = _source(db, lead_id)
     address = (
         facts.get("owner_email")
         if source == "direct_web"
@@ -262,6 +263,12 @@ def _round_limit_review(db: sqlite3.Connection, lead_id: str) -> Blocker | None:
     return next((b for b in open_blockers(db, lead_id) if b.detail.cause == "round_limit"), None)
 
 
+def _what_is_asked(registry: Registry, ask: Ask) -> str:
+    """The labels of the fields an ask is about, or its wording when none is a registry field."""
+    labels = [registry[name].label for name in ask.fields if name in registry]
+    return ", ".join(labels) if labels else ask.wording
+
+
 def _ask_producer_step(
     registry: Registry, db: sqlite3.Connection, context: EventContext, lead_id: str
 ) -> None:
@@ -270,12 +277,14 @@ def _ask_producer_step(
     draft built at an older revision is replaced, a lead with a request in flight, or nothing to ask,
     gets no new draft, and a lead that has had its two rounds goes to the underwriter (10.1)."""
     replace_stale_drafts(db, context, lead_id)
-    plan = _stored_plan(db, lead_id)
+    plan = stored_plan(db, lead_id)
+    limit_review = _round_limit_review(db, lead_id)
     if plan.proposed_decline:
+        if limit_review is not None:
+            close_blocker(db, context, limit_review.id)  # the decline ends the lead
         _draft_decline_notice(registry, db, context, lead_id)
         return
     planned = _planned_asks(registry, db, lead_id, plan)
-    limit_review = _round_limit_review(db, lead_id)
     if not planned.asks:
         if limit_review is not None:
             close_blocker(db, context, limit_review.id)
@@ -295,8 +304,8 @@ def _ask_producer_step(
                     cause="round_limit",
                     cause_persists=True,
                     resume_trigger="the facts are supplied or the lead is declined",
-                    text=f"Two requests have been sent and these asks are still open: "
-                    f"{', '.join(ask.ask_id for ask in planned.asks)}.",
+                    text=f"{MAX_REQUEST_ROUNDS} requests have been sent and these are still open: "
+                    f"{'; '.join(_what_is_asked(registry, ask) for ask in planned.asks)}.",
                 ),
             )
         return
@@ -306,6 +315,7 @@ def _ask_producer_step(
             registry=registry,
             lead_label=lead_label(db, lead_id),
             asks=planned.asks,
+            to_applicant=_source(db, lead_id) == "direct_web",
         )
     )
     create_draft(
@@ -331,7 +341,7 @@ def _quote_packet_step(
     """Draft the quote packet when the plan holds no decline and nothing open, and the lead holds no
     blocker and no unsettled message (8). An ask that remains is held by an unsettled request or a
     blocker, so the last two checks cover it. The draft waits for the underwriter."""
-    plan = _stored_plan(db, lead_id)
+    plan = stored_plan(db, lead_id)
     if (
         not build_quote_packet.is_ready(plan)
         or open_blockers(db, lead_id)
