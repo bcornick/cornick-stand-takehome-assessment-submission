@@ -1,4 +1,4 @@
-// ABOUTME: The lead detail pane: what the lead waits on, its facts with source tags, plan and messages, and the actions on the whole lead.
+// ABOUTME: The full lead view of the drill-down panel: what the lead waits on, its facts with source tags, plan and messages, and the actions on the whole lead.
 // ABOUTME: Shows one LeadDetail; the plan is the internal view, so rule ids appear here and never in a message.
 import type { components } from '@/api/types'
 import { Badge } from '@/components/ui/badge'

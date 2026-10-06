@@ -30,7 +30,7 @@ from uwh.skills.manifest import load_manifest
 TOOL_NAME = "chat_step"
 _PROMPT_FILE = Path(__file__).with_name("prompt.md")
 
-# Who the chat panel's commands and events are written as: the actor its manifest declares.
+# Who the chat's commands and events are written as: the actor its manifest declares.
 _ACTOR = load_manifest(Path(__file__).parent).actor
 
 # The steps one turn may take: a few reads and the answer, or one proposal. The cap is fixed.

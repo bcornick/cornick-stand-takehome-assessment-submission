@@ -47,7 +47,7 @@ def skill_digest(src_root: Path, skill: str, model_id: str | None = None) -> str
 
 
 def chat_digest(src_root: Path, model_id: str) -> str:
-    """The digest of the chat panel, under `src_root` (the `src/uwh` directory): every source file in
+    """The digest of the chat, under `src_root` (the `src/uwh` directory): every source file in
     `chat/` except `cases/` (the prompt, the manifest, the tools and the skill), and `model_id`."""
     chat_dir = src_root / "chat"
     files = [p for p in source_files(chat_dir) if p.relative_to(chat_dir).parts[0] != "cases"]

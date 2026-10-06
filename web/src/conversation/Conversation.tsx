@@ -4,7 +4,7 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import type { components } from '@/api/types'
 import { ChatTail } from '@/chat/ChatTail'
 import { Composer } from '@/chat/Composer'
-import type { Chat, PanelTarget } from '@/surface'
+import { QUEUE, type Chat, type PanelTarget } from '@/surface'
 
 type Schemas = components['schemas']
 
@@ -22,17 +22,17 @@ export type ConversationProps = {
 type Props = ConversationProps & {
   conversation: string
   title: string
-  // The lead the conversation's cards sit on; null for the queue, which holds the cards of no lead.
-  leadId: string | null
   headerAction?: ReactNode
   placeholder: string
   children: ReactNode
 }
 
-export const NEEDS_LIVE_MODE = 'Questions need live mode'
+const NEEDS_LIVE_MODE = 'Questions need live mode'
 
 export function Conversation(props: Props) {
-  const { conversation, title, leadId, headerAction, placeholder, children } = props
+  const { conversation, title, headerAction, placeholder, children } = props
+  // The lead the conversation's cards sit on; the queue holds the cards of no lead.
+  const leadId = conversation === QUEUE ? null : conversation
   const { run, proposals, chat, onOpen, onSelect, onChange } = props
   const replay = run.mode === 'replay'
   const turns = chat.turnsOf(conversation)

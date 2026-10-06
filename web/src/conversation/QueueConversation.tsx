@@ -16,7 +16,7 @@ export function QueueConversation({ items, ...shared }: Props) {
   const { run, chat, refresh, onSelect, onChange } = shared
   const loaded = run.run_id !== null
   return (
-    <Conversation {...shared} conversation={QUEUE} leadId={null} title="Queue" placeholder="Ask about the queue">
+    <Conversation {...shared} conversation={QUEUE} title="Queue" placeholder="Ask about the queue">
       {loaded ? (
         <>
           <p>{summarySentence(run.summary)}</p>

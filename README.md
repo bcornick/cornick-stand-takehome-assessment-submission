@@ -125,7 +125,7 @@ DeepSeek (`deepseek-flash`) is the language model. The cases column gives where 
 | `polish_message` | language model | a request has been rendered | the rendered request is sent as it is | - |
 | `read_reply` | language model; Jev classifies first when its key is set | a reply is delivered | the reply goes to the underwriter unread | `src/uwh/skills/read_reply/cases/` |
 | `build_quote_packet` | code | no open blockers and no asks remain | none | - |
-| `chat` | language model | the underwriter sends a chat message | the panel says the assistant is unavailable | `src/uwh/chat/cases/chat.yaml` |
+| `chat` | language model | the underwriter sends a chat message | the turn closes with an error in the conversation | `src/uwh/chat/cases/chat.yaml` |
 
 A skill with a pass threshold (`evaluate_playbook`, `read_reply`, `chat`) has its cases scored in every run row. A model skill uses its fallback when the model is missing or its answer is rejected.
 

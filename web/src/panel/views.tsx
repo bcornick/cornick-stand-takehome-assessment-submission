@@ -17,7 +17,7 @@ export type ViewProps = {
   onOpen: (target: PanelTarget) => void
 }
 
-export function NotFound() {
+function NotFound() {
   return <p className="text-sm text-muted-foreground">Not found.</p>
 }
 

@@ -32,11 +32,6 @@ logger = logging.getLogger(__name__)
 NEEDS_LIVE_MODE = "Questions need live mode"
 
 
-def _is_example(request: ChatRequest) -> bool:
-    """An example prompt asked first in the queue conversation: the one turn replay has recordings for."""
-    return request.message in EXAMPLE_PROMPTS and request.lead_id is None and not request.history
-
-
 router = APIRouter()
 
 
@@ -57,7 +52,9 @@ def _closing_event(
     runtime: Runtime, request: ChatRequest, on_step: Callable[[str], None]
 ) -> AnswerEvent | ProposalEvent | ErrorEvent:
     """Run the turn on a connection of this thread and say how it closed."""
-    if runtime.env.mode == "replay" and not _is_example(request):
+    # Replay holds recordings for the example prompts alone, asked first in the queue conversation;
+    # the lead and the history are part of a recording's key, so any other turn of theirs misses.
+    if runtime.env.mode == "replay" and request.message not in EXAMPLE_PROMPTS:
         return ErrorEvent(type="error", reason=NEEDS_LIVE_MODE)
     if not runtime.env.model.available:
         return ErrorEvent(type="error", reason="The assistant has no model key")

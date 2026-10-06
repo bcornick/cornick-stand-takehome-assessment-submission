@@ -108,7 +108,7 @@ class FactView(StrictModel):
 class BlockerView(StrictModel):
     """An open blocker. `item_id` is `blockers.id`, the id an `approve` or `reject` names.
 
-    The detail pane offers the actions for every open item (section 11), so the blocker carries
+    The conversation offers the actions for every open item (section 11), so the blocker carries
     what its action needs: a pending observation's value (`observation`, required exactly for the
     item kind `observation`). The item kind and, for a review, the cause are in `detail`.
     """

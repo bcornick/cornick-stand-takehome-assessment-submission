@@ -12,9 +12,10 @@ export function DemoPanel({ run, onChange }: Props) {
   const [confirming, setConfirming] = useState(false)
   const runId = run.run_id ?? 'No run loaded'
 
+  // The confirm closes once the start has answered, so its button shows the start running or failing.
   const load = async () => {
-    setConfirming(false)
     await startRun()
+    setConfirming(false)
     return null
   }
   const deliver = async () =>

@@ -18,7 +18,7 @@ class SkillFolderError(Exception):
 class SkillManifest(StrictModel):
     """manifest.yaml. `fallback` is "none" for a deterministic skill. A skill with a `pass_threshold`
     has `cases/` the eval runs; a skill without one has no eval status. `actor` is who submits the
-    skill's commands: the workflow, or the assistant for the chat panel."""
+    skill's commands: the workflow, or the assistant for the chat."""
 
     name: str
     version: str

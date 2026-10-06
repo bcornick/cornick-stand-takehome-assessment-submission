@@ -1,6 +1,6 @@
-// ABOUTME: The chat tails of the run, held in the browser's memory by conversation and lost on reload by design; a new run clears them.
+// ABOUTME: The chat tails, held in the browser's memory by run and conversation and lost on reload by design; a run shows only its own.
 // ABOUTME: Sending a message streams its turn into the tail of the conversation it was typed in.
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { getProposals, streamChat } from '@/api/client'
 import type { components } from '@/api/types'
 import { QUEUE, type Chat, type Closing, type Turn } from '@/surface'
@@ -42,12 +42,15 @@ async function rationaleOf(proposalId: number): Promise<string> {
 }
 
 export function useChat(runId: string | null, onProposal: () => void): Chat {
-  const [tails, setTails] = useState<Tails>({})
+  // Event ids restart with a run, so a run's tails are its own; a poll that fails hides them and loses nothing.
+  const [tailsByRun, setTailsByRun] = useState<Record<string, Tails>>({})
   const [inFlight, setInFlight] = useState(0)
+  const run = runId ?? ''
+  const tails = tailsByRun[run] ?? {}
   const tailsRef = useRef(tails)
   tailsRef.current = tails
-
-  useEffect(() => setTails({}), [runId])
+  const setTails = (update: (past: Tails) => Tails) =>
+    setTailsByRun((byRun) => ({ ...byRun, [run]: update(byRun[run] ?? {}) }))
 
   async function send(conversation: string, message: string) {
     const history = historyOf(tailsRef.current[conversation] ?? [])

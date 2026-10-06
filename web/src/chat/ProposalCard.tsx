@@ -1,4 +1,4 @@
-// ABOUTME: One proposal card of the chat panel: the command the assistant proposes in words with its reason, an Apply button that submits the command as the underwriter, and a Dismiss button.
+// ABOUTME: One proposal card of a conversation's chat tail: the command the assistant proposes in words with its reason, an Apply button that submits the command as the underwriter, and a Dismiss button.
 // ABOUTME: A refused command shows its reason beside the button and the card stays; nothing runs until Apply is pressed.
 import { applyProposal, dismissProposal } from '@/api/client'
 import type { components } from '@/api/types'

@@ -24,7 +24,6 @@ export function LeadConversation({ leadId, ...shared }: Props) {
     <Conversation
       {...shared}
       conversation={leadId}
-      leadId={leadId}
       title={hasAddress ? `${leadName(leadId)} · ${lead.label}` : leadName(leadId)}
       placeholder={`Ask about ${leadName(leadId).toLowerCase()}`}
       headerAction={

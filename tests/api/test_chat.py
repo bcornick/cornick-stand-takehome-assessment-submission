@@ -141,12 +141,14 @@ def test_replay_answers_an_example_prompt_from_its_recording_and_any_other_turn_
     with TestClient(create_app(settings, leadgen=leadgen, mailbox=mailbox)) as client:
         client.post("/api/run/start?wait=true")
         (closing,) = chat(client, example, None)
-        # The same words in a lead's conversation, and an example with no recording, are not answered.
-        on_a_lead = chat(client, example, "L-1")
+        typed = chat(client, "What happened today?", None)
         unrecorded = chat(client, EXAMPLE_PROMPTS[1], None)
 
     assert closing == {"type": "answer", "answer": "Nothing is waiting on you.", "citations": []}
-    assert on_a_lead == needs_live and unrecorded == needs_live
+    # A typed question makes no call; an example with no recording misses and says the same.
+    assert typed == needs_live and unrecorded == needs_live
+    misses = [e for e in events(settings, EventType.replay_miss) if e.payload.skill == "chat"]
+    assert len(misses) == 1
 
 
 def test_a_turn_with_no_model_key_closes_with_an_error(
