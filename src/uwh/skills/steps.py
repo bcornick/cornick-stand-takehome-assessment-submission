@@ -6,6 +6,7 @@ from collections.abc import Callable
 from functools import partial
 from pathlib import Path
 
+import anthropic
 from pydantic import JsonValue
 
 import uwh.skills
@@ -18,6 +19,8 @@ from uwh.runtime.event_types import (
     EventType,
     PlanBuilt,
     ProviderCalled,
+    SkillFallbackUsed,
+    SkillStatus,
     TriageCompleted,
 )
 from uwh.runtime.events import EventContext, append_event, format_timestamp
@@ -30,6 +33,8 @@ from uwh.runtime.facts import (
     usable_facts,
 )
 from uwh.runtime.hashing import hash_json, plan_hash
+from uwh.runtime.model import ModelAccess, append_model_calls, append_replay_miss
+from uwh.runtime.modes import RecordingMiss
 from uwh.runtime.policy import manifest_refusal
 from uwh.runtime.rulings import rulings_in_force
 from uwh.runtime.send import create_draft, replace_stale_drafts, rounds_used
@@ -38,6 +43,7 @@ from uwh.runtime.workflow import Step, stored_plan
 from uwh.skills.build_quote_packet import skill as build_quote_packet
 from uwh.skills.evaluate_playbook import skill as evaluate_playbook
 from uwh.skills.plan_asks import skill as plan_asks
+from uwh.skills.polish_message import skill as polish_message
 from uwh.skills.render_message import skill as render_message
 from uwh.skills.resolve_data import skill as resolve_data
 from uwh.skills.triage_fields import skill as triage_fields
@@ -269,8 +275,58 @@ def _what_is_asked(registry: Registry, ask: Ask) -> str:
     return ", ".join(labels) if labels else ask.wording
 
 
+def _polished_body(
+    model: ModelAccess,
+    db: sqlite3.Connection,
+    context: EventContext,
+    lead_id: str,
+    rendered: render_message.RenderMessageOutput,
+) -> str:
+    """The body of a rendered request: the rewrite of `polish_message` when both its checks pass, and
+    the rendered request as it is otherwise (10.2). Each model call is recorded as a `model_called`
+    event; a rewrite that is not used is recorded as `skill_fallback_used`, with the check that
+    rejected it or the reason the skill had no answer."""
+    rejection: str | None = None
+    status: SkillStatus = "unavailable"
+    if not model.available:
+        rejection = "the model is not available"
+    else:
+        request = polish_message.PolishInput(
+            rendered=rendered,
+            recipient_kind="applicant" if _source(db, lead_id) == "direct_web" else "producer",
+            round=rounds_used(db, lead_id) + 1,
+        )
+        try:
+            outcome, exchanges = polish_message.run(request, model)
+        except RecordingMiss as miss:
+            append_replay_miss(db, context, lead_id, miss)
+            rejection = "no recording answers the call"
+        except anthropic.APIError:
+            rejection = "the model provider failed"
+        else:
+            append_model_calls(db, context, lead_id, exchanges)
+            if isinstance(outcome, polish_message.Rewritten):
+                return outcome.body
+            status, rejection = "failing", outcome.reason
+    fallback = load_manifest(_SKILLS_ROOT / "polish_message").fallback
+    append_event(
+        db,
+        context,
+        EventType.skill_fallback_used,
+        SkillFallbackUsed(
+            skill="polish_message", status=status, fallback=f"{fallback} ({rejection})"
+        ),
+        lead_id=lead_id,
+    )
+    return rendered.body
+
+
 def _ask_producer_step(
-    registry: Registry, db: sqlite3.Connection, context: EventContext, lead_id: str
+    registry: Registry,
+    model: ModelAccess,
+    db: sqlite3.Connection,
+    context: EventContext,
+    lead_id: str,
 ) -> None:
     """Draft the message the plan calls for. A proposed decline suppresses every request and drafts the
     decline notice (9.6 rule 1). Otherwise the asks are planned, rendered and drafted as a request; a
@@ -326,7 +382,7 @@ def _ask_producer_step(
         planned.message_class,
         _recipient(db, lead_id, facts),
         rendered.subject,
-        rendered.body,
+        _polished_body(model, db, context, lead_id, rendered),
         rendered.ask_ids,
     )
 
@@ -376,14 +432,14 @@ def _quote_packet_step(
 
 
 def build_steps(
-    registry: Registry, providers: StandInProviders, rules: LedgerRules
+    registry: Registry, providers: StandInProviders, rules: LedgerRules, model: ModelAccess
 ) -> tuple[Step, ...]:
     """The workflow's steps in `WORKFLOW_STEP_ORDER`."""
     runners: dict[str, Callable[[sqlite3.Connection, EventContext, str], None]] = {
         "triage_fields": partial(_triage_step, registry),
         "resolve_data": partial(_resolve_step, registry, providers, rules),
         "evaluate_playbook": _evaluate_step,
-        "ask_producer": partial(_ask_producer_step, registry),
+        "ask_producer": partial(_ask_producer_step, registry, model),
         "build_quote_packet": partial(_quote_packet_step, registry),
     }
     return tuple(Step(name, runners[name]) for name in WORKFLOW_STEP_ORDER)

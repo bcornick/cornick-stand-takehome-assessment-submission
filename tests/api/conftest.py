@@ -61,7 +61,9 @@ def open_client(
 
     @contextmanager
     def open_(steps: Sequence[Step] = ()) -> Iterator[TestClient]:
-        monkeypatch.setattr(runtime, "build_steps", lambda registry, providers, rules: tuple(steps))
+        monkeypatch.setattr(
+            runtime, "build_steps", lambda registry, providers, rules, model: tuple(steps)
+        )
         with TestClient(create_app(settings, leadgen=leadgen, mailbox=mailbox)) as client:
             yield client
 

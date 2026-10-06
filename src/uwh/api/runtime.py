@@ -142,13 +142,14 @@ def open_runtime(
             )
             stack.callback(model_client.close)
             live = anthropic_call(model_client, settings.model_id)
+        model = ModelAccess(settings.run_mode, Path(settings.recordings_dir), live)
         env = RunEnvironment(
             settings.run_mode,
             ruleset_hash(IMAGE_RULES_DATA),
             rules,
             registry,
-            ModelAccess(settings.run_mode, Path(settings.recordings_dir), live),
-            build_steps(registry, StandInProviders.for_seed(settings.seed), rules),
+            model,
+            build_steps(registry, StandInProviders.for_seed(settings.seed), rules, model),
             Path(uwh.skills.__file__).parent,
             lambda: datetime.now(UTC),
             mailbox,

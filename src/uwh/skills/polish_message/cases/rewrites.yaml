@@ -1,0 +1,38 @@
+# ABOUTME: Cases of polish_message: lead 008's recorded rewrite, which both checks pass, and two hand-built rewrites that a check rejects.
+# ABOUTME: A case with `pieces` is hand-built to test our code after the model: its opening and closing, and `verdict` for the model check, are served as the model's answers. A case without them is answered by the committed recordings.
+cases:
+- name: lead 008's recorded rewrite passes both checks and keeps its questions
+  input:
+    asks: [property_purchase_date, electrical_panel_brand]
+    recipient_kind: producer
+    round: 1
+  expect:
+    result: rewritten
+    question_block_kept: true
+- name: an opening with a question mark fails the code check (hand-built, tests our code after the model)
+  input:
+    asks: [property_purchase_date, electrical_panel_brand]
+    recipient_kind: producer
+    round: 1
+    pieces:
+      opening: Thanks for the submission. Could you send the details today?
+      closing: One reply covering all of them is ideal.
+  expect:
+    result: rejected
+    check: code_check
+    detail: the opening holds a question mark
+- name: a closing that adds a deadline fails the model check (hand-built, tests our code after the model)
+  input:
+    asks: [property_purchase_date, electrical_panel_brand]
+    recipient_kind: producer
+    round: 1
+    pieces:
+      opening: Thanks for the submission. We need a few more details to complete the quote.
+      closing: Please reply within 48 hours.
+    verdict:
+      verdict: fail
+      offending_sentence: Please reply within 48 hours.
+  expect:
+    result: rejected
+    check: model_check
+    detail: Please reply within 48 hours.
