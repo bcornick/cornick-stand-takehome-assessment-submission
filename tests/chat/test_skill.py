@@ -80,7 +80,7 @@ def test_a_read_then_an_answer_cites_what_the_lookup_showed(
     (step,) = script.shown[1]["steps"]
     (shown_event,) = step["result"]["events"]
     assert step["action"] == "lead_events" and shown_event["ref"] == 1 and "id" not in shown_event
-    assert lines == ["Read the events of lead 1: 1 events"]
+    assert lines == ["Read the events of lead 1: 1 event"]
 
 
 def test_a_citation_outside_this_turns_results_is_dropped(

@@ -6,6 +6,9 @@ from pydantic import Field, JsonValue, model_validator
 
 from uwh.rules.models import (
     ActionPlan,
+    NotEvaluatedNote,
+    PlannedEffect,
+    RuleTrace,
     StrictModel,
 )
 from uwh.rules.registry import FactField
@@ -162,6 +165,16 @@ class LeadDetail(StrictModel):
     fields: list[
         FactField
     ]  # the keys `resolve_fact` accepts, with the label and type each is offered by
+
+
+class PlanPage(StrictModel):
+    """What the lead's stored plan holds for one playbook page."""
+
+    key: str  # the graph's id, or the note's ref for a page with no graph
+    effects: list[PlannedEffect]
+    declines_on_every_branch: list[RuleTrace]
+    waits_on: list[str]
+    not_evaluated: list[NotEvaluatedNote]
 
 
 # ---- events (A.1) --------------------------------------------------------------------------------

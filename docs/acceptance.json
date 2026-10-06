@@ -124,5 +124,26 @@
     "description": "The reviewer and the cross-review report no blocker, and the README holds the run command, the architecture overview, the eval loop, the skills table and \"Cut and why\". Expect: `5`.",
     "command": "grep -c -E '^## (Run it|Architecture|The eval loop|Skills|Cut and why)' README.md",
     "passes": true
+  },
+  {
+    "id": "C1-A1",
+    "milestone": "chat-surface 1",
+    "description": "The server tests the chat-surface specification pins pass: a citation outside the turn's results is dropped, a question yields zero commands, the stream ends with exactly one closing event, replay answers the live-mode error, `start_run` and `deliver_reply` are refused as proposals, and a proposal lands on its target lead. Expect: all pass.",
+    "command": "uv run pytest tests/chat tests/api/test_chat.py tests/api/test_event_summary.py -q",
+    "passes": false
+  },
+  {
+    "id": "C1-A2",
+    "milestone": "chat-surface 1",
+    "description": "The chat suite passes from its recordings, the instruction-bearing reply of lead 001 among its cases, and `make check` is clean. Expect: exit 0.",
+    "command": "uv run pytest tests/evals/test_chat.py -q && make check",
+    "passes": false
+  },
+  {
+    "id": "C1-A3",
+    "milestone": "chat-surface 1",
+    "description": "Lead 008's events read as sentences through the events endpoint of the running app: no line is cut, and the triage and fetch lines are among them. Expect: `true`.",
+    "command": "curl -s http://localhost:8000/api/leads/LEAD-00000042-008/events | jq -e '[.events[].summary] | (all(endswith(\"...\") | not)) and any(startswith(\"Triaged the fields: \")) and any(startswith(\"Fetched \"))'",
+    "passes": false
   }
 ]

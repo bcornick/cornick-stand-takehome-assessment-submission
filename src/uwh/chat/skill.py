@@ -49,7 +49,16 @@ UNREADABLE_STEP = "I could not read the assistant's reply. Ask again."
 
 # The tool input of a chat step. `action` picks what the step does; the other fields belong to one action each.
 class ChatStep(StrictModel):
-    action: Literal["lead_events", "lead_summary", "queue_summary", "answer", "propose_command"]
+    action: Literal[
+        "lead_events",
+        "lead_summary",
+        "messages",
+        "playbook_path",
+        "current_draft",
+        "queue_summary",
+        "answer",
+        "propose_command",
+    ]
     lead_id: str | None = None
     answer: str | None = None
     citations: list[int] = []  # reference numbers from this turn's lookup results
