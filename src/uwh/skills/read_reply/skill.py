@@ -14,12 +14,14 @@ from uwh.rules.registry import Registry
 from uwh.runtime.event_types import (
     AbstentionReason,
     Candidate,
+    ClassificationSource,
     ConflictOpened,
     LocatedCandidate,
     ReplyClassification,
 )
 from uwh.runtime.model import ForcedToolCall, ModelAccess, read_tool_input
 from uwh.runtime.recordings import Exchange
+from uwh.skills.read_reply import jev
 
 TOOL_NAME = "record_reply_reading"
 _PROMPT_FILE = Path(__file__).with_name("prompt.md")
@@ -52,6 +54,8 @@ class ReplyReading(StrictModel):
 
 class Reading(StrictModel):
     classification: ReplyClassification
+    classified_by: ClassificationSource = "model"
+    jev_confidence: float | None = None  # what Jev answered with, whoever classified
     candidates: list[LocatedCandidate]
     dropped: list[
         Candidate
@@ -207,9 +211,20 @@ def forced_call(input: ReadReplyInput) -> ForcedToolCall:
 
 
 def run(input: ReadReplyInput, model: ModelAccess) -> tuple[Reading | Abstention, list[Exchange]]:
-    """Read the reply. Returns the reading or the abstention with the exchange of each call made."""
+    """Read the reply. Jev, when the model access holds it, is asked the classification first; its
+    answer replaces the model's when its confidence reaches the manifest threshold. Returns the reading
+    or the abstention with the exchange of each model call made."""
+    answer = None if model.jev is None else jev.classify(input.body, model.jev)
     reading, exchanges = read_tool_input(model, forced_call(input), ReplyReading)
     if reading is None:
         refused = exchanges[-1].stop_reason == "refusal"
         return Abstention(reason="refusal" if refused else "invalid_tool_input"), exchanges
-    return interpret(reading, input), exchanges
+    read = interpret(reading, input)
+    if answer is None:
+        return read, exchanges
+    read = read.model_copy(update={"jev_confidence": answer.confidence})
+    if answer.confidence >= jev.threshold():
+        read = read.model_copy(
+            update={"classification": answer.classification, "classified_by": "jev"}
+        )
+    return read, exchanges
