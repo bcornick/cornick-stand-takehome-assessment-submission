@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { components } from '@/api/types'
 import type { Chat } from '@/surface'
 import { LeadConversation, shownSteps } from './LeadConversation'
+import { narrate } from './narrate'
 
 type Schemas = components['schemas']
 
@@ -132,8 +133,8 @@ afterEach(() => {
 })
 
 describe('shownSteps', () => {
-  it('counts the events the timeline shows', () => {
-    expect(shownSteps(events)).toBe(3)
+  it('counts the lines the timeline shows, a folded run as one', () => {
+    expect(shownSteps(narrate(events, lead))).toBe(3)
   })
 })
 

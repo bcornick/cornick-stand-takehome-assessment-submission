@@ -344,14 +344,14 @@ describe('the question card', () => {
     expect(within(card).getByText('Roof age: 12')).toBeInTheDocument()
     expect(within(card).getByText('Wall type: —')).toBeInTheDocument()
     const buttons = within(card).getAllByRole('button')
-    expect(buttons.map((b) => b.textContent)).toEqual(['decline', 'legacy underwriting'])
+    expect(buttons.map((b) => b.textContent)).toEqual(['Decline', 'Legacy underwriting'])
     for (const button of buttons) expect(button).toBeEnabled()
   })
 
   it('posts the ruling only after an option is chosen and a reason is given', async () => {
     const posted = stubApi()
     item(questionItem)
-    await userEvent.click(screen.getByRole('button', { name: 'legacy underwriting' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Legacy underwriting' }))
     expect(reasonForm().getByRole('button', { name: 'Choose legacy underwriting' })).toBeDisabled()
     expect(posted).toEqual([])
 

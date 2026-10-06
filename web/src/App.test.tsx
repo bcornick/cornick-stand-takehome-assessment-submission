@@ -282,8 +282,8 @@ describe('App', () => {
     const conversation = within(await screen.findByRole('region', { name: 'Conversation' }))
 
     expect(await conversation.findByRole('button', { name: 'Withdraw decline and send the asks' })).toBeInTheDocument()
-    expect(await conversation.findByRole('button', { name: 'legacy underwriting' })).toBeInTheDocument()
-    expect(conversation.getByRole('button', { name: 'decline' })).toBeInTheDocument()
+    expect(await conversation.findByRole('button', { name: 'Legacy underwriting' })).toBeInTheDocument()
+    expect(conversation.getByRole('button', { name: 'Decline' })).toBeInTheDocument()
 
     await userEvent.click(conversation.getByRole('button', { name: /Lead 003/ }))
 

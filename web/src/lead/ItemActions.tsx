@@ -233,7 +233,7 @@ function QuestionCard({ lead, blocker, onChange }: Props & { blocker: Blocker })
             choices={choice.options.map((option) => {
               const words = option.replace(/_/g, ' ')
               return {
-                label: words,
+                label: words.charAt(0).toUpperCase() + words.slice(1),
                 confirm: `Choose ${words}`,
                 outline: true,
                 act: (reason) => recordRuling(lead.lead_id, choice.choice_id, option, reason),
