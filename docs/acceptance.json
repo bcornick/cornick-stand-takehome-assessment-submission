@@ -82,5 +82,26 @@
     "description": "The chat cases pass in the eval: a question causes zero commands and cites event ids; a directive becomes a proposal card and a reworded refused directive stays refused. Expect: exit 0, then `true`.",
     "command": "make eval ARGS='--suite chat' && tail -n 1 evals/results.jsonl | jq -e '.kind == \"run\" and .suite == \"chat\" and (.scores | to_entries | all(.value.passed))'",
     "passes": true
+  },
+  {
+    "id": "M5-A1",
+    "milestone": 5,
+    "description": "The reply suite passes with Jev answering the classification first (replayed Jev recordings) and with no Jev key. Expect: exit 0 twice, then `true` twice.",
+    "command": "make eval ARGS='--suite replies --jev' && tail -n 1 evals/results.jsonl | jq -e '.suite == \"replies\" and .jev == true and (.scores | to_entries | all(.value.passed))' && make eval ARGS='--suite replies' && tail -n 1 evals/results.jsonl | jq -e '.suite == \"replies\" and .jev == false and (.scores | to_entries | all(.value.passed))'",
+    "passes": false
+  },
+  {
+    "id": "M5-A2",
+    "milestone": 5,
+    "description": "After a run, a routine request in the mailbox carries the rendered question block unchanged inside a rewritten opening and closing. Expect: all pass.",
+    "command": "uv run pytest -m integration tests/integration/test_polish_message.py -k question_block_unchanged",
+    "passes": false
+  },
+  {
+    "id": "M5-A3",
+    "milestone": 5,
+    "description": "A rewrite that fails either check sends the rendered request as it is. Expect: all pass.",
+    "command": "uv run pytest -m integration tests/integration/test_polish_message.py -k rejected_rewrite",
+    "passes": false
   }
 ]
