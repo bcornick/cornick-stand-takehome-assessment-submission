@@ -88,6 +88,7 @@ function ApproveOrReject({ itemId, approveLabel, canReject, onChange }: ApproveO
       {canReject && (
         <ActionForm
           label="Reject"
+          destructive
           fields={[REASON]}
           act={({ reason }) => reject(itemId, reason!)}
           onDone={onChange}
@@ -130,6 +131,7 @@ function DraftActions({ itemId, draft, onChange }: DraftActionsProps) {
       )}
       <ActionForm
         label={isDecline ? 'Withdraw decline and send the asks' : 'Reject'}
+        destructive
         fields={[REASON]}
         act={({ reason }) => reject(itemId, reason!)}
         onDone={onChange}

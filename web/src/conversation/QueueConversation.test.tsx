@@ -132,7 +132,7 @@ describe('QueueConversation', () => {
     expect(screen.getByText('The quote packet is ready to send.')).toBeInTheDocument()
     expect(await screen.findByRole('form', { name: 'Approve' })).toBeInTheDocument()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Lead 008 8924 Lakeview Blvd' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Lead 008 · 8924 Lakeview Blvd' }))
     expect(onSelect).toHaveBeenCalledWith(lead.lead_id)
   })
 

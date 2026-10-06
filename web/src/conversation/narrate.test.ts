@@ -100,6 +100,19 @@ describe('narrate', () => {
     ])
   })
 
+  it('keeps what the system did with a reply in the assistant message, under whichever actor wrote it', () => {
+    const events = [
+      event(1, 'reply_received', { actor: 'inbound', message: { subject: null, body: 'It is 2019.' } }),
+      event(2, 'reply_read', { actor: 'inbound' }),
+      event(3, 'fact_observed', { actor: 'inbound' }),
+      event(4, 'plan_built'),
+    ]
+    expect(narrate(events, leadWith([]))).toMatchObject([
+      { kind: 'bubble' },
+      { kind: 'assistant_message', bullets: [{ event: { id: 2 } }, { event: { id: 3 } }, { event: { id: 4 } }] },
+    ])
+  })
+
   it('does not break a message with a row it leaves out', () => {
     const events = [event(1, 'plan_built'), event(2, 'plan_built', { actor: 'assistant' }), event(3, 'plan_built')]
     const [block] = narrate(events, leadWith([]))

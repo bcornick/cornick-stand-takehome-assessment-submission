@@ -1,5 +1,5 @@
 // ABOUTME: The demo controls, apart from the product: load the day's leads and deliver the producers' fixture replies.
-// ABOUTME: A small card pinned bottom right that minimises to a pill.
+// ABOUTME: A small card pinned bottom right, above the composer, that minimises to a pill.
 import { useState } from 'react'
 import type { components } from '@/api/types'
 import { deliverFixtureReplies, startRun } from '@/api/client'
@@ -22,7 +22,7 @@ export function DemoPanel({ run, onChange }: Props) {
 
   if (minimised) {
     return (
-      <aside aria-label="Demo controls" className="fixed bottom-4 right-4 z-10">
+      <aside aria-label="Demo controls" className="fixed bottom-20 right-4 z-10">
         <button
           type="button"
           onClick={() => setMinimised(false)}
@@ -37,7 +37,7 @@ export function DemoPanel({ run, onChange }: Props) {
   return (
     <aside
       aria-label="Demo controls"
-      className="fixed bottom-4 right-4 z-10 w-72 space-y-3 rounded-md border bg-white p-4 text-sm shadow"
+      className="fixed bottom-20 right-4 z-10 w-72 space-y-3 rounded-md border bg-white p-4 text-sm shadow"
     >
       <div className="flex items-center justify-between">
         <h2 className="font-medium">Demo controls</h2>

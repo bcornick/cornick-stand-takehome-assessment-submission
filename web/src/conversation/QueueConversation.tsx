@@ -71,7 +71,9 @@ function ItemCard({ item, refresh, onSelect, onChange }: CardProps) {
         className="self-start text-sm font-medium underline-offset-2 hover:underline"
         onClick={() => onSelect(item.lead_id)}
       >
-        {lead.state === 'ready' ? `${leadName(item.lead_id)} ${lead.data.label}` : leadName(item.lead_id)}
+        {lead.state === 'ready' && lead.data.label !== item.lead_id
+          ? `${leadName(item.lead_id)} · ${lead.data.label}`
+          : leadName(item.lead_id)}
       </button>
       {lead.state === 'ready' && blocker !== undefined ? (
         <OpenItem lead={lead.data} blocker={blocker} onChange={onChange} />

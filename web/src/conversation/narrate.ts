@@ -1,4 +1,4 @@
-// ABOUTME: Groups a lead's events, oldest first, into the blocks of its conversation: assistant messages, bubbles, item cards and other actors' lines.
+// ABOUTME: Groups a lead's events, oldest first, into the blocks of its conversation: assistant messages, bubbles, item cards and the underwriter's own lines.
 // ABOUTME: A resolved card absorbs the row that closed it, and the assistant's own rows are left out, so the narrative says each thing once.
 import type { components } from '@/api/types'
 
@@ -82,7 +82,8 @@ export function narrate(events: Event[], lead: Lead): Block[] {
     } else if ((event.type === 'message_sent' || event.type === 'reply_received') && event.message) {
       flush()
       blocks.push({ kind: 'bubble', event, message: event.message })
-    } else if (event.actor === 'workflow') {
+    } else if (event.actor !== 'underwriter') {
+      // Reading a reply is the system's work too, written under the actor that delivered it.
       pending.push(event)
     } else {
       flush()
