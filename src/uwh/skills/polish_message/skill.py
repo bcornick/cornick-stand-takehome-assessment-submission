@@ -50,15 +50,6 @@ class Rejected(StrictModel):
     check: Literal["rewrite", "code_check", "model_check"]
     detail: str
 
-    @property
-    def reason(self) -> str:
-        stage = {
-            "rewrite": "the rewrite call gave no valid pieces",
-            "code_check": "the code check rejected the rewrite",
-            "model_check": "the model check rejected the rewrite",
-        }[self.check]
-        return f"{stage}: {self.detail}"
-
 
 def build_body(pieces: Pieces, rendered: RenderMessageOutput) -> str:
     """The opening, the question block exactly as rendered, then the closing."""

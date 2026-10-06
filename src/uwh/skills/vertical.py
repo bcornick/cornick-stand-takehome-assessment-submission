@@ -136,7 +136,7 @@ CONFIRMATION_ONLY_CLASS: RequestKind = "routine_request"
 MAX_REQUEST_ROUNDS = 2
 
 # The workflow's steps in the order a lead's pass runs them (7). Each name is a skill, except
-# `ask_producer`, which plans the asks, renders them, rewrites the rendered request and drafts it: the four share the asks.
+# `ask_producer`, which plans the asks, renders them, rewrites the rendered request and drafts it.
 WORKFLOW_STEP_ORDER: tuple[str, ...] = (
     "triage_fields",
     "resolve_data",

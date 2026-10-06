@@ -2,7 +2,9 @@
 # ABOUTME: The app runs in process in replay against Stand's leadgen and mailbox apps in process; the two calls per request are served from the committed recordings of the seed-42 record run.
 import shutil
 import sqlite3
+import threading
 from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -10,14 +12,19 @@ from typing import Any
 import pytest
 
 from tests.api.helpers import LEAD_008, RECORDINGS, first_pass
+from uwh.api import runtime
 from uwh.runtime.event_types import EventType
 from uwh.runtime.events import read_events
+from uwh.runtime import workflow
 from uwh.runtime.hashing import payload_hash
 from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
+from uwh.runtime.recordings import Exchange, RecordingKey, read_recording
 from uwh.runtime.store import open_store
 from uwh.runtime.waits import open_blockers
+from uwh.runtime.workflow import unit_of_work
 from uwh.settings import Settings
+from uwh.skills import steps
 from uwh.skills.plan_asks import skill as plan_asks
 from uwh.skills.polish_message.skill import PolishInput, rewrite_call
 from uwh.skills.render_message import skill as render_message
@@ -86,14 +93,63 @@ def test_a_rewrite_that_failed_a_check_sends_the_rendered_request_and_the_log_na
 
     assert body.startswith(render_message.OPENING)
     (fallback,) = events_of(db, LEAD_001, EventType.skill_fallback_used)
-    assert fallback.skill == "polish_message" and fallback.status == "failing"
-    assert "the model check rejected the rewrite" in fallback.fallback
-    assert "the rendered request is sent as it is" in fallback.fallback
+    assert fallback.skill == "polish_message" and fallback.status == "rejected"
+    assert fallback.fallback.startswith(
+        "The rewrite of the request was rejected by the model check ("
+    )
+    assert fallback.fallback.endswith("); the rendered request is used")
     (sent,) = mailbox.list_for_lead(LEAD_001)
     assert sent["body"] == body
     assert (
         sent["metadata"]["kind"] == "routine_request"
     )  # the class stays; it still sends automatically
+
+
+def test_a_request_the_model_wrote_is_marked_and_one_that_was_rejected_is_not(
+    db: sqlite3.Connection,
+) -> None:
+    (written,) = events_of(db, LEAD_008, EventType.intent_created)
+    (rendered,) = [
+        e for e in events_of(db, LEAD_001, EventType.intent_created) if e.kind.endswith("_request")
+    ]
+
+    assert written.rewritten_by_model is True
+    assert rendered.rewritten_by_model is False
+
+
+def test_the_model_is_called_for_a_rewrite_outside_every_unit_of_work(
+    settings: Settings,
+    leadgen: LeadgenClient,
+    mailbox: MailboxClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Leads run on parallel threads and each holds the write lock in its own units, so the lock cannot
+    say whose call is in flight; each thread counts the units it is inside instead."""
+    inside = threading.local()
+    depths: list[int] = []
+
+    @contextmanager
+    def counted(db: sqlite3.Connection) -> Iterator[None]:
+        inside.units = getattr(inside, "units", 0) + 1
+        try:
+            with unit_of_work(db):
+                yield
+        finally:
+            inside.units -= 1
+
+    def model_call(call: Any, key: RecordingKey) -> Exchange:
+        if key.skill == "polish_message":
+            depths.append(getattr(inside, "units", 0))
+        recorded = read_recording(RECORDINGS, key)
+        assert recorded is not None
+        return recorded
+
+    monkeypatch.setattr(workflow, "unit_of_work", counted)
+    monkeypatch.setattr(steps, "unit_of_work", counted)
+    monkeypatch.setattr(runtime, "anthropic_call", lambda client, model_id: model_call)
+    keyed = replace(settings, run_mode="live", model_api_key="not-used")
+    with first_pass(keyed, leadgen, mailbox):
+        assert depths and set(depths) == {0}
 
 
 def test_a_decline_notice_is_never_rewritten(

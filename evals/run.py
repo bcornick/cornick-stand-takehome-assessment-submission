@@ -1,4 +1,4 @@
-# ABOUTME: The eval runner (section 13): `python -m evals.run --suite seed42|replies|chat [--control NAME] [--hypothesis TEXT]`; the seed42 suite runs seed 42's first pass in replay mode, grades it at the settle point, plays each label's underwriter actions and grades the state after them, runs the fault runs, and appends one `run` row to the results log.
+# ABOUTME: The eval runner (section 13): `python -m evals.run --suite seed42|replies|chat [--control NAME] [--hypothesis TEXT] [--jev]`; the seed42 suite runs seed 42's first pass in replay mode, grades it at the settle point, plays each label's underwriter actions and grades the state after them, runs the fault runs, and appends one `run` row to the results log.
 # ABOUTME: Every run opens its own empty database; the leadgen and mailbox services are the eval ones named by LEADGEN_URL and MAILBOX_URL, and a failed health or bootstrap check writes an `invalid` row, never a score.
 import argparse
 import json

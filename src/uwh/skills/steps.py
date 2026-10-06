@@ -2,9 +2,12 @@
 # ABOUTME: The order is `WORKFLOW_STEP_ORDER`; the registry, providers and ledger rules a step needs arrive in `build_steps`, which is why the steps are built when the app starts.
 import json
 import sqlite3
-from collections.abc import Callable
+from collections.abc import Callable, Iterator, Sequence
+from contextlib import contextmanager
+from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
+from typing import Literal
 
 import anthropic
 from pydantic import JsonValue
@@ -19,11 +22,15 @@ from uwh.runtime.event_types import (
     EventType,
     PlanBuilt,
     ProviderCalled,
-    SkillFallbackUsed,
-    SkillStatus,
     TriageCompleted,
 )
-from uwh.runtime.events import EventContext, append_event, format_timestamp
+from uwh.runtime.events import (
+    EventContext,
+    MakeContext,
+    append_event,
+    format_timestamp,
+    require_current_run,
+)
 from uwh.runtime.facts import (
     LedgerRules,
     effective_facts,
@@ -33,13 +40,14 @@ from uwh.runtime.facts import (
     usable_facts,
 )
 from uwh.runtime.hashing import hash_json, plan_hash
-from uwh.runtime.model import ModelAccess, append_model_calls, append_replay_miss
+from uwh.runtime.model import ModelAccess, append_fallback, append_model_calls
 from uwh.runtime.modes import RecordingMiss
 from uwh.runtime.policy import manifest_refusal
 from uwh.runtime.rulings import rulings_in_force
+from uwh.runtime.recordings import Exchange
 from uwh.runtime.send import create_draft, replace_stale_drafts, rounds_used
 from uwh.runtime.waits import Blocker, close_blocker, open_blocker, open_blockers
-from uwh.runtime.workflow import Step, stored_plan
+from uwh.runtime.workflow import Step, StepRun, stored_plan, unit_of_work
 from uwh.skills.build_quote_packet import skill as build_quote_packet
 from uwh.skills.evaluate_playbook import skill as evaluate_playbook
 from uwh.skills.plan_asks import skill as plan_asks
@@ -275,64 +283,143 @@ def _what_is_asked(registry: Registry, ask: Ask) -> str:
     return ", ".join(labels) if labels else ask.wording
 
 
-def _polished_body(
+@dataclass(frozen=True)
+class _Polished:
+    """The outcome of the rewrite made for a rendered request: `request` is the body the model was
+    shown, and `rewrite` is the body to draft in its place, or None when the rendered request is used."""
+
+    request: str
+    rewrite: str | None
+
+
+@contextmanager
+def _writing(db: sqlite3.Connection, make_context: MakeContext) -> Iterator[EventContext]:
+    """A unit of work of its own, for what a step's preparation leaves before the step's unit opens."""
+    with unit_of_work(db):
+        context = make_context()
+        require_current_run(db, context.run_id)
+        yield context
+
+
+def _polish(
     model: ModelAccess,
     db: sqlite3.Connection,
-    context: EventContext,
+    make_context: MakeContext,
     lead_id: str,
     rendered: render_message.RenderMessageOutput,
-) -> str:
-    """The body of a rendered request: the rewrite of `polish_message` when both its checks pass, and
-    the rendered request as it is otherwise (10.2). Each model call is recorded as a `model_called`
-    event; a rewrite that is not used is recorded as `skill_fallback_used`, with the check that
-    rejected it or the reason the skill had no answer."""
-    rejection: str | None = None
-    status: SkillStatus = "unavailable"
-    if not model.available:
-        rejection = "the model is not available"
-    else:
-        request = polish_message.PolishInput(
-            rendered=rendered,
-            recipient_kind="applicant" if _source(db, lead_id) == "direct_web" else "producer",
-            round=rounds_used(db, lead_id) + 1,
-        )
-        try:
-            outcome = polish_message.run(
-                request, model, lambda calls: append_model_calls(db, context, lead_id, calls)
-            )
-        except RecordingMiss as miss:
-            append_replay_miss(db, context, lead_id, miss)
-            rejection = "no recording answers the call"
-        except anthropic.APIError:
-            rejection = "the model provider failed"
-        else:
-            if isinstance(outcome, polish_message.Rewritten):
-                return outcome.body
-            status, rejection = "failing", outcome.reason
+) -> _Polished:
+    """Rewrite a rendered request with `polish_message` (10.2). Each model call is recorded as a
+    `model_called` event as it completes; a rewrite that is not used is recorded as
+    `skill_fallback_used`, with the check that rejected it or the reason the skill had no answer. Each
+    is written in a unit of its own."""
     fallback = load_manifest(_SKILLS_ROOT / "polish_message").fallback
-    append_event(
-        db,
-        context,
-        EventType.skill_fallback_used,
-        SkillFallbackUsed(
-            skill="polish_message", status=status, fallback=f"{fallback} ({rejection})"
-        ),
-        lead_id=lead_id,
+
+    def unused(
+        status: Literal["unavailable", "rejected"], text: str, miss: RecordingMiss | None = None
+    ) -> _Polished:
+        with _writing(db, make_context) as context:
+            append_fallback(db, context, lead_id, "polish_message", status, text, miss)
+        return _Polished(rendered.body, None)
+
+    if not model.available:
+        return unused("unavailable", f"{fallback} (the model is not available)")
+
+    def record(calls: Sequence[Exchange]) -> None:
+        with _writing(db, make_context) as context:
+            append_model_calls(db, context, lead_id, calls)
+
+    request = polish_message.PolishInput(
+        rendered=rendered,
+        recipient_kind="applicant" if _source(db, lead_id) == "direct_web" else "producer",
+        round=rounds_used(db, lead_id) + 1,
     )
-    return rendered.body
+    try:
+        outcome = polish_message.run(request, model, record)
+    except RecordingMiss as miss:
+        return unused("unavailable", f"{fallback} (no recording answers the call)", miss)
+    except anthropic.APIError:
+        return unused("unavailable", f"{fallback} (the model provider failed)")
+    if isinstance(outcome, polish_message.Rewritten):
+        return _Polished(rendered.body, outcome.body)
+    if outcome.check == "rewrite":
+        return unused("unavailable", f"{fallback} ({outcome.detail})")
+    stage = "code" if outcome.check == "code_check" else "model"
+    return unused(
+        "rejected",
+        f"The rewrite of the request was rejected by the {stage} check ({outcome.detail}); "
+        "the rendered request is used",
+    )
+
+
+@dataclass(frozen=True)
+class _RequestDue:
+    """Whether a lead with no proposed decline is due a request: `ask`, or why not (`nothing_to_ask`,
+    `in_flight`, `round_limit`), with the planned asks."""
+
+    state: Literal["ask", "nothing_to_ask", "in_flight", "round_limit"]
+    planned: plan_asks.PlanAsksOutput
+
+
+def _request_due(
+    registry: Registry, db: sqlite3.Connection, lead_id: str, plan: ActionPlan
+) -> _RequestDue:
+    planned = _planned_asks(registry, db, lead_id, plan)
+    if not planned.asks:
+        return _RequestDue("nothing_to_ask", planned)
+    if _request_in_flight(db, lead_id):
+        return _RequestDue("in_flight", planned)
+    if rounds_used(db, lead_id) >= MAX_REQUEST_ROUNDS:
+        return _RequestDue("round_limit", planned)
+    return _RequestDue("ask", planned)
+
+
+def _render_request(
+    registry: Registry, db: sqlite3.Connection, lead_id: str, planned: plan_asks.PlanAsksOutput
+) -> render_message.RenderMessageOutput:
+    return render_message.run(
+        render_message.RenderMessageInput(
+            registry=registry,
+            lead_label=lead_label(db, lead_id),
+            asks=planned.asks,
+            to_applicant=_source(db, lead_id) == "direct_web",
+        )
+    )
+
+
+def _prepare_ask_producer(
+    registry: Registry,
+    model: ModelAccess,
+    db: sqlite3.Connection,
+    make_context: MakeContext,
+    lead_id: str,
+) -> StepRun:
+    """Before the step's unit opens: rewrite the request the step is going to draft, when it is going
+    to draft one, so the model calls hold no write lock. The stale drafts are closed first, as the
+    step closes them, so the request is judged as the step will judge it."""
+    with _writing(db, make_context) as context:
+        replace_stale_drafts(db, context, lead_id)
+    plan = stored_plan(db, lead_id)
+    polished = None
+    if not plan.proposed_decline:
+        due = _request_due(registry, db, lead_id, plan)
+        if due.state == "ask":
+            rendered = _render_request(registry, db, lead_id, due.planned)
+            polished = _polish(model, db, make_context, lead_id, rendered)
+    return partial(_ask_producer_step, registry, polished)
 
 
 def _ask_producer_step(
     registry: Registry,
-    model: ModelAccess,
+    polished: _Polished | None,
     db: sqlite3.Connection,
     context: EventContext,
     lead_id: str,
 ) -> None:
     """Draft the message the plan calls for. A proposed decline suppresses every request and drafts the
-    decline notice (9.6 rule 1). Otherwise the asks are planned, rendered and drafted as a request; a
-    draft built at an older revision is replaced, a lead with a request in flight, or nothing to ask,
-    gets no new draft, and a lead that has had its two rounds goes to the underwriter (10.1)."""
+    decline notice (9.6 rule 1). Otherwise the asks are planned, rendered and drafted as a request, with
+    the rewrite `polished` holds when it was made for this request; a draft built at an older revision
+    is replaced, a lead with a request in flight, or nothing to ask, gets no new draft, and a lead that
+    has had its two rounds goes to the underwriter (10.1)."""
     replace_stale_drafts(db, context, lead_id)
     plan = stored_plan(db, lead_id)
     limit_review = _round_limit_review(db, lead_id)
@@ -341,14 +428,14 @@ def _ask_producer_step(
             close_blocker(db, context, limit_review.id)  # the decline ends the lead
         _draft_decline_notice(registry, db, context, lead_id)
         return
-    planned = _planned_asks(registry, db, lead_id, plan)
-    if not planned.asks:
+    due = _request_due(registry, db, lead_id, plan)
+    if due.state == "nothing_to_ask":
         if limit_review is not None:
             close_blocker(db, context, limit_review.id)
         return
-    if _request_in_flight(db, lead_id):
+    if due.state == "in_flight":
         return
-    if rounds_used(db, lead_id) >= MAX_REQUEST_ROUNDS:
+    if due.state == "round_limit":
         if limit_review is None:
             open_blocker(
                 db,
@@ -362,29 +449,26 @@ def _ask_producer_step(
                     cause_persists=True,
                     resume_trigger="the facts are supplied or the lead is declined",
                     text=f"{MAX_REQUEST_ROUNDS} requests have been sent and these are still open: "
-                    f"{'; '.join(_what_is_asked(registry, ask) for ask in planned.asks)}.",
+                    f"{'; '.join(_what_is_asked(registry, ask) for ask in due.planned.asks)}.",
                 ),
             )
         return
     facts = {key: fact.value for key, fact in effective_facts(db, lead_id).items()}
-    rendered = render_message.run(
-        render_message.RenderMessageInput(
-            registry=registry,
-            lead_label=lead_label(db, lead_id),
-            asks=planned.asks,
-            to_applicant=_source(db, lead_id) == "direct_web",
-        )
+    rendered = _render_request(registry, db, lead_id, due.planned)
+    rewrite = (
+        polished.rewrite if polished is not None and polished.request == rendered.body else None
     )
     create_draft(
         db,
         context,
         load_manifest(_SKILLS_ROOT / "render_message"),
         lead_id,
-        planned.message_class,
+        due.planned.message_class,
         _recipient(db, lead_id, facts),
         rendered.subject,
-        _polished_body(model, db, context, lead_id, rendered),
+        rendered.body if rewrite is None else rewrite,
         rendered.ask_ids,
+        rewritten_by_model=rewrite is not None,
     )
 
 
@@ -440,7 +524,8 @@ def build_steps(
         "triage_fields": partial(_triage_step, registry),
         "resolve_data": partial(_resolve_step, registry, providers, rules),
         "evaluate_playbook": _evaluate_step,
-        "ask_producer": partial(_ask_producer_step, registry, model),
+        "ask_producer": partial(_ask_producer_step, registry, None),
         "build_quote_packet": partial(_quote_packet_step, registry),
     }
-    return tuple(Step(name, runners[name]) for name in WORKFLOW_STEP_ORDER)
+    prepares = {"ask_producer": partial(_prepare_ask_producer, registry, model)}
+    return tuple(Step(name, runners[name], prepares.get(name)) for name in WORKFLOW_STEP_ORDER)

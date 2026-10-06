@@ -258,7 +258,7 @@ The promise is **no automatic resend after an ambiguous delivery**. The mailbox 
 ### 7.7 Run modes
 
 - **live:** model calls use the key from `.env`.
-- **replay:** model calls are served from `recordings/` keyed by skill, prompt version and input hash. A miss fails closed with a visible error. The input hash covers only the content the model is shown (for `read_reply`, the reply body and the open asks), never run ids or intent ids. The prompt version is the hash of the `prompt.md` bytes and of the forced tool (its name, description and input schema), so a change to either records again. After any change to a `prompt.md` or a tool, the affected recordings are recorded again and committed. Replay uses its own app database.
+- **replay:** model calls are served from `recordings/` keyed by skill, prompt version and input hash. A miss fails closed with a visible error, except a Jev call (10.4): its miss is recorded as a `replay_miss` event and the language model classifies the reply. The input hash covers only the content the model is shown (for `read_reply`, the reply body and the open asks), never run ids or intent ids. The prompt version is the hash of the `prompt.md` bytes and of the forced tool (its name, description and input schema), so a change to either records again. After any change to a `prompt.md` or a tool, the affected recordings are recorded again and committed. Replay uses its own app database.
 - **record:** a live run that also writes each model exchange to `recordings/` at the repository root, bind-mounted read-write in this mode and read-only in replay. Recordings are committed.
 
 The mode is shown on screen at all times and stored on every event. The system never falls back from live to replay.
@@ -297,7 +297,7 @@ Rules:
 | `evaluate_playbook` | no | after resolution | none |
 | `plan_asks` | no | after evaluation | none |
 | `render_message` | no | an ask plan, quote or decline needs a message | none |
-| `polish_message` | Language model | a request has been rendered | the rendered request is sent as it is |
+| `polish_message` | Language model | a request has been rendered | the rendered request is used as it is |
 | `read_reply` | Language model for extraction; Jev first for classification when its key is set, language model as fallback | a reply is delivered | reply goes to the underwriter unread |
 | `build_quote_packet` | no | no open blockers and no asks remain | none |
 
@@ -603,7 +603,7 @@ When `read_reply` abstains (A.10), the `reply_read` event records the abstention
 
 Reply text is untrusted. It is length-capped, passed to the model as data, and cannot approve an action. The model call runs outside any database transaction; then accepted facts, round closure and re-evaluation commit in one short transaction. A reply is refused unless its intent is `sent`, and a body already delivered for the intent is refused. With no key in live mode the reply is recorded unread and raises an underwriter review.
 
-**Classification cascade.** With a Jev key (`TYPESAFE_API_KEY`), Jev answers the classification as a choice question. The interface computes confidence from the returned probabilities, and when it is below the per-question threshold (default 0.7) the language model answers instead; the confidence is the top option's probability, the model is still called for the candidates, and the `reply_read` event records which source answered and Jev's confidence. Jev's exchanges are recorded under `recordings/jev/`, keyed by the question version and the hash of the reply body and the options. Without a Jev key the language model answers every time, so the system works fully without Jev. Brett and Stand's reviewers both run with a Jev key; the path without Jev is the fallback.
+**Classification cascade.** With a Jev key (`TYPESAFE_API_KEY`), Jev answers the classification as a choice question. The interface computes confidence from the returned probabilities, and when it is below the per-question threshold (default 0.7) the language model answers instead; the confidence is the top option's probability, the model is still called for the candidates, and the `reply_read` event records which source answered and Jev's confidence. Jev's exchanges are recorded under `recordings/jev/`, keyed by the question version and the hash of the reply body and the options. Without a Jev key the language model answers every time, so the system works fully without Jev. When Jev gives no answer (an outage, or in replay no recording), a `skill_fallback_used` event records it, a miss also writes a `replay_miss` event, and the language model classifies; the reply is never refused for Jev. Each Jev call is a `model_called` event under Jev's model id with the usage it returns, and the `reply_read` summary says who classified and Jev's confidence. Brett and Stand's reviewers both run with a Jev key; the path without Jev is the fallback.
 
 ### 10.5 Quote packet and decline notice
 

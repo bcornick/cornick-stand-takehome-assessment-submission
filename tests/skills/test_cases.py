@@ -27,4 +27,3 @@ def test_a_wrong_expectation_is_reported() -> None:
         "committed: expected not in ['no_action RF-1']: 'no_action RF-1'"
     ]
     assert mismatches({"paths": {"RF-9": []}}, observed) == ["paths.RF-9: not observed"]
-

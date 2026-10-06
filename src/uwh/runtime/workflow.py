@@ -33,15 +33,24 @@ MAX_LEADS_IN_FLIGHT = 4
 _FIRST_PASS_STATUSES: tuple[Status, ...] = ("received", "triaged")
 
 
+type StepRun = Callable[[sqlite3.Connection, EventContext, str], None]
+
+
 @dataclass(frozen=True)
 class Step:
     """One workflow step of a lead. `run` acts on the lead through the ledger, the waits and the other
     runtime modules. It runs inside a unit of work that `run_steps` opens, so it neither opens its own nor
     commits, and it leaves the posting of a message to the send primitive.
+
+    A step that needs a slow call, a model's, has a `prepare`. At top level `run_steps` calls it before the
+    step's unit opens, so the call holds no write lock; it returns the run to use and writes what the call
+    leaves in a unit of its own, which stays when the step's unit rolls back. Inside a caller's
+    transaction it is called in that transaction.
     """
 
     name: str
-    run: Callable[[sqlite3.Connection, EventContext, str], None]
+    run: StepRun
+    prepare: Callable[[sqlite3.Connection, MakeContext, str], StepRun] | None = None
 
 
 @contextmanager
@@ -184,23 +193,31 @@ def _run_step(
     make_context: MakeContext,
     lead_id: str,
     step: Step,
+    run: StepRun,
     *,
     last: bool,
 ) -> None:
-    """Run the step and the status moves after it. The last step also moves the lead to `in_progress`
+    """Run `run`, the step's run, and the status moves after it. The last step also moves the lead to `in_progress`
     and closes its step-failure blocker, so a pass that ran every step leaves neither a stale status
     nor a stale blocker.
 
     Raises StaleRun, with nothing run or written, when the pass belongs to a replaced run."""
     context = make_context()
     require_current_run(db, context.run_id)
-    step.run(db, context, lead_id)
+    run(db, context, lead_id)
     if _status(db, lead_id) == "received":
         transition(db, lead_id, "triaged")
     if last:
         transition(db, lead_id, "in_progress")
         for blocker in _step_failure_blockers(db, lead_id):
             close_blocker(db, make_context(), blocker.id)
+
+
+def _prepared(
+    db: sqlite3.Connection, make_context: MakeContext, lead_id: str, step: Step
+) -> StepRun:
+    """The run of the step: what its `prepare` returns, or its own `run`."""
+    return step.run if step.prepare is None else step.prepare(db, make_context, lead_id)
 
 
 def run_steps(
@@ -215,7 +232,7 @@ def run_steps(
     blocker; the first moves it from `received` to `triaged`, so a lead whose pass was cut short is
     still `received` or `triaged`. `make_context` builds the context of each unit's events.
 
-    At top level each step is one unit of work. A step that raises rolls back its own unit, the
+    At top level each step is one unit of work, after its `prepare` if it has one. A step that raises rolls back its own unit, the
     remaining steps do not run and a `data` blocker naming the step opens in a unit of its own
     (7.1, 8). Inside a caller's transaction the whole pass is one savepoint: a step that raises rolls
     back every step of the pass and its status moves, the blocker opens and `run_steps` returns, so
@@ -229,11 +246,13 @@ def run_steps(
         if db.in_transaction:
             with unit_of_work(db):
                 for position, step in enumerate(steps):
-                    _run_step(db, make_context, lead_id, step, last=position == len(steps) - 1)
+                    run = _prepared(db, make_context, lead_id, step)
+                    _run_step(db, make_context, lead_id, step, run, last=position == len(steps) - 1)
         else:
             for position, step in enumerate(steps):
+                run = _prepared(db, make_context, lead_id, step)
                 with unit_of_work(db):
-                    _run_step(db, make_context, lead_id, step, last=position == len(steps) - 1)
+                    _run_step(db, make_context, lead_id, step, run, last=position == len(steps) - 1)
     except StaleRun:
         raise
     except Exception as error:

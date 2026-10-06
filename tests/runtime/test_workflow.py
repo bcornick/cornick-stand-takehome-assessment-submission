@@ -15,6 +15,7 @@ from uwh.runtime.store import open_store
 from uwh.runtime.waits import open_blocker, open_blockers, primary_next_action
 from uwh.runtime.workflow import (
     Step,
+    StepRun,
     create_lead,
     interrupted_leads,
     reevaluate,
@@ -140,6 +141,72 @@ def test_a_leads_steps_run_in_order_each_sees_the_one_before_and_the_status_foll
         "c sees ['a', 'b'] at triaged",
     ]
     assert status_of(db) == "in_progress"
+
+
+def prepared_step(seen: list[str], run: StepRun | None = None) -> Step:
+    """A step whose `prepare` notes whether it runs inside a transaction and hands back `run`, or a
+    run that notes the same."""
+
+    def prepare(db: sqlite3.Connection, make_context: MakeContext, lead_id: str) -> StepRun:
+        seen.append(f"prepare in transaction: {db.in_transaction}")
+
+        def default(db: sqlite3.Connection, context: EventContext, lead_id: str) -> None:
+            seen.append(f"run in transaction: {db.in_transaction}")
+
+        return run or default
+
+    return Step("prepared", lambda *_: pytest.fail("run is replaced by prepare"), prepare)
+
+
+def test_a_steps_prepare_runs_before_its_unit_and_the_run_it_returns_runs_inside_it(
+    db: sqlite3.Connection, make_context: MakeContext
+) -> None:
+    seen: list[str] = []
+
+    run_steps(db, make_context, LEAD, [prepared_step(seen)])
+
+    assert seen == ["prepare in transaction: False", "run in transaction: True"]
+
+
+def test_a_steps_prepare_runs_inside_the_callers_transaction_when_there_is_one(
+    db: sqlite3.Connection, make_context: MakeContext
+) -> None:
+    seen: list[str] = []
+
+    with unit_of_work(db):
+        run_steps(db, make_context, LEAD, [prepared_step(seen)])
+
+    assert seen == ["prepare in transaction: True", "run in transaction: True"]
+
+
+def test_what_a_prepare_wrote_in_its_own_unit_stays_when_the_run_raises(
+    db: sqlite3.Connection, make_context: MakeContext
+) -> None:
+    def prepare(db: sqlite3.Connection, make_context: MakeContext, lead_id: str) -> StepRun:
+        with unit_of_work(db):
+            observe(db, make_context(), lead_id, "kept", 1, "submitted", {}, RULES)
+
+        def run(db: sqlite3.Connection, context: EventContext, lead_id: str) -> None:
+            observe(db, context, lead_id, "lost", 1, "submitted", {}, RULES)
+            raise RuntimeError("the draft failed")
+
+        return run
+
+    run_steps(db, make_context, LEAD, [Step("ask", lambda *_: None, prepare)])
+
+    assert sorted(effective_facts(db, LEAD)) == ["kept"]
+    assert step_failure_blockers(db) == ["Step ask failed: the draft failed"]
+
+
+def test_a_prepare_that_raises_stops_the_lead_with_the_step_failure_blocker(
+    db: sqlite3.Connection, make_context: MakeContext
+) -> None:
+    def prepare(db: sqlite3.Connection, make_context: MakeContext, lead_id: str) -> StepRun:
+        raise RuntimeError("no plan")
+
+    run_steps(db, make_context, LEAD, [Step("ask", lambda *_: None, prepare)])
+
+    assert step_failure_blockers(db) == ["Step ask failed: no plan"]
 
 
 def test_a_step_that_raises_stops_the_lead_with_one_data_blocker_naming_the_step(
