@@ -21,7 +21,7 @@ export function Composer({ placeholder, disabled, note, onSend }: Props) {
   }
 
   return (
-    <form onSubmit={submit} className="flex items-center gap-2 border-t p-3">
+    <form onSubmit={submit} className="flex max-w-2xl items-center gap-2">
       <input
         aria-label="Message"
         value={message}

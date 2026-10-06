@@ -1,5 +1,5 @@
 // ABOUTME: The demo controls, apart from the product: load the day's leads and deliver the producers' fixture replies.
-// ABOUTME: A small black card pinned bottom right, above the composer, that minimises to a pill.
+// ABOUTME: A small black card pinned to the bottom right corner, beside the composer, that minimises to a pill.
 import { useState } from 'react'
 import type { components } from '@/api/types'
 import { deliverFixtureReplies, startRun } from '@/api/client'
@@ -23,11 +23,11 @@ export function DemoPanel({ run, onChange }: Props) {
 
   if (minimised) {
     return (
-      <aside aria-label="Demo controls" className="fixed bottom-20 right-4 z-10">
+      <aside aria-label="Demo controls" className="fixed bottom-4 right-4 z-10">
         <button
           type="button"
           onClick={() => setMinimised(false)}
-          className="rounded-full bg-inverse px-3 py-1 text-xs text-white shadow"
+          className="rounded-full bg-inverse px-3 py-1 text-xs text-white shadow-[0_14px_44px_rgba(0,0,0,0.55)]"
         >
           {run.mode} · {runId}
         </button>
@@ -38,7 +38,7 @@ export function DemoPanel({ run, onChange }: Props) {
   return (
     <aside
       aria-label="Demo controls"
-      className="on-inverse fixed bottom-20 right-4 z-10 w-72 space-y-3 rounded-md bg-inverse p-4 text-sm text-white shadow"
+      className="on-inverse fixed bottom-4 right-4 z-10 w-72 space-y-3 rounded-md bg-inverse p-4 text-sm text-white shadow-[0_14px_44px_rgba(0,0,0,0.55)]"
     >
       <div className="flex items-center justify-between">
         <h2 className="font-medium">Demo controls</h2>

@@ -49,7 +49,7 @@ export function Conversation(props: Props) {
         {headerAction}
       </header>
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-        {/* The column is narrow enough to stay clear of the demo controls at the narrowest supported width. */}
+        {/* The column is narrow enough to stay clear of the demo controls, in the corner, at the narrowest supported width. */}
         <div className="flex max-w-2xl flex-col gap-4">
           {children}
           <ChatTail
@@ -63,12 +63,15 @@ export function Conversation(props: Props) {
           <div ref={end} />
         </div>
       </div>
-      <Composer
-        placeholder={placeholder}
-        disabled={replay || chat.running}
-        note={replay ? NEEDS_LIVE_MODE : null}
-        onSend={(message) => chat.send(conversation, message)}
-      />
+      {/* The composer keeps the column's width, so the demo controls sit beside it and not over it. */}
+      <div className="border-t px-6 py-3">
+        <Composer
+          placeholder={placeholder}
+          disabled={replay || chat.running}
+          note={replay ? NEEDS_LIVE_MODE : null}
+          onSend={(message) => chat.send(conversation, message)}
+        />
+      </div>
     </section>
   )
 }
