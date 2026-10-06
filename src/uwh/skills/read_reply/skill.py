@@ -1,5 +1,6 @@
 # ABOUTME: The read_reply skill (10.4, A.9, A.10): one forced tool call reads a producer's reply against the asks of the open request, and code then locates each quote in the reply and drops what was not asked or does not fit the field.
 # ABOUTME: The output is a reading or a typed abstention. A tool input that fails validation repeats the call once; a second failure, or a refusal, abstains.
+from collections.abc import Mapping
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -8,7 +9,7 @@ from pydantic import Field, ValidationError
 
 from uwh.rules.confirmations import confirmation_asks, reported_fields
 from uwh.rules.data_files import read_yaml
-from uwh.rules.models import StrictModel
+from uwh.rules.models import FieldTriage, Requirement, StrictModel
 from uwh.rules.registry import Registry
 from uwh.runtime.event_types import (
     AbstentionReason,
@@ -155,6 +156,30 @@ def interpret(reading: ReplyReading, input: ReadReplyInput) -> Reading:
             )
         )
     return Reading(classification=reading.classification, candidates=located, dropped=dropped)
+
+
+def decide_classification(
+    reading: Reading, asks: list[OpenAsk], triage: Mapping[str, FieldTriage]
+) -> Reading:
+    """The reading with its classification decided from the asks (10.4). The model's classification only
+    tells an on-topic reply from `off_topic` and `declines_to_answer`, which stand. An on-topic reply is
+    `answers_all` when every ask is answered or inactive, and `answers_some` otherwise. `triage` is the
+    lead's field triage with the reply's values applied: a follow-on whose condition those values make
+    inactive is neither answered nor outstanding, which the model cannot know."""
+    if reading.classification in ("off_topic", "declines_to_answer"):
+        return reading
+    answered = {candidate.ask_id for candidate in reading.candidates}
+    outstanding = [
+        ask
+        for ask in asks
+        if ask.ask_id not in answered
+        and not (
+            ask.field in triage
+            and triage[ask.field].requirement == Requirement.conditional_inactive
+        )
+    ]
+    classification: ReplyClassification = "answers_some" if outstanding else "answers_all"
+    return reading.model_copy(update={"classification": classification})
 
 
 def _tool_schema() -> dict[str, Any]:

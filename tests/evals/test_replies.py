@@ -15,6 +15,8 @@ from evals.graders.evidence import Evidence
 from evals.graders.reply import reply_reading
 from evals.run import evaluate_replies
 from uwh.api.runtime import open_runtime
+from uwh.runtime.event_types import ReplyRead
+from uwh.runtime.events import read_events
 from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
 from uwh.settings import Settings
@@ -58,6 +60,30 @@ def after_replies(
         copy = sqlite3.connect(":memory:")
         db.backup(copy)
         yield Evidence(copy, ev.registry, ev.mail, ev.earlier)
+
+
+# lead -> the classification of its fixture reply: an on-topic reply is answers_all when every ask still
+# active after its values is answered, and the model's off_topic and declines_to_answer stand.
+CLASSIFICATIONS = {
+    LEAD_003: "answers_all",
+    "LEAD-00000042-005": "answers_all",
+    LEAD_007: "answers_some",
+    "LEAD-00000042-006": "off_topic",
+    "LEAD-00000042-002": "declines_to_answer",
+}
+
+
+@pytest.mark.parametrize(("lead", "classification"), CLASSIFICATIONS.items())
+def test_the_recorded_classification_of_a_reply_is_decided_from_its_asks(
+    lead: str, classification: str, after_replies: Evidence
+) -> None:
+    reads = [
+        e.payload
+        for e in read_events(after_replies.db, lead_id=lead)
+        if isinstance(e.payload, ReplyRead)
+    ]
+
+    assert [r.classification for r in reads] == [classification]
 
 
 def set_path(label: dict[str, Any], path: list[str], value: Any) -> None:

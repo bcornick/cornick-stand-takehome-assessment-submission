@@ -8,6 +8,9 @@ from functools import partial
 import anthropic
 from pydantic import JsonValue
 
+from uwh.rules.derivations import derived_from
+from uwh.rules.models import FieldTriage
+from uwh.rules.triage import triage_fields
 from uwh.runtime.event_types import (
     Actor,
     ApprovalDecision,
@@ -32,6 +35,7 @@ from uwh.runtime.facts import (
     reject_late_reply_values,
     reject_observation,
     resolve_fact,
+    usable_facts,
 )
 from uwh.runtime.hashing import sha256_hex
 from uwh.runtime.modes import RecordingMiss
@@ -316,6 +320,16 @@ def _reply_target(db: sqlite3.Connection, payload: Mapping[str, JsonValue]) -> I
 type _ReplyReading = tuple[read_reply.Reading | read_reply.Abstention, list[Exchange]] | None
 
 
+def _triage_with_reply(
+    db: sqlite3.Connection, env: RunEnvironment, lead_id: str, reading: read_reply.Reading
+) -> dict[str, FieldTriage]:
+    """The lead's field triage over its usable facts with the reading's values applied."""
+    facts = {key: fact.value for key, fact in usable_facts(db, lead_id).items()}
+    facts |= {candidate.field: candidate.value for candidate in reading.candidates}
+    conflicting = [name for conflict in open_conflicts(db, lead_id) for name in conflict.fields]
+    return triage_fields(env.registry, facts, conflicting, derived_from())
+
+
 def _read_reply_first(
     db: sqlite3.Connection,
     env: RunEnvironment,
@@ -337,6 +351,13 @@ def _read_reply_first(
             reading = read_reply.run(
                 read_reply.ReadReplyInput(body=_text(payload, "body"), asks=asks), env.model
             )
+            if isinstance(reading[0], read_reply.Reading):
+                reading = (
+                    read_reply.decide_classification(
+                        reading[0], asks, _triage_with_reply(db, env, intent.lead_id, reading[0])
+                    ),
+                    reading[1],
+                )
         except RecordingMiss as miss:
             with unit_of_work(db):
                 append_event(
