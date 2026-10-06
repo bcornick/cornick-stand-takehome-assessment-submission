@@ -1,6 +1,6 @@
 // ABOUTME: The frame of one conversation: its header, the timeline given as children, the chat tail of typed messages below it, and the composer at the bottom.
-// ABOUTME: The composer is disabled in replay with a note, since a typed question needs a live model.
-import type { ReactNode } from 'react'
+// ABOUTME: The composer is disabled in replay with a note, since a typed question needs a live model; a turn's progress scrolls the conversation to its end.
+import { useEffect, useRef, type ReactNode } from 'react'
 import type { components } from '@/api/types'
 import { ChatTail } from '@/chat/ChatTail'
 import { Composer } from '@/chat/Composer'
@@ -35,22 +35,33 @@ export function Conversation(props: Props) {
   const { conversation, title, leadId, headerAction, placeholder, children } = props
   const { run, proposals, chat, onOpen, onSelect, onChange } = props
   const replay = run.mode === 'replay'
+  const turns = chat.turnsOf(conversation)
+  const latest = turns.at(-1)
+  const end = useRef<HTMLDivElement>(null)
+  // A message the underwriter sends, each lookup and the closing bring the end into view; opening a conversation does not.
+  useEffect(() => {
+    if (latest !== undefined) end.current?.scrollIntoView({ block: 'end' })
+  }, [turns.length, latest?.steps.length, latest?.closing])
   return (
     <section aria-label="Conversation" className="flex h-full flex-col">
       <header className="flex items-center justify-between gap-4 border-b px-6 py-3">
         <h1 className="text-base font-semibold">{title}</h1>
         {headerAction}
       </header>
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-6 py-4">
-        {children}
-        <ChatTail
-          turns={chat.turnsOf(conversation)}
-          proposals={proposals.filter((proposal) => proposal.lead_id === leadId)}
-          leadId={leadId}
-          onOpen={onOpen}
-          onSelect={onSelect}
-          onChange={onChange}
-        />
+      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+        {/* The column is narrow enough to stay clear of the demo controls at the narrowest supported width. */}
+        <div className="flex max-w-2xl flex-col gap-4">
+          {children}
+          <ChatTail
+            turns={turns}
+            proposals={proposals.filter((proposal) => proposal.lead_id === leadId)}
+            leadId={leadId}
+            onOpen={onOpen}
+            onSelect={onSelect}
+            onChange={onChange}
+          />
+          <div ref={end} />
+        </div>
       </div>
       <Composer
         placeholder={placeholder}
