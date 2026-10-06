@@ -88,7 +88,7 @@
     "milestone": 5,
     "description": "The reply suite passes with Jev answering the classification first (replayed Jev recordings) and with no Jev key. Expect: exit 0 twice, then `true` twice.",
     "command": "make eval ARGS='--suite replies --jev' && tail -n 1 evals/results.jsonl | jq -e '.suite == \"replies\" and .jev == true and (.scores | to_entries | all(.value.passed))' && make eval ARGS='--suite replies' && tail -n 1 evals/results.jsonl | jq -e '.suite == \"replies\" and .jev == false and (.scores | to_entries | all(.value.passed))'",
-    "passes": false
+    "passes": true
   },
   {
     "id": "M5-A2",
@@ -116,7 +116,7 @@
     "milestone": 6,
     "description": "Replay reproduces the demo run with no network call to a model: a run start, the fixture replies and lead 008's packet approval against the running app in replay, while the app's outbound HTTP shows no request to a model or Jev host. Expect: all pass.",
     "command": "uv run pytest -m integration tests/integration/test_replay_demo.py",
-    "passes": false
+    "passes": true
   },
   {
     "id": "M6-A3",
