@@ -1,11 +1,11 @@
 # ABOUTME: Default-profile services: Stand's leadgen and mailbox, and the app; eval-profile services: their own leadgen and mailbox, and the eval runner. Requires Docker Compose 2.20 or later.
-# ABOUTME: Each service has its own named volume; the app and the eval runner read .env and interpolate the run settings.
+# ABOUTME: Host ports default to Stand's 8081 and 8025 and the app's 8000; LEADGEN_PORT, MAILBOX_PORT and APP_PORT move them. Each service has its own named volume; the app and the eval runner read .env and interpolate the run settings.
 services:
   leadgen:
     build:
       context: ./sim-harness
       dockerfile: leadgen/Dockerfile
-    ports: ["8081:8080"]
+    ports: ["${LEADGEN_PORT:-8081}:8080"]
     environment:
       DEBUG: "${DEBUG:-false}"
       LEADGEN_DB: "/data/leadgen.db"
@@ -20,7 +20,7 @@ services:
     build:
       context: ./sim-harness
       dockerfile: mailbox/Dockerfile
-    ports: ["8025:8080"]
+    ports: ["${MAILBOX_PORT:-8025}:8080"]
     environment:
       MAILBOX_DB: "/data/mailbox.db"
     volumes: ["mailbox-data:/data"]
@@ -37,16 +37,16 @@ services:
       target: app
       args:
         GIT_COMMIT: "${GIT_COMMIT:-unknown}"
-    ports: ["8000:8000"]
+    ports: ["${APP_PORT:-8000}:8000"]
     env_file: .env
     environment:
-      RUN_MODE: "${RUN_MODE:-live}"
+      RUN_MODE: "${RUN_MODE:-replay}"
       SEED: "${SEED:-42}"
       MODEL_ID: "${MODEL_ID:-deepseek-flash}"
       MODEL_BASE_URL: "${MODEL_BASE_URL:-https://api.deepseek.com/anthropic}"
       LEADGEN_URL: "http://leadgen:8080"
       MAILBOX_URL: "http://mailbox:8080"
-      UWH_DB: "/data/app-${RUN_MODE:-live}.db"
+      UWH_DB: "/data/app-${RUN_MODE:-replay}.db"
     volumes:
       - "app-data:/data"
       - "./recordings:/app/recordings:${RECORDINGS_ACCESS:-ro}"
