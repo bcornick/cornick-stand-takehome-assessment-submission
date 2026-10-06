@@ -74,6 +74,7 @@ const lead: Schemas['LeadDetail'] = {
       confirmed: false,
       evidence: {},
       observation_id: 1,
+      event_id: 1,
     },
   ],
   plan: {

@@ -48,6 +48,7 @@ const pending: Schemas['FactView'] = {
   confirmed: false,
   evidence: {},
   observation_id: 41,
+  event_id: 41,
 }
 
 function blocker(
@@ -79,6 +80,7 @@ const lead: Schemas['LeadDetail'] = {
       confirmed: false,
       evidence: {},
       observation_id: 1,
+      event_id: 1,
     },
     {
       key: 'months_unoccupied',
@@ -88,6 +90,7 @@ const lead: Schemas['LeadDetail'] = {
       confirmed: false,
       evidence: {},
       observation_id: 3,
+      event_id: 3,
     },
     {
       key: 'roof_age',
@@ -97,6 +100,7 @@ const lead: Schemas['LeadDetail'] = {
       confirmed: false,
       evidence: {},
       observation_id: 2,
+      event_id: 2,
     },
   ],
   plan: {

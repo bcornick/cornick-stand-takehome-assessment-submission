@@ -10,6 +10,7 @@ type Schemas = components['schemas']
 
 const card: Schemas['ProposalView'] = {
   proposal_id: 4,
+  lead_id: null,
   payload: {
     type: 'decline_lead',
     payload: { lead_id: 'LEAD-1', reason: 'vacant' },
