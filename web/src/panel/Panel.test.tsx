@@ -77,7 +77,7 @@ const lead: Schemas['LeadDetail'] = {
   ],
   plan: null,
   blockers: [],
-  fields: [],
+  fields: [{ key: 'roof_age', label: 'Roof age', kind: 'integer', options: [] }],
   drafts: [draft],
 }
 
@@ -149,6 +149,7 @@ describe('the fact view', () => {
     stubApi()
     panel({ kind: 'fact', lead_id: 'LEAD-1', id: 1 })
     const observations = await screen.findByRole('region', { name: 'Observations' })
+    expect(screen.getByRole('region', { name: 'Value in use' })).toHaveTextContent('Roof age roof_age')
     expect(observations).toHaveTextContent('The submission gave roof_age 12')
     expect(observations).toHaveTextContent('A reply gave roof_age 15 (pending)')
   })

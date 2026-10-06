@@ -1,9 +1,9 @@
-// ABOUTME: The left column: the name STAND in capitals, the run summary sentence, the "Queue" entry and the leads in their groups.
+// ABOUTME: The left column: the name STAND in capitals, the "Queue" entry and the leads in their groups.
 // ABOUTME: Rows keep the order the API returns.
 import type { components } from '@/api/types'
 import { Badge } from '@/components/ui/badge'
-import { MISSING, leadName, summarySentence } from '@/format'
-import { BLOCKER_KIND_LABELS, GROUP_LABELS, GROUP_ORDER, STATUS_LABELS } from '@/labels'
+import { formatDate, leadName } from '@/format'
+import { GROUP_LABELS, GROUP_ORDER } from '@/labels'
 import { QUEUE } from '@/surface'
 
 type Schemas = components['schemas']
@@ -26,7 +26,24 @@ type RowProps = {
   onSelect: (conversation: string) => void
 }
 
+// What differs between leads: who the lead waits on, or that it is finished.
+function chipLabel(row: Schemas['QueueRow']): string | null {
+  if (row.status === 'quote_sent') return 'Quote sent'
+  if (row.status === 'declined') return 'Declined'
+  if (row.waits_on === 'underwriter') return 'Needs your decision'
+  if (row.waits_on === 'producer') return 'Waiting on producer'
+  if (row.waits_on === 'data_team') return 'Waiting on data'
+  return null
+}
+
+function queueTime(businessDays: number): string {
+  const days = Math.round(businessDays)
+  if (businessDays < 0.5) return 'in queue today'
+  return `${days} ${days === 1 ? 'day' : 'days'} in queue`
+}
+
 function LeadRow({ row, isSelected, onSelect }: RowProps) {
+  const chip = chipLabel(row)
   return (
     <button
       type="button"
@@ -36,16 +53,12 @@ function LeadRow({ row, isSelected, onSelect }: RowProps) {
     >
       <span className="flex items-center justify-between gap-2">
         <span className="font-medium">{leadName(row.lead_id)}</span>
-        <Badge variant="secondary">{STATUS_LABELS[row.status]}</Badge>
+        {chip !== null && <Badge variant="secondary">{chip}</Badge>}
       </span>
       <span className="block truncate">{row.label === row.lead_id ? 'no address' : row.label}</span>
-      <span className="block text-muted-foreground">
-        {row.primary_next_action === null
-          ? 'Nothing waiting'
-          : BLOCKER_KIND_LABELS[row.primary_next_action]}
-      </span>
       <span className="block text-xs text-muted-foreground">
-        {row.effective_date ?? MISSING} · {row.age_business_days.toFixed(1)} days
+        {row.effective_date === null ? 'No effective date' : `Effective ${formatDate(row.effective_date)}`}
+        {` · ${queueTime(row.age_business_days)}`}
         {row.service_level_breached && ' · Past service level'}
       </span>
     </button>
@@ -57,7 +70,6 @@ export function LeadList({ run, rows, selected, onSelect }: Props) {
     <nav aria-label="Leads" className="h-full overflow-y-auto border-r">
       <div className="px-4 py-3">
         <h1 className="text-4xl font-semibold tracking-wide">STAND</h1>
-        <p className="text-xs text-muted-foreground">{summarySentence(run.summary)}</p>
       </div>
       <button
         type="button"

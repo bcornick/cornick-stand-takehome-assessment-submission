@@ -103,6 +103,25 @@ describe('what the lead waits on', () => {
   })
 })
 
+describe('the facts', () => {
+  it('names a fact by its field label', () => {
+    const fact = {
+      key: 'coverage_a',
+      value: 500000,
+      source: 'submitted' as const,
+      status: 'accepted' as const,
+      confirmed: false,
+      evidence: {},
+      observation_id: 1,
+      event_id: 1,
+    }
+    pane({ ...lead, facts: [fact] })
+    const table = within(screen.getByRole('table', { name: 'Facts' }))
+    expect(table.getByText('Coverage A')).toBeInTheDocument()
+    expect(table.queryByText('coverage_a')).toBeNull()
+  })
+})
+
 describe('the actions on the lead', () => {
   it('resolves a fact from a choice of the lead’s registry fields, as a number for an integer', async () => {
     const posted = stubApi()

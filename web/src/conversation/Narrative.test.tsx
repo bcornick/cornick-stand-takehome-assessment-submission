@@ -78,12 +78,14 @@ const lead: Schemas['LeadDetail'] = {
 }
 
 function narrative(events: Event[], detail = lead, onOpen = vi.fn()) {
-  render(<Narrative lead={detail} events={events} onOpen={onOpen} onChange={() => {}} />)
+  render(<Narrative lead={detail} events={events} onOpen={onOpen} />)
   return onOpen
 }
 
 describe('Narrative', () => {
-  it.each(Object.keys(EVENT_LABELS) as Event['type'][])('shows the sentence of a %s row', (type) => {
+const notNarrated: Event['type'][] = ['model_called', 'skill_fallback_used', 'replay_miss', 'fault_injected', 'provider_called']
+
+  it.each((Object.keys(EVENT_LABELS) as Event['type'][]).filter((type) => !notNarrated.includes(type)))('shows the sentence of a %s row', (type) => {
     narrative([event(1, type, { summary: 'The sentence.' })], { ...lead, blockers: [] })
     expect(screen.getByText('The sentence.')).toBeInTheDocument()
   })
@@ -107,12 +109,13 @@ describe('Narrative', () => {
     narrative(Array.from({ length: 5 }, (_, i) => event(i + 1, 'fact_observed')), { ...lead, blockers: [] })
     expect(screen.getByText('Recorded 5 facts')).toBeInTheDocument()
     await userEvent.click(screen.getByText('Recorded 5 facts'))
-    expect(screen.getAllByRole('button', { name: /^Event / })).toHaveLength(5)
+    expect(screen.getAllByRole('button', { name: /^Open fact / })).toHaveLength(5)
   })
 
-  it('shows an open item as a card at its event with its actions', () => {
-    narrative([event(1, 'plan_built'), event(2, 'blocker_opened', { item_id: 7 })])
-    expect(screen.getByRole('form', { name: 'Approve' })).toBeInTheDocument()
+  it('shows an open item at its event as its line, since its card sits above the fold', () => {
+    narrative([event(1, 'plan_built'), event(2, 'blocker_opened', { item_id: 7, summary: 'Waiting on you.' })])
+    expect(screen.getByText('Waiting on you.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Approve' })).toBeNull()
   })
 
   it('shows an approved item as one line and the approval once', () => {
@@ -149,24 +152,93 @@ describe('Narrative', () => {
     expect(screen.queryByText('Assistant row.')).toBeNull()
   })
 
-  it('opens an event, a fact, a reply, and a card’s details from their chips', async () => {
+  it('opens a fact, a message and a reply from their chips', async () => {
     const onOpen = narrative([
       event(1, 'plan_built'),
-      event(2, 'fact_observed'),
+      event(2, 'fact_observed', { fact_key: 'roof_year' }),
       event(3, 'message_sent', { message: { subject: 'Ask', body: 'Please send it.' } }),
       event(4, 'reply_received', { message: { subject: null, body: 'Here it is.' } }),
       event(5, 'blocker_opened', { item_id: 7 }),
     ])
-    const chips = screen.getAllByRole('button', { name: /^Event / })
-    for (const chip of chips) await userEvent.click(chip)
-    await userEvent.click(screen.getByRole('button', { name: 'details' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Open fact roof_year' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Open the message' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Open the reply' }))
 
     expect(onOpen.mock.calls.map(([target]) => target)).toEqual([
-      { kind: 'event', lead_id: 'LEAD-1', id: 1 },
       { kind: 'fact', lead_id: 'LEAD-1', id: 2 },
       { kind: 'event', lead_id: 'LEAD-1', id: 3 },
       { kind: 'reply', lead_id: 'LEAD-1', id: 4 },
-      { kind: 'event', lead_id: 'LEAD-1', id: 5 },
     ])
+  })
+
+  it('numbers fact chips within each message and gives a plan line none', () => {
+    narrative(
+      [
+        event(1, 'plan_built'),
+        event(2, 'fact_observed', { fact_key: 'a' }),
+        event(3, 'fact_observed', { fact_key: 'b' }),
+        event(4, 'message_sent', { message: { subject: 'Hi', body: 'Body' } }),
+        event(5, 'fact_observed', { fact_key: 'c' }),
+      ],
+      { ...lead, blockers: [] },
+    )
+    const chips = screen.getAllByRole('button').map((chip) => `${chip.getAttribute('aria-label')}=${chip.textContent}`)
+    expect(chips).toEqual(['Open fact a=1', 'Open fact b=2', 'Open the message=1', 'Open fact c=1'])
+  })
+
+  it('shows a run of provider lookups as one sentence with counts and labelled missing inputs', () => {
+    const lookup = (status: 'found' | 'not_found' | 'blocked' | 'unavailable', missing: string[] = []) => ({
+      status,
+      missing_inputs: missing,
+    })
+    narrative(
+      [
+        event(1, 'provider_called', { lookup: lookup('found') }),
+        event(2, 'provider_called', { lookup: lookup('found') }),
+        event(3, 'provider_called', { lookup: lookup('blocked', ['city', 'zip']) }),
+        event(4, 'provider_called', { lookup: lookup('blocked', ['city']) }),
+        event(5, 'provider_called', { lookup: lookup('not_found') }),
+        event(6, 'provider_called', { lookup: lookup('unavailable') }),
+      ],
+      {
+        ...lead,
+        blockers: [],
+        fields: [
+          { key: 'city', label: 'City' },
+          { key: 'zip', label: 'ZIP code' },
+        ] as Schemas['LeadDetail']['fields'],
+      },
+    )
+    expect(
+      screen.getByText('Looked up 6 providers: 2 found, 2 blocked on City and ZIP code, 1 not found, 1 unavailable'),
+    ).toBeInTheDocument()
+  })
+
+  it('omits a count that is zero', () => {
+    narrative([event(1, 'provider_called', { lookup: { status: 'found', missing_inputs: [] } })], { ...lead, blockers: [] })
+    expect(screen.getByText('Looked up 1 provider: 1 found')).toBeInTheDocument()
+  })
+
+  it('shows the last triage line of a run only', () => {
+    narrative(
+      [event(1, 'triage_completed', { summary: 'First.' }), event(2, 'triage_completed', { summary: 'Last.' })],
+      { ...lead, blockers: [] },
+    )
+    expect(screen.queryByText('First.')).toBeNull()
+    expect(screen.getByText('Last.')).toBeInTheDocument()
+  })
+
+  it('shows field keys in a sentence as registry labels', () => {
+    narrative([event(1, 'plan_built', { summary: 'Checked p_f.' })], {
+      ...lead,
+      blockers: [],
+      fields: [{ key: 'p_f', label: 'Fire probability' }] as Schemas['LeadDetail']['fields'],
+    })
+    expect(screen.getByText('Checked Fire probability.')).toBeInTheDocument()
+  })
+
+  it('labels each assistant message', () => {
+    narrative([event(1, 'plan_built')], { ...lead, blockers: [] })
+    expect(screen.getByText('Assistant')).toBeInTheDocument()
   })
 })

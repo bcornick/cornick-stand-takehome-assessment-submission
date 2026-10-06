@@ -124,16 +124,25 @@ afterEach(() => {
 })
 
 describe('QueueConversation', () => {
-  it('shows an open item as a card with a link to its lead and its Approve form', async () => {
+  it('shows an open item as a card with a link to its lead and its Approve choice', async () => {
     stubLead(lead)
     const onSelect = vi.fn()
     renderQueue({ onSelect })
 
     expect(screen.getByText('The quote packet is ready to send.')).toBeInTheDocument()
-    expect(await screen.findByRole('form', { name: 'Approve' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Approve' })).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: 'Lead 008 · 8924 Lakeview Blvd' }))
     expect(onSelect).toHaveBeenCalledWith(lead.lead_id)
+  })
+
+  it('opens with the greeting under the Assistant label, not the run counts', () => {
+    stubLead(lead)
+    renderQueue()
+
+    expect(screen.getByText('Assistant')).toBeInTheDocument()
+    expect(screen.getByText('1 lead needs you. 1 is waiting on producers.')).toBeInTheDocument()
+    expect(screen.queryByText(/follow-ups sent/)).toBeNull()
   })
 
   it('shows nothing for an item its lead does not hold', async () => {
@@ -155,9 +164,13 @@ describe('QueueConversation', () => {
     expect(screen.queryByRole('button', { name: run.example_prompts[0]! })).toBeNull()
   })
 
-  it('sends an example prompt to the queue conversation', async () => {
+  it('sends an example prompt, shown beside the composer, to the queue conversation', async () => {
     stubLead(lead)
     const chat = renderQueue()
+
+    const prompt = screen.getByRole('button', { name: run.example_prompts[0]! })
+    const bottomBar = screen.getByRole('textbox').closest('.border-t')
+    expect(bottomBar).toContainElement(prompt)
 
     await userEvent.click(screen.getByRole('button', { name: run.example_prompts[0]! }))
     expect(chat.send).toHaveBeenCalledWith(QUEUE, run.example_prompts[0])

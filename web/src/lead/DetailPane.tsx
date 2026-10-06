@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { formatValue } from '@/format'
+import { fieldLabel, formatValue } from '@/format'
 import {
   BLOCKER_KIND_LABELS,
   DRAFT_STATE_LABELS,
@@ -42,7 +42,7 @@ export function DetailPane({ lead, onChange }: Props) {
         <Blockers blockers={lead.blockers} />
       </Section>
       <Section title="Facts">
-        <Facts facts={lead.facts} />
+        <Facts facts={lead.facts} fields={lead.fields} />
       </Section>
       <Section title="Plan">
         {lead.plan === null ? <Empty>Not triaged yet.</Empty> : <PlanView plan={lead.plan} />}
@@ -131,7 +131,7 @@ function PlanView({ plan }: { plan: Plan }) {
   )
 }
 
-function Facts({ facts }: { facts: LeadDetail['facts'] }) {
+function Facts({ facts, fields }: { facts: LeadDetail['facts']; fields: LeadDetail['fields'] }) {
   return (
     <Table aria-label="Facts">
       <TableHeader>
@@ -144,7 +144,7 @@ function Facts({ facts }: { facts: LeadDetail['facts'] }) {
       <TableBody>
         {facts.map((fact) => (
           <TableRow key={fact.observation_id}>
-            <TableCell className="font-mono">{fact.key}</TableCell>
+            <TableCell>{fieldLabel(fields, fact.key)}</TableCell>
             <TableCell>{formatValue(fact.value)}</TableCell>
             <TableCell className="space-x-1">
               <Badge variant="secondary">{SOURCE_LABELS[fact.source]}</Badge>

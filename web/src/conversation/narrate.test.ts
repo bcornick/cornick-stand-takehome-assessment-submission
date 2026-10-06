@@ -79,6 +79,33 @@ describe('narrate', () => {
     expect(kinds(events)).toEqual([])
   })
 
+  it.each(['model_called', 'skill_fallback_used', 'replay_miss', 'fault_injected'] as const)(
+    'leaves out a %s row without breaking the message around it',
+    (type) => {
+      const events = [event(1, 'plan_built'), event(2, type), event(3, 'plan_built')]
+      expect(narrate(events, leadWith([]))).toMatchObject([{ kind: 'assistant_message', bullets: [{}, {}] }])
+    },
+  )
+
+  it('makes a run of provider lookups one bullet and keeps only the last triage row of a run', () => {
+    const events = [
+      event(1, 'provider_called'),
+      event(2, 'provider_called'),
+      event(3, 'plan_built'),
+      event(4, 'triage_completed'),
+      event(5, 'triage_completed'),
+    ]
+    expect(narrate(events, leadWith([]))).toMatchObject([
+      {
+        bullets: [
+          { kind: 'lookups', events: [{ id: 1 }, { id: 2 }] },
+          { kind: 'event', event: { id: 3 } },
+          { kind: 'event', event: { id: 5 } },
+        ],
+      },
+    ])
+  })
+
   it('makes consecutive workflow rows one message that a bubble, a card or another actor breaks', () => {
     const events = [
       event(1, 'plan_built'),

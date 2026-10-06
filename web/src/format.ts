@@ -22,17 +22,6 @@ export function leadName(leadId: string): string {
   return `Lead ${leadId.slice(leadId.lastIndexOf('-') + 1)}`
 }
 
-// The run's seven counts as one sentence.
-export function summarySentence(summary: components['schemas']['RunSummary']): string {
-  return (
-    `${summary.quotes_sent} quotes sent, ${summary.follow_ups_sent} follow-ups sent, ` +
-    `${summary.declines_approved} declines approved, ` +
-    `${summary.waiting_on_underwriter} waiting on the underwriter, ` +
-    `${summary.waiting_on_producer} waiting on the producer, ` +
-    `${summary.waiting_on_data} waiting on data, ${summary.delivery_unknown} delivery unknown.`
-  )
-}
-
 // An ISO date or timestamp as a short date, for example "Jul 21".
 export function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })

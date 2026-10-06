@@ -2,6 +2,7 @@
 // ABOUTME: A turn shows its lookups as they happen, then its answer with citation chips, its card or its error.
 import type { components } from '@/api/types'
 import { Chip } from '@/components/Chip'
+import { AssistantLabel } from '@/conversation/AssistantLabel'
 import { leadName } from '@/format'
 import { QUEUE, type PanelTarget, type Turn } from '@/surface'
 import { ProposalCard } from './ProposalCard'
@@ -38,6 +39,7 @@ export function ChatTail({ turns, proposals, leadId, onOpen, onSelect, onChange 
                 {closing === null && <p className="text-xs text-accent">Working…</p>}
                 {closing?.type === 'answer' && (
                   <div className="flex flex-col gap-1">
+                    <AssistantLabel />
                     <p className="text-sm">{closing.answer}</p>
                     <p className="flex gap-1">
                       {closing.citations.map((citation) => (
@@ -58,7 +60,7 @@ export function ChatTail({ turns, proposals, leadId, onOpen, onSelect, onChange 
                   <button
                     type="button"
                     onClick={() => onSelect(closing.lead_id ?? QUEUE)}
-                    className="self-start text-sm underline"
+                    className="self-start text-xs underline"
                   >
                     {closing.lead_id === null ? 'Proposed on the queue' : `Proposed on ${leadName(closing.lead_id)}`}
                   </button>

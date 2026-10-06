@@ -2,7 +2,7 @@
 // ABOUTME: Each view reads the lead and its events as loaded; a target the lead does not hold shows one line saying so.
 import type { components } from '@/api/types'
 import { Badge } from '@/components/ui/badge'
-import { formatTime, formatValue } from '@/format'
+import { fieldLabel, formatTime, formatValue } from '@/format'
 import { ACTOR_LABELS, DRAFT_STATE_LABELS, EVENT_LABELS, MESSAGE_KIND_LABELS, SOURCE_LABELS } from '@/labels'
 import type { PanelTarget } from '@/surface'
 import { effectLine } from './effectLine'
@@ -69,7 +69,9 @@ export function FactView(props: ViewProps) {
   return (
     <div className="flex flex-col gap-4 text-sm">
       <section aria-label="Value in use" className="flex flex-col gap-1">
-        <p className="font-mono">{key}</p>
+        <p>
+          {fieldLabel(lead.fields, key)} <span className="font-mono text-xs text-muted-foreground">{key}</span>
+        </p>
         <p>{formatValue(fact.value)}</p>
         <p className="flex flex-wrap items-center gap-2">
           <Badge variant="secondary">{SOURCE_LABELS[fact.source]}</Badge>

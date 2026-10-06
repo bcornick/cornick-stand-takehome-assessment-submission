@@ -65,11 +65,45 @@ describe('LeadList', () => {
       expect.stringContaining('Lead 009'),
       expect.stringContaining('Lead 008'),
     ])
-    expect(within(blocked).getAllByText('Underwriter review')).toHaveLength(2)
-    expect(within(waiting).getByText('Producer reply')).toBeInTheDocument()
+    expect(within(blocked).getAllByText('Needs your decision')).toHaveLength(2)
+    expect(within(waiting).getByText('Waiting on producer')).toBeInTheDocument()
     expect(within(waiting).getByText(/Past service level/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Lead 008/ })).toHaveAttribute('aria-current', 'true')
     expect(screen.getByRole('button', { name: /Lead 009/ })).not.toHaveAttribute('aria-current')
+  })
+
+  it.each<[string, Partial<Schemas['QueueRow']>, string | null]>([
+    ['data', { waits_on: 'data_team' }, 'Waiting on data'],
+    ['a sent quote', { status: 'quote_sent', waits_on: null }, 'Quote sent'],
+    ['a decline', { status: 'declined', waits_on: null }, 'Declined'],
+    ['nothing', { waits_on: null }, null],
+  ])('chips a lead waiting on %s', (_name, change, chip) => {
+    render(<LeadList run={run} rows={[{ ...row, ...change }]} selected={QUEUE} onSelect={() => undefined} />)
+    const entry = screen.getByRole('button', { name: /Lead 008/ })
+    const labels = ['Needs your decision', 'Waiting on producer', 'Waiting on data', 'Quote sent', 'Declined', 'In progress']
+    for (const label of labels) {
+      if (label === chip) expect(within(entry).getByText(label)).toBeInTheDocument()
+      else expect(within(entry).queryByText(label)).toBeNull()
+    }
+  })
+
+  it.each<[number, string]>([
+    [0.4, 'in queue today'],
+    [1, '1 day in queue'],
+    [3.2, '3 days in queue'],
+  ])('words an age of %s business days as "%s" beside the effective date', (age, wording) => {
+    render(
+      <LeadList run={run} rows={[{ ...row, age_business_days: age }]} selected={QUEUE} onSelect={() => undefined} />,
+    )
+    expect(screen.getByText(`Effective Jul 23 · ${wording}`)).toBeInTheDocument()
+  })
+
+  it('says there is no effective date, and leaves the summary sentence to the conversation', () => {
+    render(
+      <LeadList run={run} rows={[{ ...row, effective_date: null }]} selected={QUEUE} onSelect={() => undefined} />,
+    )
+    expect(screen.getByText(/No effective date · /)).toBeInTheDocument()
+    expect(screen.queryByText(/follow-ups sent/)).toBeNull()
   })
 
   it('says "no address" for a lead whose label is its id', () => {

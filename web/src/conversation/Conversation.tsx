@@ -24,13 +24,14 @@ type Props = ConversationProps & {
   title: string
   headerAction?: ReactNode
   placeholder: string
+  suggestions?: string[]
   children: ReactNode
 }
 
 const NEEDS_LIVE_MODE = 'Questions need live mode'
 
 export function Conversation(props: Props) {
-  const { conversation, title, headerAction, placeholder, children } = props
+  const { conversation, title, headerAction, placeholder, suggestions, children } = props
   // The lead the conversation's cards sit on; the queue holds the cards of no lead.
   const leadId = conversation === QUEUE ? null : conversation
   const { run, proposals, chat, onOpen, onSelect, onChange } = props
@@ -50,7 +51,7 @@ export function Conversation(props: Props) {
       </header>
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
         {/* The column is narrow enough to stay clear of the demo controls, in the corner, at the narrowest supported width. */}
-        <div className="flex max-w-2xl flex-col gap-4">
+        <div className="mx-auto flex w-full max-w-[720px] flex-col gap-4">
           {children}
           <ChatTail
             turns={turns}
@@ -65,12 +66,29 @@ export function Conversation(props: Props) {
       </div>
       {/* The composer keeps the column's width, so the demo controls sit beside it and not over it. */}
       <div className="border-t px-6 py-3">
-        <Composer
-          placeholder={placeholder}
-          disabled={replay || chat.running}
-          note={replay ? NEEDS_LIVE_MODE : null}
-          onSend={(message) => chat.send(conversation, message)}
-        />
+        <div className="mx-auto flex w-full max-w-[720px] flex-col gap-2">
+          {suggestions !== undefined && turns.length === 0 && (
+            <div className="flex flex-wrap gap-2">
+              {suggestions.map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  className="button-outline"
+                  disabled={chat.running}
+                  onClick={() => chat.send(conversation, prompt)}
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+          )}
+          <Composer
+            placeholder={placeholder}
+            disabled={replay || chat.running}
+            note={replay ? NEEDS_LIVE_MODE : null}
+            onSend={(message) => chat.send(conversation, message)}
+          />
+        </div>
       </div>
     </section>
   )

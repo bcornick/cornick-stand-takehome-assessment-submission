@@ -2,9 +2,8 @@
 // ABOUTME: Built from the lead's events, oldest first.
 import type { components } from '@/api/types'
 import { Chip } from '@/components/Chip'
-import { formatTime } from '@/format'
+import { formatTime, labelKeys } from '@/format'
 import { ACTOR_LABELS } from '@/labels'
-import { OpenItem } from '@/lead/ItemActions'
 import type { PanelTarget } from '@/surface'
 import { type Block, type Bullet, narrate } from './narrate'
 
@@ -15,78 +14,101 @@ type Props = {
   lead: Schemas['LeadDetail']
   events: Schemas['EventRow'][]
   onOpen: (target: PanelTarget) => void
-  onChange: () => void
 }
 
 type Open = (target: PanelTarget) => void
+type Lead = Schemas['LeadDetail']
 
-function EventChip({ event, leadId, onOpen }: { event: Event; leadId: string; onOpen: Open }) {
-  const kind = event.type === 'fact_observed' ? 'fact' : 'event'
-  return (
-    <Chip
-      label={event.id}
-      opens={`Event ${event.id}`}
-      onClick={() => onOpen({ kind, lead_id: leadId, id: event.id })}
-    />
-  )
+const plural = (count: number, noun: string) => `${count} ${noun}${count === 1 ? '' : 's'}`
+
+function joinWithAnd(items: string[]): string {
+  return items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`
 }
 
-function BulletRow({ bullet, leadId, onOpen }: { bullet: Bullet; leadId: string; onOpen: Open }) {
-  if (bullet.kind === 'event') {
+// A run of provider lookups as one sentence: how many, how each went, and which inputs the blocked ones lacked.
+function lookupSentence(events: Event[], lead: Lead): string {
+  const lookups = events.flatMap((event) => (event.lookup ? [event.lookup] : []))
+  const count = (status: string) => lookups.filter((lookup) => lookup.status === status).length
+  const missing = [...new Set(lookups.flatMap((lookup) => lookup.missing_inputs))]
+  const blocked = count('blocked')
+  const outcomes = [
+    count('found') && `${count('found')} found`,
+    blocked && `${blocked} blocked on ${joinWithAnd(missing.map((key) => labelKeys(key, lead.fields)))}`,
+    count('not_found') && `${count('not_found')} not found`,
+    count('unavailable') && `${count('unavailable')} unavailable`,
+  ].filter(Boolean)
+  return `Looked up ${plural(events.length, 'provider')}: ${outcomes.join(', ')}`
+}
+
+// The facts of one message that get a chip, numbered 1, 2, 3 in the order shown.
+function chipNumbers(bullets: Bullet[]): Map<number, number> {
+  const numbers = new Map<number, number>()
+  const shown = bullets.flatMap((bullet) => (bullet.kind === 'event' ? [bullet.event] : bullet.kind === 'facts' ? bullet.events : []))
+  for (const event of shown) {
+    if (event.type === 'fact_observed') numbers.set(event.id, numbers.size + 1)
+  }
+  return numbers
+}
+
+type BulletProps = { bullet: Bullet; lead: Lead; numbers: Map<number, number>; onOpen: Open }
+
+function BulletRow({ bullet, lead, numbers, onOpen }: BulletProps) {
+  if (bullet.kind === 'lookups') return <li>{lookupSentence(bullet.events, lead)}</li>
+  if (bullet.kind === 'facts') {
     return (
-      <li className="flex items-baseline gap-2">
-        <span>{bullet.event.summary}</span>
-        <EventChip event={bullet.event} leadId={leadId} onOpen={onOpen} />
+      <li>
+        <details>
+          <summary>{`Recorded ${bullet.events.length} facts`}</summary>
+          <ul className="mt-1 flex flex-col gap-1 pl-4">
+            {bullet.events.map((event) => (
+              <BulletRow key={event.id} bullet={{ kind: 'event', event }} lead={lead} numbers={numbers} onOpen={onOpen} />
+            ))}
+          </ul>
+        </details>
       </li>
     )
   }
+  const { event } = bullet
+  const number = numbers.get(event.id)
   return (
-    <li>
-      <details>
-        <summary>{`Recorded ${bullet.events.length} facts`}</summary>
-        <ul className="mt-1 flex flex-col gap-1 pl-4">
-          {bullet.events.map((event) => (
-            <BulletRow key={event.id} bullet={{ kind: 'event', event }} leadId={leadId} onOpen={onOpen} />
-          ))}
-        </ul>
-      </details>
+    <li className="flex items-baseline gap-2">
+      <span>{labelKeys(event.summary, lead.fields)}</span>
+      {number !== undefined && (
+        <Chip
+          label={number}
+          opens={`Open fact ${event.fact_key ?? event.id}`}
+          onClick={() => onOpen({ kind: 'fact', lead_id: lead.lead_id, id: event.id })}
+        />
+      )}
     </li>
   )
 }
 
-function BlockView({ block, lead, onOpen, onChange }: { block: Block } & Omit<Props, 'events'>) {
+function BlockView({ block, lead, onOpen }: { block: Block } & Omit<Props, 'events'>) {
   const leadId = lead.lead_id
   switch (block.kind) {
-    case 'assistant_message':
+    case 'assistant_message': {
+      const numbers = chipNumbers(block.bullets)
       return (
-        <ul className="flex flex-col gap-1">
-          {block.bullets.map((bullet) => (
-            <BulletRow
-              key={bullet.kind === 'event' ? bullet.event.id : bullet.events[0].id}
-              bullet={bullet}
-              leadId={leadId}
-              onOpen={onOpen}
-            />
-          ))}
-        </ul>
-      )
-    case 'open_card':
-      return (
-        <div className="flex flex-col gap-2 rounded-md border bg-background p-3">
-          <OpenItem lead={lead} blocker={block.blocker} onChange={onChange} />
-          <button
-            type="button"
-            className="self-start text-sm underline"
-            onClick={() => onOpen({ kind: 'event', lead_id: leadId, id: block.event.id })}
-          >
-            details
-          </button>
+        <div className="flex flex-col gap-1 text-sm">
+          <p className="text-xs text-gray-600">Assistant</p>
+          <ul className="flex flex-col gap-1">
+            {block.bullets.map((bullet) => (
+              <BulletRow key={bullet.kind === 'event' ? bullet.event.id : bullet.events[0].id} bullet={bullet} lead={lead} numbers={numbers} onOpen={onOpen} />
+            ))}
+          </ul>
         </div>
       )
+    }
+    case 'open_card':
+      // The card itself sits above the fold, after the summary; the timeline keeps the line.
+      return <p className="text-sm">{labelKeys(block.event.summary, lead.fields)}</p>
     case 'resolved_card':
       return (
         <p className="text-sm text-gray-600">
-          {block.closing ? `${ACTOR_LABELS[block.closing.actor]}: ${block.closing.summary}` : 'Closed'}
+          {block.closing
+            ? `${ACTOR_LABELS[block.closing.actor]}: ${labelKeys(block.closing.summary, lead.fields)}`
+            : 'Closed'}
         </p>
       )
     case 'bubble': {
@@ -95,13 +117,13 @@ function BlockView({ block, lead, onOpen, onChange }: { block: Block } & Omit<Pr
       // The body folds under its first line; a one-line body has nothing to fold.
       const [firstLine, ...rest] = body.split('\n')
       return (
-        <div className="flex flex-col gap-1 rounded-md border bg-background p-3">
-          <p className="flex items-baseline gap-2 text-sm text-gray-600">
+        <div className="flex flex-col gap-1 rounded-md border bg-background p-3 text-sm">
+          <p className="flex items-baseline gap-2 text-xs text-gray-600">
             <span>{sent ? 'To the producer' : 'From the producer'}</span>
             <span>{formatTime(block.event.sim_ts)}</span>
             <Chip
-              label={block.event.id}
-              opens={`Event ${block.event.id}`}
+              label={1}
+              opens={sent ? 'Open the message' : 'Open the reply'}
               onClick={() => onOpen({ kind: sent ? 'event' : 'reply', lead_id: leadId, id: block.event.id })}
             />
           </p>
@@ -119,20 +141,19 @@ function BlockView({ block, lead, onOpen, onChange }: { block: Block } & Omit<Pr
     }
     case 'line':
       return (
-        <p className="flex items-baseline gap-2">
-          <span className="text-sm text-gray-600">{ACTOR_LABELS[block.event.actor]}</span>
-          <span>{block.event.summary}</span>
-          <EventChip event={block.event} leadId={leadId} onOpen={onOpen} />
+        <p className="flex items-baseline gap-2 text-sm">
+          <span className="text-xs text-gray-600">{ACTOR_LABELS[block.event.actor]}</span>
+          <span>{labelKeys(block.event.summary, lead.fields)}</span>
         </p>
       )
   }
 }
 
-export function Narrative({ lead, events, onOpen, onChange }: Props) {
+export function Narrative({ lead, events, onOpen }: Props) {
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-5">
       {narrate(events, lead).map((block, index) => (
-        <BlockView key={index} block={block} lead={lead} onOpen={onOpen} onChange={onChange} />
+        <BlockView key={index} block={block} lead={lead} onOpen={onOpen} />
       ))}
     </div>
   )

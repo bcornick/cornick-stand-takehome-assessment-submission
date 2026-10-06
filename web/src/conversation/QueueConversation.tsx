@@ -1,11 +1,12 @@
-// ABOUTME: The queue-level conversation: the run summary as its first message, the open items of every lead as cards, and the example prompts while nothing has been asked.
+// ABOUTME: The queue-level conversation: the queue greeting as its first message and the open items of every lead as cards.
 // ABOUTME: A card shows its lead as a button that selects the lead's conversation, then the item with its actions.
 import { getLead } from '@/api/client'
 import type { components } from '@/api/types'
 import { useRemote } from '@/api/useRemote'
-import { leadName, summarySentence } from '@/format'
+import { greeting, leadName } from '@/format'
 import { OpenItem } from '@/lead/ItemActions'
 import { QUEUE } from '@/surface'
+import { AssistantLabel } from './AssistantLabel'
 import { Conversation, type ConversationProps } from './Conversation'
 
 type Item = components['schemas']['Item']
@@ -13,13 +14,22 @@ type Item = components['schemas']['Item']
 type Props = ConversationProps & { items: Item[] }
 
 export function QueueConversation({ items, ...shared }: Props) {
-  const { run, chat, refresh, onSelect, onChange } = shared
+  const { run, refresh, onSelect, onChange } = shared
   const loaded = run.run_id !== null
   return (
-    <Conversation {...shared} conversation={QUEUE} title="Queue" placeholder="Ask about the queue">
+    <Conversation
+      {...shared}
+      conversation={QUEUE}
+      title="Queue"
+      placeholder="Ask about the queue"
+      suggestions={loaded ? run.example_prompts : undefined}
+    >
       {loaded ? (
         <>
-          <p>{summarySentence(run.summary)}</p>
+          <div className="flex flex-col gap-1">
+            <AssistantLabel />
+            <p className="text-sm">{greeting(run.summary)}</p>
+          </div>
           {items.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nothing is waiting on you.</p>
           ) : (
@@ -30,22 +40,6 @@ export function QueueConversation({ items, ...shared }: Props) {
                 </li>
               ))}
             </ul>
-          )}
-          {chat.turnsOf(QUEUE).length === 0 && run.example_prompts.length > 0 && (
-            <div className="flex flex-col items-start gap-2">
-              <p className="text-sm text-muted-foreground">Try asking:</p>
-              {run.example_prompts.map((prompt) => (
-                <button
-                  key={prompt}
-                  type="button"
-                  className="button-outline"
-                  disabled={chat.running}
-                  onClick={() => chat.send(QUEUE, prompt)}
-                >
-                  {prompt}
-                </button>
-              ))}
-            </div>
           )}
         </>
       ) : (

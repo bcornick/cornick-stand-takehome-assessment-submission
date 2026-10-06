@@ -97,11 +97,22 @@ const lead: Schemas['LeadDetail'] = {
   label: row.label,
   status: 'in_progress',
   summary: 'Triage is running.',  revision: 3,
-  facts: [],
+  facts: [
+    {
+      key: 'roof_year',
+      value: 2019,
+      source: 'submitted',
+      status: 'accepted',
+      confirmed: false,
+      evidence: {},
+      observation_id: 1,
+      event_id: 6,
+    },
+  ],
   pages: [],
   plan,
   blockers: [],
-  fields: [],
+  fields: [{ key: 'roof_year', label: 'Roof year', kind: 'integer', options: [] }],
   drafts: [],
 }
 
@@ -174,7 +185,8 @@ function event(id: number, type: Schemas['EventRow']['type'], summary: string, m
 
 const firstPassEvents = [
   event(1, 'triage_completed', 'Triaged the fields: 14 missing'),
-  event(2, 'provider_called', 'Fetched the replacement cost: 928992'),
+  event(2, 'provider_called', 'Fetched the replacement cost: 928992', { lookup: { status: 'found', missing_inputs: [] } }),
+  event(6, 'fact_observed', 'Recorded roof_year as 2019 (submitted)', { fact_key: 'roof_year' }),
   event(3, 'message_sent', 'Sent the message to the producer', {
     message: { subject: 'Information needed for your quote', body: 'What year was the roof replaced?' },
   }),
@@ -250,10 +262,11 @@ describe('App', () => {
 
     await userEvent.click(demo.getByRole('button', { name: "Deliver the producers' replies" }))
 
-    const approve = within(await conversation.findByRole('form', { name: 'Approve' }))
-    expect(conversation.getByText('The roof was replaced in 2019.')).toBeInTheDocument()
-    await userEvent.type(approve.getByRole('textbox', { name: 'Reason' }), 'matches the plan')
-    await userEvent.click(approve.getByRole('button', { name: 'Approve' }))
+    expect(await conversation.findByText('The roof was replaced in 2019.')).toBeInTheDocument()
+    await userEvent.click(conversation.getByRole('button', { name: 'Approve' }))
+    const confirm = within(conversation.getByRole('form', { name: 'Confirm the choice' }))
+    await userEvent.type(confirm.getByRole('textbox'), 'matches the plan')
+    await userEvent.click(confirm.getByRole('button', { name: 'Approve' }))
 
     expect(calls).toContain('POST /api/run/start?wait=true')
     expect(calls).toContain('POST /api/replies/fixtures')
@@ -268,7 +281,7 @@ describe('App', () => {
     render(<App />)
     const conversation = within(await screen.findByRole('region', { name: 'Conversation' }))
 
-    expect(await conversation.findByRole('form', { name: 'Withdraw decline and send the asks' })).toBeInTheDocument()
+    expect(await conversation.findByRole('button', { name: 'Withdraw decline and send the asks' })).toBeInTheDocument()
     expect(await conversation.findByRole('button', { name: 'legacy underwriting' })).toBeInTheDocument()
     expect(conversation.getByRole('button', { name: 'decline' })).toBeInTheDocument()
 
@@ -277,7 +290,7 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: /Lead 003/ })).toBeInTheDocument()
   })
 
-  it('opens the panel on the event a chip cites, and closes it', async () => {
+  it('opens the panel on the fact a chip cites, and closes it', async () => {
     stubApi(true)
     render(<App />)
     const leads = within(await screen.findByRole('navigation', { name: 'Leads' }))
@@ -285,11 +298,11 @@ describe('App', () => {
     const conversation = within(await screen.findByRole('region', { name: 'Conversation' }))
     expect(screen.queryByRole('complementary', { name: 'Detail' })).toBeNull()
 
-    await userEvent.click(await conversation.findByRole('button', { name: 'Event 2' }))
+    await userEvent.click(await conversation.findByRole('button', { name: 'Open fact roof_year' }))
 
     const panel = within(await screen.findByRole('complementary', { name: 'Detail' }))
-    expect(await panel.findByText('Fetched the replacement cost: 928992')).toBeInTheDocument()
-    expect(panel.getByText('Data looked up')).toBeInTheDocument()
+    expect(await panel.findByText('Roof year')).toBeInTheDocument()
+    expect(panel.getByText('2019')).toBeInTheDocument()
 
     await userEvent.click(panel.getByRole('button', { name: 'Close' }))
     expect(screen.queryByRole('complementary', { name: 'Detail' })).toBeNull()
