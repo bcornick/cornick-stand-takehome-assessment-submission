@@ -25,4 +25,5 @@ up:
 	docker compose up --build
 
 eval:
+	touch evals/results.jsonl
 	docker compose --profile eval run --build --rm $(RUN_OPTS) eval $(ARGS)

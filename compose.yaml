@@ -1,5 +1,5 @@
-# ABOUTME: Default-profile services: Stand's leadgen and mailbox, and the app. Requires Docker Compose 2.20 or later.
-# ABOUTME: Each service has its own named volume; the app reads .env and interpolates the run settings.
+# ABOUTME: Default-profile services: Stand's leadgen and mailbox, and the app; eval-profile services: their own leadgen and mailbox, and the eval runner. Requires Docker Compose 2.20 or later.
+# ABOUTME: Each service has its own named volume; the app and the eval runner read .env and interpolate the run settings.
 services:
   leadgen:
     build:
@@ -66,7 +66,62 @@ services:
       retries: 5
       start_period: 10s
 
+  leadgen-eval:
+    profiles: [eval]
+    build:
+      context: ./sim-harness
+      dockerfile: leadgen/Dockerfile
+    environment:
+      DEBUG: "${DEBUG:-false}"
+      LEADGEN_DB: "/data/leadgen.db"
+    volumes: ["leadgen-eval-data:/data"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  mailbox-eval:
+    profiles: [eval]
+    build:
+      context: ./sim-harness
+      dockerfile: mailbox/Dockerfile
+    environment:
+      MAILBOX_DB: "/data/mailbox.db"
+    volumes: ["mailbox-eval-data:/data"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  eval:
+    profiles: [eval]
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: eval
+      args:
+        GIT_COMMIT: "${GIT_COMMIT:-unknown}"
+    env_file: .env
+    environment:
+      RUN_MODE: replay
+      SEED: "42"
+      MODEL_ID: "${MODEL_ID:-deepseek-flash}"
+      LEADGEN_URL: "http://leadgen-eval:8080"
+      MAILBOX_URL: "http://mailbox-eval:8080"
+    volumes:
+      - "./recordings:/app/recordings:${RECORDINGS_ACCESS:-ro}"
+      - "./evals/results.jsonl:/app/evals/results.jsonl"
+    depends_on:
+      leadgen-eval:
+        condition: service_healthy
+      mailbox-eval:
+        condition: service_healthy
+
 volumes:
   leadgen-data:
   mailbox-data:
   app-data:
+  leadgen-eval-data:
+  mailbox-eval-data:
