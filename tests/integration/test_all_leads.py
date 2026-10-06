@@ -37,7 +37,7 @@ FIRST_PASS = {
     "000": FirstPass([DECLINE_NOTICE_DRAFT], {}, set(), set()),
     # No street address: a routine request that includes it.
     "001": FirstPass([REPLY_WAIT], {"routine_request": 1}, {"street_address"}, set()),
-    # KYC 8 and 9: the requests for the missing fields; the liability exclusion is in the plan.
+    # KYC 8 and 9: the request for the missing fields.
     "002": FirstPass([REPLY_WAIT], {"routine_request": 1}, {"coverage_a", "is_rental"}, set()),
     # The failed fire simulation is one card; the registry asks and the occupancy confirmation go out.
     "003": FirstPass(

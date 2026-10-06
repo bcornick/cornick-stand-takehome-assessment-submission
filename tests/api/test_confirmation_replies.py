@@ -1,27 +1,22 @@
 # ABOUTME: Tests the reply to the confirmation in lead 004's request (7.3 rules 3 and 6): a reply that restates the zero residents closes the conflict and the producer gets one consolidated second request, and a reply that changes the number raises an underwriter review and leaves the conflict open.
-# ABOUTME: The app runs in process with the real steps; the model's reading is a hand-made recording of the reply, since these tests are of the ledger's rules and not of the model.
-import json
+# ABOUTME: These tests are of our code after the model: a confirmation answer is mapped to the field its question reports and the ledger's rules apply it. The reading is a hand-made recording in a temporary directory, so no model reads the reply.
 import sqlite3
 from collections.abc import Iterator
 from dataclasses import replace
 from pathlib import Path
-from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 
-from tests.api.helpers import REGISTRY, first_pass
-from uwh.rules.registry import load_registry
+from tests.api.helpers import first_pass, record_reading
 from uwh.runtime.event_types import EventType
 from uwh.runtime.events import read_events
 from uwh.runtime.facts import effective_facts, open_conflicts
 from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
-from uwh.runtime.recordings import Exchange, write_recording
 from uwh.runtime.store import open_store
 from uwh.runtime.waits import open_blockers
 from uwh.settings import Settings
-from uwh.skills.read_reply import skill
 
 LEAD_004 = "LEAD-00000042-004"
 CONFIRMATION = "no_residents_in_primary_home"
@@ -46,43 +41,14 @@ def reply_to_the_confirmation(
     app: TestClient, db: sqlite3.Connection, tmp_path: Path, body: str, value: int, quote: str
 ) -> None:
     """Deliver a reply that answers only the confirmation, with the reading a model would give."""
-    (intent_id, ask_ids) = db.execute(
-        "SELECT id, ask_ids_json FROM intents WHERE lead_id = ?", (LEAD_004,)
-    ).fetchone()
-    assert CONFIRMATION in json.loads(ask_ids)
-    asks = skill.open_asks(
-        json.loads(ask_ids),
-        load_registry(str(REGISTRY)),
-        [c.opened for c in open_conflicts(db, LEAD_004)],
-    )
-    call = skill.forced_call(skill.ReadReplyInput(body=body, asks=asks))
-    key = call.recording_key
-    tool_input: dict[str, Any] = {
-        "classification": "answers_some",
-        "candidates": [
-            {
-                "ask_id": CONFIRMATION,
-                "field": "number_of_residents",
-                "value": value,
-                "quote": quote,
-            }
-        ],
-    }
-    write_recording(
+    (intent_id,) = db.execute("SELECT id FROM intents WHERE lead_id = ?", (LEAD_004,)).fetchone()
+    record_reading(
+        db,
         tmp_path,
-        key,
-        Exchange(
-            skill=key.skill,
-            prompt_version=key.prompt_version,
-            input_hash=key.input_hash,
-            input=dict(call.shown),
-            model_id="deepseek-flash",
-            request_id="",
-            stop_reason="tool_use",
-            tokens_in=1,
-            tokens_out=1,
-            tool_input=tool_input,
-        ),
+        LEAD_004,
+        intent_id,
+        body,
+        [{"ask_id": CONFIRMATION, "field": "number_of_residents", "value": value, "quote": quote}],
     )
     answer = app.post(
         "/api/replies", json={"lead_id": LEAD_004, "intent_id": intent_id, "body": body}
