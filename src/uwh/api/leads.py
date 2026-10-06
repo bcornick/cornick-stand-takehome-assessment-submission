@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException
 from uwh.api.event_summary import event_summary
 from uwh.api.pages import plan_pages
 from uwh.api.runtime import RuntimeDependency
-from uwh.api.summary import summary_line
+from uwh.api.summary import ask_count, summary_line
 from uwh.api.views import (
     BlockerView,
     DraftView,
@@ -28,7 +28,6 @@ from uwh.rules.models import ActionPlan, StrictModel
 from uwh.rules.registry import Registry, fact_fields
 from uwh.runtime.clock import age_business_days
 from uwh.runtime.event_types import (
-    REQUEST_KINDS,
     ApprovalRecorded,
     BlockerClosed,
     BlockerOpened,
@@ -69,17 +68,6 @@ def _group(status: str, action: Blocker | None) -> QueueGroup:
     return "waiting_on_data_or_producer"
 
 
-def _ask_count(db: sqlite3.Connection, lead_id: str) -> int:
-    asks: set[str] = set()
-    placeholders = ", ".join("?" for _ in REQUEST_KINDS)
-    for (ask_ids,) in db.execute(
-        f"SELECT ask_ids_json FROM intents WHERE lead_id = ? AND kind IN ({placeholders})",
-        (lead_id, *REQUEST_KINDS),
-    ):
-        asks.update(json.loads(ask_ids))
-    return len(asks)
-
-
 def queue_rows(db: sqlite3.Connection, now: datetime) -> list[QueueRow]:
     """One row per lead, in the order of section 11; `now` is the simulated time."""
     rows: list[QueueRow] = []
@@ -100,7 +88,7 @@ def queue_rows(db: sqlite3.Connection, now: datetime) -> list[QueueRow]:
                 age_business_days=age,
                 service_level_breached=age > SERVICE_LEVEL_BUSINESS_DAYS,
                 effective_date=effective_date if isinstance(effective_date, str) else None,
-                ask_count=_ask_count(db, lead_id),
+                ask_count=ask_count(db, lead_id),
                 group=_group(status, action),
             )
         )
@@ -167,7 +155,7 @@ def lead_detail(db: sqlite3.Connection, lead_id: str, registry: Registry) -> Lea
         lead_id=lead_id,
         label=lead_label(db, lead_id),
         status=status,
-        summary=summary_line(db, lead_id, status, plan, blockers),
+        summary=summary_line(db, lead_id, status, plan, blockers, fact_fields(registry)),
         revision=revision,
         facts=[FactView(**vars(fact)) for fact in facts.values()],
         plan=plan,
