@@ -5,6 +5,7 @@ from collections.abc import Callable, Sequence
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+from uwh.rules.registry import RegistryField
 from uwh.runtime.event_types import EventType
 from uwh.runtime.events import EventContext, StoredEvent, read_events
 from uwh.runtime.facts import LedgerRules
@@ -27,6 +28,20 @@ REVISION = 3
 RECIPIENT = "producer@example.com"
 
 MakeContext = Callable[[], EventContext]
+
+# The one field a test resolves a fact on.
+REGISTRY = {
+    "acreage": RegistryField(
+        name="acreage",
+        label="Acreage",
+        section="Property",
+        kind="decimal",
+        options=[],
+        required="no",
+        required_when=None,
+        producer_editable=True,
+    )
+}
 
 
 def skill_manifest(*command_classes: str, name: str = "asker") -> SkillManifest:
@@ -92,7 +107,7 @@ def command_environment(
         "replay",
         RULESET,
         LedgerRules(),
-        {},
+        REGISTRY,
         ModelAccess("replay", tmp_path, None),
         steps,
         tmp_path,

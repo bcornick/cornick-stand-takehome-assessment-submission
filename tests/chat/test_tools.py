@@ -84,3 +84,20 @@ def test_the_open_items_span_every_lead(db: sqlite3.Connection) -> None:
     (item,) = open_items(db)["open_items"]
 
     assert item["lead_id"] == "L-2" and item["kind"] == "underwriter_review"
+
+
+def test_a_wait_on_the_producer_is_not_an_open_item_in_the_summary_or_the_list(
+    db: sqlite3.Connection,
+) -> None:
+    open_blocker(
+        db,
+        SETUP,
+        "L-1",
+        "producer_reply",
+        "producer",
+        BlockerDetail(resume_trigger="the producer replies", text="Waiting for the producer."),
+    )
+    db.commit()
+
+    assert lead_summary(db, "L-1")["open_items"] == []
+    assert [item["lead_id"] for item in open_items(db)["open_items"]] == ["L-2"]

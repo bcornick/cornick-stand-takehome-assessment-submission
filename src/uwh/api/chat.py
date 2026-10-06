@@ -67,10 +67,7 @@ def apply_proposal(proposal_id: int, runtime: RuntimeDependency) -> CommandRespo
         card = _open_card(db, proposal_id)
         command = card.payload
         assert isinstance(command["type"], str) and isinstance(command["payload"], dict)
-        try:
-            result, _ = runtime.submit_as_underwriter(db, command["type"], command["payload"])
-        except NotImplementedError as error:
-            raise HTTPException(status_code=501, detail=str(error)) from error
+        result, _ = runtime.submit_as_underwriter(db, command["type"], command["payload"])
         if result.accepted:
             settle_proposal(db, proposal_id, "applied")
     return CommandResponse(accepted=result.accepted, event_id=result.event_id, reason=result.reason)

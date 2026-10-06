@@ -5,7 +5,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-from pydantic import Field, ValidationError
+from pydantic import Field
 
 from uwh.rules.confirmations import confirmation_asks, reported_fields
 from uwh.rules.data_files import read_yaml
@@ -18,7 +18,7 @@ from uwh.runtime.event_types import (
     LocatedCandidate,
     ReplyClassification,
 )
-from uwh.runtime.model import ForcedToolCall, ModelAccess
+from uwh.runtime.model import ForcedToolCall, ModelAccess, read_tool_input
 from uwh.runtime.recordings import Exchange
 
 TOOL_NAME = "record_reply_reading"
@@ -208,16 +208,8 @@ def forced_call(input: ReadReplyInput) -> ForcedToolCall:
 
 def run(input: ReadReplyInput, model: ModelAccess) -> tuple[Reading | Abstention, list[Exchange]]:
     """Read the reply. Returns the reading or the abstention with the exchange of each call made."""
-    call = forced_call(input)
-    exchanges: list[Exchange] = []
-    for _ in range(2):
-        exchange = model.exchange(call)
-        exchanges.append(exchange)
-        if exchange.stop_reason == "refusal":
-            return Abstention(reason="refusal"), exchanges
-        try:
-            reading = ReplyReading.model_validate(exchange.tool_input)
-        except ValidationError:
-            continue
-        return interpret(reading, input), exchanges
-    return Abstention(reason="invalid_tool_input"), exchanges
+    reading, exchanges = read_tool_input(model, forced_call(input), ReplyReading)
+    if reading is None:
+        refused = exchanges[-1].stop_reason == "refusal"
+        return Abstention(reason="refusal" if refused else "invalid_tool_input"), exchanges
+    return interpret(reading, input), exchanges

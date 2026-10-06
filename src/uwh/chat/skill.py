@@ -1,27 +1,38 @@
 # ABOUTME: The chat skill (section 11, A.11): a bounded loop of forced tool calls in which the model looks something up, answers, or proposes a command, and code runs the read tools and submits `propose_command` as the assistant.
-# ABOUTME: A turn is at most MAX_STEPS calls. An answer cites only event ids a tool showed this turn, and a proposal executes nothing: the command layer stores a card or refuses it.
+# ABOUTME: A turn is at most MAX_STEPS steps. An answer cites only event ids a tool showed this turn, and a proposal executes nothing: the command layer stores a card or refuses it.
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal, Self
 
-from pydantic import JsonValue, ValidationError, model_validator
+from pydantic import JsonValue, model_validator
 
+from uwh.api.leads import open_items
 from uwh.chat.tools import READ_TOOLS
 from uwh.rules.models import StrictModel
 from uwh.runtime.commands import submit_command
-from uwh.runtime.event_types import EventType, ModelCalled, ReplayMiss
-from uwh.runtime.events import append_event
-from uwh.runtime.model import ForcedToolCall
+from uwh.runtime.events import EventContext
+from uwh.runtime.model import (
+    ForcedToolCall,
+    append_model_calls,
+    append_replay_miss,
+    read_tool_input,
+)
 from uwh.runtime.modes import RecordingMiss
+from uwh.runtime.proposals import is_proposable
 from uwh.runtime.recordings import Exchange
 from uwh.runtime.runs import RunEnvironment, command_context
 from uwh.runtime.workflow import unit_of_work
+from uwh.skills.manifest import load_manifest
+from uwh.skills.steps import lead_label
 
 TOOL_NAME = "chat_step"
 _PROMPT_FILE = Path(__file__).with_name("prompt.md")
 
-# The calls one turn may make: a few reads and the answer, or one proposal. The cap is fixed; there is no retry loop.
+# Who the chat panel's commands and events are written as: the actor its manifest declares.
+_ACTOR = load_manifest(Path(__file__).parent).actor
+
+# The steps one turn may take: a few reads and the answer, or one proposal. The cap is fixed.
 MAX_STEPS = 4
 
 # What the panel says when a turn ends without an answer of the model's own.
@@ -74,94 +85,66 @@ def forced_call(shown: dict[str, Any]) -> ForcedToolCall:
     )
 
 
-def _next_step(
-    shown: dict[str, Any], env: RunEnvironment
-) -> tuple[ChatStep | None, list[Exchange]]:
-    """The model's next step with the exchange of each call made. A tool input that fails validation
-    repeats the call once; a second failure, or a refusal, gives no step."""
-    call = forced_call(shown)
-    exchanges: list[Exchange] = []
-    for _ in range(2):
-        exchange = env.model.exchange(call)
-        exchanges.append(exchange)
-        if exchange.stop_reason == "refusal":
-            return None, exchanges
-        try:
-            return ChatStep.model_validate(exchange.tool_input), exchanges
-        except ValidationError:
-            continue
-    return None, exchanges
+def _context(db: sqlite3.Connection, env: RunEnvironment) -> EventContext:
+    return command_context(db, _ACTOR, env.mode, env.ruleset_hash, env.now())
 
 
-def _propose(db: sqlite3.Connection, env: RunEnvironment, step: ChatStep) -> tuple[str, int | None]:
+def _point_to_the_items(db: sqlite3.Connection, lead_id: str | None) -> str:
+    """What the answer says when the assistant was asked to decide something only the underwriter
+    decides (7.4): where the open item is, in the lead's detail pane, and what it asks."""
+    items = [item for item in open_items(db) if lead_id is None or item.lead_id == lead_id]
+    if not items:
+        return "That is your decision, and nothing is waiting on you now."
+    where = " ".join(
+        f"In lead {lead_label(db, item.lead_id)}'s detail pane: {item.detail.text}"
+        for item in items
+    )
+    return f"That is your decision, made on the item itself. {where}"
+
+
+def _propose(
+    db: sqlite3.Connection, env: RunEnvironment, step: ChatStep, lead_id: str | None
+) -> tuple[str, int | None]:
     """Submit the step's proposal as the assistant. The answer says what the command layer did: the
-    card it stored, or why it refused."""
+    card it stored, the open item to decide when the command is the underwriter's own, or why it
+    refused."""
     command_payload: dict[str, JsonValue] = dict(step.command_payload or {})
     result = submit_command(
         db,
         env,
-        "assistant",
+        _ACTOR,
         "propose_command",
         {"type": step.command_type, "payload": command_payload, "rationale": step.rationale},
     )
-    if not result.accepted:
-        return f"I cannot propose that: {result.reason}.", None
-    row = db.execute("SELECT id FROM proposals WHERE event_id = ?", (result.event_id,)).fetchone()
-    return f"Proposed: {step.rationale} Review the card and apply it, or dismiss it.", row[0]
-
-
-def _record_model_calls(
-    db: sqlite3.Connection, env: RunEnvironment, lead_id: str | None, exchanges: list[Exchange]
-) -> None:
-    with unit_of_work(db):
-        context = command_context(db, "assistant", env.mode, env.ruleset_hash, env.now())
-        for exchange in exchanges:
-            append_event(
-                db,
-                context,
-                EventType.model_called,
-                ModelCalled(
-                    skill=exchange.skill,
-                    prompt_version=exchange.prompt_version,
-                    input_hash=exchange.input_hash,
-                    tokens_in=exchange.tokens_in,
-                    tokens_out=exchange.tokens_out,
-                    stop_reason=exchange.stop_reason,
-                ),
-                lead_id=lead_id,
-                model_id=exchange.model_id,
-                request_id=exchange.request_id or None,
-                prompt_versions={exchange.skill: exchange.prompt_version},
-            )
-
-
-def _record_miss(db: sqlite3.Connection, env: RunEnvironment, miss: RecordingMiss) -> None:
-    with unit_of_work(db):
-        append_event(
-            db,
-            command_context(db, "assistant", env.mode, env.ruleset_hash, env.now()),
-            EventType.replay_miss,
-            ReplayMiss(
-                skill=miss.key.skill,
-                prompt_version=miss.key.prompt_version,
-                input_hash=miss.key.input_hash,
-            ),
-            lead_id=None,
-        )
+    if result.accepted:
+        row = db.execute(
+            "SELECT id FROM proposals WHERE event_id = ?", (result.event_id,)
+        ).fetchone()
+        return f"Proposed: {step.rationale} Review the card and apply it, or dismiss it.", row[0]
+    if step.command_type is not None and not is_proposable(step.command_type):
+        named = command_payload.get("lead_id")
+        return _point_to_the_items(db, named if isinstance(named, str) else lead_id), None
+    return f"I cannot propose that: {result.reason}.", None
 
 
 def run_turn(
     db: sqlite3.Connection, env: RunEnvironment, message: str, lead_id: str | None
 ) -> TurnResult:
-    """One chat turn. The model reads through the tools until it answers or proposes, at most
-    MAX_STEPS calls. A replay with no recording for a call records the miss and raises RecordingMiss."""
+    """One chat turn. The model reads through the tools until it answers or proposes, in at most
+    MAX_STEPS steps; a step whose tool input is invalid repeats its call once, so a turn makes at most
+    twice that many calls. A replay with no recording for a call records the miss and raises
+    RecordingMiss."""
     steps: list[dict[str, JsonValue]] = []
     shown_ids: set[int] = set()
     exchanges: list[Exchange] = []
     answer, cited, proposal_id = NO_ANSWER_IN_STEPS, [], None
     try:
         for _ in range(MAX_STEPS):
-            step, made = _next_step({"message": message, "lead_id": lead_id, "steps": steps}, env)
+            step, made = read_tool_input(
+                env.model,
+                forced_call({"message": message, "lead_id": lead_id, "steps": steps}),
+                ChatStep,
+            )
             exchanges += made
             if step is None:
                 answer = UNREADABLE_STEP
@@ -172,7 +155,7 @@ def run_turn(
                 cited = [i for i in dict.fromkeys(step.cited_event_ids) if i in shown_ids]
                 break
             if step.action == "propose_command":
-                answer, proposal_id = _propose(db, env, step)
+                answer, proposal_id = _propose(db, env, step, lead_id)
                 break
             result = READ_TOOLS[step.action](db, step.lead_id or "")
             shown_ids.update(event["id"] for event in result.get("events", []))
@@ -180,8 +163,10 @@ def run_turn(
                 {"action": step.action, "arguments": {"lead_id": step.lead_id}, "result": result}
             )
     except RecordingMiss as miss:
-        _record_miss(db, env, miss)
+        with unit_of_work(db):
+            append_replay_miss(db, _context(db, env), None, miss)
         raise
     finally:
-        _record_model_calls(db, env, lead_id, exchanges)
+        with unit_of_work(db):
+            append_model_calls(db, _context(db, env), lead_id, exchanges)
     return TurnResult(answer, cited, proposal_id, exchanges)

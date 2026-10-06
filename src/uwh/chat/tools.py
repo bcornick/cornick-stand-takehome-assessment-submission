@@ -1,12 +1,13 @@
 # ABOUTME: The chat panel's read tools (section 11): the recent events of a lead, a lead's summary and every open item, each answered from the stored state.
-# ABOUTME: A tool returns plain JSON for the model; the events carry their ids, which an answer cites.
+# ABOUTME: A tool returns plain JSON for the model; the events carry their ids, which an answer cites. The open items are the ones the pages list.
 import sqlite3
 from collections.abc import Callable
 from typing import Any
 
+from uwh.api.leads import open_items as open_item_rows
+from uwh.api.views import Item
 from uwh.runtime.events import read_events
 from uwh.runtime.facts import effective_facts
-from uwh.runtime.waits import Blocker, open_blockers
 from uwh.skills.steps import lead_label
 
 # How many of a lead's latest events a tool shows, and how much of each event's payload.
@@ -36,13 +37,12 @@ def lead_events(db: sqlite3.Connection, lead_id: str) -> dict[str, Any]:
     }
 
 
-def _item(blocker: Blocker) -> dict[str, Any]:
+def _item(item: Item) -> dict[str, Any]:
     return {
-        "item_id": blocker.id,
-        "lead_id": blocker.lead_id,
-        "kind": blocker.kind,
-        "owner": blocker.owner,
-        "text": blocker.detail.text,
+        "item_id": item.item_id,
+        "lead_id": item.lead_id,
+        "kind": item.kind,
+        "text": item.detail.text,
     }
 
 
@@ -56,14 +56,13 @@ def lead_summary(db: sqlite3.Connection, lead_id: str) -> dict[str, Any]:
         "label": lead_label(db, lead_id),
         "status": row[0],
         "facts": {key: fact.value for key, fact in effective_facts(db, lead_id).items()},
-        "open_items": [_item(blocker) for blocker in open_blockers(db, lead_id)],
+        "open_items": [_item(item) for item in open_item_rows(db) if item.lead_id == lead_id],
     }
 
 
 def open_items(db: sqlite3.Connection) -> dict[str, Any]:
     """Every open item of every lead."""
-    lead_ids = [row[0] for row in db.execute("SELECT lead_id FROM leads ORDER BY lead_id")]
-    return {"open_items": [_item(b) for lead_id in lead_ids for b in open_blockers(db, lead_id)]}
+    return {"open_items": [_item(item) for item in open_item_rows(db)]}
 
 
 # The read actions of a chat step and the functions that answer them; `lead_id` is the lead the

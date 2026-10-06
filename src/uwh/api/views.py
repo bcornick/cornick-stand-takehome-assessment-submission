@@ -1,13 +1,14 @@
-# ABOUTME: Request and response models of the app's HTTP routes (A.5, A.11, section 11), with the checks that tie a blocker, an item, a page and a proposed command to the architecture's rules.
+# ABOUTME: Request and response models of the app's HTTP routes (A.5, A.11, section 11), with the checks that tie a blocker, an item and a page to the architecture's rules.
 # ABOUTME: Value sets are the Literal types of event_types and settings; the literals defined in this module belong to one view's own shape; no shape holds a model confidence (section 11).
-from typing import Annotated, Any, Literal, Self
+from typing import Annotated, Literal, Self
 
-from pydantic import Field, JsonValue, ValidationError, model_validator
+from pydantic import Field, JsonValue, model_validator
 
 from uwh.rules.models import (
     ActionPlan,
     StrictModel,
 )
+from uwh.rules.registry import FactField
 from uwh.runtime.event_types import (
     Actor,
     BlockerDetail,
@@ -25,16 +26,6 @@ from uwh.settings import RunMode
 from uwh.skills.read_reply.skill import MAX_BODY_CHARACTERS
 from uwh.skills.vertical import refuse_unservable_blocker
 
-
-# A.11: a proposal holds one of six HTTP commands: never approve, reject or another proposal.
-ProposableCommandType = Literal[
-    "deliver_reply",
-    "edit_draft",
-    "resolve_fact",
-    "decline_lead",
-    "record_ruling",
-    "start_run",
-]
 
 # A fact's reported value as a command carries it.
 FactValue = str | int | float | bool
@@ -168,6 +159,9 @@ class LeadDetail(StrictModel):
     plan: ActionPlan | None  # None until the lead has been triaged
     blockers: list[BlockerView]
     drafts: list[DraftView]  # every message of the lead, oldest first
+    fields: list[
+        FactField
+    ]  # the keys `resolve_fact` accepts, with the label and type each is offered by
 
 
 # ---- events (A.1) --------------------------------------------------------------------------------
@@ -263,58 +257,6 @@ class StartRunPayload(StrictModel):
     seed: int
 
 
-# The payload models of the six commands a proposal can hold, by command type (A.11).
-PROPOSABLE_PAYLOADS: dict[str, type[StrictModel]] = {
-    "edit_draft": EditDraftPayload,
-    "record_ruling": RecordRulingPayload,
-    "resolve_fact": ResolveFactPayload,
-    "decline_lead": DeclineLeadPayload,
-    "deliver_reply": DeliverReplyPayload,
-    "start_run": StartRunPayload,
-}
-
-ProposedPayload = (
-    EditDraftPayload
-    | RecordRulingPayload
-    | ResolveFactPayload
-    | DeclineLeadPayload
-    | DeliverReplyPayload
-    | StartRunPayload
-)
-
-
-class ProposeCommandPayload(StrictModel):
-    """`{type, payload, rationale}` (A.11): `type` and `payload` together are one of the six
-    proposable HTTP commands, never `approve`, `reject` or `propose_command`. The payload is read as
-    the model of `type` before the union field sees it."""
-
-    type: ProposableCommandType
-    payload: ProposedPayload
-    rationale: str
-
-    @model_validator(mode="before")
-    @classmethod
-    def payload_is_the_models_of_its_type(cls, data: Any) -> Any:
-        if isinstance(data, dict) and data.get("type") in PROPOSABLE_PAYLOADS:
-            model = PROPOSABLE_PAYLOADS[data["type"]]
-            payload = data.get("payload")
-            if isinstance(payload, dict):
-                try:
-                    payload = model.model_validate(payload)
-                except ValidationError as error:
-                    raise ValueError(
-                        f"the payload is not a {data['type']} payload: {error}"
-                    ) from None
-                return {**data, "payload": payload}
-        return data
-
-    @model_validator(mode="after")
-    def payload_is_not_another_commands(self) -> Self:
-        if type(self.payload) is not PROPOSABLE_PAYLOADS[self.type]:
-            raise ValueError(f"the payload is not a {self.type} payload")
-        return self
-
-
 class ApproveCommand(StrictModel):
     type: Literal["approve"]
     payload: ApprovePayload
@@ -355,12 +297,7 @@ class StartRunCommand(StrictModel):
     payload: StartRunPayload
 
 
-class ProposeCommandCommand(StrictModel):
-    type: Literal["propose_command"]
-    payload: ProposeCommandPayload
-
-
-# The commands `POST /api/commands` accepts: A.11's nine rows, none of them workflow-only.
+# The commands `POST /api/commands` accepts: A.11's rows an underwriter submits, none of them workflow-only and none a proposal.
 Command = Annotated[
     ApproveCommand
     | RejectCommand
@@ -369,8 +306,7 @@ Command = Annotated[
     | ResolveFactCommand
     | DeclineLeadCommand
     | DeliverReplyCommand
-    | StartRunCommand
-    | ProposeCommandCommand,
+    | StartRunCommand,
     Field(discriminator="type"),
 ]
 

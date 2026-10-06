@@ -1,4 +1,4 @@
-# ABOUTME: Tests the chat turn's loop (section 11): the cap on calls, an answer that cites only events a tool showed, a proposal stored through the command layer or refused by it, the repeat on an invalid tool input, and the events a turn writes.
+# ABOUTME: Tests the chat turn's loop (section 11): the cap on calls, an answer that cites only events a tool showed, a proposal stored through the command layer or a refusal that points to the open item, the repeat on an invalid tool input, and the events a turn writes.
 # ABOUTME: The model is scripted call by call, since the tests are of our loop and not of the model; the committed chat cases are graded from recordings by the eval.
 import sqlite3
 from copy import deepcopy
@@ -13,7 +13,7 @@ import uwh.chat
 
 from tests.runtime.helpers import RULESET, RUN_START, command_environment, events_of, insert_run
 from uwh.chat.skill import MAX_STEPS, NO_ANSWER_IN_STEPS, UNREADABLE_STEP, forced_call, run_turn
-from uwh.runtime.event_types import EventType
+from uwh.runtime.event_types import BlockerDetail, EventType
 from uwh.runtime.events import EventContext, read_events
 from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
@@ -23,11 +23,13 @@ from uwh.runtime.proposals import open_proposals
 from uwh.runtime.recordings import Exchange, RecordingKey
 from uwh.runtime.runs import RunEnvironment
 from uwh.runtime.store import open_store
+from uwh.runtime.waits import open_blocker
 from uwh.runtime.workflow import create_lead
 from uwh.skills.manifest import check_skill_folder
 from uwh.skills.vertical import REFERENCE_MORNING
 
 LEAD = "L-1"
+SETUP = EventContext("run-1", "replay", "workflow", RULESET, RUN_START, REFERENCE_MORNING)
 READ_EVENTS = {"action": "lead_events", "lead_id": LEAD}
 DECLINE = {
     "action": "propose_command",
@@ -64,8 +66,7 @@ class Script:
 def db(tmp_path: Path) -> sqlite3.Connection:
     db = open_store(str(tmp_path / "app.db"))
     insert_run(db)
-    setup = EventContext("run-1", "replay", "workflow", RULESET, RUN_START, REFERENCE_MORNING)
-    create_lead(db, setup, LEAD, "web", "2026-06-29T07:00:00Z")
+    create_lead(db, SETUP, LEAD, "web", "2026-06-29T07:00:00Z")
     db.commit()
     return db
 
@@ -156,21 +157,54 @@ def test_a_proposal_stores_a_card_and_the_answer_points_to_it(
 
 
 @pytest.mark.parametrize("command", ["approve", "reject", "send_quote_packet"])
-def test_a_directive_to_approve_reject_or_send_is_refused_by_the_command_layer(
+def test_a_directive_to_approve_reject_or_send_is_refused_and_the_answer_names_the_open_item(
     db: sqlite3.Connection,
     scripted: Callable[..., tuple[RunEnvironment, Script]],
     command: str,
 ) -> None:
+    open_blocker(
+        db,
+        SETUP,
+        LEAD,
+        "underwriter_review",
+        "underwriter",
+        BlockerDetail(
+            item_kind="no_contact_route", resume_trigger="a contact is given", text="No contact."
+        ),
+    )
+    db.commit()
     env, _ = scripted(
         {**DECLINE, "command_type": command, "command_payload": {"item_id": 1, "reason": "ok"}}
     )
 
     turn = run_turn(db, env, "do it", LEAD)
 
-    assert turn.proposal_id is None and command in turn.answer
+    assert turn.proposal_id is None
+    assert "No contact." in turn.answer and "detail pane" in turn.answer
+    assert command not in turn.answer
     assert open_proposals(db) == []
     (refusal,) = events_of(db, EventType.command_refused)
     assert refusal.actor == "assistant"
+
+
+def test_a_refused_directive_on_a_lead_with_no_open_item_says_nothing_is_waiting(
+    db: sqlite3.Connection, scripted: Callable[..., tuple[RunEnvironment, Script]]
+) -> None:
+    env, _ = scripted({**DECLINE, "command_type": "approve", "command_payload": {"item_id": 1}})
+
+    turn = run_turn(db, env, "do it", LEAD)
+
+    assert "nothing is waiting" in turn.answer and "approve" not in turn.answer
+
+
+def test_a_proposal_the_command_layer_refuses_for_another_reason_gives_that_reason(
+    db: sqlite3.Connection, scripted: Callable[..., tuple[RunEnvironment, Script]]
+) -> None:
+    env, _ = scripted({**DECLINE, "command_payload": {"lead_id": LEAD}, "rationale": ""})
+
+    turn = run_turn(db, env, "decline it", LEAD)
+
+    assert turn.proposal_id is None and turn.answer.startswith("I cannot propose that: ")
 
 
 def test_an_invalid_tool_input_repeats_the_call_once_and_then_gives_up(

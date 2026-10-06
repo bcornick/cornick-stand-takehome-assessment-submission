@@ -1,15 +1,20 @@
 # ABOUTME: How a model skill gets its answer (A.10, 7.7): one forced tool call to the Anthropic-format endpoint, served by the run mode from the live call, the live call and a recording, or the recording alone.
 # ABOUTME: A model skill describes its call as a ForcedToolCall and receives the Exchange; the live call is absent when the environment holds no key.
 import json
-from collections.abc import Callable, Mapping
+import sqlite3
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import anthropic
 from anthropic.types import ToolParam
+from pydantic import ValidationError
 
-from uwh.runtime.modes import exchange_for_mode
+from uwh.rules.models import StrictModel
+from uwh.runtime.event_types import EventType, ModelCalled, ReplayMiss
+from uwh.runtime.events import EventContext, append_event
+from uwh.runtime.modes import RecordingMiss, exchange_for_mode
 from uwh.runtime.recordings import Exchange, RecordingKey, input_hash, prompt_version
 from uwh.settings import RunMode
 
@@ -105,3 +110,66 @@ class ModelAccess:
             return self.live(call, key)
 
         return exchange_for_mode(self.mode, self.recordings, key, call_model)
+
+
+def read_tool_input[Output: StrictModel](
+    model: ModelAccess, call: ForcedToolCall, output: type[Output]
+) -> tuple[Output | None, list[Exchange]]:
+    """The tool input as `output`, with the exchange of each call made. A tool input that fails
+    validation repeats the call once; a second failure, or a refusal, gives no output. The last
+    exchange's stop reason tells a refusal from an invalid input."""
+    exchanges: list[Exchange] = []
+    for _ in range(2):
+        exchange = model.exchange(call)
+        exchanges.append(exchange)
+        if exchange.stop_reason == "refusal":
+            return None, exchanges
+        try:
+            return output.model_validate(exchange.tool_input), exchanges
+        except ValidationError:
+            continue
+    return None, exchanges
+
+
+def append_model_calls(
+    db: sqlite3.Connection,
+    context: EventContext,
+    lead_id: str | None,
+    exchanges: Sequence[Exchange],
+) -> None:
+    """Write one `model_called` event for each exchange. The caller commits."""
+    for exchange in exchanges:
+        append_event(
+            db,
+            context,
+            EventType.model_called,
+            ModelCalled(
+                skill=exchange.skill,
+                prompt_version=exchange.prompt_version,
+                input_hash=exchange.input_hash,
+                tokens_in=exchange.tokens_in,
+                tokens_out=exchange.tokens_out,
+                stop_reason=exchange.stop_reason,
+            ),
+            lead_id=lead_id,
+            model_id=exchange.model_id,
+            request_id=exchange.request_id or None,
+            prompt_versions={exchange.skill: exchange.prompt_version},
+        )
+
+
+def append_replay_miss(
+    db: sqlite3.Connection, context: EventContext, lead_id: str | None, miss: RecordingMiss
+) -> None:
+    """Write the `replay_miss` event of a call that had no recording. The caller commits."""
+    append_event(
+        db,
+        context,
+        EventType.replay_miss,
+        ReplayMiss(
+            skill=miss.key.skill,
+            prompt_version=miss.key.prompt_version,
+            input_hash=miss.key.input_hash,
+        ),
+        lead_id=lead_id,
+    )

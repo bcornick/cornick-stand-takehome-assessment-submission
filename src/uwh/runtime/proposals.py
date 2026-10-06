@@ -10,6 +10,7 @@ from pydantic import JsonValue
 from uwh.runtime.event_types import Actor, EventType, ProposalCreated, ProposalState
 from uwh.runtime.events import EventContext, append_event
 from uwh.runtime.workflow import unit_of_work
+from uwh.skills.vertical import command_class
 
 
 @dataclass(frozen=True)
@@ -19,6 +20,17 @@ class Proposal:
     state: ProposalState
     actor: Actor
     event_id: int
+
+
+def is_proposable(command_type: str) -> bool:
+    """A card may hold a command the underwriter submits, except `approve` and `reject`: those are the
+    underwriter's own decisions (A.11)."""
+    declared = command_class(command_type)
+    return (
+        declared is not None
+        and command_type not in ("approve", "reject")
+        and "underwriter" in declared.actors
+    )
 
 
 def create_proposal(

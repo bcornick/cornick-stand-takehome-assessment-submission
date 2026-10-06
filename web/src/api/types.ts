@@ -548,6 +548,20 @@ export interface components {
             type: "exclusion_or_endorsement";
         };
         /**
+         * FactField
+         * @description A fact key an underwriter may resolve, with the label and answer type the page offers it by.
+         */
+        FactField: {
+            /** Key */
+            key: string;
+            /** Kind */
+            kind: string;
+            /** Label */
+            label: string;
+            /** Options */
+            options: string[];
+        };
+        /**
          * FactView
          * @description An effective fact with its source tag. `p_f` is a fact like any other.
          */
@@ -614,6 +628,8 @@ export interface components {
             drafts: components["schemas"]["DraftView"][];
             /** Facts */
             facts: components["schemas"]["FactView"][];
+            /** Fields */
+            fields: components["schemas"]["FactField"][];
             /** Label */
             label: string;
             /** Lead Id */
@@ -712,32 +728,6 @@ export interface components {
              * @enum {string}
              */
             state: "open" | "applied" | "dismissed";
-        };
-        /** ProposeCommandCommand */
-        ProposeCommandCommand: {
-            payload: components["schemas"]["ProposeCommandPayload"];
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "propose_command";
-        };
-        /**
-         * ProposeCommandPayload
-         * @description `{type, payload, rationale}` (A.11): `type` and `payload` together are one of the six
-         *     proposable HTTP commands, never `approve`, `reject` or `propose_command`. The payload is read as
-         *     the model of `type` before the union field sees it.
-         */
-        ProposeCommandPayload: {
-            /** Payload */
-            payload: components["schemas"]["EditDraftPayload"] | components["schemas"]["RecordRulingPayload"] | components["schemas"]["ResolveFactPayload"] | components["schemas"]["DeclineLeadPayload"] | components["schemas"]["ReplyRequest"] | components["schemas"]["StartRunPayload"];
-            /** Rationale */
-            rationale: string;
-            /**
-             * Type
-             * @enum {string}
-             */
-            type: "deliver_reply" | "edit_draft" | "resolve_fact" | "decline_lead" | "record_ruling" | "start_run";
         };
         /**
          * QueueRow
@@ -1040,7 +1030,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ApproveCommand"] | components["schemas"]["RejectCommand"] | components["schemas"]["EditDraftCommand"] | components["schemas"]["RecordRulingCommand"] | components["schemas"]["ResolveFactCommand"] | components["schemas"]["DeclineLeadCommand"] | components["schemas"]["DeliverReplyCommand"] | components["schemas"]["StartRunCommand"] | components["schemas"]["ProposeCommandCommand"];
+                "application/json": components["schemas"]["ApproveCommand"] | components["schemas"]["RejectCommand"] | components["schemas"]["EditDraftCommand"] | components["schemas"]["RecordRulingCommand"] | components["schemas"]["ResolveFactCommand"] | components["schemas"]["DeclineLeadCommand"] | components["schemas"]["DeliverReplyCommand"] | components["schemas"]["StartRunCommand"];
             };
         };
         responses: {

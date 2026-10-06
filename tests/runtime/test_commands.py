@@ -703,3 +703,29 @@ def test_decline_lead_is_refused_for_a_lead_that_is_already_final(
     )
 
     assert_refused(db, result, "already final")
+
+
+@pytest.mark.parametrize(
+    "key",
+    ["acreage", "q:willing_to_mitigate", "q:contact_email"],
+    ids=["field", "catalogue", "route"],
+)
+def test_resolve_fact_takes_a_registry_field_a_catalogue_answer_or_the_contact_email(
+    db: sqlite3.Connection, env: RunEnvironment, key: str
+) -> None:
+    assert submit_command(
+        db, env, "underwriter", "resolve_fact", {**RESOLVE_ACREAGE, "key": key}
+    ).accepted
+
+
+@pytest.mark.parametrize("key", ["acerage", "q:no_such_question", "wiring"])
+def test_resolve_fact_refuses_a_key_that_is_not_a_registry_field_or_catalogue_id(
+    db: sqlite3.Connection, env: RunEnvironment, key: str
+) -> None:
+    before = len(read_events(db))
+
+    result = submit_command(db, env, "underwriter", "resolve_fact", {**RESOLVE_ACREAGE, "key": key})
+
+    assert_refused(db, result, key)
+    assert [e.type for e in read_events(db)[before:]] == [EventType.command_refused]
+    assert effective_facts(db, LEAD) == {}

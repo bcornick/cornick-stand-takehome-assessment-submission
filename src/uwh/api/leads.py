@@ -6,6 +6,7 @@ from datetime import datetime
 
 from fastapi import APIRouter, HTTPException
 
+from uwh.api.event_summary import event_summary
 from uwh.api.runtime import RuntimeDependency
 from uwh.api.views import (
     BlockerView,
@@ -18,7 +19,8 @@ from uwh.api.views import (
     QueueGroup,
     QueueRow,
 )
-from uwh.rules.models import ActionPlan, StrictModel
+from uwh.rules.models import ActionPlan
+from uwh.rules.registry import Registry, fact_fields
 from uwh.runtime.clock import age_business_days
 from uwh.runtime.event_types import REQUEST_KINDS
 from uwh.runtime.events import read_events
@@ -129,7 +131,7 @@ def _blocker_view(db: sqlite3.Connection, blocker: Blocker) -> BlockerView:
     )
 
 
-def lead_detail(db: sqlite3.Connection, lead_id: str) -> LeadDetail | None:
+def lead_detail(db: sqlite3.Connection, lead_id: str, registry: Registry) -> LeadDetail | None:
     """The lead's detail, or None when there is no such lead."""
     lead = db.execute(
         "SELECT status, revision, plan_json FROM leads WHERE lead_id = ?", (lead_id,)
@@ -164,13 +166,13 @@ def lead_detail(db: sqlite3.Connection, lead_id: str) -> LeadDetail | None:
             )
             for d in drafts
         ],
+        fields=list(fact_fields(registry).values()),
     )
 
 
-def _summary(payload: StrictModel) -> str:
-    """The payload's fields as `name: value` pairs on one line, cut to SUMMARY_LIMIT characters."""
-    line = "; ".join(f"{name}: {value}" for name, value in payload)
-    return line if len(line) <= SUMMARY_LIMIT else line[: SUMMARY_LIMIT - 3] + "..."
+def _cut(summary: str) -> str:
+    """The summary, cut to SUMMARY_LIMIT characters."""
+    return summary if len(summary) <= SUMMARY_LIMIT else summary[: SUMMARY_LIMIT - 3] + "..."
 
 
 def lead_events(db: sqlite3.Connection, lead_id: str) -> LeadEvents | None:
@@ -185,7 +187,7 @@ def lead_events(db: sqlite3.Connection, lead_id: str) -> LeadEvents | None:
                 type=event.type,
                 actor=event.actor,
                 sim_ts=event.sim_ts.isoformat(),
-                summary=_summary(event.payload),
+                summary=_cut(event_summary(event.payload)),
             )
             for event in read_events(db, lead_id=lead_id)
         ],
@@ -216,7 +218,7 @@ def list_leads(runtime: RuntimeDependency) -> list[QueueRow]:
 @router.get("/api/leads/{id}")
 def get_lead(id: str, runtime: RuntimeDependency) -> LeadDetail:
     with runtime.database() as db:
-        detail = lead_detail(db, id)
+        detail = lead_detail(db, id, runtime.env.registry)
     if detail is None:
         raise HTTPException(status_code=404, detail=f"no lead {id}")
     return detail

@@ -790,6 +790,39 @@
         "title": "ExclusionOrEndorsementEffect",
         "type": "object"
       },
+      "FactField": {
+        "additionalProperties": false,
+        "description": "A fact key an underwriter may resolve, with the label and answer type the page offers it by.",
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Options",
+            "type": "array"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "kind",
+          "options"
+        ],
+        "title": "FactField",
+        "type": "object"
+      },
       "FactView": {
         "additionalProperties": false,
         "description": "An effective fact with its source tag. `p_f` is a fact like any other.",
@@ -942,6 +975,13 @@
             "title": "Facts",
             "type": "array"
           },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/FactField"
+            },
+            "title": "Fields",
+            "type": "array"
+          },
           "label": {
             "title": "Label",
             "type": "string"
@@ -984,7 +1024,8 @@
           "facts",
           "plan",
           "blockers",
-          "drafts"
+          "drafts",
+          "fields"
         ],
         "title": "LeadDetail",
         "type": "object"
@@ -1229,77 +1270,6 @@
           "event_id"
         ],
         "title": "ProposalView",
-        "type": "object"
-      },
-      "ProposeCommandCommand": {
-        "additionalProperties": false,
-        "properties": {
-          "payload": {
-            "$ref": "#/components/schemas/ProposeCommandPayload"
-          },
-          "type": {
-            "const": "propose_command",
-            "title": "Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "type",
-          "payload"
-        ],
-        "title": "ProposeCommandCommand",
-        "type": "object"
-      },
-      "ProposeCommandPayload": {
-        "additionalProperties": false,
-        "description": "`{type, payload, rationale}` (A.11): `type` and `payload` together are one of the six\nproposable HTTP commands, never `approve`, `reject` or `propose_command`. The payload is read as\nthe model of `type` before the union field sees it.",
-        "properties": {
-          "payload": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/EditDraftPayload"
-              },
-              {
-                "$ref": "#/components/schemas/RecordRulingPayload"
-              },
-              {
-                "$ref": "#/components/schemas/ResolveFactPayload"
-              },
-              {
-                "$ref": "#/components/schemas/DeclineLeadPayload"
-              },
-              {
-                "$ref": "#/components/schemas/ReplyRequest"
-              },
-              {
-                "$ref": "#/components/schemas/StartRunPayload"
-              }
-            ],
-            "title": "Payload"
-          },
-          "rationale": {
-            "title": "Rationale",
-            "type": "string"
-          },
-          "type": {
-            "enum": [
-              "deliver_reply",
-              "edit_draft",
-              "resolve_fact",
-              "decline_lead",
-              "record_ruling",
-              "start_run"
-            ],
-            "title": "Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "type",
-          "payload",
-          "rationale"
-        ],
-        "title": "ProposeCommandPayload",
         "type": "object"
       },
       "QueueRow": {
@@ -2023,7 +1993,6 @@
                     "decline_lead": "#/components/schemas/DeclineLeadCommand",
                     "deliver_reply": "#/components/schemas/DeliverReplyCommand",
                     "edit_draft": "#/components/schemas/EditDraftCommand",
-                    "propose_command": "#/components/schemas/ProposeCommandCommand",
                     "record_ruling": "#/components/schemas/RecordRulingCommand",
                     "reject": "#/components/schemas/RejectCommand",
                     "resolve_fact": "#/components/schemas/ResolveFactCommand",
@@ -2055,9 +2024,6 @@
                   },
                   {
                     "$ref": "#/components/schemas/StartRunCommand"
-                  },
-                  {
-                    "$ref": "#/components/schemas/ProposeCommandCommand"
                   }
                 ],
                 "title": "Command"

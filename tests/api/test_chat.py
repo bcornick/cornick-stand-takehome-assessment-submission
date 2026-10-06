@@ -149,7 +149,8 @@ def test_a_directive_to_approve_is_refused_as_the_assistant_and_leaves_no_card(
 
     answer = chat(client, message, lead)
 
-    assert answer["proposal"] is None and "approve" in answer["answer"]
+    assert answer["proposal"] is None and "nothing is waiting" in answer["answer"]
+    assert "approve" not in answer["answer"]
     (refusal,) = [e for e in events(settings, EventType.command_refused) if e.actor == "assistant"]
     assert refusal.payload.command_type == "propose_command"
     assert client.get("/api/proposals").json() == []

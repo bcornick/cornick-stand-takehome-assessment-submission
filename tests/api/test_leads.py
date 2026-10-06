@@ -128,6 +128,9 @@ def test_lead_008_shows_its_waiting_request_then_the_packet_that_the_underwriter
         assert [(d["kind"], d["state"]) for d in waiting["drafts"]] == [("routine_request", "sent")]
         assert {f["key"]: f["source"] for f in waiting["facts"]}["street_address"] == "submitted"
         assert waiting["plan"]["not_evaluated"][0]["text"].endswith("is not evaluated.")
+        fields = {f["key"]: f for f in waiting["fields"]}
+        assert fields["coverage_a"]["kind"] == "integer" and fields["coverage_a"]["label"]
+        assert "q:contact_email" in fields
 
         assert app.post("/api/replies/fixtures").status_code == 200
         reviewing = app.get(f"/api/leads/{LEAD_008}").json()
@@ -213,7 +216,7 @@ def test_the_events_of_a_lead_come_in_id_order_with_a_short_summary_each(
         assert body["lead_id"] == LEAD_008
         assert ids == sorted(ids) and len(set(ids)) == len(ids)
         (sent,) = [e for e in events if e["type"] == "message_sent"]
-        assert sent["summary"].startswith("intent_id: ")
+        assert sent["summary"] == "The message was posted to the mailbox."
         assert all(len(e["summary"]) <= SUMMARY_LIMIT for e in events)
         assert any(e["summary"].endswith("...") for e in events)
         assert {e["actor"] for e in events} >= {"workflow"}

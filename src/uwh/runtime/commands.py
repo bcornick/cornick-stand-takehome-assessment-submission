@@ -9,6 +9,7 @@ import anthropic
 from pydantic import JsonValue
 
 from uwh.rules.models import FieldTriage
+from uwh.rules.registry import CONTACT_EMAIL_KEY, fact_fields
 from uwh.runtime.event_types import (
     Actor,
     ApprovalDecision,
@@ -17,8 +18,6 @@ from uwh.runtime.event_types import (
     CommandRefused,
     EventType,
     IntentState,
-    ModelCalled,
-    ReplayMiss,
     ReplyRead,
     ReplyReceived,
     ReviewCause,
@@ -36,9 +35,10 @@ from uwh.runtime.facts import (
     usable_facts,
 )
 from uwh.runtime.hashing import sha256_hex
+from uwh.runtime.model import append_model_calls, append_replay_miss
 from uwh.runtime.modes import RecordingMiss
 from uwh.runtime.runs import RunEnvironment, begin_run, command_context, current_run, pass_context
-from uwh.runtime.proposals import create_proposal
+from uwh.runtime.proposals import create_proposal, is_proposable
 from uwh.runtime.rulings import active_rulings, declines_of, write_ruling
 from uwh.runtime.send import (
     Intent,
@@ -364,17 +364,7 @@ def _read_reply_first(
                 )
         except RecordingMiss as miss:
             with unit_of_work(db):
-                append_event(
-                    db,
-                    _context(db, env, actor),
-                    EventType.replay_miss,
-                    ReplayMiss(
-                        skill=miss.key.skill,
-                        prompt_version=miss.key.prompt_version,
-                        input_hash=miss.key.input_hash,
-                    ),
-                    lead_id=intent.lead_id,
-                )
+                append_replay_miss(db, _context(db, env, actor), intent.lead_id, miss)
             raise _Refusal(str(miss)) from miss
         except anthropic.APIError:
             reading = (
@@ -404,24 +394,7 @@ def _record_reply_events(
         )
         return
     result, exchanges = reading
-    for exchange in exchanges:
-        append_event(
-            db,
-            context,
-            EventType.model_called,
-            ModelCalled(
-                skill=exchange.skill,
-                prompt_version=exchange.prompt_version,
-                input_hash=exchange.input_hash,
-                tokens_in=exchange.tokens_in,
-                tokens_out=exchange.tokens_out,
-                stop_reason=exchange.stop_reason,
-            ),
-            lead_id=intent.lead_id,
-            model_id=exchange.model_id,
-            request_id=exchange.request_id or None,
-            prompt_versions={exchange.skill: exchange.prompt_version},
-        )
+    append_model_calls(db, context, intent.lead_id, exchanges)
     if isinstance(result, read_reply.Abstention):
         read = ReplyRead(
             intent_id=intent.id,
@@ -554,6 +527,8 @@ def _resolve_fact(
         raise _Refusal("the payload needs value")
     if not _lead_exists(db, lead_id):
         raise _Refusal(f"there is no lead {lead_id}")
+    if key not in fact_fields(env.registry):
+        raise _Refusal(f"{key} is not a registry field or a catalogue question")
     event_id = resolve_fact(db, context, lead_id, key, payload["value"], reason, env.ledger_rules)
     return _Outcome(event_id, lead_id)
 
@@ -611,7 +586,7 @@ def _propose_command(
     declared = command_class(proposed)
     if declared is None:
         raise _Refusal(f"{proposed} is not a command")
-    if proposed in ("approve", "reject") or "underwriter" not in declared.actors:
+    if not is_proposable(proposed):
         raise _Refusal(f"a proposal cannot carry {proposed}; the underwriter decides that")
     proposed_payload = payload.get("payload")
     if not isinstance(proposed_payload, dict):
@@ -645,7 +620,9 @@ def _settle(
     if payload.get("artifact_hash") is not None and not (approve and detail.item_kind == "draft"):
         raise _Refusal(f"{command} of item {item.id} carries no artifact_hash")
     if detail.item_kind == "no_contact_route":
-        raise _Refusal("a missing contact route is resolved with resolve_fact on q:contact_email")
+        raise _Refusal(
+            f"a missing contact route is resolved with resolve_fact on {CONTACT_EMAIL_KEY}"
+        )
     revision, plan_hash = _lead_binding(db, item.lead_id)
     decision: ApprovalDecision = "approved" if approve else "rejected"
     artifact: Intent | None = None
