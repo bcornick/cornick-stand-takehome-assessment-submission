@@ -21,6 +21,7 @@ sys.path.insert(0, str(ROOT / "sim-harness"))
 import leadgen  # noqa: E402
 from leadgen import generator  # noqa: E402
 
+from evals.graders.evidence import Result  # noqa: E402
 from uwh.rules.registry import Registry  # noqa: E402
 from uwh.runtime.event_types import EventType, TriageCompleted  # noqa: E402
 from uwh.runtime.events import read_events  # noqa: E402
@@ -239,3 +240,30 @@ def summary(judgements: list[Judgement]) -> str:
         if j.verdict == Verdict.disagrees
     ]
     return "\n".join(lines)
+
+
+def stands_key(db: sqlite3.Connection, registry: Registry, seed: int) -> Result:
+    """The grader of 13.2: Stand's key, regenerated for `seed`, against every lead's first pass. It fails
+    on any disagreement; the verdict counts are its measures."""
+    planless = [
+        lead_id for (lead_id,) in db.execute("SELECT lead_id FROM leads WHERE plan_hash IS NULL")
+    ]
+    if planless:
+        return Result([f"{lead_id} has no plan" for lead_id in planless])
+    states = {
+        lead_id: read_lead_state(db, lead_id)
+        for (lead_id,) in db.execute("SELECT lead_id FROM leads")
+    }
+    judgements = grade(regenerate_history(seed), states, registry)
+    counts = Counter(j.verdict for j in judgements)
+    return Result(
+        [
+            f"{j.record.lead_id} {j.record.kind} {j.record.field}: {j.reason}"
+            for j in judgements
+            if j.verdict == Verdict.disagrees
+        ],
+        {
+            **{verdict.value: counts[verdict] for verdict in Verdict},
+            "decided_by_the_9_2_table": sum(j.by_interpretation for j in judgements),
+        },
+    )
