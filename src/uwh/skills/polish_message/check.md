@@ -14,7 +14,9 @@ Judge only `opening` and `closing`, sentence by sentence, against `request`. A s
 - a decision, such as whether the submission will be quoted, accepted or declined;
 - a price or any amount of money;
 - a deadline or any time limit or promise about timing;
-- a request, such as asking for something that is not one of the numbered questions.
+- a request, such as asking for something that is not one of the numbered questions;
+- a claim about what anyone has done or reviewed, such as that the submission has been reviewed;
+- a promise or statement about what will or will not be asked, such as that the email covers everything still outstanding.
 
 Warm wording is fine: thanks, a greeting, saying the details are needed to complete the quote, saying one reply covering everything is ideal, saying this follows up an earlier email.
 

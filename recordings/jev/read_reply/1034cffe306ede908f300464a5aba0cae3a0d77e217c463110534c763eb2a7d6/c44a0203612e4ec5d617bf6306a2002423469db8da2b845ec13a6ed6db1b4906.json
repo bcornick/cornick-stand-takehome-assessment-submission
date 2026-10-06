@@ -1,0 +1,27 @@
+{
+  "input": {
+    "options": {
+      "answers_all": "The reply answers everything the request appears to ask.",
+      "answers_some": "The reply answers part of what the request appears to ask and leaves the rest.",
+      "declines_to_answer": "The reply refuses, or says the information cannot or will not be given.",
+      "off_topic": "The reply does not respond to the request."
+    },
+    "state": "Hi,\n\nPartial answers on Meadowlark Ln while I chase the owner for the rest.\n\nThe zip is 34102. They want liability at 300,000. No animals on the property. Living area is 2,800 square feet and the roof is a hip roof.\n\nI will send the remaining items as soon as I have them.\n\nThanks,\nMarcus Lee\nSuncoast Risk Partners\n"
+  },
+  "input_hash": "c44a0203612e4ec5d617bf6306a2002423469db8da2b845ec13a6ed6db1b4906",
+  "model_id": "jev-1.13.0",
+  "prompt_version": "1034cffe306ede908f300464a5aba0cae3a0d77e217c463110534c763eb2a7d6",
+  "request_id": "",
+  "skill": "read_reply",
+  "stop_reason": "",
+  "tokens_in": 496,
+  "tokens_out": 52,
+  "tool_input": {
+    "probabilities": {
+      "answers_all": 0.0,
+      "answers_some": 1.0,
+      "declines_to_answer": 0.0,
+      "off_topic": 0.0
+    }
+  }
+}

@@ -319,9 +319,10 @@ def jev_settings(
     settings: Settings, tmp_path: Path, probabilities: dict[str, float] | None
 ) -> Settings:
     """Settings with a Jev key, replaying the committed model recordings and, when `probabilities` is
-    given, a Jev recording of the fixture reply that returns them."""
+    given, a Jev recording of the fixture reply that returns them. The committed Jev recordings are
+    left out, so a Jev call is recorded only here."""
     recordings = tmp_path / "recordings"
-    shutil.copytree(RECORDINGS, recordings)
+    shutil.copytree(RECORDINGS, recordings, ignore=shutil.ignore_patterns("jev"))
     if probabilities is not None:
         shown = {"state": FIXTURE_BODY, "options": jev.QUESTION.options}
         key = RecordingKey("read_reply", jev.QUESTION.version, input_hash(shown))

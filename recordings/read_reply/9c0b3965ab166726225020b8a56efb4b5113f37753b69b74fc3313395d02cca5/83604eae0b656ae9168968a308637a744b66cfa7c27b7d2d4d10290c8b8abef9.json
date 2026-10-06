@@ -158,8 +158,8 @@
   "request_id": "",
   "skill": "read_reply",
   "stop_reason": "tool_use",
-  "tokens_in": 1933,
-  "tokens_out": 633,
+  "tokens_in": 141,
+  "tokens_out": 631,
   "tool_input": {
     "candidates": [
       {
@@ -201,13 +201,13 @@
       {
         "ask_id": "num_stories",
         "field": "num_stories",
-        "quote": "with one story",
+        "quote": "one story",
         "value": 1
       },
       {
         "ask_id": "roof_shape",
         "field": "roof_shape",
-        "quote": "and a gable roof",
+        "quote": "a gable roof",
         "value": "Gable"
       },
       {

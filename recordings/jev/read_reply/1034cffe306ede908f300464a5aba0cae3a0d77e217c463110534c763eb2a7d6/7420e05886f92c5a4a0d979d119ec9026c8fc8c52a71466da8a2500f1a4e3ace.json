@@ -1,0 +1,27 @@
+{
+  "input": {
+    "options": {
+      "answers_all": "The reply answers everything the request appears to ask.",
+      "answers_some": "The reply answers part of what the request appears to ask and leaves the rest.",
+      "declines_to_answer": "The reply refuses, or says the information cannot or will not be given.",
+      "off_topic": "The reply does not respond to the request."
+    },
+    "state": "Hi,\n\nThe client has decided to renew with their current carrier and has asked us to withdraw the Old Mill Rd submission. Please close the file; we won't be sending the information requested.\n\nRegards,\nLee Donovan\nHigh Desert Insurance Agency\n"
+  },
+  "input_hash": "7420e05886f92c5a4a0d979d119ec9026c8fc8c52a71466da8a2500f1a4e3ace",
+  "model_id": "jev-1.13.0",
+  "prompt_version": "1034cffe306ede908f300464a5aba0cae3a0d77e217c463110534c763eb2a7d6",
+  "request_id": "",
+  "skill": "read_reply",
+  "stop_reason": "",
+  "tokens_in": 451,
+  "tokens_out": 54,
+  "tool_input": {
+    "probabilities": {
+      "answers_all": 0.0,
+      "answers_some": 0.0,
+      "declines_to_answer": 1.0,
+      "off_topic": 0.0
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "input": {
+    "options": {
+      "answers_all": "The reply answers everything the request appears to ask.",
+      "answers_some": "The reply answers part of what the request appears to ask and leaves the rest.",
+      "declines_to_answer": "The reply refuses, or says the information cannot or will not be given.",
+      "off_topic": "The reply does not respond to the request."
+    },
+    "state": "Hello,\n\nHappy to fill in the gaps, sorry the form came through so patchy.\n\nThe state is Colorado, CO. My first name is Grace. The house isn't in a trust, it's just in our names. For liability we'd like three hundred thousand. It has never sat empty, so zero months unoccupied. No pool, never wanted one. It's roughly 2,100 square feet, a single-story ranch. The roof is standing-seam metal, the long vertical panels. The breaker panel is a 200-amp service. The water heater is a tank, about six years old, down in the unfinished basement. The fire station is about a mile and a half from us and they're a career department, full-time firefighters. The nearest hydrant is maybe 150 feet down the street.\n\nOn the number of people in the home: that zero on the form must be a typo. There are two of us living here full time, my husband and me.\n\nThanks so much,\nGrace Ahn\n"
+  },
+  "input_hash": "96fc50089dc48571ca9f77f120f3390f013f633821609541838b4c69e5002e71",
+  "model_id": "jev-1.13.0",
+  "prompt_version": "1034cffe306ede908f300464a5aba0cae3a0d77e217c463110534c763eb2a7d6",
+  "request_id": "",
+  "skill": "read_reply",
+  "stop_reason": "",
+  "tokens_in": 622,
+  "tokens_out": 52,
+  "tool_input": {
+    "probabilities": {
+      "answers_all": 0.86,
+      "answers_some": 0.14,
+      "declines_to_answer": 0.0,
+      "off_topic": 0.0
+    }
+  }
+}

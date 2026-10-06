@@ -1,0 +1,19 @@
+{
+  "input": {
+    "closing": "A single reply covering the items above is ideal. Thank you for your help.",
+    "opening": "Thank you for your submission. This is a follow-up on our earlier email, as a few details are still needed to complete the quote. We appreciate your patience and your help in getting these to us.",
+    "request": "Thank you for your submission. To complete the quote we need the items below. One reply covering all of them is ideal.\n\nAdditional questions\n1. The number of people living in the home is listed as 0. Can you confirm that number?"
+  },
+  "input_hash": "54db410cb861b3bb7edc58aff35d6f94b42a31ad9ae3e2ab1ef0fd9cf229f129",
+  "model_id": "deepseek-flash",
+  "prompt_version": "8696555597a0b227c0a9e61b325e6f244e334bf320f7c79c336aba6c00bf6090",
+  "request_id": "",
+  "skill": "polish_message",
+  "stop_reason": "tool_use",
+  "tokens_in": 294,
+  "tokens_out": 50,
+  "tool_input": {
+    "offending_sentence": "",
+    "verdict": "pass"
+  }
+}

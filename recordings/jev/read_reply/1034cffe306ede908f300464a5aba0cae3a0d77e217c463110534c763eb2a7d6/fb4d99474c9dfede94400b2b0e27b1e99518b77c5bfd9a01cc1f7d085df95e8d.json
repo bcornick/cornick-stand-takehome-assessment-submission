@@ -1,0 +1,27 @@
+{
+  "input": {
+    "options": {
+      "answers_all": "The reply answers everything the request appears to ask.",
+      "answers_some": "The reply answers part of what the request appears to ask and leaves the rest.",
+      "declines_to_answer": "The reply refuses, or says the information cannot or will not be given.",
+      "off_topic": "The reply does not respond to the request."
+    },
+    "state": "Hi there,\n\nThanks for getting back to me so quickly! The lot is 1.5 acres according to the deed, mostly lawn with a few palms along the back fence. We have two dogs who stay inside the fence, in case that matters for anything.\n\nLet me know if there is anything else you need from me.\n\nThanks,\nPriya Whitfield\n"
+  },
+  "input_hash": "fb4d99474c9dfede94400b2b0e27b1e99518b77c5bfd9a01cc1f7d085df95e8d",
+  "model_id": "jev-1.13.0",
+  "prompt_version": "1034cffe306ede908f300464a5aba0cae3a0d77e217c463110534c763eb2a7d6",
+  "request_id": "",
+  "skill": "read_reply",
+  "stop_reason": "",
+  "tokens_in": 479,
+  "tokens_out": 52,
+  "tool_input": {
+    "probabilities": {
+      "answers_all": 0.66,
+      "answers_some": 0.34,
+      "declines_to_answer": 0.0,
+      "off_topic": 0.0
+    }
+  }
+}

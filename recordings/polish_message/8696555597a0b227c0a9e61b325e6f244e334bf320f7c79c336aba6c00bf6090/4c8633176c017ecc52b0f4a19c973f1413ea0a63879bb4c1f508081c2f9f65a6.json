@@ -1,0 +1,19 @@
+{
+  "input": {
+    "closing": "A single reply covering the items above would be ideal. Thank you for your help.",
+    "opening": "Thank you for sending your client's property submission our way. This is a follow-up on our earlier email, as a few details are still needed to complete the quote. We appreciate your help in gathering them.",
+    "request": "Thank you for your submission. To complete the quote we need the items below. One reply covering all of them is ideal.\n\nProperty\n1. How is the dwelling used: owner occupied single family, owner occupied multi family, secondary residence or seasonal residence?\n2. When was the property purchased?\n\nConstruction\n3. What brand is the electrical panel?"
+  },
+  "input_hash": "4c8633176c017ecc52b0f4a19c973f1413ea0a63879bb4c1f508081c2f9f65a6",
+  "model_id": "deepseek-flash",
+  "prompt_version": "8696555597a0b227c0a9e61b325e6f244e334bf320f7c79c336aba6c00bf6090",
+  "request_id": "",
+  "skill": "polish_message",
+  "stop_reason": "tool_use",
+  "tokens_in": 319,
+  "tokens_out": 50,
+  "tool_input": {
+    "offending_sentence": "",
+    "verdict": "pass"
+  }
+}

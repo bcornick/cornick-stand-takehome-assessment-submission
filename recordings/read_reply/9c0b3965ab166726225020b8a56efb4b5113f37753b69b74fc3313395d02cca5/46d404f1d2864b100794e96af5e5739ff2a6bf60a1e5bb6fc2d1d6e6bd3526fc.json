@@ -157,7 +157,7 @@
   "request_id": "",
   "skill": "read_reply",
   "stop_reason": "tool_use",
-  "tokens_in": 1268,
+  "tokens_in": 244,
   "tokens_out": 663,
   "tool_input": {
     "candidates": [

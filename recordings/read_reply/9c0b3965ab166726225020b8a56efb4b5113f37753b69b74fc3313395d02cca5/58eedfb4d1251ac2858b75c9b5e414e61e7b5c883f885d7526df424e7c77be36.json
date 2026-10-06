@@ -185,8 +185,8 @@
   "request_id": "",
   "skill": "read_reply",
   "stop_reason": "tool_use",
-  "tokens_in": 1498,
-  "tokens_out": 805,
+  "tokens_in": 218,
+  "tokens_out": 794,
   "tool_input": {
     "candidates": [
       {
@@ -234,7 +234,7 @@
       {
         "ask_id": "num_stories",
         "field": "num_stories",
-        "quote": "It's roughly 2,100 square feet, a single-story ranch.",
+        "quote": "a single-story ranch",
         "value": 1
       },
       {

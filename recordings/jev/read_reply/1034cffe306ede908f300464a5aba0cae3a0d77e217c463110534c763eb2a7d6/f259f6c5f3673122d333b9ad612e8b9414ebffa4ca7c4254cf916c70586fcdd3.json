@@ -1,0 +1,27 @@
+{
+  "input": {
+    "options": {
+      "answers_all": "The reply answers everything the request appears to ask.",
+      "answers_some": "The reply answers part of what the request appears to ask and leaves the rest.",
+      "declines_to_answer": "The reply refuses, or says the information cannot or will not be given.",
+      "off_topic": "The reply does not respond to the request."
+    },
+    "state": "Hello,\n\nAnswers below for the Old Mill Rd risk in Naples.\n\nThe insureds would like Coverage A at $850,000. The home is their primary residence. They closed on the purchase on March 3, 2025, and it is a two-story house. The fire department serving the address is a career department.\n\nOn the number of people living in the home: zero is correct for the time being. They are finishing a renovation and have not moved in, so nobody is living there at the moment. They expect to be in before the policy starts.\n\nRegards,\nTom Alvarez\nGulf Coast Insurance Services\n"
+  },
+  "input_hash": "f259f6c5f3673122d333b9ad612e8b9414ebffa4ca7c4254cf916c70586fcdd3",
+  "model_id": "jev-1.13.0",
+  "prompt_version": "1034cffe306ede908f300464a5aba0cae3a0d77e217c463110534c763eb2a7d6",
+  "request_id": "",
+  "skill": "read_reply",
+  "stop_reason": "",
+  "tokens_in": 537,
+  "tokens_out": 52,
+  "tool_input": {
+    "probabilities": {
+      "answers_all": 0.72,
+      "answers_some": 0.28,
+      "declines_to_answer": 0.0,
+      "off_topic": 0.0
+    }
+  }
+}

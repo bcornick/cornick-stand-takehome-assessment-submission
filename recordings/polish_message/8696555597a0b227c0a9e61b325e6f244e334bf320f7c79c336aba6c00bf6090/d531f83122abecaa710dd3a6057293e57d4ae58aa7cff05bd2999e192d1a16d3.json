@@ -1,0 +1,19 @@
+{
+  "input": {
+    "closing": "A single reply covering all of the items above is ideal. Please let us know if anything is unclear.",
+    "opening": "Thank you for sending over your client's property submission. We're glad to have it, and a few more details will help us complete the quote.",
+    "request": "Thank you for your submission. To complete the quote we need the items below. One reply covering all of them is ideal.\n\nProperty\n1. When was the property purchased?\n\nConstruction\n2. What brand is the electrical panel?"
+  },
+  "input_hash": "d531f83122abecaa710dd3a6057293e57d4ae58aa7cff05bd2999e192d1a16d3",
+  "model_id": "deepseek-flash",
+  "prompt_version": "8696555597a0b227c0a9e61b325e6f244e334bf320f7c79c336aba6c00bf6090",
+  "request_id": "",
+  "skill": "polish_message",
+  "stop_reason": "tool_use",
+  "tokens_in": 286,
+  "tokens_out": 50,
+  "tool_input": {
+    "offending_sentence": "",
+    "verdict": "pass"
+  }
+}

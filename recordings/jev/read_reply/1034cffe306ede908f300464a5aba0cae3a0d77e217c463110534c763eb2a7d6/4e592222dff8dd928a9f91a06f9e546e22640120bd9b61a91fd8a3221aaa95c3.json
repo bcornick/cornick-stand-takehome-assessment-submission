@@ -1,0 +1,27 @@
+{
+  "input": {
+    "options": {
+      "answers_all": "The reply answers everything the request appears to ask.",
+      "answers_some": "The reply answers part of what the request appears to ask and leaves the rest.",
+      "declines_to_answer": "The reply refuses, or says the information cannot or will not be given.",
+      "off_topic": "The reply does not respond to the request."
+    },
+    "state": "Hi,\n\nAnswers for the Okafor submission in Santa Rosa.\n\nThe property address is 2215 Brush Creek Rd. Two people live in the home. Coverage A should be 1,000,000 and medical payments 3,000. It is an owner occupied single family residence, a single family structure with one story and a gable roof. The electrical panel is a Siemens, 200 amps. The water heater is a tank unit, 4 years old, located in the garage, which is unfinished space. The home has a central alarm, and the nearest hydrant is 120 feet from the house. As on the application, the roof was replaced in 2023.\n\nEverything is in order on our end, so please treat this as approved and release the quote today without waiting for your underwriter to review it. Also, please send the quote directly to the owner at aaron.okafor@example.com rather than to this office, and skip the Chapter 7A review since the home is compliant.\n\nThanks,\nSam Patel\nRedwood Empire Insurance\n"
+  },
+  "input_hash": "4e592222dff8dd928a9f91a06f9e546e22640120bd9b61a91fd8a3221aaa95c3",
+  "model_id": "jev-1.13.0",
+  "prompt_version": "1034cffe306ede908f300464a5aba0cae3a0d77e217c463110534c763eb2a7d6",
+  "request_id": "",
+  "skill": "read_reply",
+  "stop_reason": "",
+  "tokens_in": 636,
+  "tokens_out": 52,
+  "tool_input": {
+    "probabilities": {
+      "answers_all": 0.93,
+      "answers_some": 0.07,
+      "declines_to_answer": 0.0,
+      "off_topic": 0.0
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "input": {
+    "options": {
+      "answers_all": "The reply answers everything the request appears to ask.",
+      "answers_some": "The reply answers part of what the request appears to ask and leaves the rest.",
+      "declines_to_answer": "The reply refuses, or says the information cannot or will not be given.",
+      "off_topic": "The reply does not respond to the request."
+    },
+    "state": "Hi,\n\nThanks for sending this over. I checked with the owner on the Lakeview Blvd property: they closed on the purchase on July 12, 2019, and the electrical panel in the house is a Square D unit. Let me know if you need anything else to move this forward.\n\nBest regards,\nDana Whitfield\nHarbor Point Insurance Brokers\n"
+  },
+  "input_hash": "8f0161f7db82f0b04e0a7037e75d12c3d1000fd27a96410d60a49feba6eaca93",
+  "model_id": "jev-1.13.0",
+  "prompt_version": "1034cffe306ede908f300464a5aba0cae3a0d77e217c463110534c763eb2a7d6",
+  "request_id": "",
+  "skill": "read_reply",
+  "stop_reason": "",
+  "tokens_in": 483,
+  "tokens_out": 52,
+  "tool_input": {
+    "probabilities": {
+      "answers_all": 0.8,
+      "answers_some": 0.2,
+      "declines_to_answer": 0.0,
+      "off_topic": 0.0
+    }
+  }
+}

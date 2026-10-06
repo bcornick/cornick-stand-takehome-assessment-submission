@@ -80,7 +80,7 @@
   "request_id": "",
   "skill": "read_reply",
   "stop_reason": "tool_use",
-  "tokens_in": 635,
+  "tokens_in": 251,
   "tokens_out": 55,
   "tool_input": {
     "candidates": [],

@@ -1,0 +1,27 @@
+{
+  "input": {
+    "options": {
+      "answers_all": "The reply answers everything the request appears to ask.",
+      "answers_some": "The reply answers part of what the request appears to ask and leaves the rest.",
+      "declines_to_answer": "The reply refuses, or says the information cannot or will not be given.",
+      "off_topic": "The reply does not respond to the request."
+    },
+    "state": "Hi,\n\nHere is what I have from the owner on Hillside Ct.\n\nThe property is in Boulder, zip 80302. It is not held in a trust. The insured's date of birth is November 2, 1979. Medical payments at 1,000 is fine. There are no animals on the property. The house sits on a slab foundation and has two stories. The roof is standing seam metal with a gable shape. The electrical panel is 200 amps and the plumbing is about 12 years old. The fire department is 2.5 miles from the house.\n\nOne correction on the vacancy: the owner tells me the house was empty for 5 consecutive months, not 3. He was overseas for work from January through the end of May and the house sat unoccupied the whole time.\n\nBest,\nJordan Reyes\nFront Range Insurance Group\n"
+  },
+  "input_hash": "a631c7585218aa7b29bfa37a4822e6ba7149b3e270faf6bac88bfa12fe982746",
+  "model_id": "jev-1.13.0",
+  "prompt_version": "1034cffe306ede908f300464a5aba0cae3a0d77e217c463110534c763eb2a7d6",
+  "request_id": "",
+  "skill": "read_reply",
+  "stop_reason": "",
+  "tokens_in": 595,
+  "tokens_out": 52,
+  "tool_input": {
+    "probabilities": {
+      "answers_all": 0.87,
+      "answers_some": 0.13,
+      "declines_to_answer": 0.0,
+      "off_topic": 0.0
+    }
+  }
+}
