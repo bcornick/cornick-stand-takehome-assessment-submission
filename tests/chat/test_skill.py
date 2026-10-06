@@ -112,7 +112,7 @@ def test_a_turn_stops_at_the_cap_and_makes_no_further_call(
     turn = turn_on(db, env, "q")
 
     assert turn.answer == NO_ANSWER_IN_STEPS
-    assert len(script.shown) == MAX_STEPS == len(turn.exchanges)
+    assert len(script.shown) == MAX_STEPS
     assert len(script.tool_inputs) == 3
 
 

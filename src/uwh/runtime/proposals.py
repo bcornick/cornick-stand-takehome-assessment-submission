@@ -22,11 +22,11 @@ class Proposal:
 
 # The commands a card may hold. `approve` and `reject` are the underwriter's own decisions (A.11);
 # `start_run` and `deliver_reply` belong to other controls of the page.
-PROPOSABLE = ("edit_draft", "record_ruling", "resolve_fact", "decline_lead")
+_PROPOSABLE = ("edit_draft", "record_ruling", "resolve_fact", "decline_lead")
 
 
 def is_proposable(command_type: str) -> bool:
-    return command_type in PROPOSABLE
+    return command_type in _PROPOSABLE
 
 
 def create_proposal(

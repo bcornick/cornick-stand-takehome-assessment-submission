@@ -589,14 +589,14 @@ def _propose_command(
     payload: Mapping[str, JsonValue],
 ) -> _Outcome:
     """Store a card for a command the underwriter may apply and run nothing (A.11). The proposed
-    command is one the underwriter submits, never `approve` or `reject`: those are the underwriter's
-    own decisions. The card's command is checked in full when the underwriter applies it."""
+    command is `edit_draft`, `record_ruling`, `resolve_fact` or `decline_lead`. The card's command is
+    checked in full when the underwriter applies it."""
     proposed, rationale = _text(payload, "type"), _nonempty_text(payload, "rationale")
     declared = command_class(proposed)
     if declared is None:
         raise _Refusal(f"{proposed} is not a command")
     if not is_proposable(proposed):
-        raise _Refusal(f"a proposal cannot carry {proposed}; the underwriter decides that")
+        raise _Refusal(f"a proposal cannot carry {proposed}")
     proposed_payload = payload.get("payload")
     if not isinstance(proposed_payload, dict):
         raise _Refusal("the payload needs payload, an object")

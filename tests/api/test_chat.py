@@ -100,14 +100,15 @@ def test_the_stream_carries_each_lookup_and_ends_with_exactly_one_closing_event(
 
 
 def test_replay_answers_that_questions_need_live_mode_and_calls_no_model(
-    tmp_path: Path, leadgen: LeadgenClient, mailbox: MailboxClient, model: Script
+    tmp_path: Path, leadgen: LeadgenClient, mailbox: MailboxClient
 ) -> None:
     settings = replay_settings(tmp_path, 7)
     with TestClient(create_app(settings, leadgen=leadgen, mailbox=mailbox)) as client:
         stream = chat(client, "What happened?", "L-1")
 
     assert stream == [{"type": "error", "reason": "Questions need live mode"}]
-    assert model.shown == [] and events(settings, EventType.model_called) == []
+    assert events(settings, EventType.model_called) == []
+    assert events(settings, EventType.replay_miss) == []
 
 
 def test_a_turn_with_no_model_key_closes_with_an_error(
@@ -118,6 +119,16 @@ def test_a_turn_with_no_model_key_closes_with_an_error(
         (closing,) = chat(client, "What happened?", "L-1")
 
     assert closing == {"type": "error", "reason": "The assistant has no model key"}
+
+
+def test_a_turn_that_fails_still_closes_the_stream_with_an_error(
+    client: TestClient, lead: str, caplog: pytest.LogCaptureFixture
+) -> None:
+    # The scripted model has nothing to return, so its call raises inside the turn's thread.
+    (closing,) = chat(client, "What happened?", lead)
+
+    assert closing["type"] == "error" and closing["reason"].startswith("The assistant failed")
+    assert "the chat turn failed" in caplog.text
 
 
 def test_a_directive_becomes_an_open_card_on_its_lead_that_changes_nothing(

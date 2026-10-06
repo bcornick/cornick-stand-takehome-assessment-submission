@@ -10,7 +10,7 @@ from pydantic import JsonValue, model_validator
 
 from uwh.api.leads import open_items
 from uwh.api.views import ChatExchange, Citation
-from uwh.chat.tools import LEAD_LOOKUPS, References, look_up, short_name
+from uwh.chat.tools import References, look_up, short_name
 from uwh.rules.models import StrictModel
 from uwh.runtime.commands import submit_command
 from uwh.runtime.events import EventContext
@@ -73,7 +73,6 @@ class ChatStep(StrictModel):
             "answer": ("answer",),
             "propose_command": ("command_type", "command_payload", "rationale"),
         }
-        assert self.action in needed or self.action in LEAD_LOOKUPS
         missing = [
             name for name in needed.get(self.action, ("lead_id",)) if getattr(self, name) is None
         ]
@@ -89,7 +88,6 @@ class TurnResult:
     answer: str | None  # None exactly when the turn created a card
     citations: list[Citation]
     proposal_id: int | None
-    exchanges: list[Exchange]
 
 
 def forced_call(shown: dict[str, Any]) -> ForcedToolCall:
@@ -197,4 +195,4 @@ def run_turn(
     finally:
         with unit_of_work(db):
             append_model_calls(db, _context(db, env), lead_id, exchanges)
-    return TurnResult(answer, cited, proposal_id, exchanges)
+    return TurnResult(answer, cited, proposal_id)

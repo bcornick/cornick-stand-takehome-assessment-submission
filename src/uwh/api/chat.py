@@ -1,6 +1,7 @@
 # ABOUTME: The chat routes (A.5, section 11): POST /api/chat runs one chat turn and answers as a server-sent-events stream, GET /api/proposals lists the open cards, and a card is applied or dismissed.
 # ABOUTME: A turn runs in a worker thread of its own, so a closed tab lets it finish; applying a card submits its command as the underwriter, the actor the REST transport binds.
 import asyncio
+import logging
 import sqlite3
 import threading
 from collections.abc import AsyncIterable, Callable
@@ -22,6 +23,8 @@ from uwh.api.views import (
 )
 from uwh.chat.skill import run_turn
 from uwh.runtime.proposals import Proposal, open_proposals, read_proposal, settle_proposal
+
+logger = logging.getLogger(__name__)
 
 # What a turn closes with in replay: nothing recorded answers a typed question.
 NEEDS_LIVE_MODE = "Questions need live mode"
@@ -75,7 +78,16 @@ async def chat(request: ChatRequest, runtime: RuntimeDependency) -> AsyncIterabl
         loop.call_soon_threadsafe(events.put_nowait, event)
 
     def turn() -> None:
-        emit(_closing_event(runtime, request, lambda s: emit(StepEvent(type="step", summary=s))))
+        closing: ChatEvent
+        try:
+            closing = _closing_event(
+                runtime, request, lambda line: emit(StepEvent(type="step", summary=line))
+            )
+        except Exception as error:
+            # The stream ends with a closing event whatever the turn raised.
+            logger.exception("the chat turn failed")
+            closing = ErrorEvent(type="error", reason=f"The assistant failed: {error}")
+        emit(closing)
 
     threading.Thread(target=turn, name="chat-turn").start()
     while True:

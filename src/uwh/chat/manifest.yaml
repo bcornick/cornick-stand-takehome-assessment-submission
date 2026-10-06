@@ -1,9 +1,9 @@
 name: chat
 version: "1"
-purpose: Answers an underwriter's questions from the event log and the lead detail, citing event ids, and turns a directive into a proposal card the underwriter applies.
+purpose: Answers an underwriter's questions from the system's records, citing what it was shown, and turns a directive into a proposal card the underwriter applies.
 trigger: the underwriter sends a chat message
 command_classes: [propose_command]
 actor: assistant
-fallback: the panel says the assistant is unavailable and the underwriter works from the pages
+fallback: the conversation says the assistant is unavailable and the underwriter works from the timeline and the cards
 pass_threshold: 1.0
 model_skill: true
