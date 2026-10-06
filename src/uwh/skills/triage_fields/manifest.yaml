@@ -4,4 +4,3 @@ purpose: Joins a lead's usable facts with the field registry and decides, for ea
 trigger: a lead is received or its facts change
 command_classes: []
 fallback: none
-pass_threshold: 1.0

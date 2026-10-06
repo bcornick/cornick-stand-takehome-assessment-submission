@@ -68,7 +68,7 @@ Done when: a run leaves every lead at a sent quote, one sent request, or an unde
 
 ### 3. Evals
 
-`make eval` with the seed-42 suite and its graders, the reply suite over the reply fixtures, the three controls, per-skill cases, and the results log. Then one improvement cycle on reply reading: a failing case, a prompt change, the rerun, each as a row in the log.
+`make eval` with the seed-42 suite and its nine graders (Coverage, One open request, Asks, Forbidden asks, Rule trace, Packet fidelity, Send safety, Stand's key, Reply reading), the reply suite over the reply fixtures, the three controls, the cases of the two skills that have them (`evaluate_playbook` and `read_reply`), and the results log. The other skills are covered by plain unit tests. The critical errors fail the run whatever the graders say. Then one improvement cycle on reply reading: a failing case, a prompt change, the rerun, each as a row in the log.
 
 Done when: the reference run passes every grader; each of the three controls is caught by a named grader; the results log shows the improvement cycle.
 

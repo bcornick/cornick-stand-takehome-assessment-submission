@@ -4,4 +4,3 @@ purpose: Renders a request to the producer in code from the asks, with the fixed
 trigger: an ask plan or a proposed decline needs a message
 command_classes: [send_routine_request, send_sensitive_request, send_decline_notice]
 fallback: none
-pass_threshold: 1.0

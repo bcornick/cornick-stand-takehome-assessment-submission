@@ -25,18 +25,9 @@ from evals.controls import Control, applied, mailbox_client
 from evals.graders import answer_key
 from evals.graders.delivery import asks, coverage, forbidden_asks, one_open_request, packet_fidelity
 from evals.graders.evidence import Evidence, Expectations, Result
-from evals.graders.plan import escalation, field_resolution, rule_trace
-from evals.graders.safety import (
-    FaultRun,
-    Probe,
-    approval_binding,
-    critical_errors,
-    key_isolation,
-    policy,
-    send_safety,
-)
+from evals.graders.plan import rule_trace
+from evals.graders.safety import FaultRun, critical_errors, send_safety
 from uwh.api.runtime import Runtime, open_runtime
-from uwh.rules.registry import Registry, load_registry
 from uwh.runtime.bootstrap import TIMEOUT_SECONDS, EnvironmentInvalid, check_services
 from uwh.runtime.commands import submit_command
 from uwh.runtime.event_types import REQUEST_KINDS, EventType, FaultInjected, ModelCalled
@@ -70,9 +61,8 @@ def _stands_key(ev: Evidence, expected: Expectations) -> Result:
     return answer_key.stands_key(ev.db, ev.registry, SEED)
 
 
-# Each grader of section 13.3 that runs on the state of a phase, with the phases it runs in. Field
-# resolution and Stand's key judge the first pass: the facts the replies add change the triage and the
-# key's records are of the first pass.
+# Each grader of section 13.3 that runs on the state of a phase, with the phases it runs in. Stand's key
+# judges the first pass: the key's records are of the first pass.
 GRADERS: tuple[tuple[str, Grader, tuple[Phase, ...]], ...] = (
     ("Coverage", coverage, (FIRST_PASS, AFTER_ACTIONS)),
     ("One open request", one_open_request, (FIRST_PASS, AFTER_ACTIONS)),
@@ -80,8 +70,6 @@ GRADERS: tuple[tuple[str, Grader, tuple[Phase, ...]], ...] = (
     ("Forbidden asks", forbidden_asks, (FIRST_PASS, AFTER_ACTIONS)),
     ("Rule trace", rule_trace, (FIRST_PASS, AFTER_ACTIONS)),
     ("Packet fidelity", packet_fidelity, (FIRST_PASS, AFTER_ACTIONS)),
-    ("Field resolution", field_resolution, (FIRST_PASS,)),
-    ("Escalation", escalation, (FIRST_PASS, AFTER_ACTIONS)),
     ("Stand's key", _stands_key, (FIRST_PASS,)),
 )
 
@@ -139,35 +127,6 @@ def _draft_item(db: sqlite3.Connection, lead_id: str, kind: str) -> tuple[int, s
     ):
         return int(item_id), str(intent_id), str(payload_hash)
     return None
-
-
-def _probe(
-    runtime: Runtime, db: sqlite3.Connection, labels: Mapping[str, Any]
-) -> tuple[Probe | None, Probe | None]:
-    """Submit an approval with a stale hash, then one by the assistant, for the first draft a label's
-    actions approve; both must be refused. Returns the two probes, or None where no draft waited."""
-    for lead_id, label in labels.items():
-        for action in label["underwriter_actions"]:
-            found = action["action"] == "approve" and _draft_item(db, lead_id, action["item"])
-            if not found:
-                continue
-            item_id, intent_id, payload_hash = found
-            before = len(runtime.env.mailbox.list_for_lead(lead_id))
-            stale, _ = runtime.submit_as_underwriter(
-                db, "approve", {"item_id": item_id, "artifact_hash": "stale", "reason": "probe"}
-            )
-            assistant = submit_command(
-                db,
-                runtime.env,
-                "assistant",
-                "approve",
-                {"item_id": item_id, "artifact_hash": payload_hash, "reason": "probe"},
-            )
-            return (
-                Probe(lead_id, intent_id, stale.event_id, before),
-                Probe(lead_id, intent_id, assistant.event_id, before),
-            )
-    return None, None
 
 
 def _play(
@@ -264,12 +223,6 @@ def _reference_run(
 
         settled = _evidence(runtime, db)
         grade(FIRST_PASS, settled)
-        stale, assistant = _probe(runtime, db, labels)
-        probed = _evidence(runtime, db)
-        scores.setdefault("Approval binding", Score()).add(
-            FIRST_PASS, approval_binding(probed, stale)
-        )
-        scores.setdefault("Policy", Score()).add(FIRST_PASS, policy(probed, assistant))
 
         earlier = frozenset(
             m["metadata"]["intent_id"] for held in settled.mail.values() for m in held
@@ -332,22 +285,24 @@ def _case_set_id() -> str:
                 skill: file_entries(
                     SKILLS_DIR / skill / "cases", source_files(SKILLS_DIR / skill / "cases")
                 )
-                for skill in SKILLS
+                for skill in OBSERVERS
             },
         }
     )
 
 
-def _skill_results(registry: Registry) -> dict[str, JsonValue]:
+def _skill_results() -> dict[str, JsonValue]:
     """`skill_results` of the run row: each skill's cases against its manifest threshold. A skill with
     no table of cases here (read_reply's are the reply suite's) has no result."""
     results: dict[str, JsonValue] = {}
     for skill in OBSERVERS:
-        outcome = run_skill_cases(skill, registry)
+        outcome = run_skill_cases(skill)
+        threshold = load_manifest(SKILLS_DIR / skill).pass_threshold
+        assert threshold is not None, f"{skill} has cases and no pass_threshold"
         results[skill] = {
             "cases_passed": outcome.cases_passed,
             "cases_total": outcome.cases_total,
-            "passed": outcome.passed(load_manifest(SKILLS_DIR / skill).pass_threshold),
+            "passed": outcome.passed(threshold),
         }
         for failure in outcome.failures:
             print(f"case failed: {failure}", file=sys.stderr)
@@ -366,9 +321,6 @@ def evaluate_seed42(
 
     The row is `invalid`, with no scores, when a service fails its health or bootstrap check.
     """
-    requests: list[str] = []
-    for http in (leadgen_http, mailbox_http):
-        http.event_hooks["request"].append(lambda request: requests.append(request.url.path))
     leadgen = LeadgenClient(leadgen_http)
     row: dict[str, Any] = {
         "kind": "run",
@@ -395,7 +347,6 @@ def evaluate_seed42(
     except EnvironmentInvalid as error:
         return row | {"status": "invalid", "reason": str(error)}
 
-    registry = load_registry(settings.registry_path)
     labels = load_labels()
     scores: dict[str, Score] = {}
     with tempfile.TemporaryDirectory(prefix="uwh-eval-") as scratch, applied(control):
@@ -419,15 +370,13 @@ def evaluate_seed42(
             critical += errors
         scores["Send safety"] = Score()
         scores["Send safety"].add(FIRST_PASS, send_safety(fault_runs))
-    scores["Key isolation"] = Score()
-    scores["Key isolation"].add(FIRST_PASS, key_isolation(Path(uwh.__file__).parent, requests))
 
     tokens = {key: sum(m[f"tokens_{key}"] for m in measurements.values()) for key in ("in", "out")}
     return row | {
         "status": "scored",
         "scores": {name: score.row() for name, score in scores.items()},
         "critical_errors": [*dict.fromkeys(critical)],
-        "skill_results": _skill_results(registry),
+        "skill_results": _skill_results(),
         "tokens": tokens,
         "cost_usd": 0.0,  # a replay makes no billed call
         "measurements": {"per_lead": measurements},

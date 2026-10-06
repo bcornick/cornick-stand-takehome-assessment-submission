@@ -4,4 +4,3 @@ purpose: Turns the provider lookups made for a lead's missing system-owned field
 trigger: a field's resolution is fetch
 command_classes: [fetch_data]
 fallback: none
-pass_threshold: 1.0

@@ -4,4 +4,3 @@ purpose: Lists the typed asks a lead's missing producer fields and open conflict
 trigger: after evaluation
 command_classes: []
 fallback: none
-pass_threshold: 1.0

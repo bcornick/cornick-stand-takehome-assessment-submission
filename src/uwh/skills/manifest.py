@@ -1,5 +1,5 @@
 # ABOUTME: The skill manifest model of section 8, the loader that reads one manifest, and the check that a skill folder holds every part it needs to run.
-# ABOUTME: A manifest is manifest.yaml; the folder needs skill.py and cases/, and prompt.md for a model skill only.
+# ABOUTME: A manifest is manifest.yaml; the folder needs skill.py, cases/ for a skill with a pass threshold, and prompt.md for a model skill only.
 from pathlib import Path
 from typing import Self
 
@@ -15,7 +15,8 @@ class SkillFolderError(Exception):
 
 
 class SkillManifest(StrictModel):
-    """manifest.yaml. `fallback` is "none" for a deterministic skill."""
+    """manifest.yaml. `fallback` is "none" for a deterministic skill. A skill with a `pass_threshold`
+    has `cases/` the eval runs; a skill without one has no eval status."""
 
     name: str
     version: str
@@ -23,7 +24,7 @@ class SkillManifest(StrictModel):
     trigger: str
     command_classes: list[str]
     fallback: str
-    pass_threshold: float = Field(gt=0, le=1)
+    pass_threshold: float | None = Field(default=None, gt=0, le=1)
     threshold_reason: str | None = None
     model_skill: bool = False
 
@@ -41,7 +42,9 @@ class SkillManifest(StrictModel):
             raise ValueError(
                 f"command_classes lists a class twice: duplicate {', '.join(repeated)}"
             )
-        if self.pass_threshold != 1.0 and not self.threshold_reason:
+        if self.pass_threshold is None and self.threshold_reason:
+            raise ValueError("a threshold_reason accompanies a pass_threshold")
+        if self.pass_threshold not in (None, 1.0) and not self.threshold_reason:
             raise ValueError("a pass_threshold other than 1.0 needs a threshold_reason")
         if self.pass_threshold == 1.0 and self.threshold_reason:
             raise ValueError("a threshold_reason accompanies a pass_threshold other than 1.0")
@@ -75,12 +78,13 @@ def load_manifest(folder: Path) -> SkillManifest:
 def check_skill_folder(folder: Path) -> SkillManifest:
     """Load the manifest of the skill folder and check the folder holds each part it needs.
 
-    It needs `cases/`, which the app image leaves out, so it runs where the evals run.
+    A skill with a `pass_threshold` needs `cases/`, which the app image leaves out, so the check
+    runs where the evals run.
     """
     manifest = load_manifest(folder)
     if not (folder / "skill.py").is_file():
         raise _folder_error(folder, "skill.py is missing")
-    if not (folder / "cases").is_dir():
+    if manifest.pass_threshold is not None and not (folder / "cases").is_dir():
         raise _folder_error(folder, "cases/ is missing")
     has_prompt = (folder / "prompt.md").is_file()
     if manifest.model_skill and not has_prompt:

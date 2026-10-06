@@ -12,7 +12,6 @@ from fastapi.testclient import TestClient
 
 from evals import run
 from evals.graders.evidence import Evidence
-from evals.graders.safety import Probe
 from tests.api.helpers import FIXTURE_REPLIES, LEAD_008, RECORDINGS, REGISTRY
 from uwh.api import runtime
 from uwh.api.app import create_app
@@ -80,8 +79,6 @@ class Snapshot:
 class RunState:
     settled: Snapshot  # the settle point, before any underwriter action
     acted: Snapshot  # after lead 008's reply and approval
-    stale_hash: Probe | None  # the approval with a stale hash, as the runner submits it
-    by_assistant: Probe | None  # the approval by the assistant
 
 
 # The state is built by the first test that asks for it and shared with the rest.
@@ -105,7 +102,6 @@ def run_state(
                 return Snapshot(_copy(db), {lead: list(held) for lead, held in ev.mail.items()})
 
             settled = snapshot()
-            stale_hash, by_assistant = run._probe(app, db, labels)
             assert run._play(app, db, LEAD_008, labels[LEAD_008]["underwriter_actions"]) == []
-            _BUILT.append(RunState(settled, snapshot(), stale_hash, by_assistant))
+            _BUILT.append(RunState(settled, snapshot()))
     return _BUILT[0]

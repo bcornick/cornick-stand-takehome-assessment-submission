@@ -4,4 +4,3 @@ purpose: Builds the quote packet in code from the action plan, with the coverage
 trigger: no open blockers and no asks remain
 command_classes: [send_quote_packet]
 fallback: none
-pass_threshold: 1.0

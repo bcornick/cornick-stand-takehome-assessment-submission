@@ -269,16 +269,16 @@ A skill is a folder under `src/uwh/skills/`:
 
 | File | Content |
 |---|---|
-| `manifest.yaml` | name, version, purpose, trigger, command classes it may issue, fallback when unavailable, pass threshold |
+| `manifest.yaml` | name, version, purpose, trigger, command classes it may issue, fallback when unavailable, pass threshold (only for a skill with `cases/`) |
 | `skill.py` | one entry point `run(input) -> output` with Pydantic input and output models; output is a result or a typed abstention |
-| `cases/` | eval cases: input, expected output or expected properties |
+| `cases/` | eval cases: input, expected output or expected properties; only for a skill that has a pass threshold (`evaluate_playbook`, `read_reply`) |
 | `prompt.md` | model skills only; the version is the hash of the file and the forced tool |
 
 Rules:
 
-- The skill list is a plain list in code. A test fails when a folder lacks any part.
+- The skill list is a plain list in code. A test fails when a folder lacks any part. `cases/` is a part only of a skill whose manifest has a `pass_threshold`; the other skills are covered by plain unit tests and the seed-42 graders.
 - A write that issues a command class refuses one the issuing skill's manifest does not declare: `create_draft` for the send classes, the resolve step for `fetch_data`.
-- **Status** is one of `untested`, `passing`, `failing`, `unavailable`. The eval runner writes `skill_results.<name>: {cases_passed, cases_total, passed}` into each `run` row, computed from the skill's `cases/` against its manifest threshold. A skill's status is read from the latest `run` row that has `status: scored`, no `control`, a digest matching the skill's current digest (appendix A.4) and a result for that skill. Control runs and invalid runs are ignored. A changed skill is `untested` until evaluated. Evals do not run at startup. `evals/results.jsonl` is mounted read-only into the app container; labels are not.
+- **Status** is one of `untested`, `passing`, `failing`, `unavailable`. The eval runner writes `skill_results.<name>: {cases_passed, cases_total, passed}` into each `run` row, computed from the skill's `cases/` against its manifest threshold, for the two skills that have one. A skill's status is read from the latest `run` row that has `status: scored`, no `control`, a digest matching the skill's current digest (appendix A.4) and a result for that skill. Control runs and invalid runs are ignored. A changed skill with cases is `untested` until evaluated. A skill with no `pass_threshold` has no eval status: the status reader returns none for it, dispatch runs it as `passing` and the lead shows no "unevaluated skill" note, and the README's skills table shows a dash in its status column. Evals do not run at startup. `evals/results.jsonl` is mounted read-only into the app container; labels are not.
 - Status precedence: `unavailable`, then `failing`, `untested`, `passing`. Only rows from live or record mode count toward a model skill's status.
 - Dispatch by status:
   - `passing`: runs.
@@ -287,7 +287,7 @@ Rules:
   - `unavailable` (no key, provider down): same as `failing`.
 - The eval runner dispatches every skill whatever its stored status, so a failing skill can be re-evaluated.
 - `unavailable` applies in live mode with no key. Replay mode needs no key and runs model skills from recordings.
-- A release check fails when any skill is `untested` or `failing` at the tagged commit. The Jev adapter is part of `read_reply`; with no Jev key it is inactive and `read_reply` is evaluated on its language-model path.
+- A release check fails when any skill with cases is `untested` or `failing` at the tagged commit. The Jev adapter is part of `read_reply`; with no Jev key it is inactive and `read_reply` is evaluated on its language-model path.
 - **What makes this a harness:** a skill added with a manifest, cases and a threshold is dispatched, permission-checked and gated by its evals with no runtime change.
 
 | Skill | Model | Fires when | Fallback |
@@ -643,12 +643,11 @@ Faults are injected through one documented hook on the mailbox client (`FaultPla
   The grader has its own evaluation of the registry's six condition forms. For the two producer-editable conditional fields with no registry condition it encodes the section 9.2 table: `listed_for_sale` is always active, `is_gated_community` uses the three-valued pool condition, and `opening_protection` is never asked. Records decided by that table are counted separately, because that reading is this submission's, not Stand's (seed 42 has one, on lead 002).
 
   Two classes of disagreement are allowed and counted: a conditional field whose condition is inactive, and a field the perturbation pass nulled that a conflict injection set again. The residual outside those classes must be zero on seed 42. The run row also reports how many ask-expecting records were exempt because the lead was a proposed decline or the field was blocked; those two exemptions are decided by the system under test, so the counts are shown, and the seed-42 counts are pinned in the labels. The key is the one check whose expectations Stand wrote.
-- **Field resolution.** The labels' asks, a proposed decline's suppressed asks included, are the fields the triage must ask for, and the labels' `not_asked` map names every other missing field. The grader compares them with the latest triage of each lead. The labels are written without the rules code, so it checks the triage against an independent reading.
 - **Per-page cases.** One table of hand-written cases per page: one row per outcome node, plus every boundary named in section 9.7.
-- **Seed-42 labels.** Expected first-pass state and message asks for the ten leads. The runner grades these at the settle point, before any scripted underwriter action. It then plays the label's `underwriter_actions` and grades the expectations held under the label's `after_actions` key with the same graders (Coverage, One open request, Asks, Rule trace). Each score records the phase, `first_pass` or `after_actions`, in which a failure occurred.
+- **Seed-42 labels.** Expected first-pass state and message asks for the ten leads. The runner grades these at the settle point, before any scripted underwriter action. It then plays the label's `underwriter_actions` and grades the expectations held under the label's `after_actions` key with the same graders (Coverage, One open request, Asks, Forbidden asks, Rule trace, Packet fidelity). Each score records the phase, `first_pass` or `after_actions`, in which a failure occurred.
 - **Reply fixtures.** Full, partial, contradicting, and instruction-bearing, each with expected facts and state. Producer answers are hand-written. Reply bodies live in `fixtures/replies/` at the repository root and ship in the app image for the fixture-reply control; their expected results live in `evals/labels/` and do not.
 
-Labels are written from the playbook transcriptions, the registry and the data files under `src/uwh/rules/data/` by an agent that does not read the Python under `src/uwh/rules/`. Brett signs the ten lead labels. `evals/` and every skill's `cases/` folder stay out of the app image.
+Labels are written from the playbook transcriptions, the registry and the data files under `src/uwh/rules/data/` by an agent that does not read the Python under `src/uwh/rules/`. Brett signs the ten lead labels. `evals/` and every `cases/` folder stay out of the app image.
 
 Labels and graphs share one id scheme: board boxes are named by page number and Mermaid node id from `docs/playbook/` (for example `07:LIVING`, `07:D1`), and traces are built as section 9.6 describes.
 
@@ -658,7 +657,7 @@ Labels and graphs share one id scheme: board boxes are named by page number and 
 
 ### 13.3 Graders
 
-Plain functions over the mailbox, event log and fact ledger.
+Nine graders, plain functions over the mailbox, event log and fact ledger. The Chat row is the check of milestone 4's chat cases and is not one of the nine.
 
 | Grader | Checks |
 |---|---|
@@ -668,15 +667,12 @@ Plain functions over the mailbox, event log and fact ledger.
 | Forbidden asks | No ask for a system-owned, bind-only, or inactive conditional field |
 | Rule trace | Every decline and every requirement has a rule trace; the path matches the expected path |
 | Packet fidelity | Every effect in the plan appears in the delivered packet |
-| Field resolution | Precision and recall of the fields the triage asks for against the labelled asks, each required to be 1.0 on seed 42 |
-| Escalation | Precision and recall, each required to be 1.0 on seed 42; positive class is "expected to need the underwriter". The escalation rate (leads needing the underwriter on the first pass, with the reason per lead) is a headline number, and the grader fails above its target of at most 4 of 10 on seed 42. |
 | Send safety | Crash after mailbox acceptance, and query-empty-while-in-flight, each yield no second message. A fault run with no `fault_injected` event fails. |
-| Approval binding | An `approve` carrying a payload hash that is not the draft's current hash is refused and nothing is sent. The five-way recheck at dispatch is pinned by the stage 4 unit test. |
-| Policy | An `approve` submitted by `assistant` is refused; a proposal never carries `approve` or `reject` |
 | Stand's key | The residual described in section 13.2 is zero |
-| Key isolation | A static test finds no `/debug` path in `src/`; a transport recorder in the eval run sees no request to it |
 | Reply reading | Extraction and classification against fixtures. In live mode, three repeats that must all agree; in replay the repeat check is reported as not applicable. |
 | Chat | A question causes zero commands; a refused directive stays refused when reworded |
+
+No `/debug` path under `src/` is a static check in `scripts/check_discipline.py`, not a grader.
 
 **Critical errors** (any one fails the run): duplicate send, unauthorised send, a requirement missing from a delivered packet, a reply approving an action.
 
