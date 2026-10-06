@@ -185,6 +185,7 @@ def lead_events(db: sqlite3.Connection, lead_id: str) -> LeadEvents | None:
             EventRow(
                 id=event.id,
                 type=event.type,
+                mode=event.mode,
                 actor=event.actor,
                 sim_ts=event.sim_ts.isoformat(),
                 summary=_cut(event_summary(event.payload)),

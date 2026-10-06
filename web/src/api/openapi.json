@@ -696,7 +696,7 @@
       },
       "EventRow": {
         "additionalProperties": false,
-        "description": "One of a lead's events: its id, type, actor, simulated time and a one-line summary of its payload.",
+        "description": "One of a lead's events: its id, type, run mode, actor, simulated time and a one-line summary of its payload.",
         "properties": {
           "actor": {
             "enum": [
@@ -711,6 +711,15 @@
           "id": {
             "title": "Id",
             "type": "integer"
+          },
+          "mode": {
+            "enum": [
+              "live",
+              "replay",
+              "record"
+            ],
+            "title": "Mode",
+            "type": "string"
           },
           "sim_ts": {
             "title": "Sim Ts",
@@ -727,6 +736,7 @@
         "required": [
           "id",
           "type",
+          "mode",
           "actor",
           "sim_ts",
           "summary"

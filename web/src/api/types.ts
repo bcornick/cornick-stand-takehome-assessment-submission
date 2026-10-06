@@ -514,7 +514,7 @@ export interface components {
         };
         /**
          * EventRow
-         * @description One of a lead's events: its id, type, actor, simulated time and a one-line summary of its payload.
+         * @description One of a lead's events: its id, type, run mode, actor, simulated time and a one-line summary of its payload.
          */
         EventRow: {
             /**
@@ -524,6 +524,11 @@ export interface components {
             actor: "workflow" | "underwriter" | "assistant" | "inbound";
             /** Id */
             id: number;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "live" | "replay" | "record";
             /** Sim Ts */
             sim_ts: string;
             /** Summary */
