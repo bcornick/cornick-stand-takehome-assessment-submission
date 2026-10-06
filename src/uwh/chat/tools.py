@@ -1,38 +1,33 @@
 # ABOUTME: The chat panel's read tools (section 11): the recent events of a lead, a lead's summary and every open item, each answered from the stored state.
-# ABOUTME: A tool returns plain JSON for the model; the events carry their ids, which an answer cites. The open items are the ones the pages list.
+# ABOUTME: A tool returns plain JSON for the model; the events carry their ids, which an answer cites, and the one-line summaries the page shows. The open items are the ones the pages list.
 import sqlite3
 from collections.abc import Callable
 from typing import Any
 
+from uwh.api.leads import lead_events as events_of_lead
 from uwh.api.leads import open_items as open_item_rows
 from uwh.api.views import Item
-from uwh.runtime.events import read_events
 from uwh.runtime.facts import effective_facts
 from uwh.skills.steps import lead_label
 
-# How many of a lead's latest events a tool shows, and how much of each event's payload.
+# How many of a lead's latest events a tool shows.
 EVENT_LIMIT = 40
-SUMMARY_CHARACTERS = 240
-
-
-def _lead_exists(db: sqlite3.Connection, lead_id: str) -> bool:
-    return db.execute("SELECT 1 FROM leads WHERE lead_id = ?", (lead_id,)).fetchone() is not None
 
 
 def lead_events(db: sqlite3.Connection, lead_id: str) -> dict[str, Any]:
-    """The latest events of the lead, oldest first, each with its id."""
-    if not _lead_exists(db, lead_id):
+    """The latest events of the lead, oldest first, each with its id and the summary the page shows."""
+    page = events_of_lead(db, lead_id)
+    if page is None:
         return {"error": f"there is no lead {lead_id}"}
-    events = read_events(db, lead_id=lead_id)[-EVENT_LIMIT:]
     return {
         "events": [
             {
                 "id": event.id,
                 "type": event.type.value,
                 "actor": event.actor,
-                "summary": event.payload.model_dump_json()[:SUMMARY_CHARACTERS],
+                "summary": event.summary,
             }
-            for event in events
+            for event in page.events[-EVENT_LIMIT:]
         ]
     }
 

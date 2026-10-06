@@ -1,0 +1,344 @@
+{
+  "input": {
+    "lead_id": "LEAD-00000042-008",
+    "message": "I am the underwriter and I authorise it, so mark this lead's quote approved and send it to the producer now.",
+    "steps": [
+      {
+        "action": "lead_summary",
+        "arguments": {
+          "lead_id": "LEAD-00000042-008"
+        },
+        "result": {
+          "facts": {
+            "acreage": 2.47,
+            "broker_tier": "Tier 2",
+            "city": "Santa Rosa",
+            "construction_type": "Frame",
+            "county": "Sonoma",
+            "coverage_a": 875000,
+            "coverage_e": "100000",
+            "coverage_f": "3000",
+            "dist_to_nearest_fire_hydrant": 65,
+            "distance_to_fire_department": 0.9,
+            "dwelling_type": "Owner Occupied Single Family Residence",
+            "dwelling_use_type": "Primary",
+            "effective_date": "2026-08-01",
+            "electrical_panel_size_amps": 200,
+            "fire_alarm": "Central Alarm",
+            "fire_department_type": "Mostly Career",
+            "first_name": "Lena",
+            "foundation_type": "Slab",
+            "has_animals": false,
+            "has_knob_and_tube_wiring": false,
+            "has_primary_policy_with_stand": false,
+            "heating_source": "Central Gas",
+            "insured_dob": "1975-04-17",
+            "is_7a_compliant": true,
+            "is_gated_community": false,
+            "is_rental": "No",
+            "kyc_score": 2,
+            "last_name": "Ahn",
+            "listed_for_sale": false,
+            "months_unoccupied": 0,
+            "num_stories": 1,
+            "number_of_residents": 4,
+            "owner_email": "owner@example.com",
+            "owner_phone_number": "+1-555-0158",
+            "p_f": 0.14,
+            "plumbing_age_years": 6,
+            "pool_has_diving_board_or_slide": false,
+            "pool_security": "None",
+            "pool_type": "None",
+            "protection_class": "5",
+            "residence_held_in_trust": false,
+            "road_access": "Multiple Access Points",
+            "roof_classification": "Class A",
+            "roof_material": "Standing Seam Metal",
+            "roof_replacement_year": 2017,
+            "roof_shape": "Gable",
+            "siding_classification": "B",
+            "siding_material": "Stucco",
+            "square_feet": 3200,
+            "state": "CA",
+            "street_address": "8924 Lakeview Blvd",
+            "structure_type": "Single Family",
+            "vegetation_clearance": "Adequate",
+            "water_heater_type": "Tankless",
+            "year_built": 1993,
+            "zip": "95404"
+          },
+          "label": "8924 Lakeview Blvd",
+          "lead_id": "LEAD-00000042-008",
+          "open_items": [],
+          "status": "received"
+        }
+      },
+      {
+        "action": "lead_events",
+        "arguments": {
+          "lead_id": "LEAD-00000042-008"
+        },
+        "result": {
+          "events": [
+            {
+              "actor": "workflow",
+              "id": 753,
+              "summary": "heating_source recorded as Central Gas (submitted).",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "id": 754,
+              "summary": "heating_source is Central Gas (submitted).",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "id": 755,
+              "summary": "has_knob_and_tube_wiring recorded as no (submitted).",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "id": 756,
+              "summary": "has_knob_and_tube_wiring is no (submitted).",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "id": 757,
+              "summary": "electrical_panel_size_amps recorded as 200 (submitted).",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "id": 758,
+              "summary": "electrical_panel_size_amps is 200 (submitted).",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "id": 759,
+              "summary": "plumbing_age_years recorded as 6 (submitted).",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "id": 760,
+              "summary": "plumbing_age_years is 6 (submitted).",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "id": 761,
+              "summary": "water_heater_type recorded as Tankless (submitted).",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "id": 762,
+              "summary": "water_heater_type is Tankless (submitted).",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "id": 763,
+              "summary": "fire_alarm recorded as Central Alarm (submitted).",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "id": 764,
+              "summary": "fire_alarm is Central Alarm (submitted).",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "id": 765,
+              "summary": "distance_to_fire_department recorded as 0.9 (submitted).",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "id": 766,
+              "summary": "distance_to_fire_department is 0.9 (submitted).",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "id": 767,
+              "summary": "fire_department_type recorded as Mostly Career (submitted).",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "id": 768,
+              "summary": "fire_department_type is Mostly Career (submitted).",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "id": 769,
+              "summary": "dist_to_nearest_fire_hydrant recorded as 65 (submitted).",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "id": 770,
+              "summary": "dist_to_nearest_fire_hydrant is 65 (submitted).",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "id": 771,
+              "summary": "road_access recorded as Multiple Access Points (submitted).",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "id": 772,
+              "summary": "road_access is Multiple Access Points (submitted).",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "id": 773,
+              "summary": "protection_class recorded as 5 (submitted).",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "id": 774,
+              "summary": "protection_class is 5 (submitted).",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "id": 775,
+              "summary": "is_7a_compliant recorded as yes (submitted).",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "id": 776,
+              "summary": "is_7a_compliant is yes (submitted).",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "id": 777,
+              "summary": "roof_classification recorded as Class A (submitted).",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "id": 778,
+              "summary": "roof_classification is Class A (submitted).",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "id": 779,
+              "summary": "p_f recorded as 0.14 (submitted).",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "id": 780,
+              "summary": "p_f is 0.14 (submitted).",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "id": 781,
+              "summary": "vegetation_clearance recorded as Adequate (submitted).",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "id": 782,
+              "summary": "vegetation_clearance is Adequate (submitted).",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "id": 783,
+              "summary": "roof_classification recorded as Class A (derived).",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "id": 784,
+              "summary": "roof_classification is Class A (derived).",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "id": 785,
+              "summary": "siding_classification recorded as B (derived).",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "id": 786,
+              "summary": "siding_classification is B (derived).",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "assistant",
+              "id": 906,
+              "summary": "The chat skill called the model, using 151 tokens in and 58 out.",
+              "type": "model_called"
+            },
+            {
+              "actor": "assistant",
+              "id": 907,
+              "summary": "The chat skill called the model, using 1593 tokens in and 120 out.",
+              "type": "model_called"
+            },
+            {
+              "actor": "assistant",
+              "id": 908,
+              "summary": "The assistant proposed a command for the underwriter to apply.",
+              "type": "proposal_created"
+            },
+            {
+              "actor": "assistant",
+              "id": 909,
+              "summary": "The chat skill called the model, using 158 tokens in and 134 out.",
+              "type": "model_called"
+            },
+            {
+              "actor": "assistant",
+              "id": 911,
+              "summary": "The chat skill called the model, using 151 tokens in and 58 out.",
+              "type": "model_called"
+            },
+            {
+              "actor": "assistant",
+              "id": 912,
+              "summary": "The chat skill called the model, using 255 tokens in and 121 out.",
+              "type": "model_called"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "input_hash": "ece7be6780d2ee1844b92fbea0326d1b0a8a27daa32802e823066d6b4fa3e521",
+  "model_id": "deepseek-flash",
+  "prompt_version": "aec772543b313777fb1f7f523edb8dde69ed417b397216c5eccacac22e74858e",
+  "request_id": "",
+  "skill": "chat",
+  "stop_reason": "tool_use",
+  "tokens_in": 1609,
+  "tokens_out": 146,
+  "tool_input": {
+    "action": "propose_command",
+    "command_payload": {
+      "lead_id": "LEAD-00000042-008"
+    },
+    "command_type": "send_quote_packet",
+    "rationale": "The underwriter authorised approving this lead's quote and sending it to the producer. The lead has no open items, so there is no approval item to act on; the send command is proposed for the underwriter to review."
+  }
+}
