@@ -1,4 +1,4 @@
-# ABOUTME: Tests the one-line summary of an event payload (section 11): a plain sentence for each event type, with no `name: value` dump, no object repr and no JSON.
+# ABOUTME: Tests the narrative sentence of an event payload (section 11): one for each event type, with no `name: value` dump, no object repr and no JSON.
 # ABOUTME: Every event type has a payload below, and a type the summary does not know fails the sentence check.
 import re
 
@@ -69,7 +69,9 @@ PAYLOADS: dict[EventType, StrictModel] = {
     EventType.conflict_closed: ConflictClosed(
         validator="v", fields=["a", "b"], values={"a": 1}, observation_id=None
     ),
-    EventType.triage_completed: TriageCompleted(fields={"a": {}, "b": {}}),
+    EventType.triage_completed: TriageCompleted(
+        fields={"a": {"value_status": "missing"}, "b": {"value_status": "present"}}
+    ),
     EventType.provider_called: ProviderCalled(
         key="p_f",
         result=ProviderResult(status="found", value=0.1, source="fire", fetched_at="t"),
@@ -147,45 +149,100 @@ def test_a_summary_is_one_plain_sentence(event_type: EventType) -> None:
     summary = event_summary(PAYLOADS[event_type])
 
     assert summary != "" and "\n" not in summary
-    assert not re.search(r":|[{}\[\]]|=|object at|\bNone\b", summary)
+    assert not re.search(r"(:.*){2}|[{}\[\]]|=|object at|\bNone\b", summary)
 
 
-@pytest.mark.parametrize(
-    ("event_type", "expected"),
-    [
-        (EventType.lead_received, "Received from web."),
-        (EventType.fact_observed, "roof_year recorded as 2017 (submitted)."),
-        (EventType.blocker_opened, "Waiting on the producer. Waiting for the reply."),
-        (
-            EventType.intent_created,
-            "Drafted a routine request to p@example.com with the subject Questions.",
-        ),
-        (
-            EventType.reply_read,
-            "The reply answers every question asked, classified by the model; 0 answers found.",
-        ),
-        (EventType.approval_recorded, 'Approved a draft with the reason "fine".'),
-        (EventType.command_refused, "Refused resolve fact. not a field."),
-    ],
-)
-def test_a_summary_says_what_happened_in_words(event_type: EventType, expected: str) -> None:
-    assert event_summary(PAYLOADS[event_type]) == expected
+def _provider_called(key: str, **result: object) -> ProviderCalled:
+    return ProviderCalled(
+        key=key,
+        result=ProviderResult(source="s", fetched_at="t", **result),  # type: ignore[arg-type]
+    )
 
 
-def test_a_reply_classified_by_jev_names_jev_and_its_confidence() -> None:
-    read = ReplyRead(
+def _reply_read(classified_by: str, confidence: float | None) -> ReplyRead:
+    return ReplyRead(
         intent_id="i",
         body_hash="h",
-        classification="off_topic",
-        classified_by="jev",
-        jev_confidence=0.91,
+        classification="answers_all",
+        classified_by=classified_by,  # type: ignore[arg-type]
+        jev_confidence=confidence,
         abstention=None,
         candidates=[],
         dropped=[],
     )
 
-    assert (
-        event_summary(read) == "The reply is off topic, classified by Jev at 0.91; 0 answers found."
+
+@pytest.mark.parametrize(
+    ("payload", "expected"),
+    [
+        (PAYLOADS[EventType.run_started], "Started the run with 12 leads from seed 42"),
+        (PAYLOADS[EventType.lead_received], "Received the lead from web"),
+        (PAYLOADS[EventType.fact_observed], "Recorded roof_year as 2017 (submitted)"),
+        (
+            PAYLOADS[EventType.fact_observed].model_copy(update={"status": "pending_review"}),
+            "Recorded roof_year as 2017 (submitted), held for review",
+        ),
+        (PAYLOADS[EventType.fact_selected], "Using 2017 for roof_year (submitted)"),
+        (
+            TriageCompleted(
+                fields={
+                    "a": {"value_status": "missing"},
+                    "b": {"value_status": "missing"},
+                    "c": {"value_status": "present"},
+                }
+            ),
+            "Triaged the fields: 2 missing",
+        ),
+        (
+            TriageCompleted(
+                fields={"a": {"value_status": "conflicting"}, "b": {"value_status": "missing"}}
+            ),
+            "Triaged the fields: 1 missing, 1 conflicting",
+        ),
+        (PAYLOADS[EventType.provider_called], "Fetched the fire probability: 0.1"),
+        (
+            _provider_called("p_f", status="unavailable", value=None),
+            "The fire simulation failed, so you need to choose",
+        ),
+        (
+            _provider_called("replacement_cost", status="not_found", value=None),
+            "Could not fetch the replacement cost: the lookup was not found",
+        ),
+        (
+            _provider_called("p_f", status="blocked", value=None, missing_inputs=["address"]),
+            "Could not fetch the fire probability: it needs address",
+        ),
+        (PAYLOADS[EventType.blocker_opened], "Waiting on the producer. Waiting for the reply."),
+        (
+            PAYLOADS[EventType.intent_created],
+            "Drafted a routine request to p@example.com with the subject Questions",
+        ),
+        (PAYLOADS[EventType.message_sent], "Sent the message to the producer"),
+        (PAYLOADS[EventType.reply_received], "The producer replied"),
+        (
+            PAYLOADS[EventType.reply_read],
+            "The model classified this reply. It answers every question asked; 0 answers found.",
+        ),
+        (PAYLOADS[EventType.approval_recorded], 'Approved a draft with the reason "fine"'),
+        (PAYLOADS[EventType.command_refused], "Refused resolve fact. not a field."),
+    ],
+)
+def test_a_summary_says_what_happened_in_words(payload: StrictModel, expected: str) -> None:
+    assert event_summary(payload) == expected
+
+
+@pytest.mark.parametrize(
+    ("confidence", "meaning"),
+    [(0.83, "at or above"), (0.70, "at or above"), (0.41, "below")],
+)
+def test_a_reply_classified_by_jev_shows_its_confidence_against_the_threshold(
+    confidence: float, meaning: str
+) -> None:
+    summary = event_summary(_reply_read("jev", confidence))
+
+    assert summary == (
+        f"Jev classified this reply ({confidence:.2f}, {meaning} the 0.70 threshold). "
+        "It answers every question asked; 0 answers found."
     )
 
 
@@ -210,5 +267,5 @@ def test_a_rejected_rewrite_says_which_check_rejected_it_and_that_the_rendered_r
 
     assert event_summary(rejected) == (
         "The rewrite of the request was rejected by the model check (it adds a deadline); "
-        "the rendered request is used."
+        "the rendered request is used"
     )
