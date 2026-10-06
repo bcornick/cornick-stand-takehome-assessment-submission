@@ -21,14 +21,16 @@ sys.path.insert(0, str(ROOT / "sim-harness"))
 import leadgen  # noqa: E402
 from leadgen import generator  # noqa: E402
 
-from uwh.rules.confirmations import confirmation_asks  # noqa: E402
 from uwh.rules.registry import Registry  # noqa: E402
 from uwh.runtime.event_types import EventType, TriageCompleted  # noqa: E402
 from uwh.runtime.events import read_events  # noqa: E402
-from uwh.runtime.facts import open_conflicts, usable_facts  # noqa: E402
+from uwh.runtime.facts import usable_facts  # noqa: E402
 from uwh.rules.models import ActionPlan  # noqa: E402
 
 CONFIG_PATH = Path(leadgen.__file__).with_name("generator_config.yaml")
+WORDING_PATH = ROOT / "src" / "uwh" / "rules" / "data" / "wording.yaml"
+# The ask id of the one confirmation that stands for the two dwelling-use conflicts.
+COMBINED_CONFIRMATION_ID = "dwelling_use_conflict"
 # The queue the app reads: POST /queue?count=10&seed=<seed> with the service's default difficulty.
 COUNT = 10
 DIFFICULTY = "mixed"
@@ -63,7 +65,7 @@ class LeadState:
     """What the grader reads of one lead after the first pass."""
 
     asked: frozenset[str]  # fields of a field request or follow-on question, sent or drafted
-    confirmed: frozenset[str]  # fields a sent or drafted confirmation, or an open choice, covers
+    confirmed: frozenset[str]  # fields a sent or drafted confirmation covers
     facts: Mapping[str, JsonValue]  # the usable facts
     blocked: frozenset[str]  # fields whose resolution is blocked
     proposed_decline: bool
@@ -89,6 +91,16 @@ def regenerate_history(seed: int) -> list[Record]:
     ]
 
 
+def _confirmation_fields() -> dict[str, list[str]]:
+    """The fields each confirmation covers, by its ask id, as the wording file lists them."""
+    with WORDING_PATH.open(encoding="utf-8") as handle:
+        wording = yaml.safe_load(handle)
+    return {
+        **{name: entry["fields"] for name, entry in wording["confirmations"].items()},
+        COMBINED_CONFIRMATION_ID: wording["combined_confirmation"]["fields"],
+    }
+
+
 def read_lead_state(db: sqlite3.Connection, lead_id: str) -> LeadState:
     """The state of `lead_id` in the application database after the first pass."""
     ask_ids = {
@@ -107,13 +119,12 @@ def read_lead_state(db: sqlite3.Connection, lead_id: str) -> LeadState:
         e.payload for e in read_events(db, lead_id=lead_id) if e.type == EventType.triage_completed
     ][-1]
     assert isinstance(triage, TriageCompleted)
-    confirmations = confirmation_asks([c.opened for c in open_conflicts(db, lead_id)])
+    confirmations = _confirmation_fields()
     return LeadState(
-        asked=frozenset(ask_ids - {ask.ask_id for ask in confirmations}),
+        asked=frozenset(ask_ids - confirmations.keys()),
         confirmed=frozenset(
-            name for ask in confirmations if ask.ask_id in ask_ids for name in ask.fields
-        )
-        | frozenset(name for choice in plan.open_choices for name in choice.show),
+            name for ask_id in ask_ids & confirmations.keys() for name in confirmations[ask_id]
+        ),
         facts={key: fact.value for key, fact in usable_facts(db, lead_id).items()},
         blocked=frozenset(
             name
@@ -170,8 +181,8 @@ def _judge(
         if state.proposed_decline:
             return Verdict.exempt_proposed_decline, "the decline review stands for the confirmation"
         if record.field in state.confirmed:
-            return Verdict.agrees, "a confirmation or underwriter item covers it"
-        return Verdict.disagrees, "no confirmation or underwriter item covers the conflict"
+            return Verdict.agrees, "a confirmation covers it"
+        return Verdict.disagrees, "no confirmation covers the conflict"
     if record.kind in NEVER_ASK_KINDS or not field.producer_editable:
         if asked:
             return Verdict.disagrees, "a field the system owns or defers was asked"
