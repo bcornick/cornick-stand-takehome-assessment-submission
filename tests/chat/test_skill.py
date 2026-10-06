@@ -9,6 +9,8 @@ from typing import Any
 
 import pytest
 
+import uwh.chat
+
 from tests.runtime.helpers import RULESET, RUN_START, command_environment, events_of, insert_run
 from uwh.chat.skill import MAX_STEPS, NO_ANSWER_IN_STEPS, UNREADABLE_STEP, forced_call, run_turn
 from uwh.runtime.event_types import EventType
@@ -22,6 +24,7 @@ from uwh.runtime.recordings import Exchange, RecordingKey
 from uwh.runtime.runs import RunEnvironment
 from uwh.runtime.store import open_store
 from uwh.runtime.workflow import create_lead
+from uwh.skills.manifest import check_skill_folder
 from uwh.skills.vertical import REFERENCE_MORNING
 
 LEAD = "L-1"
@@ -198,3 +201,10 @@ def test_the_model_is_shown_the_message_the_lead_and_nothing_else() -> None:
 
     assert call.shown == {"message": "m", "lead_id": None, "steps": []}
     assert call.tool_name == "chat_step"
+
+
+def test_the_chat_folder_is_a_complete_skill_folder_for_the_assistant() -> None:
+    manifest = check_skill_folder(Path(uwh.chat.__file__).parent)
+
+    assert (manifest.actor, manifest.command_classes) == ("assistant", ["propose_command"])
+    assert manifest.model_skill and manifest.pass_threshold == 1.0
