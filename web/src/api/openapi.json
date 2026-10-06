@@ -1235,22 +1235,8 @@
       },
       "ProposalView": {
         "additionalProperties": false,
-        "description": "A `proposals` row (A.1). A command proposal's payload is `{type, payload, rationale}`.",
+        "description": "A proposal card (A.1). A command proposal's payload is `{type, payload, rationale}`.",
         "properties": {
-          "actor": {
-            "enum": [
-              "workflow",
-              "underwriter",
-              "assistant",
-              "inbound"
-            ],
-            "title": "Actor",
-            "type": "string"
-          },
-          "event_id": {
-            "title": "Event Id",
-            "type": "integer"
-          },
           "payload": {
             "additionalProperties": {
               "$ref": "#/components/schemas/JsonValue"
@@ -1261,23 +1247,11 @@
           "proposal_id": {
             "title": "Proposal Id",
             "type": "integer"
-          },
-          "state": {
-            "enum": [
-              "open",
-              "applied",
-              "dismissed"
-            ],
-            "title": "State",
-            "type": "string"
           }
         },
         "required": [
           "proposal_id",
-          "payload",
-          "state",
-          "actor",
-          "event_id"
+          "payload"
         ],
         "title": "ProposalView",
         "type": "object"
@@ -2268,9 +2242,7 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProposalView"
-                }
+                "schema": {}
               }
             },
             "description": "Successful Response"

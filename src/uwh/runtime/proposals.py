@@ -7,7 +7,7 @@ from typing import Literal
 
 from pydantic import JsonValue
 
-from uwh.runtime.event_types import Actor, EventType, ProposalCreated, ProposalState
+from uwh.runtime.event_types import EventType, ProposalCreated, ProposalState
 from uwh.runtime.events import EventContext, append_event
 from uwh.runtime.workflow import unit_of_work
 from uwh.skills.vertical import command_class
@@ -18,8 +18,6 @@ class Proposal:
     id: int
     payload: dict[str, JsonValue]  # {type, payload, rationale}
     state: ProposalState
-    actor: Actor
-    event_id: int
 
 
 def is_proposable(command_type: str) -> bool:
@@ -58,13 +56,13 @@ def create_proposal(
     return event_id
 
 
-def _proposal(row: tuple[int, str, ProposalState, Actor, int]) -> Proposal:
-    return Proposal(row[0], json.loads(row[1]), row[2], row[3], row[4])
+def _proposal(row: tuple[int, str, ProposalState]) -> Proposal:
+    return Proposal(row[0], json.loads(row[1]), row[2])
 
 
 def read_proposal(db: sqlite3.Connection, proposal_id: int) -> Proposal | None:
     row = db.execute(
-        "SELECT id, payload_json, state, actor, event_id FROM proposals WHERE id = ?",
+        "SELECT id, payload_json, state FROM proposals WHERE id = ?",
         (proposal_id,),
     ).fetchone()
     return None if row is None else _proposal(row)
@@ -73,7 +71,7 @@ def read_proposal(db: sqlite3.Connection, proposal_id: int) -> Proposal | None:
 def open_proposals(db: sqlite3.Connection) -> list[Proposal]:
     """The cards still open, oldest first."""
     rows = db.execute(
-        "SELECT id, payload_json, state, actor, event_id FROM proposals"
+        "SELECT id, payload_json, state FROM proposals"
         " WHERE state = 'open' ORDER BY id"
     ).fetchall()
     return [_proposal(row) for row in rows]

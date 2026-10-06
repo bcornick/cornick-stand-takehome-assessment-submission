@@ -712,27 +712,15 @@ export interface components {
         };
         /**
          * ProposalView
-         * @description A `proposals` row (A.1). A command proposal's payload is `{type, payload, rationale}`.
+         * @description A proposal card (A.1). A command proposal's payload is `{type, payload, rationale}`.
          */
         ProposalView: {
-            /**
-             * Actor
-             * @enum {string}
-             */
-            actor: "workflow" | "underwriter" | "assistant" | "inbound";
-            /** Event Id */
-            event_id: number;
             /** Payload */
             payload: {
                 [key: string]: components["schemas"]["JsonValue"];
             };
             /** Proposal Id */
             proposal_id: number;
-            /**
-             * State
-             * @enum {string}
-             */
-            state: "open" | "applied" | "dismissed";
         };
         /**
          * QueueRow
@@ -1229,7 +1217,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ProposalView"];
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

@@ -95,7 +95,7 @@ The runner also grades reply facts and chat, and four critical errors fail a run
 
 **Stand's answer key.** The grader checks every record of the generator's debug history for seed 42, outside `src/`. Allowed disagreements are counted and pinned in `evals/labels/seed42/exemptions.yaml`: 26 records exempt because lead 000 is a proposed decline, and 0 exempt as blocked. The run counts 190 agreeing records, 5 inactive conditionals, 1 field set again by a conflict injection and 0 disagreements. One record is decided by this submission's reading of the registry, not Stand's; it is counted apart.
 
-**The results log.** `evals/results.jsonl` is append-only. A `run` row holds the suite, control, mode, commit, evaluator hash, case-set id, skill digests, scores, critical errors, tokens, cost and the hypothesis. A `decision` row, written by a person after reading a run, names keep or discard and the reason. A skill's status reads from the latest scored row.
+**The results log.** `evals/results.jsonl` is append-only. A `run` row holds the suite, control, mode, commit, evaluator hash, case-set id, skill digests, scores, critical errors, tokens, cost and the hypothesis. A `decision` row, written by a person after reading a run, names keep or discard and the reason.
 
 **The one improvement cycle.** On the held-back reply for lead 005 the model returned the state as "Colorado", and the `replies` suite failed it. One prompt clause (return the shortest conventional form) made the rerun return the short form; the remaining classification misses were not a prompt fault, so code now decides `answers_all` from the open asks, and the final run read 8 of 8 fixtures. Brett's `decision` row keeps the change; two earlier rows run on an uncommitted tree carry decision rows that discard them.
 
@@ -124,7 +124,7 @@ DeepSeek (`deepseek-flash`) is the language model. The cases column gives where 
 | `build_quote_packet` | code | no open blockers and no asks remain | none | - |
 | `chat` | language model | the underwriter sends a chat message | the panel says the assistant is unavailable | `src/uwh/chat/cases/chat.yaml` |
 
-A skill with a pass threshold (`evaluate_playbook`, `read_reply`, `chat`) has a status of `untested`, `passing`, `failing` or `unavailable`, read from the log. A failing model skill uses its fallback; a failing code skill stops the lead with a `data` blocker.
+A skill with a pass threshold (`evaluate_playbook`, `read_reply`, `chat`) has its cases scored in every run row. A model skill uses its fallback when the model is missing or its answer is rejected.
 
 **Hit list**, in the order proposed: (1) the five unbuilt playbook pages, because Plumbing and Electrical apply to every lead and carry only a note; (2) real provider adapters in place of the stand-in lookups, since fetched values are the largest source of facts the producer is spared from; (3) a rule-change flow with eval evidence, so a reviewed ruling becomes a case.
 

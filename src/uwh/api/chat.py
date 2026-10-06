@@ -15,13 +15,7 @@ router = APIRouter()
 
 
 def _view(card: Proposal) -> ProposalView:
-    return ProposalView(
-        proposal_id=card.id,
-        payload=card.payload,
-        state=card.state,
-        actor=card.actor,
-        event_id=card.event_id,
-    )
+    return ProposalView(proposal_id=card.id, payload=card.payload)
 
 
 def _open_card(db: sqlite3.Connection, proposal_id: int) -> Proposal:
@@ -74,10 +68,7 @@ def apply_proposal(proposal_id: int, runtime: RuntimeDependency) -> CommandRespo
 
 
 @router.post("/api/proposals/{proposal_id}/dismiss")
-def dismiss_proposal(proposal_id: int, runtime: RuntimeDependency) -> ProposalView:
+def dismiss_proposal(proposal_id: int, runtime: RuntimeDependency) -> None:
     with runtime.database() as db:
         _open_card(db, proposal_id)
         settle_proposal(db, proposal_id, "dismissed")
-        dismissed = read_proposal(db, proposal_id)
-    assert dismissed is not None  # the card was read a moment ago
-    return _view(dismissed)

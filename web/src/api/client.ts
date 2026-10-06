@@ -101,4 +101,4 @@ export const getProposals = () => request<Schemas['ProposalView'][]>('/api/propo
 export const applyProposal = (proposalId: number) =>
   post<Schemas['CommandResponse']>(`/api/proposals/${proposalId}/apply`)
 export const dismissProposal = (proposalId: number) =>
-  post<Schemas['ProposalView']>(`/api/proposals/${proposalId}/dismiss`)
+  post<null>(`/api/proposals/${proposalId}/dismiss`)

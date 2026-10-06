@@ -19,7 +19,6 @@ from uwh.runtime.event_types import (
     MessageKind,
     ObservationSource,
     ObservationStatus,
-    ProposalState,
     Status,
 )
 from uwh.settings import RunMode
@@ -335,13 +334,10 @@ class FixtureRepliesResponse(StrictModel):
 
 
 class ProposalView(StrictModel):
-    """A `proposals` row (A.1). A command proposal's payload is `{type, payload, rationale}`."""
+    """A proposal card (A.1). A command proposal's payload is `{type, payload, rationale}`."""
 
     proposal_id: int
     payload: dict[str, JsonValue]
-    state: ProposalState
-    actor: Actor
-    event_id: int
 
 
 # ---- chat (section 11) --------------------------------------------------------------------------------
