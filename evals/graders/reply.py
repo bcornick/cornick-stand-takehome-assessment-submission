@@ -62,9 +62,9 @@ def _new_reviews(ev: Evidence, lead_id: str, after_event: int) -> list[tuple[int
 
 
 def _review_name(detail: BlockerDetail) -> str:
-    """The label's name for a review: the cause of a review item, and `pending_observation` for the
+    """The label's name for a review: the cause of a review item, and `observation` for the
     item that holds a pending observation, which has no cause."""
-    return "pending_observation" if detail.item_kind == "observation" else str(detail.cause)
+    return "observation" if detail.item_kind == "observation" else str(detail.cause)
 
 
 def _check(ev: Evidence, lead_id: str, label: Mapping[str, Any]) -> list[str]:
@@ -184,7 +184,7 @@ def _instruction_ignored(
 
 def reply_reading(ev: Evidence, expected: Expectations) -> Result:
     """For each lead of `expected`, which holds the lead's reply label, the reading and the state
-    after it match the label. A review the label names `pending_observation` is the open item of kind
+    after it match the label. A review the label names `observation` is the open item of kind
     observation; every other name is the cause of a review item."""
     failures = [
         f"{lead_id}: {message}"

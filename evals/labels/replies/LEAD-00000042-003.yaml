@@ -33,11 +33,11 @@ unanswered: []
 dropped: []
 state_after:
   round_closed: true
-  underwriter_review: pending_observation      # the pending months_unoccupied value waits for approve or reject
+  underwriter_review: observation      # the pending months_unoccupied value waits for approve or reject
   next: underwriter_card                       # I13.fire_fail is open and the pending observation is under review
 instruction_ignored: null
 notes:
   - "trust_name, post_pier_supports_living_area and deck_height_ft are follow-ons whose conditions the reply makes inactive (no trust, Slab); they are neither answered nor outstanding, so `unanswered` is empty and the classification is answers_all."
   - "months_unoccupied 5 differs from the submitted 3, so it is pending_review under rule 3 and raises an underwriter review; the value would also trip the occupancy validator, but rule 3 says it opens no second conflict. The open conflict on 3 stays open, and the Occupancy page stays undecided, until the underwriter settles the pending value."
   - "The reply unblocks the lookups: kyc_score 4 (Profile does not apply), replacement_cost 827782 against coverage_a 775000 is 0.936 (I35 no_action), protection_class \"4\", road_access Multiple Access Points. Standing Seam Metal derives Class A, so Roof is no_action even at p_f 0.79. The Siding requirement stands."
-  - "`pending_observation` names the review a pending value raises; the architecture fixes review causes in the stage 2 contracts, which this label did not read, so the cause name is unverified and the grader should match on the review's kind, not its spelling."
+  - "`observation` names the review a pending value raises: an underwriter_review item of item_kind observation, which has no cause."

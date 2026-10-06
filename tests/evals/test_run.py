@@ -1,30 +1,15 @@
 # ABOUTME: Tests the eval runner end to end in process against Stand's leadgen and mailbox apps: the reference run passes and its row holds the fields of 13.5, each control is caught by its named grader, and an unreachable service gives an invalid row and a non-zero exit.
 # ABOUTME: Every run replays the recordings, so no model is called.
 import json
-import shutil
 from pathlib import Path
 
 import httpx2
 import pytest
-import yaml
 
 from evals import run
 from evals.controls import Control
 from evals.run import evaluate_seed42, failed
 from uwh.settings import Settings
-
-
-@pytest.fixture
-def labels(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """The seed-42 labels, with lead 000's status read as the system leaves it, in_progress: the label
-    says triaged, a disagreement that waits for the labels' owner."""
-    copy = tmp_path / "labels"
-    shutil.copytree(run.LABELS_DIR, copy)
-    path = copy / "LEAD-00000042-000.yaml"
-    label = yaml.safe_load(path.read_text(encoding="utf-8"))
-    label["first_pass"]["status"] = "in_progress"
-    path.write_text(yaml.safe_dump(label), encoding="utf-8")
-    monkeypatch.setattr(run, "LABELS_DIR", copy)
 
 
 FIELDS = {
@@ -47,7 +32,6 @@ FIELDS = {
 }
 
 
-@pytest.mark.usefixtures("labels")
 def test_the_reference_run_passes_every_grader_and_its_row_holds_the_fields_of_13_5(
     settings: Settings, stand_leadgen_client: httpx2.Client, stand_mailbox_client: httpx2.Client
 ) -> None:
@@ -74,7 +58,6 @@ CAUGHT_BY = {
 }
 
 
-@pytest.mark.usefixtures("labels")
 @pytest.mark.parametrize("control", list(Control))
 def test_each_control_is_caught_by_its_named_graders(
     control: Control,

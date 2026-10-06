@@ -46,6 +46,15 @@ class Conflict:
         """The validator on these values: a conflict closed by the reply or underwriter observation that confirmed its values is not opened again on them (9.6)."""
         return (self.validator, self.fields, _canonical(self.values))
 
+    def keeps_values_in(self, conflict: "Conflict") -> bool:
+        """Whether `conflict`, the validator's conflict now, has the values this confirmed conflict
+        closed on. A field the confirmation did not cover, one that was missing and is now
+        filled, is not a change; a changed or removed value is."""
+        return self.validator == conflict.validator and all(
+            field in conflict.values and conflict.values[field] == self.values[field]
+            for field in self.fields
+        )
+
 
 # A validator maps the lead's effective values to the conflicts that hold.
 Validator = Callable[[Mapping[str, JsonValue]], list[Conflict]]
@@ -217,9 +226,9 @@ class _Pass:
             if conflict.identity not in holding:
                 self.close_conflict(conflict, None)
         open_now = {c.identity for c in open_conflicts(self.db, self.lead_id)}
-        confirmed = _confirmed_identities(self.db, self.lead_id)
+        confirmed = _confirmed_conflicts(self.db, self.lead_id)
         for identity, conflict in holding.items():
-            if identity not in open_now and identity not in confirmed:
+            if identity not in open_now and not any(c.keeps_values_in(conflict) for c in confirmed):
                 append_event(
                     self.db,
                     self.context,
@@ -276,15 +285,13 @@ def open_conflicts(db: sqlite3.Connection, lead_id: str) -> list[Conflict]:
     return list(open_by_identity.values())
 
 
-def _confirmed_identities(
-    db: sqlite3.Connection, lead_id: str
-) -> set[tuple[str, tuple[str, ...], str]]:
-    """The conflicts closed by the reply or underwriter observation that confirmed their values; their validator is not to open them again."""
-    return {
-        conflict.identity
+def _confirmed_conflicts(db: sqlite3.Connection, lead_id: str) -> list[Conflict]:
+    """The conflicts closed by the reply or underwriter observation that confirmed their values; their validator is not to open them again on those values."""
+    return [
+        conflict
         for opened, conflict, observation_id in _conflict_events(db, lead_id)
         if not opened and observation_id is not None
-    }
+    ]
 
 
 def effective_facts(db: sqlite3.Connection, lead_id: str) -> dict[str, Fact]:

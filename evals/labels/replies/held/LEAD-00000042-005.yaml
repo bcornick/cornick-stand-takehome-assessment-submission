@@ -36,11 +36,11 @@ unanswered: []
 dropped: []
 state_after:
   round_closed: true
-  underwriter_review: pending_observation      # the pending number_of_residents value waits for approve or reject
+  underwriter_review: observation      # the pending number_of_residents value waits for approve or reject
   next: underwriter_card
 instruction_ignored: null
 notes:
   - "state is a text field; \"CO\" matches the spelling the other seed-42 leads carry and the reply gives both forms, so the quote may be either \"CO\" or \"Colorado, CO\". A grader on this field should accept the value \"CO\" with either quote."
   - "trust_name, pool_security, above_ground_pool_ladder are follow-ons made inactive by the answers (no trust, no pool); water_heater_age_years and water_heater_location are follow-ons made active by \"a tank\" and are answered. `unanswered` is therefore empty and the classification is answers_all."
   - "number_of_residents 2 differs from the submitted 0, so it is pending_review under rule 3 and raises an underwriter review; 0 stays in force and the no_residents conflict stays open until the underwriter approves the 2. Nothing on a built page reads number_of_residents, so the plan is otherwise complete: state unblocks the lookups (replacement_cost 456139 against coverage_a 475000 is 1.041, I35 no_action; p_f 0.15, Fire Simulation does not apply), Standing Seam Metal derives Class A, Occupancy does not apply, and the Profile exclusion (KYC 6) stays on the plan."
-  - "`pending_observation` names the review a pending value raises; the cause spelling is unverified against the stage 2 contracts, which this label did not read."
+  - "`observation` names the review a pending value raises: an underwriter_review item of item_kind observation, which has no cause."

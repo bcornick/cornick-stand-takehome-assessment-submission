@@ -4,6 +4,7 @@ import sqlite3
 from collections.abc import Iterator
 from dataclasses import replace
 from pathlib import Path
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -38,9 +39,15 @@ def db(settings: Settings) -> Iterator[sqlite3.Connection]:
 
 
 def reply_to_the_confirmation(
-    app: TestClient, db: sqlite3.Connection, tmp_path: Path, body: str, value: int, quote: str
+    app: TestClient,
+    db: sqlite3.Connection,
+    tmp_path: Path,
+    body: str,
+    value: int,
+    quote: str,
+    *others: dict[str, Any],
 ) -> None:
-    """Deliver a reply that answers only the confirmation, with the reading a model would give."""
+    """Deliver a reply that answers the confirmation and any other asks, with the reading a model would give."""
     (intent_id,) = db.execute("SELECT id FROM intents WHERE lead_id = ?", (LEAD_004,)).fetchone()
     record_reading(
         db,
@@ -48,7 +55,15 @@ def reply_to_the_confirmation(
         LEAD_004,
         intent_id,
         body,
-        [{"ask_id": CONFIRMATION, "field": "number_of_residents", "value": value, "quote": quote}],
+        [
+            {
+                "ask_id": CONFIRMATION,
+                "field": "number_of_residents",
+                "value": value,
+                "quote": quote,
+            },
+            *others,
+        ],
     )
     answer = app.post(
         "/api/replies", json={"lead_id": LEAD_004, "intent_id": intent_id, "body": body}
@@ -83,3 +98,32 @@ def test_a_reply_that_changes_the_number_raises_a_review_and_leaves_the_conflict
     assert effective_facts(db, LEAD_004)["number_of_residents"].value == 0
     (review,) = [b for b in open_blockers(db, LEAD_004) if b.detail.item_kind == "observation"]
     assert "2" in review.detail.text
+
+
+def test_a_restating_reply_that_fills_a_missing_field_of_the_pair_does_not_reopen_the_conflict(
+    app: TestClient, db: sqlite3.Connection, mailbox: MailboxClient, tmp_path: Path
+) -> None:
+    # dwelling_use_type is missing from the conflict's fields; "Primary" fills it (rule 2) and does
+    # not change a value the conflict closed on.
+    reply_to_the_confirmation(
+        app,
+        db,
+        tmp_path,
+        "Zero is right: 0 people live there. The home is Primary.",
+        0,
+        "0 people",
+        {
+            "ask_id": "dwelling_use_type",
+            "field": "dwelling_use_type",
+            "value": "Primary",
+            "quote": "Primary",
+        },
+    )
+
+    assert open_conflicts(db, LEAD_004) == []
+    assert effective_facts(db, LEAD_004)["dwelling_use_type"].value == "Primary"
+    # The reply left the other asks unanswered; the second request carries those and no confirmation.
+    requests = sorted((m["metadata"]["round"], m["body"]) for m in mailbox.list_for_lead(LEAD_004))
+    assert [round_ for round_, _ in requests] == [1, 2]
+    assert "Can you confirm that number?" not in requests[1][1]
+    assert "What Coverage A (dwelling) amount is requested?" in requests[1][1]

@@ -11,7 +11,7 @@
 lead_id: LEAD-00000042-000
 reviewed_by: null
 first_pass:
-  status: triaged
+  status: in_progress
   outcome: proposed_decline
   request: null
   suppressed:                      # what the registry and validators would have asked, held back by the decline
@@ -101,6 +101,5 @@ after_actions:
   underwriter_items: []
   messages: [decline_notice]       # one decline notice in the mailbox, no request
 questions:
-  - "Status of a lead waiting on a decline notice: labelled `triaged` (nothing has been sent); should it be `in_progress`?"
   - "Occupancy is `applies: unknown` because months_unoccupied is in an open conflict that the decline suppresses; is the decline traced to Post & Pier alone, as labelled, or should Occupancy's own decline path (03:UNOCC -> 03:V_NP -> DECLINE) appear as a second trace?"
   - "Pools, Animals and PC 9 & 10 rest on missing facts (pool_type, has_animals, protection_class); the label lists only the pages that certainly apply. Should an unknown cut page also carry a note?"
