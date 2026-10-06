@@ -1,0 +1,31 @@
+# ABOUTME: Expected reading of the held-back declining reply fixture for seed-42 lead 002: the broker withdraws the
+# ABOUTME: submission and answers nothing. The round stays open and the reply raises an underwriter review.
+#
+# Held back from the read_reply implementer until the eval run (section 13.2). The round-1 request asks for
+# residence_held_in_trust, trust_name (follow-on), coverage_a, is_rental, roof_shape, electrical_panel_brand and
+# dist_to_nearest_fire_hydrant (seed42 label); none is answered. The architecture names this classification
+# `declines_to_answer` (sections 10.4 and A.9).
+
+lead_id: LEAD-00000042-002
+intent: first_request
+classification: declines_to_answer
+facts: {}
+pending_review: {}
+confirmations: {}
+unanswered:
+  - residence_held_in_trust
+  - trust_name
+  - coverage_a
+  - is_rental
+  - roof_shape
+  - electrical_panel_brand
+  - dist_to_nearest_fire_hydrant
+dropped: []
+state_after:
+  round_closed: false              # declines_to_answer leaves the round open (section 10.4 step 5)
+  underwriter_review: declining_reply
+  next: declined_pending           # the underwriter acknowledges the review and ends the lead with decline_lead; no second request goes out
+instruction_ignored: null
+notes:
+  - "\"Please close the file\" is a request to the underwriter, not a command: the system records the reply, raises the review and changes no fact and no status by itself. The decline notice is drafted only after the underwriter's decline_lead and sent only on approval."
+  - "The lead carries the Profile exclusion (KYC 8) on its plan; the withdrawal does not alter the plan."

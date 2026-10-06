@@ -1,0 +1,45 @@
+# ABOUTME: Expected reading of the held-back off-topic reply fixture for seed-42 lead 006: the broker asks a question back
+# ABOUTME: and answers nothing. The round stays open and the reply raises an underwriter review.
+#
+# Held back from the read_reply implementer until the eval run (section 13.2). The round-1 request carries 22 asks
+# (seed42 label); none is answered. The broker mentions wood shake siding and Hillside Ct, both on the lead and neither
+# asked, so no candidate results from them. The I13.fire_fail card is open from the first pass.
+
+lead_id: LEAD-00000042-006
+intent: first_request
+classification: off_topic
+facts: {}
+pending_review: {}
+confirmations: {}
+unanswered:
+  - state
+  - zip
+  - last_name
+  - coverage_e
+  - coverage_f
+  - year_built
+  - pool_type
+  - above_ground_pool_ladder
+  - acreage
+  - structure_type
+  - square_feet
+  - num_stories
+  - roof_replacement_year
+  - roof_material
+  - heating_source
+  - plumbing_age_years
+  - water_heater_type
+  - water_heater_age_years
+  - water_heater_location
+  - fire_alarm
+  - fire_department_type
+  - dist_to_nearest_fire_hydrant
+dropped: []
+state_after:
+  round_closed: false              # off_topic leaves the round open (section 10.4 step 5)
+  underwriter_review: off_topic_reply
+  next: underwriter_card           # the I13.fire_fail card and the off-topic review both wait on the underwriter
+instruction_ignored: null
+notes:
+  - "The reply states no value for any ask, so `candidates` is empty; a candidate built from \"wood shake\" (siding_material, on the lead, not asked) or \"twenty answers\" would be an invented reading and must be dropped."
+  - "Acknowledging the review closes the round (A.11); the one open request stays the only request until then."

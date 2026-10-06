@@ -1,0 +1,22 @@
+# ABOUTME: Expected reading of the full reply fixture for seed-42 lead 009: the applicant answers the one ask, acreage.
+# ABOUTME: Kind: full. Every ask is answered and no page needs more, so the quote packet is drafted and waits for approval.
+#
+# The round-1 request asks for acreage alone (seed42 label). The applicant also mentions her dogs; has_animals is on
+# the lead (true) and was not asked, so no observation comes from it.
+
+lead_id: LEAD-00000042-009
+intent: first_request
+classification: answers_all
+facts:
+  acreage: 1.5                     # "The lot is 1.5 acres according to the deed"
+pending_review: {}
+confirmations: {}
+unanswered: []
+dropped: [has_animals]             # "We have two dogs": a field not asked; the model omits it or code drops it
+state_after:
+  round_closed: true
+  underwriter_review: null
+  next: quote_packet_waiting       # 1.5 acres trips no validator; Roof, Siding and Replacement Cost stay no_action
+instruction_ignored: null
+notes:
+  - "`dropped` names has_animals so that no observation results from the dogs, whether the model never emits the candidate or code drops it as a field not asked; either reading satisfies this label."

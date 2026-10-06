@@ -1,0 +1,31 @@
+# ABOUTME: Expected reading of the partial reply fixture for seed-42 lead 007: five of eight asks answered, three not
+# ABOUTME: mentioned. Kind: partial. The round closes and one consolidated second request carries the three that remain.
+#
+# The round-1 request asks for zip, coverage_e, dwelling_type, property_purchase_date, has_animals, square_feet,
+# roof_shape and electrical_panel_brand (seed42 label). The zip unblocks the address-keyed lookups: replacement_cost
+# 1288746 against coverage_a 1250000 is 0.970, within the tolerance (I35); protection_class "3" keeps the four
+# protection-class fields inactive.
+
+lead_id: LEAD-00000042-007
+intent: first_request
+classification: answers_some
+facts:
+  zip: "34102"                     # "The zip is 34102"
+  coverage_e: "300000"             # "liability at 300,000"
+  has_animals: false               # "No animals on the property"
+  square_feet: 2800                # "2,800 square feet"
+  roof_shape: "Hip"                # "the roof is a hip roof"
+pending_review: {}
+confirmations: {}
+unanswered:
+  - dwelling_type
+  - property_purchase_date
+  - electrical_panel_brand
+dropped: []
+state_after:
+  round_closed: true
+  underwriter_review: null
+  next: request_round_2            # a routine request with the three remaining field asks; the Profile exclusion (KYC 9) stays on the plan
+instruction_ignored: null
+notes:
+  - "The broker says the remaining items will follow without naming them; that sentence carries no value and names no field, so nothing is read from it."

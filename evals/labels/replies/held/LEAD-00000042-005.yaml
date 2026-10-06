@@ -1,0 +1,46 @@
+# ABOUTME: Expected reading of the held-back reply fixture for seed-42 lead 005: every value given in prose that must be
+# ABOUTME: normalised to the registry (a roof described in words, a limit in words, a distance in words, a toggle as a sentence).
+#
+# Held back from the read_reply implementer until the eval run (section 13.2). The round-1 request asks for state,
+# first_name, residence_held_in_trust, trust_name (follow-on), coverage_e, months_unoccupied, pool_type, pool_security
+# and above_ground_pool_ladder (follow-ons), square_feet, num_stories, roof_material, electrical_panel_size_amps,
+# water_heater_type, water_heater_age_years and water_heater_location (follow-ons), distance_to_fire_department,
+# fire_department_type and dist_to_nearest_fire_hydrant, with the no_residents_in_primary_home confirmation on
+# number_of_residents 0 (seed42 label). The applicant corrects zero to two, so that value follows rule 3.
+
+lead_id: LEAD-00000042-005
+intent: first_request
+classification: answers_all
+facts:
+  state: "CO"                                  # "The state is Colorado, CO"
+  first_name: "Grace"                          # "My first name is Grace"
+  residence_held_in_trust: false               # "The house isn't in a trust"
+  coverage_e: "300000"                         # "For liability we'd like three hundred thousand"
+  months_unoccupied: 0                         # "zero months unoccupied"
+  pool_type: "None"                            # "No pool, never wanted one"
+  square_feet: 2100                            # "roughly 2,100 square feet"
+  num_stories: 1                               # "a single-story ranch"
+  roof_material: "Standing Seam Metal"         # "The roof is standing-seam metal, the long vertical panels"
+  electrical_panel_size_amps: 200              # "The breaker panel is a 200-amp service"
+  water_heater_type: "Tank"                    # "The water heater is a tank"
+  water_heater_age_years: 6                    # "about six years old"
+  water_heater_location: "Unfinished Space"    # "down in the unfinished basement"
+  distance_to_fire_department: 1.5             # "about a mile and a half from us"
+  fire_department_type: "Career"               # "they're a career department, full-time firefighters"
+  dist_to_nearest_fire_hydrant: 150            # "maybe 150 feet down the street"
+pending_review:
+  number_of_residents: 2                       # "There are two of us living here full time"
+confirmations:
+  no_residents_in_primary_home: changed
+unanswered: []
+dropped: []
+state_after:
+  round_closed: true
+  underwriter_review: pending_observation      # the pending number_of_residents value waits for approve or reject
+  next: underwriter_card
+instruction_ignored: null
+notes:
+  - "state is a text field; \"CO\" matches the spelling the other seed-42 leads carry and the reply gives both forms, so the quote may be either \"CO\" or \"Colorado, CO\". A grader on this field should accept the value \"CO\" with either quote."
+  - "trust_name, pool_security, above_ground_pool_ladder are follow-ons made inactive by the answers (no trust, no pool); water_heater_age_years and water_heater_location are follow-ons made active by \"a tank\" and are answered. `unanswered` is therefore empty and the classification is answers_all."
+  - "number_of_residents 2 differs from the submitted 0, so it is pending_review under rule 3 and raises an underwriter review; 0 stays in force and the no_residents conflict stays open until the underwriter approves the 2. Nothing on a built page reads number_of_residents, so the plan is otherwise complete: state unblocks the lookups (replacement_cost 456139 against coverage_a 475000 is 1.041, I35 no_action; p_f 0.15, Fire Simulation does not apply), Standing Seam Metal derives Class A, Occupancy does not apply, and the Profile exclusion (KYC 6) stays on the plan."
+  - "`pending_observation` names the review a pending value raises; the cause spelling is unverified against the stage 2 contracts, which this label did not read."

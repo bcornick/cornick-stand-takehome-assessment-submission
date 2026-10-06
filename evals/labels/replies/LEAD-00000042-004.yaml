@@ -1,0 +1,30 @@
+# ABOUTME: Expected reading of the full reply fixture for seed-42 lead 004: five field asks answered and the zero-residents
+# ABOUTME: confirmation restated. Kind: full. The conflict closes under rule 6 and the quote packet waits for approval.
+#
+# The round-1 request asks for coverage_a, dwelling_use_type, property_purchase_date, num_stories and
+# fire_department_type, with the no_residents_in_primary_home confirmation on number_of_residents 0 (seed42 label).
+# The broker restates zero and explains it, so the conflict closes (section 7.3 rule 6). dwelling_use_type was missing,
+# so "Primary" fills it under rule 2; it is not a change to a field of the conflicting pair.
+
+lead_id: LEAD-00000042-004
+intent: first_request
+classification: answers_all
+facts:
+  coverage_a: 850000                        # "Coverage A at $850,000"
+  dwelling_use_type: "Primary"              # "The home is their primary residence"
+  property_purchase_date: "2025-03-03"      # "They closed on the purchase on March 3, 2025"
+  num_stories: 2                            # "it is a two-story house"
+  fire_department_type: "Career"            # "a career department"
+pending_review: {}
+confirmations:
+  no_residents_in_primary_home: restated    # "zero is correct for the time being"
+unanswered: []
+dropped: []
+state_after:
+  round_closed: true
+  underwriter_review: null
+  next: quote_packet_waiting       # coverage_a 850000 against replacement_cost 832290 is 1.021, within the 10% tolerance (I35)
+instruction_ignored: null
+notes:
+  - "The confirmation is restated, so the no_residents conflict closes under rule 6 and section 9.6 says the same validator does not open it again on the same values. dwelling_use_type arriving as Primary is a missing field filled (rule 2), not a changed field of the pair; this label reads the closed conflict as staying closed. If the implementation reopens it on the new dwelling_use_type value, the lead would instead go to request_round_2 with the same confirmation; raise that reading with Brett rather than changing this label."
+  - "number_of_residents 0 stays the effective fact, confirmed by the reply as evidence."
