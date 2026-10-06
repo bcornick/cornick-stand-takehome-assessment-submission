@@ -56,7 +56,7 @@ Each fact was checked against the code.
 1. One command starts everything in containers.
 2. Every seed-42 lead reaches one primary next action, with all blockers visible.
 3. Rules live in data files read by a small interpreter, not in prompts. An underwriter's ruling on a choice is recorded and applies to that lead.
-4. Models are used only where language must be read: reply extraction, reply classification, and the chat panel.
+4. Models are used only where language must be read: reply extraction, reply classification, and the chat.
 5. The eval loop grades stored state (mailbox, event log, fact ledger), proves its graders can fail, and logs every run.
 6. Every capability is a skill with a typed contract and its own eval cases.
 
@@ -65,7 +65,7 @@ Each fact was checked against the code.
 - No pricing or rating.
 - No reply simulator. Reply handling is real; reply text comes from fixtures or a paste box.
 - No live third-party data calls. Addresses are synthetic.
-- No agent framework and no model-driven control flow outside the chat panel.
+- No agent framework and no model-driven control flow outside the chat.
 - No learned decision model. The rules are written down.
 - No rule editor. The rules change by a reviewed commit to `src/uwh/rules/data/`.
 - No promotion of autonomy from eval evidence. The levels are constants in code (section 7.4).
@@ -78,11 +78,10 @@ The brief sets a 5 to 6 hour box and says the choice of what to cut is evaluated
 Not built:
 
 - **The five playbook pages no seed-42 archetype reaches: Plumbing, Electrical, Pools, Trusts & LLCs, and Protection Class 9 & 10.** Their interpretation rows, catalogue questions, wording and resolution rules are not in the data files. Seven pages are built: Profile, Occupancy, Fire Simulation, Roof, Siding, Post & Pier and Replacement Cost. A lead that a not-built page applies to carries an explicit `not_evaluated` note naming the page, never a silent pass (section 9.6). Plumbing and Electrical apply to every lead, so each lead, and lead 008's quote packet, carries a note that those two pages are not evaluated.
-- **The MCP transport.** The chat panel calls the same functions directly.
+- **The MCP transport.** The chat calls the same functions directly.
 - **The 50-seed sweep.** The system and its evals run seed 42 only.
 - **The rule-change flow and the model-driven triage comparison.** Rules change by a reviewed commit to the data files.
 - **The settings screens, the skills screen and the emergency stop.** Autonomy levels are constants in code (section 7.4).
-- **Server-sent events.** The pages refetch after an action and on an interval.
 - **Controls and graders beyond those section 13 names.** The eval has three controls: do nothing, email everything and send twice.
 - **The constructed packet cases and the outcome-case sample.** Cases are a table per page.
 
@@ -232,7 +231,7 @@ Every state-changing action is a typed command. The workflow, UI and chat all su
 | `start_run` | human only | underwriter |
 | `propose_command` | auto | assistant |
 
-- `assistant` can read and can propose. A proposal becomes a command card that the underwriter applies. They cannot approve, and a proposal cannot carry `approve` or `reject`: asked to approve or reject, the assistant points the underwriter to the item instead.
+- `assistant` can read and can propose. A proposal becomes a command card that the underwriter applies. They cannot approve. A proposal carries one of `edit_draft`, `record_ruling`, `resolve_fact` and `decline_lead`: asked to approve or reject, the assistant points the underwriter to the item instead.
 - **Approval binds to a frozen artifact:** lead revision, action-plan hash, ruleset hash, recipient, and the exact message or packet hash. The dispatcher rechecks all five and the class's level immediately before sending. A mismatch returns the item to review. An `approve` of a draft carries the payload hash of the artifact the underwriter was shown; a hash that is missing or not current is refused, so a stale browser cannot approve replaced content.
 
 ### 7.5 Sending
@@ -293,7 +292,7 @@ Rules:
 | `read_reply` | Language model for extraction; Jev first for classification when its key is set, language model as fallback | a reply is delivered | reply goes to the underwriter unread |
 | `build_quote_packet` | no | no open blockers and no asks remain | none |
 
-The chat panel is governed the same way: its tool list, prompt and eval cases live in `src/uwh/chat/` with a manifest.
+The chat is governed the same way: its lookups, prompt and eval cases live in `src/uwh/chat/` with a manifest.
 
 ## 9. Rules core
 
@@ -603,13 +602,16 @@ The packet is built in code: coverages as submitted, coverage adjustments shown 
 
 ## 11. Underwriter surface
 
-- **Queue.** One row per lead: status chip, primary next action, who it waits on, age against a two-business-day service level (Stand's distributor page promises estimates "inside two business days"; labelled as an assumed service level), effective date, ask count. Order: blocked on the underwriter, then waiting on data or producer, then finished; within a group, earliest effective date first, then lead id. A one-sentence summary heads the page with separate counts for quotes sent, follow-ups sent, declines approved, waiting on the underwriter, waiting on the producer, waiting on data, delivery unknown. "Follow-ups sent" counts every request sent to a producer, in any round; the brief calls the first request a follow-up. The four waiting counts count each lead once, by its primary next action: an underwriter review or question, a producer reply, a data blocker, or an unknown delivery.
-- **Detail pane.** Next action (templated from the plan). Facts with source tags. Playbook path as a checklist with an exceptions-only toggle. The draft. Non-blocking notes. A "paste a reply" box. A "deliver fixture replies" control delivers every stored fixture reply for the run, so a default run exercises `read_reply` on several leads. Search and map links where the board calls for a human look.
-- **Items.** Review (approve, edit, reject; batchable). Question (equal buttons, no default, required reason; never batched across leads; all open choices on one lead share one card with the relevant values shown). What the system did automatically is read from the lead's event list; there is no separate notify item. The detail pane offers the actions for every open item on its lead.
-- **Chat.** A second client of the command layer. It calls the same functions the pages use, directly. Read tools answer from the event log and cite event ids. A directive becomes a `propose_command` card that the underwriter previews and applies.
-- **Mode label.** "live", "record" or "replay", always visible, with the run id.
-- No numeric confidence is displayed.
-- **Updates.** The pages refetch after an action and on an interval.
+One page for an underwriter's desk, at least 1280px wide: the lead list on the left, the open conversation in the centre, a drill-down panel on the right when something is opened, and the demo controls pinned bottom right. `docs/chat-surface.md` is its specification.
+
+- **Lead list.** The one-sentence run summary heads it, with separate counts for quotes sent, follow-ups sent, declines approved, waiting on the underwriter, waiting on the producer, waiting on data, delivery unknown. "Follow-ups sent" counts every request sent to a producer, in any round; the brief calls the first request a follow-up. The four waiting counts count each lead once, by its primary next action: an underwriter review or question, a producer reply, a data blocker, or an unknown delivery. A "Queue" entry opens the queue conversation. Below it, one row per lead: its short name, address, status chip, primary next action, effective date and age against a two-business-day service level (Stand's distributor page promises estimates "inside two business days"; labelled as an assumed service level). Order: waiting on the underwriter, then waiting on the producer or data, then finished; within a group, earliest effective date first, then lead id.
+- **Conversation.** A lead's conversation is its event log, oldest first, written by code: `event_summary` gives each event one sentence that names the fact, the result and what follows. Consecutive workflow events form one assistant message with a bullet per event. A message the system sent and a reply it read are bubbles. An item the underwriter acts on is a card at the event that opened it: a review (approve, edit, reject), a question (equal buttons, no default, required reason; all open choices on one lead share one card with the relevant values shown), a pending value, an unknown delivery. A resolved card stays in place as one read-only line. What the system did automatically is read from the same timeline; there is no separate notify item. Every bullet, bubble and card opens its evidence in the panel.
+- **Queue conversation.** The run summary, then the open items of every lead as cards, and three example questions the server owns.
+- **Chat.** Below the timeline sit the underwriter's typed messages and the assistant's answers, held in the browser's memory by run and conversation. The assistant is a second client of the command layer. One turn is at most four steps of a forced tool call: a lookup, an answer or a proposal. The six lookups (lead events, lead summary, messages, playbook path, current draft, queue summary) read the views the page uses, and every result item carries a reference number of the turn. An answer cites numbers; the server keeps only those the turn's results showed and returns them resolved to an event, a fact, a message, a reply or a playbook page. A directive becomes a `propose_command` card on the lead it targets, which the underwriter applies or dismisses. Each message carries the last four exchanges of its conversation, which the prompt treats as data. `POST /api/chat` answers as a server-sent-events stream: a `step` per lookup, then exactly one closing `answer`, `proposal` or `error`. In replay the composer is disabled and the endpoint closes with "Questions need live mode" without a model call.
+- **Drill-down panel.** A citation chip or a card's "details" link opens it on a fact (value, source, the event that recorded it, the lead's other observations of the key), an event, a message, a playbook page (effect lines, board path ids, waits, not-evaluated notes) or the full lead (waiting on, facts, plan, messages, and the lead actions: paste a reply, resolve a fact, decline the lead).
+- **Demo controls.** A separate card: "Load today's leads" starts the run, and asks first when a run exists; "Deliver the producers' replies" delivers every stored fixture reply for the run, so a default run exercises `read_reply` on several leads. It shows the mode ("live", "record" or "replay"), the seed and the run id.
+- A confidence is shown only with its threshold: a reply Jev classified reads "Jev classified this reply (0.83, at or above the 0.70 threshold)", and a reply the model classified shows none.
+- **Updates.** The page refetches after an action and every five seconds; a refetch does not touch a chat turn in flight.
 
 ## 12. Underwriter input
 
@@ -699,7 +701,7 @@ A reference run passes everything. Each broken variant must be failed by its nam
 - Stand's code and Dockerfiles are unmodified. Stand's own `docker-compose.yml` stays in place, unused; ours keeps Stand's documented host ports.
 - Database paths are set through `LEADGEN_DB` and `MAILBOX_DB`. `DEBUG` passes through as `${DEBUG:-false}`, so a reviewer can switch the answer key on for their own use; the application client has no debug method either way.
 - Inside the network the app calls `http://leadgen:8080` and `http://mailbox:8080`.
-- "Start morning run" recreates every app table, resets the interactive mailbox and posts the queue for `SEED` (default 42), count 10. A start is refused while a run is still processing or a message is being sent. Every commit and dispatch checks that its run id is the current one, so work left over from a replaced run writes nothing.
+- "Load today's leads" recreates every app table, resets the interactive mailbox and posts the queue for `SEED` (default 42), count 10. A start is refused while a run is still processing or a message is being sent. Every commit and dispatch checks that its run id is the current one, so work left over from a replaced run writes nothing.
 - Replay mode uses its own app database and a `replay` run id; it writes to the interactive mailbox after a reset.
 - `.env` must exist: the README's first step is `cp .env.example .env`. It is passed into the app and eval services explicitly, along with `LEADGEN_URL` and `MAILBOX_URL` (defaults `http://leadgen:8080` and `http://mailbox:8080`; the eval overrides them). `.env.example` documents `MODEL_API_KEY` (a DeepSeek key), `MODEL_BASE_URL` (default `https://api.deepseek.com/anthropic`), `MODEL_ID` (default `deepseek-flash`), `TYPESAFE_API_KEY` (optional), `RUN_MODE`, `SEED`, `DEBUG`.
 - `.gitattributes` sets `eol=lf`. The frontend builds inside the container. Images build for linux/amd64 and linux/arm64.
@@ -833,7 +835,7 @@ All hashes are SHA-256 over canonical JSON (sorted keys, UTF-8, no insignificant
 | `POST /api/replies` | Deliver a reply `{lead_id, intent_id, body}`. Returns after the reply has been read and the lead re-evaluated. Accepted only for an intent in state `sent`. |
 | `POST /api/replies/fixtures` | Deliver every stored fixture reply for the run. Returns after all are processed. |
 | `GET /api/proposals` | Proposal cards stored by `propose_command` |
-| `POST /api/chat` | One chat turn |
+| `POST /api/chat` | One chat turn, answered as a server-sent-events stream: a `step` per lookup, then one closing `answer`, `proposal` or `error` |
 
 ### A.6 Graph file format
 

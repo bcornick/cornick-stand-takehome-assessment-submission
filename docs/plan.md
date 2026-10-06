@@ -10,7 +10,7 @@ This is a take-home submission, reviewed in 45 minutes, for a brief that sets a 
 - Request emails rendered in code, the send path with intent states and startup reconcile, and one open request per lead.
 - Reply handling: the reply endpoint, the paste box, the fixture-reply control, and `read_reply` on DeepSeek.
 - Quote packet and decline notice, each sent only on the underwriter's approval.
-- The underwriter surface: queue, lead detail, approve, edit, reject, underwriter choices, and the chat panel.
+- The underwriter surface (`docs/chat-surface.md`): the lead list, each lead's conversation with its cards (approve, edit, reject, underwriter choices), the drill-down panel, the demo controls, and the chat.
 - Evals through `make eval`: the seed-42 suite with its graders and Stand's answer key, the reply suite, three controls (do nothing, email everything, send twice), the results log, and one recorded improvement cycle on reply reading.
 - Record and replay modes, so the demo runs from recordings.
 - The Jev adapter in front of reply classification.
@@ -21,11 +21,10 @@ This is a take-home submission, reviewed in 45 minutes, for a brief that sets a 
 Each item is listed in the README under "Cut and why". A lead that would have reached a cut playbook page carries an explicit `not_evaluated` note for it, never a silent pass.
 
 - The five playbook pages no seed-42 lead reaches: Plumbing, Electrical, Pools, Trusts & LLCs, Protection Class 9 & 10, with their interpretation rows, catalogue questions, wording and resolution rules.
-- The MCP transport. The chat panel calls the same functions directly.
+- The MCP transport. The chat calls the same functions directly.
 - The 50-seed sweep.
 - The rule-change flow and the model-driven triage comparison.
 - The settings screens, the skills screen and the emergency stop. Autonomy levels are constants in code: a routine request sends automatically and every other message waits for approval.
-- Server-sent events. The pages refetch after an action and on an interval.
 - Controls and graders beyond those named under "What is built".
 - The constructed packet cases and the outcome-case sample; cases are a table per page.
 

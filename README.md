@@ -15,18 +15,20 @@ Open `http://localhost:8000`. The first build takes a few minutes. Stand's leadg
 
 To see the demo:
 
-1. Click **Start morning run**. The app posts the ten leads and settles them.
-2. Open lead 008 in the queue. The detail pane shows its facts with their sources, the playbook path, and the request the system sent.
-3. Click **Deliver fixture replies**. Every stored producer reply is delivered and read; lead 008's reply is read and its lead becomes a quote packet draft.
-4. Back on lead 008, **Approve** the packet. The mailbox then holds one request and one packet for it.
+1. In **Demo controls**, bottom right, click **Load today's leads**. The app posts the ten leads and settles them; the lead list on the left fills.
+2. Open lead 008. Its conversation is what the system did, oldest first: the fields it triaged, the values it fetched, the plan it built and the request it sent to the producer. Each line carries a chip that opens its evidence in the panel on the right; **Full detail** opens the lead's facts with their sources, its plan and its messages.
+3. Click **Deliver the producers' replies**. Every stored producer reply is delivered and read; lead 008's conversation gains the reply, what was read from it, and a quote packet as a card.
+4. **Approve** the packet on the card. The mailbox then holds one request and one packet for it.
 
-Leads 000, 003 and 006 need the underwriter on the first pass: 000 is a proposed decline that waits for approval, and 003 and 006 each show one question card.
+Leads 000, 003 and 006 need the underwriter on the first pass, and the **Queue** conversation lists their cards: 000 is a proposed decline that waits for approval, and 003 and 006 each show one question card.
+
+Below a conversation's timeline the underwriter can type a question or an instruction. An answer cites what it rests on as numbered chips; an instruction becomes a card that the underwriter applies or dismisses.
 
 ### Run modes
 
-`RUN_MODE` in `.env` picks the mode, and the page always shows it.
+`RUN_MODE` in `.env` picks the mode, and the demo controls always show it.
 
-- `replay` (the default): every model and Jev exchange is served from `recordings/`. No key is needed and no model host is called. A request with no recording fails closed with a visible error; a Jev miss falls back to the language model. The chat panel cannot answer in the replay demo: its recordings are of a run before the first pass, and a run's event ids and times differ from them; a `live` or `record` run answers it.
+- `replay` (the default): every model and Jev exchange is served from `recordings/`. No key is needed and no model host is called. A request with no recording fails closed with a visible error; a Jev miss falls back to the language model. The composer is disabled in replay, with the note "Questions need live mode": a typed question needs a live model, and a `live` or `record` run answers it.
 - `live`: calls DeepSeek with `MODEL_API_KEY`. Nothing reads or writes a recording.
 - `record`: as live, and each exchange is written to `recordings/`. Also set `RECORDINGS_ACCESS=rw`, because the folder is mounted read-only otherwise.
 
@@ -53,7 +55,7 @@ Stand's mailbox <-- send path <-- command layer <-- underwriter UI, chat, workfl
                                   event log + fact ledger (SQLite) under all of it
 ```
 
-**Lead workflow.** "Start morning run" posts the queue from the leadgen service. Each lead runs through a fixed list of steps: field triage against Stand's registry, data resolution (derive, fetch from the stand-in providers, assume), playbook evaluation over the seven built pages, the ask plan, and the rendered request. A lead holds a status and a set of open blockers (producer reply, underwriter review, underwriter question, data, delivery unknown); its next action is the highest-priority blocker. A producer's reply is read, its values enter the ledger, and the lead re-evaluates from the top until it reaches a packet draft or a stated wait. A routine request goes out on its own; a sensitive request, the packet and the decline notice go out only on approval.
+**Lead workflow.** "Load today's leads" posts the queue from the leadgen service. Each lead runs through a fixed list of steps: field triage against Stand's registry, data resolution (derive, fetch from the stand-in providers, assume), playbook evaluation over the seven built pages, the ask plan, and the rendered request. A lead holds a status and a set of open blockers (producer reply, underwriter review, underwriter question, data, delivery unknown); its next action is the highest-priority blocker. A producer's reply is read, its values enter the ledger, and the lead re-evaluates from the top until it reaches a packet draft or a stated wait. A routine request goes out on its own; a sensitive request, the packet and the decline notice go out only on approval.
 
 **Command layer and actors.** Every state change is a typed command: nothing else writes. The actors are the workflow, the underwriter, the assistant (chat) and the reply endpoint, and the transport sets the actor, never a model argument. Routine requests send automatically; every other message waits for approval. An approval binds to a hash of the exact artifact shown, the lead revision and the ruleset, so a stale browser cannot approve changed content.
 
@@ -63,7 +65,7 @@ Stand's mailbox <-- send path <-- command layer <-- underwriter UI, chat, workfl
 
 **Skills as workflow steps.** A skill is a folder with a manifest (purpose, trigger, command classes it may issue, fallback), an entry point, and cases or a prompt where it has them. Six skills are code and two use the language model (`polish_message`, `read_reply`); five of them run as the workflow's steps. The model never writes a question: code renders every request from the ask plan, and the model writes only an opening and a closing that two checks hold to adding no consequence, price, deadline or request. A command that sends refuses a class the issuing skill's manifest does not declare. There is no agent framework and no model-driven control flow outside the chat.
 
-**The chat is a second client.** It answers from the event log and cites event ids, and it can only propose: a directive becomes a card the underwriter previews and applies. A directive to approve, reject or send is refused, and the answer points to the lead's open item.
+**The conversation is the surface.** A lead's conversation is its event log written as sentences by code, with the underwriter's items as cards at the event that raised them; the drill-down panel shows the fact, event, message or playbook page behind any line. The assistant below it is a second client of the command layer. It reads through six named lookups, cites what it was shown by a reference number the server resolves, and can only propose: a directive becomes a card on its lead that the underwriter applies. A directive to approve, reject or send is refused, and the answer points to the open item in the lead's conversation. The turn streams its lookups as server-sent events, and the answer arrives whole.
 
 **Record and replay.** A model exchange is keyed by the skill, the hash of its prompt and forced tool, and the content the model is shown. Recordings are committed under `recordings/`, and they are the only model answers the tests and the replay demo see. Changing a prompt or tool changes the key, so its recordings are recorded again.
 
@@ -75,7 +77,7 @@ For the rest (rules core, the interpretation table, ledger rules, message classe
 
 - `seed42`: the ten leads against the ten labels in `evals/labels/seed42/`, graded at the settle point and again after scripted underwriter actions. The labels were written from the playbook, the registry and the data files without reading the rules code.
 - `replies`: eight reply fixtures (three held back under `fixtures/replies/held/`; lead 008's reply, the ninth, is the demo's) read by `read_reply`, graded against `evals/labels/replies/`.
-- `chat`: three cases with eight recordings; a question causes zero commands, and a refused directive stays refused when reworded.
+- `chat`: four cases with nine recordings; a question causes zero commands, a refused directive stays refused when reworded, and a producer's reply that carries an instruction is read back without one being followed.
 
 **The nine graders.**
 
@@ -104,7 +106,8 @@ The runner also grades reply facts and chat, and four critical errors fail a run
 1. `polish_message` has no cases and no repeat check. Its judge call decides whether an opening and closing add a consequence; measure its consistency across repeats and build a case table of rewrites it should reject.
 2. Reply reading on confirmations and catalogue questions. The reply suite's eight fixtures are mostly field answers; add fixtures where the producer restates, corrects or partly answers a confirmation, and extend the held-back set.
 3. Jev's confidence. The 0.7 threshold is the architecture's default, applied to three outcomes (on topic, off topic, declines to answer). The nine Jev recordings exercise the cascade in replay, where Jev classifies seven of the eight reply fixtures and the model the other; record more replies and set the threshold from their probabilities.
-4. Token counts. `tokens_in` on an event is the provider's `input_tokens` alone; DeepSeek reports cached input separately, so the stored input counts undercount what a call read (lead 008's reading shows 135 input tokens for a prompt longer than that). Count cached input too and compare the totals with the provider's billing page.
+4. The assistant. Chat threads live in the browser; keep them on the server so a reload and a second reviewer see them. Give the assistant a dry-run lookup, so a card can say what its command would change before the underwriter applies it.
+5. Token counts. `tokens_in` on an event is the provider's `input_tokens` alone; DeepSeek reports cached input separately, so the stored input counts undercount what a call read (lead 008's reading shows 135 input tokens for a prompt longer than that). Count cached input too and compare the totals with the provider's billing page.
 
 Live-call totals are recorded per milestone in `docs/progress.md`; the project used about 50,000 reported input tokens and 13,000 output tokens on `deepseek-flash`, and 4,771 input and 468 output on Jev, with the undercount above.
 
@@ -137,7 +140,11 @@ The brief sets a 5 to 6 hour box and grades what is cut. A lead that would have 
 - **The 50-seed sweep.** The system and its evals run seed 42, whose ten leads carry the failure modes the brief names.
 - **The rule-change flow and the model-driven triage comparison.** Rules change by a reviewed commit to the data files, which keeps one reviewed table.
 - **Settings screens, the skills screen and the emergency stop.** Autonomy levels are constants in code: a routine request sends automatically and everything else waits for approval.
-- **Server-sent events.** The pages refetch after an action and on an interval, which is enough for ten leads.
+- **Stopping a chat turn.** A turn is a few bounded model calls and can write at most a card, so a closed tab lets it finish.
+- **Server-side chat history.** Typed messages live in the browser and are lost on reload; the timeline above them is the event log, which persists.
+- **Streamed answer text.** The answer is a field of a forced tool call, so it arrives whole; the lookups stream as steps.
+- **A dry-run lookup.** A card states its command in words; the command layer checks it in full when the underwriter applies it.
+- **A mobile layout.** The surface is for an underwriter's desk and is desktop only.
 - **Controls and graders beyond the named ones.** The three controls and nine graders cover each failure the plan names.
 - **The constructed packet cases and the outcome-case sample.** Cases are a table per page.
 
@@ -157,7 +164,8 @@ What the reviews found and what is left as it is in this proof of concept.
 - An edited draft is not checked for pricing, a decline reason or internal notes before it is sent; the underwriter approves every edited draft and sees its text.
 - A chat turn that finishes after a new run has started writes its proposal card into the new run.
 - Proposal-card ids restart with each run (item ids do not), so a stale tab's Apply can hit the new run's card with the same number.
-- The chat panel cannot answer in the replay demo: its recordings are of a run before the first pass; a `live` or `record` run answers it.
+- The assistant does not answer in the replay demo: the composer is disabled with "Questions need live mode"; a `live` or `record` run answers it.
+- A citation proves the assistant was shown the item, not that the item supports the claim.
 - Dismissing a proposal card writes outside the command layer and records no event.
 - A round-2 rewrite runs inside the command's transaction, so a slow model call holds the write lock for other leads.
 - The runtime does not gate a skill on its eval status; the results log is read by `make eval` and by people.
@@ -168,7 +176,7 @@ What the reviews found and what is left as it is in this proof of concept.
 ## Where things are
 
 - `src/uwh/`: the application. `runtime/` (event log, ledger, commands, send path, workflow), `rules/` (registry loader, validators, graph interpreter, reviewed data files), `skills/` (one folder each), `providers/` (stand-in lookups from captured world files), `chat/`, `api/` (FastAPI routes).
-- `web/`: the React queue, detail pane and chat panel.
+- `web/`: the React surface: the lead list, the conversation with its cards and chat, the drill-down panel and the demo controls.
 - `evals/`: the runner, graders, controls, labels and `results.jsonl`.
 - `recordings/`: committed model exchanges; `fixtures/replies/`: producer replies for the fixture control.
 - `tests/`: fast, slow and integration tests; `tools/` and `scripts/`: the fresh-clone rehearsal, type generation and the discipline check.
