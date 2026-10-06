@@ -423,3 +423,21 @@ Brett's decisions carried into milestone 1: an underwriter's value that still tr
 **Open with Brett:** the label signatures (`reviewed_by` on the ten seed-42 files); the default `RUN_MODE`.
 
 **Next:** milestone 4: the underwriter surface.
+
+## Milestone 4: Underwriter surface (8c470db)
+
+**Done:** every action an underwriter needs on the ten leads works from the browser against the running app, and the chat cases pass in the eval. M4-A1 (nine action tests through the app's routes against the containers), M4-A2 (the web tests) and M4-A3 (the chat suite row) pass, run by the lead.
+- Routes: `GET /api/items`, `GET /api/leads/{id}/events` (a sentence per event, `src/uwh/api/event_summary.py`), `POST /api/chat`, `GET /api/proposals`, `POST /api/proposals/{id}/apply|dismiss`. The 501 stub module is gone: every A.5 route is served.
+- Pane: Approve with a reason, Edit and Reject on drafts ("Withdraw decline and send the asks" on a decline notice); Approve and Reject on a pending value, shown beside the value it would replace; Acknowledge on an event-raised review; one question card per lead with equal option buttons, no default and a required reason; Resolve fact from a select of the lead's fields, sent in the registry's kind, refusing an unknown key; Decline lead; Paste a reply against the latest sent request; Open items across leads; the event list; refetch after an action and on an interval.
+- Chat (`src/uwh/chat/`): one forced `chat_step` tool per call with the actions `lead_events`, `lead_summary`, `open_items`, `answer` (cited event ids) and `propose_command`; at most four steps per turn; a proposal is stored as a card the underwriter applies or dismisses; a directive to approve, reject or send is refused by the actor rule and the answer points to the lead's open item; the Chat grader and `--suite chat`; three cases with eight recordings; the chat prompt's digest on the row.
+- Two builders ran in parallel worktrees; the lead merged both and resolved three conflicts.
+
+**Live calls:** one record run for the chat cases: eight calls, 9,241 in / 737 out. Project total: 27,506 in, 6,896 out.
+
+**Checks:** `make check` clean at 8c470db, run by the builder (733 fast Python tests, 27 web tests); the lead ran the acceptance commands and the integration tests (pass). `make check` takes about 80 seconds; the in-process API tests each run a full seed-42 pass.
+
+**Decisions:** the chat's single tool with an `action` field reuses `read_reply`'s forced-call and recording mechanism; the apply and dismiss routes are additions to A.5; the chat eval holds the run at its start so event ids are stable across runs; `src/uwh/chat/cases/` is exempt from the discipline word list as quoted voice ("most recently"), a reword would cost two live calls; the chat `lead_events` tool still returns the raw event payloads to the model, because the tool result is in the recording key and changing it needs a re-record (milestone 6, with any chat re-record). The reviewer read the milestone once: no blocker; its findings on what the underwriter sees are fixed; removals left for milestone 6: `ProposalView.state`/`actor`/`event_id` unread by the web, the dismiss route's body.
+
+**Open with Brett:** the label signatures; the default `RUN_MODE`; any item on his presentation list beyond the pass above.
+
+**Next:** milestone 5: the Jev adapter (ask Brett before the first live Jev call), then `polish_message`.
