@@ -410,17 +410,21 @@ class ProposalView(StrictModel):
 # ---- chat (section 11) --------------------------------------------------------------------------------
 
 
-class ChatRequest(StrictModel):
-    """One chat turn; the server holds the conversation."""
+# A chat message is capped so a turn's prompt stays small.
+MAX_CHAT_CHARACTERS = 2000
 
-    message: str
+
+class ChatRequest(StrictModel):
+    """One chat turn: the underwriter's message, and the lead open in the page when there is one."""
+
+    lead_id: str | None = None
+    message: str = Field(min_length=1, max_length=MAX_CHAT_CHARACTERS)
 
 
 class ChatResponse(StrictModel):
-    """One answer. Asked to approve or reject, the assistant creates no card and points the
-    underwriter to the item instead (7.4, A.11): `item_ids` are the items the answer points to."""
+    """One answer. A directive the command layer accepts comes back as a card; one it refuses (an
+    approval, a rejection, a send) comes back as an answer that says why, with no card (7.4, A.11)."""
 
     answer: str
     cited_event_ids: list[int]  # the events a read answer cites
-    proposals: list[ProposalView]  # the `propose_command` cards the turn created
-    item_ids: list[int]  # the items (`blockers.id`) the answer points the underwriter to
+    proposal: ProposalView | None  # the card a directive created

@@ -63,10 +63,8 @@ def test_the_static_frontend_is_served_and_the_api_routes_keep_precedence_over_i
     with static_client(tmp_path) as client:
         root = client.get("/")
         run = client.get("/api/run")
-        declared = client.get("/api/proposals")
         unknown = client.get("/api/no-such-route")
     assert root.status_code == 200 and 'id="root"' in root.text
     assert run.status_code == 200
-    assert declared.status_code == 501
     assert unknown.status_code == 404
     assert unknown.headers["content-type"].startswith("application/json")

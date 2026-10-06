@@ -1,0 +1,9 @@
+name: chat
+version: "1"
+purpose: Answers an underwriter's questions from the event log and the lead detail, citing event ids, and turns a directive into a proposal card the underwriter applies.
+trigger: the underwriter sends a chat message
+command_classes: [propose_command]
+actor: assistant
+fallback: the panel says the assistant is unavailable and the underwriter works from the pages
+pass_threshold: 1.0
+model_skill: true

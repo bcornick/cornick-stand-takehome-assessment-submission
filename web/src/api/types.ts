@@ -123,6 +123,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/proposals/{proposal_id}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Apply Proposal */
+        post: operations["apply_proposal_api_proposals__proposal_id__apply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/proposals/{proposal_id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Dismiss Proposal */
+        post: operations["dismiss_proposal_api_proposals__proposal_id__dismiss_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/replies": {
         parameters: {
             query?: never;
@@ -343,26 +377,25 @@ export interface components {
         };
         /**
          * ChatRequest
-         * @description One chat turn; the server holds the conversation.
+         * @description One chat turn: the underwriter's message, and the lead open in the page when there is one.
          */
         ChatRequest: {
+            /** Lead Id */
+            lead_id?: string | null;
             /** Message */
             message: string;
         };
         /**
          * ChatResponse
-         * @description One answer. Asked to approve or reject, the assistant creates no card and points the
-         *     underwriter to the item instead (7.4, A.11): `item_ids` are the items the answer points to.
+         * @description One answer. A directive the command layer accepts comes back as a card; one it refuses (an
+         *     approval, a rejection, a send) comes back as an answer that says why, with no card (7.4, A.11).
          */
         ChatResponse: {
             /** Answer */
             answer: string;
             /** Cited Event Ids */
             cited_event_ids: number[];
-            /** Item Ids */
-            item_ids: number[];
-            /** Proposals */
-            proposals: components["schemas"]["ProposalView"][];
+            proposal: components["schemas"]["ProposalView"] | null;
         };
         /** CommandResponse */
         CommandResponse: {
@@ -1149,6 +1182,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProposalView"][];
+                };
+            };
+        };
+    };
+    apply_proposal_api_proposals__proposal_id__apply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proposal_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dismiss_proposal_api_proposals__proposal_id__dismiss_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proposal_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProposalView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

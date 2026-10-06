@@ -7,6 +7,7 @@ import yaml
 from pydantic import Field, ValidationError, model_validator
 
 from uwh.rules.models import StrictModel
+from uwh.runtime.event_types import Actor
 from uwh.skills.vertical import COMMAND_CLASSES
 
 
@@ -16,7 +17,8 @@ class SkillFolderError(Exception):
 
 class SkillManifest(StrictModel):
     """manifest.yaml. `fallback` is "none" for a deterministic skill. A skill with a `pass_threshold`
-    has `cases/` the eval runs; a skill without one has no eval status."""
+    has `cases/` the eval runs; a skill without one has no eval status. `actor` is who submits the
+    skill's commands: the workflow, or the assistant for the chat panel."""
 
     name: str
     version: str
@@ -26,15 +28,16 @@ class SkillManifest(StrictModel):
     fallback: str
     pass_threshold: float | None = Field(default=None, gt=0, le=1)
     model_skill: bool = False
+    actor: Actor = "workflow"
 
     @model_validator(mode="after")
     def _check_rules(self) -> Self:
-        # A skill issues its commands as the workflow actor (7.4).
-        issuable = {c.name for c in COMMAND_CLASSES if "workflow" in c.actors}
+        # A skill issues its commands as its actor (7.4).
+        issuable = {c.name for c in COMMAND_CLASSES if self.actor in c.actors}
         refused = [c for c in self.command_classes if c not in issuable]
         if refused:
             raise ValueError(
-                f"command_classes names classes a skill cannot issue: {', '.join(refused)}"
+                f"command_classes names classes a skill cannot issue as {self.actor}: {', '.join(refused)}"
             )
         repeated = sorted({c for c in self.command_classes if self.command_classes.count(c) > 1})
         if repeated:

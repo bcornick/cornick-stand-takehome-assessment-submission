@@ -1,4 +1,4 @@
-# ABOUTME: Images for the app (Python 3.12 slim with the locked dependencies, src/ without any cases/ folder, and the frontend built in a Node stage) and for the eval runner (the app image plus evals/, the skills' cases and Stand's generator).
+# ABOUTME: Images for the app (Python 3.12 slim with the locked dependencies, src/ without any cases/ folder, and the frontend built in a Node stage) and for the eval runner (the app image plus evals/, the skills' and the chat panel's cases and Stand's generator).
 # ABOUTME: GIT_COMMIT is a build argument because .git is outside the build context.
 
 # Copy src/ and delete every cases/ folder so no layer of the app image holds one.
@@ -52,11 +52,12 @@ ENV GIT_COMMIT=$GIT_COMMIT
 EXPOSE 8000
 CMD ["uvicorn", "--factory", "uwh.api.app:create_app", "--host", "0.0.0.0", "--port", "8000"]
 
-# The eval runner: the app image with the skills' cases back in src/, the labels and graders in evals/,
+# The eval runner: the app image with the skills' and the chat panel's cases back in src/, the labels and graders in evals/,
 # and Stand's generator, which the answer-key grader runs in process. Results append to evals/results.jsonl,
 # which the eval service bind-mounts from the host.
 FROM app AS eval
 COPY src/uwh/skills ./src/uwh/skills
+COPY src/uwh/chat ./src/uwh/chat
 COPY sim-harness/shared ./sim-harness/shared
 COPY sim-harness/leadgen ./sim-harness/leadgen
 COPY evals ./evals

@@ -1,4 +1,4 @@
-// ABOUTME: Typed fetch calls: the run, the queue, one lead's detail and events and the open items, and the actions of the page: start the run, deliver the fixture replies, the underwriter's commands and a pasted reply.
+// ABOUTME: Typed fetch calls: the run, the queue, one lead's detail and events, the open items and the proposal cards, and the actions of the page: start the run, deliver the fixture replies, the underwriter's commands, a pasted reply, a chat message, apply or dismiss a card.
 // ABOUTME: A response that is not 2xx throws an ApiError that names the route and the status; a command resolves to the reason it was refused, or null when it was accepted.
 import type { components, paths } from '@/api/types'
 
@@ -83,3 +83,11 @@ export const deliverReply = async (leadId: string, intentId: string, body: strin
       body,
     }),
   )
+
+export const sendChat = (message: string, leadId: string | null) =>
+  post<Schemas['ChatResponse']>('/api/chat', { message, lead_id: leadId })
+export const getProposals = () => request<Schemas['ProposalView'][]>('/api/proposals')
+export const applyProposal = (proposalId: number) =>
+  post<Schemas['CommandResponse']>(`/api/proposals/${proposalId}/apply`)
+export const dismissProposal = (proposalId: number) =>
+  post<Schemas['ProposalView']>(`/api/proposals/${proposalId}/dismiss`)

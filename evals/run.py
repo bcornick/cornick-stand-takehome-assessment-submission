@@ -1,4 +1,4 @@
-# ABOUTME: The eval runner (section 13): `python -m evals.run --suite seed42|replies [--control NAME] [--hypothesis TEXT]`; the seed42 suite runs seed 42's first pass in replay mode, grades it at the settle point, plays each label's underwriter actions and grades the state after them, runs the fault runs, and appends one `run` row to the results log.
+# ABOUTME: The eval runner (section 13): `python -m evals.run --suite seed42|replies|chat [--control NAME] [--hypothesis TEXT]`; the seed42 suite runs seed 42's first pass in replay mode, grades it at the settle point, plays each label's underwriter actions and grades the state after them, runs the fault runs, and appends one `run` row to the results log.
 # ABOUTME: Every run opens its own empty database; the leadgen and mailbox services are the eval ones named by LEADGEN_URL and MAILBOX_URL, and a failed health or bootstrap check writes an `invalid` row, never a score.
 import argparse
 import json
@@ -21,20 +21,25 @@ from pydantic import JsonValue
 
 import uwh
 from evals.cases import (
+    CHAT_DIR,
     SKILLS_DIR,
+    ChatCase,
     ReplyCase,
     SkillResult,
+    load_chat_cases,
     load_reply_cases,
     run_skill_cases,
 )
 from evals.controls import Control, applied, mailbox_client
 from evals.graders import answer_key
+from evals.graders.chat import TurnEvidence, chat
 from evals.graders.delivery import asks, coverage, forbidden_asks, one_open_request, packet_fidelity
 from evals.graders.evidence import Evidence, Expectations, Result
 from evals.graders.plan import rule_trace
 from evals.graders.reply import reply_facts, reply_reading
 from evals.graders.safety import FaultRun, critical_errors, send_safety
 from uwh.api.runtime import Runtime, open_runtime
+from uwh.chat.skill import run_turn
 from uwh.runtime.bootstrap import TIMEOUT_SECONDS, EnvironmentInvalid, check_services
 from uwh.runtime.commands import CommandResult, submit_command
 from uwh.runtime.event_types import REQUEST_KINDS, EventType, FaultInjected, ModelCalled
@@ -43,6 +48,7 @@ from uwh.runtime.faults import FaultPlan
 from uwh.runtime.hashing import file_entries, hash_json, source_files
 from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
+from uwh.runtime.modes import RecordingMiss
 from uwh.runtime.runs import current_run, pass_context, run_passes
 from uwh.settings import Settings
 from uwh.skills import SKILLS
@@ -297,25 +303,26 @@ def _evaluator_hash() -> str:
     )
 
 
-def _case_set_id(labels_dir: Path, skills: Iterable[str]) -> str:
-    """The hash of the labels and of the cases of the skills."""
+def _case_set_id(labels_dir: Path | None, case_folders: Iterable[Path]) -> str:
+    """The hash of the labels, when the suite has them, and of the case folders."""
     return hash_json(
         {
-            "labels": file_entries(labels_dir, source_files(labels_dir)),
+            "labels": None
+            if labels_dir is None
+            else file_entries(labels_dir, source_files(labels_dir)),
             "cases": {
-                skill: file_entries(
-                    SKILLS_DIR / skill / "cases", source_files(SKILLS_DIR / skill / "cases")
-                )
-                for skill in skills
+                folder.parent.name: file_entries(folder, source_files(folder))
+                for folder in case_folders
             },
         }
     )
 
 
-def _skill_result(skill: str, outcome: SkillResult) -> dict[str, JsonValue]:
-    """A skill's cases against its manifest threshold, as `skill_results` of the run row holds them."""
-    threshold = load_manifest(SKILLS_DIR / skill).pass_threshold
-    assert threshold is not None, f"{skill} has cases and no pass_threshold"
+def _skill_result(folder: Path, outcome: SkillResult) -> dict[str, JsonValue]:
+    """The cases of the skill in `folder` against its manifest threshold, as `skill_results` of the
+    run row holds them."""
+    threshold = load_manifest(folder).pass_threshold
+    assert threshold is not None, f"{folder.name} has cases and no pass_threshold"
     for failure in outcome.failures:
         print(f"case failed: {failure}", file=sys.stderr)
     return {
@@ -328,7 +335,7 @@ def _skill_result(skill: str, outcome: SkillResult) -> dict[str, JsonValue]:
 def _skill_results() -> dict[str, JsonValue]:
     """`skill_results` of a seed42 run row: evaluate_playbook's table of cases. read_reply's cases are
     the reply suite's."""
-    return {"evaluate_playbook": _skill_result("evaluate_playbook", run_skill_cases())}
+    return {"evaluate_playbook": _skill_result(SKILLS_DIR / "evaluate_playbook", run_skill_cases())}
 
 
 def _tokens(measurements: Mapping[str, Mapping[str, float]]) -> dict[str, float]:
@@ -422,7 +429,7 @@ def evaluate_seed42(
 
     return _evaluate(
         "seed42",
-        _case_set_id(LABELS_DIR, ["evaluate_playbook"]),
+        _case_set_id(LABELS_DIR, [SKILLS_DIR / "evaluate_playbook" / "cases"]),
         settings,
         leadgen_http,
         mailbox_http,
@@ -494,7 +501,7 @@ def evaluate_replies(
             "critical_errors": [*dict.fromkeys(critical)],
             "skill_results": {
                 "read_reply": _skill_result(
-                    "read_reply",
+                    SKILLS_DIR / "read_reply",
                     SkillResult(
                         sum(not failures for failures in by_case.values()),
                         len(cases),
@@ -509,7 +516,97 @@ def evaluate_replies(
 
     return _evaluate(
         "replies",
-        _case_set_id(REPLY_LABELS_DIR, ["read_reply"]),
+        _case_set_id(REPLY_LABELS_DIR, [SKILLS_DIR / "read_reply" / "cases"]),
+        settings,
+        leadgen_http,
+        mailbox_http,
+        control,
+        hypothesis,
+        score,
+    )
+
+
+def play_chat_cases(
+    runtime: Runtime, db: sqlite3.Connection, cases: Sequence[ChatCase]
+) -> tuple[list[TurnEvidence], list[str]]:
+    """Start seed 42's run, leave it at its start (no first pass, so the event ids are the same on
+    every run) and put each case's messages to the assistant in order. Returns the evidence of each
+    turn, and a message for each turn that had no recording."""
+    result = submit_command(db, runtime.env, "underwriter", "start_run", {"seed": SEED})
+    assert result.accepted, result.reason
+    turns: list[TurnEvidence] = []
+    misses: list[str] = []
+    for case in cases:
+        for message, expect in case.turns:
+            before = db.execute("SELECT COALESCE(MAX(id), 0) FROM events").fetchone()[0]
+            try:
+                turn = run_turn(db, runtime.env, message, case.lead)
+            except RecordingMiss as miss:
+                misses.append(f"{case.name} / {message!r}: {miss}")
+                continue
+            turns.append(
+                TurnEvidence(
+                    case.name,
+                    message,
+                    expect,
+                    turn.cited_event_ids,
+                    turn.proposal_id,
+                    [e for e in read_events(db) if e.id > before],
+                )
+            )
+    return turns, misses
+
+
+def evaluate_chat(
+    settings: Settings,
+    leadgen_http: httpx2.Client,
+    mailbox_http: httpx2.Client,
+    *,
+    control: Control | None,
+    hypothesis: str | None,
+) -> dict[str, Any]:
+    """Run the chat suite (13.3): put the messages of the chat cases to the assistant against seed
+    42's run at its start and grade what each turn did. In replay the model's replies come from the
+    recordings."""
+    cases = load_chat_cases()
+
+    def score(per_run: Callable[[str], Settings], leadgen: LeadgenClient) -> dict[str, Any]:
+        with (
+            open_runtime(
+                per_run("chat"), leadgen, mailbox_client(control, mailbox_http)
+            ) as runtime,
+            runtime.database() as db,
+        ):
+            turns, misses = play_chat_cases(runtime, db, cases)
+            measurements = _measurements(db)
+        by_case = {
+            case.name: chat([t for t in turns if t.case == case.name]).failures
+            + [m for m in misses if m.startswith(f"{case.name} / ")]
+            for case in cases
+        }
+        outcome = Score()
+        outcome.add(FIRST_PASS, Result([f for failures in by_case.values() for f in failures]))
+        return {
+            "scores": {"Chat": outcome.row()},
+            "critical_errors": [],
+            "skill_results": {
+                "chat": _skill_result(
+                    CHAT_DIR,
+                    SkillResult(
+                        sum(not failures for failures in by_case.values()),
+                        len(cases),
+                        outcome.failures,
+                    ),
+                )
+            },
+            "tokens": _tokens(measurements),
+            "cost_usd": 0.0,  # a replay makes no billed call
+            "measurements": {"per_lead": measurements},
+        }
+
+    return _evaluate(
+        "chat",
+        _case_set_id(None, [CHAT_DIR / "cases"]),
         settings,
         leadgen_http,
         mailbox_http,
@@ -534,7 +631,7 @@ def failed(row: Mapping[str, Any]) -> list[str]:
     )
 
 
-SUITES = {"seed42": evaluate_seed42, "replies": evaluate_replies}
+SUITES = {"seed42": evaluate_seed42, "replies": evaluate_replies, "chat": evaluate_chat}
 
 
 @contextmanager

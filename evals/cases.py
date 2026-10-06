@@ -9,14 +9,17 @@ from typing import Any
 import yaml
 from pydantic import JsonValue
 
+import uwh.chat
 import uwh.providers
 import uwh.skills
+from evals.graders.chat import Expect
 from uwh.rules.graphs import Outcome, load_graphs
 from uwh.rules.models import Rulings
 from uwh.skills.evaluate_playbook import skill as evaluate_playbook
 
 ROOT = Path(__file__).resolve().parent.parent
 SKILLS_DIR = Path(uwh.skills.__file__).parent
+CHAT_DIR = Path(uwh.chat.__file__).parent
 WORLD = Path(uwh.providers.__file__).parent / "data" / "world-42.json"
 # What the first pass adds to lead 008's captured fields: the derived siding class and the fetched replacement cost.
 FIRST_PASS_ADDITIONS: dict[str, JsonValue] = {
@@ -52,6 +55,28 @@ class ReplyCase:
     lead: str
     body: str
     label: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class ChatCase:
+    """A lead of the seed-42 run and the messages put to the assistant about it, each with the
+    outcome it must have."""
+
+    name: str
+    lead: str
+    turns: list[tuple[str, Expect]]  # (message, expected outcome)
+
+
+def load_chat_cases() -> list[ChatCase]:
+    """The cases of the chat package's `cases/` folder, files in name order."""
+    cases: list[ChatCase] = []
+    for path in sorted((CHAT_DIR / "cases").glob("*.yaml")):
+        table = yaml.safe_load(path.read_text(encoding="utf-8"))
+        cases += [
+            ChatCase(c["name"], c["lead"], [(t["message"], t["expect"]) for t in c["turns"]])
+            for c in table["cases"]
+        ]
+    return cases
 
 
 def load_reply_cases() -> list[ReplyCase]:

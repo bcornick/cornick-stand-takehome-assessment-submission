@@ -341,9 +341,22 @@
       },
       "ChatRequest": {
         "additionalProperties": false,
-        "description": "One chat turn; the server holds the conversation.",
+        "description": "One chat turn: the underwriter's message, and the lead open in the page when there is one.",
         "properties": {
+          "lead_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Id"
+          },
           "message": {
+            "maxLength": 2000,
+            "minLength": 1,
             "title": "Message",
             "type": "string"
           }
@@ -356,7 +369,7 @@
       },
       "ChatResponse": {
         "additionalProperties": false,
-        "description": "One answer. Asked to approve or reject, the assistant creates no card and points the\nunderwriter to the item instead (7.4, A.11): `item_ids` are the items the answer points to.",
+        "description": "One answer. A directive the command layer accepts comes back as a card; one it refuses (an\napproval, a rejection, a send) comes back as an answer that says why, with no card (7.4, A.11).",
         "properties": {
           "answer": {
             "title": "Answer",
@@ -369,26 +382,21 @@
             "title": "Cited Event Ids",
             "type": "array"
           },
-          "item_ids": {
-            "items": {
-              "type": "integer"
-            },
-            "title": "Item Ids",
-            "type": "array"
-          },
-          "proposals": {
-            "items": {
-              "$ref": "#/components/schemas/ProposalView"
-            },
-            "title": "Proposals",
-            "type": "array"
+          "proposal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProposalView"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
           "answer",
           "cited_event_ids",
-          "proposals",
-          "item_ids"
+          "proposal"
         ],
         "title": "ChatResponse",
         "type": "object"
@@ -2225,6 +2233,84 @@
           }
         },
         "summary": "List Proposals"
+      }
+    },
+    "/api/proposals/{proposal_id}/apply": {
+      "post": {
+        "operationId": "apply_proposal_api_proposals__proposal_id__apply_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "title": "Proposal Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Apply Proposal"
+      }
+    },
+    "/api/proposals/{proposal_id}/dismiss": {
+      "post": {
+        "operationId": "dismiss_proposal_api_proposals__proposal_id__dismiss_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "title": "Proposal Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposalView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dismiss Proposal"
       }
     },
     "/api/replies": {
