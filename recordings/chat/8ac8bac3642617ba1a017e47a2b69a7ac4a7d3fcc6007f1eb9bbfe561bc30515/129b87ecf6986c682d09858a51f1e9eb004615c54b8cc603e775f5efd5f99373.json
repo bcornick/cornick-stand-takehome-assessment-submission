@@ -1,0 +1,20 @@
+{
+  "input": {
+    "history": [],
+    "lead_id": "LEAD-00000042-008",
+    "message": "What was most recently recorded for this lead?",
+    "steps": []
+  },
+  "input_hash": "129b87ecf6986c682d09858a51f1e9eb004615c54b8cc603e775f5efd5f99373",
+  "model_id": "deepseek-flash",
+  "prompt_version": "8ac8bac3642617ba1a017e47a2b69a7ac4a7d3fcc6007f1eb9bbfe561bc30515",
+  "request_id": "",
+  "skill": "chat",
+  "stop_reason": "tool_use",
+  "tokens_in": 1344,
+  "tokens_out": 58,
+  "tool_input": {
+    "action": "lead_events",
+    "lead_id": "LEAD-00000042-008"
+  }
+}
