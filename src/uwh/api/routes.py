@@ -7,8 +7,6 @@ from fastapi import APIRouter, HTTPException
 from uwh.api.views import (
     ChatRequest,
     ChatResponse,
-    Item,
-    LeadEvents,
     ProposalView,
 )
 
@@ -17,16 +15,6 @@ router = APIRouter()
 
 def not_implemented(route: str) -> NoReturn:
     raise HTTPException(status_code=501, detail=f"{route} is not implemented")
-
-
-@router.get("/api/leads/{id}/events")
-def get_lead_events(id: str) -> LeadEvents:
-    not_implemented("GET /api/leads/{id}/events")
-
-
-@router.get("/api/items")
-def list_items() -> list[Item]:
-    not_implemented("GET /api/items")
 
 
 @router.get("/api/proposals")

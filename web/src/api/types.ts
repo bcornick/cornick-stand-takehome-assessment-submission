@@ -481,8 +481,7 @@ export interface components {
         };
         /**
          * EventRow
-         * @description An `events` row. `payload` is an object that follows `PAYLOAD_MODELS[type]`; the row checks
-         *     it, so the schema stays one object type rather than 28 row variants.
+         * @description One of a lead's events: its id, type, actor, simulated time and a one-line summary of its payload.
          */
         EventRow: {
             /**
@@ -492,33 +491,10 @@ export interface components {
             actor: "workflow" | "underwriter" | "assistant" | "inbound";
             /** Id */
             id: number;
-            /** Lead Id */
-            lead_id: string | null;
-            /**
-             * Mode
-             * @enum {string}
-             */
-            mode: "live" | "replay" | "record";
-            /** Model Id */
-            model_id: string | null;
-            /** Payload */
-            payload: {
-                [key: string]: components["schemas"]["JsonValue"];
-            };
-            /** Prompt Versions */
-            prompt_versions: {
-                [key: string]: string;
-            } | null;
-            /** Real Ts */
-            real_ts: string;
-            /** Request Id */
-            request_id: string | null;
-            /** Ruleset Hash */
-            ruleset_hash: string | null;
-            /** Run Id */
-            run_id: string | null;
             /** Sim Ts */
             sim_ts: string;
+            /** Summary */
+            summary: string;
             type: components["schemas"]["EventType"];
         };
         /**
@@ -574,6 +550,23 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /**
+         * Item
+         * @description An open item an underwriter acts on: a review, a question card or an unknown delivery. The
+         *     lead's detail carries what its action needs; this row says which lead to open.
+         */
+        Item: {
+            detail: components["schemas"]["BlockerDetail"];
+            /** Item Id */
+            item_id: number;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "delivery_unknown" | "underwriter_question" | "underwriter_review" | "data" | "producer_reply";
+            /** Lead Id */
+            lead_id: string;
         };
         JsonValue: unknown;
         /**
@@ -655,24 +648,6 @@ export interface components {
             /** Show */
             show: string[];
         };
-        /**
-         * OpenChoiceView
-         * @description An open underwriter choice with the values of the fields it shows (section 11).
-         */
-        OpenChoiceView: {
-            /** Choice Id */
-            choice_id: string;
-            /** Options */
-            options: string[];
-            /** Prompt */
-            prompt: string;
-            /** Show */
-            show: string[];
-            /** Shown Values */
-            shown_values: {
-                [key: string]: components["schemas"]["JsonValue"];
-            };
-        };
         /** PlannedEffect */
         PlannedEffect: {
             /** Committed */
@@ -730,35 +705,6 @@ export interface components {
              * @enum {string}
              */
             type: "deliver_reply" | "edit_draft" | "resolve_fact" | "decline_lead" | "record_ruling" | "start_run";
-        };
-        /**
-         * QuestionItem
-         * @description The lead's open choices as one card (section 11). `item_id` is the question blocker's id.
-         */
-        QuestionItem: {
-            /** Choices */
-            choices: components["schemas"]["OpenChoiceView"][];
-            detail: components["schemas"]["BlockerDetail"];
-            /** Item Id */
-            item_id: number;
-            /**
-             * Kind
-             * @enum {string}
-             */
-            kind: "delivery_unknown" | "underwriter_question" | "underwriter_review" | "data" | "producer_reply";
-            /** Lead Id */
-            lead_id: string;
-            observation: components["schemas"]["FactView"] | null;
-            /**
-             * Owner
-             * @enum {string}
-             */
-            owner: "underwriter" | "producer" | "data_team";
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "question";
         };
         /**
          * QueueRow
@@ -887,40 +833,6 @@ export interface components {
             reason: string;
             /** Value */
             value: string | number | boolean;
-        };
-        /**
-         * ReviewItem
-         * @description An open review: `item` says which A.11 row it is, so the client knows what `approve` and
-         *     `reject` do. A draft row carries the draft whose `payload_hash` an `approve` echoes.
-         */
-        ReviewItem: {
-            detail: components["schemas"]["BlockerDetail"];
-            draft: components["schemas"]["DraftView"] | null;
-            /**
-             * Item
-             * @enum {string}
-             */
-            item: "draft_request" | "draft_quote_packet" | "draft_decline_notice" | "pending_observation" | "delivery_unknown" | "no_contact_route" | "review_raised_by_event" | "review_cause_persists";
-            /** Item Id */
-            item_id: number;
-            /**
-             * Kind
-             * @enum {string}
-             */
-            kind: "delivery_unknown" | "underwriter_question" | "underwriter_review" | "data" | "producer_reply";
-            /** Lead Id */
-            lead_id: string;
-            observation: components["schemas"]["FactView"] | null;
-            /**
-             * Owner
-             * @enum {string}
-             */
-            owner: "underwriter" | "producer" | "data_team";
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "review";
         };
         /**
          * RuleTrace
@@ -1134,7 +1046,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": (components["schemas"]["ReviewItem"] | components["schemas"]["QuestionItem"])[];
+                    "application/json": components["schemas"]["Item"][];
                 };
             };
         };

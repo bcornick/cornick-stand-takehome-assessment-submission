@@ -1,4 +1,4 @@
-# ABOUTME: GET /api/leads and GET /api/leads/{id} (A.5, section 11): the queue rows in display order, and one lead's facts with their source tags, plan, open blockers and messages, built from stored state.
+# ABOUTME: GET /api/leads, /api/leads/{id}, /api/leads/{id}/events and /api/items (A.5, section 11): the queue rows in display order, one lead's detail and event list, and the open items across leads, built from stored state.
 # ABOUTME: The queue groups leads by who the primary next action waits on, and orders a group by effective date, then lead id.
 import json
 import sqlite3
@@ -7,10 +7,21 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException
 
 from uwh.api.runtime import RuntimeDependency
-from uwh.api.views import BlockerView, DraftView, FactView, LeadDetail, QueueGroup, QueueRow
-from uwh.rules.models import ActionPlan
+from uwh.api.views import (
+    BlockerView,
+    DraftView,
+    EventRow,
+    FactView,
+    Item,
+    LeadDetail,
+    LeadEvents,
+    QueueGroup,
+    QueueRow,
+)
+from uwh.rules.models import ActionPlan, StrictModel
 from uwh.runtime.clock import age_business_days
 from uwh.runtime.event_types import REQUEST_KINDS
+from uwh.runtime.events import read_events
 from uwh.runtime.facts import effective_facts
 from uwh.runtime.runs import current_run, run_sim_now
 from uwh.runtime.waits import Blocker, open_blockers, primary_next_action
@@ -20,6 +31,12 @@ router = APIRouter()
 
 # The assumed service level of section 11: Stand's distributor page promises estimates inside two business days.
 SERVICE_LEVEL_BUSINESS_DAYS = 2
+
+# The blocker kinds an underwriter acts on; a data or producer wait is not an item.
+ITEM_KINDS = ("underwriter_review", "underwriter_question", "delivery_unknown")
+
+# The longest event summary the pane shows.
+SUMMARY_LIMIT = 120
 
 _GROUP_ORDER: tuple[QueueGroup, ...] = (
     "blocked_on_underwriter",
@@ -150,6 +167,42 @@ def lead_detail(db: sqlite3.Connection, lead_id: str) -> LeadDetail | None:
     )
 
 
+def _summary(payload: StrictModel) -> str:
+    """The payload's fields as `name: value` pairs on one line, cut to SUMMARY_LIMIT characters."""
+    line = "; ".join(f"{name}: {value}" for name, value in payload)
+    return line if len(line) <= SUMMARY_LIMIT else line[: SUMMARY_LIMIT - 3] + "..."
+
+
+def lead_events(db: sqlite3.Connection, lead_id: str) -> LeadEvents | None:
+    """The lead's events in id order, or None when there is no such lead."""
+    if db.execute("SELECT 1 FROM leads WHERE lead_id = ?", (lead_id,)).fetchone() is None:
+        return None
+    return LeadEvents(
+        lead_id=lead_id,
+        events=[
+            EventRow(
+                id=event.id,
+                type=event.type,
+                actor=event.actor,
+                sim_ts=event.sim_ts.isoformat(),
+                summary=_summary(event.payload),
+            )
+            for event in read_events(db, lead_id=lead_id)
+        ],
+    )
+
+
+def open_items(db: sqlite3.Connection) -> list[Item]:
+    """The open reviews, question cards and unknown deliveries of every lead, by lead id then item id."""
+    items = [
+        Item(item_id=b.id, lead_id=b.lead_id, kind=b.kind, detail=b.detail)
+        for (lead_id,) in db.execute("SELECT lead_id FROM leads").fetchall()
+        for b in open_blockers(db, lead_id)
+        if b.kind in ITEM_KINDS
+    ]
+    return sorted(items, key=lambda item: (item.lead_id, item.item_id))
+
+
 # The handlers carry no docstring: FastAPI copies one into the OpenAPI document.
 @router.get("/api/leads")
 def list_leads(runtime: RuntimeDependency) -> list[QueueRow]:
@@ -167,3 +220,18 @@ def get_lead(id: str, runtime: RuntimeDependency) -> LeadDetail:
     if detail is None:
         raise HTTPException(status_code=404, detail=f"no lead {id}")
     return detail
+
+
+@router.get("/api/leads/{id}/events")
+def get_lead_events(id: str, runtime: RuntimeDependency) -> LeadEvents:
+    with runtime.database() as db:
+        events = lead_events(db, id)
+    if events is None:
+        raise HTTPException(status_code=404, detail=f"no lead {id}")
+    return events
+
+
+@router.get("/api/items")
+def list_items(runtime: RuntimeDependency) -> list[Item]:
+    with runtime.database() as db:
+        return open_items(db)
