@@ -25,6 +25,7 @@ from uwh.runtime.bootstrap import TIMEOUT_SECONDS
 from uwh.runtime.commands import CommandResult, submit_command
 from uwh.runtime.facts import LedgerRules
 from uwh.runtime.hashing import ruleset_hash
+from uwh.runtime.jev_client import JevAccess, jev_call
 from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
 from uwh.runtime.model import ModelAccess, anthropic_call
@@ -37,6 +38,8 @@ logger = logging.getLogger(__name__)
 
 # How long one model call may take before it is abandoned.
 MODEL_TIMEOUT_SECONDS = 60.0
+# How long one Jev call may take before it is abandoned.
+JEV_TIMEOUT_SECONDS = 30.0
 
 # The image's rules data: the ruleset every run uses (A.4).
 IMAGE_RULES_DATA = Path(uwh.rules.__file__).parent / "data"
@@ -142,12 +145,23 @@ def open_runtime(
             )
             stack.callback(model_client.close)
             live = anthropic_call(model_client, settings.model_id)
+        jev = None
+        if settings.typesafe_api_key is not None:
+            jev_http = httpx2.Client(
+                base_url=settings.typesafe_base_url,
+                headers={"Authorization": f"Bearer {settings.typesafe_api_key}"},
+                timeout=JEV_TIMEOUT_SECONDS,
+            )
+            stack.enter_context(jev_http)
+            jev = JevAccess(
+                settings.run_mode, Path(settings.recordings_dir) / "jev", jev_call(jev_http)
+            )
         env = RunEnvironment(
             settings.run_mode,
             ruleset_hash(IMAGE_RULES_DATA),
             rules,
             registry,
-            ModelAccess(settings.run_mode, Path(settings.recordings_dir), live),
+            ModelAccess(settings.run_mode, Path(settings.recordings_dir), live, jev),
             build_steps(registry, StandInProviders.for_seed(settings.seed), rules),
             Path(uwh.skills.__file__).parent,
             lambda: datetime.now(UTC),

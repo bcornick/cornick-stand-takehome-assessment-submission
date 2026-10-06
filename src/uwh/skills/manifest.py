@@ -28,6 +28,9 @@ class SkillManifest(StrictModel):
     fallback: str
     pass_threshold: float | None = Field(default=None, gt=0, le=1)
     model_skill: bool = False
+    jev_threshold: float | None = Field(
+        default=None, gt=0, le=1
+    )  # Jev's classification is used at or above this confidence
     actor: Actor = "workflow"
 
     @model_validator(mode="after")

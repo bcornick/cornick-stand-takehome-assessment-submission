@@ -14,6 +14,7 @@ from pydantic import ValidationError
 from uwh.rules.models import StrictModel
 from uwh.runtime.event_types import EventType, ModelCalled, ReplayMiss
 from uwh.runtime.events import EventContext, append_event
+from uwh.runtime.jev_client import JevAccess
 from uwh.runtime.modes import RecordingMiss, exchange_for_mode
 from uwh.runtime.recordings import Exchange, RecordingKey, input_hash, prompt_version
 from uwh.settings import RunMode
@@ -89,11 +90,13 @@ def anthropic_call(client: anthropic.Anthropic, model_id: str) -> LiveCall:
 
 @dataclass(frozen=True)
 class ModelAccess:
-    """What the run mode lets a model skill do. `live` is None when the environment holds no key."""
+    """What the run mode lets a model skill do. `live` is None when the environment holds no key, and
+    `jev` is None when it holds no Jev key."""
 
     mode: RunMode
     recordings: Path
     live: LiveCall | None
+    jev: JevAccess | None = None
 
     @property
     def available(self) -> bool:

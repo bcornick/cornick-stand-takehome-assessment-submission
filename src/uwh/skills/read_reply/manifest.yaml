@@ -6,3 +6,4 @@ command_classes: []
 fallback: the reply goes to the underwriter unread
 pass_threshold: 1.0
 model_skill: true
+jev_threshold: 0.7

@@ -76,6 +76,7 @@ SkillStatus = Literal["untested", "passing", "failing", "unavailable"]
 # A.10: the two codes a skill abstains with, and nothing else.
 AbstentionReason = Literal["invalid_tool_input", "refusal"]
 ReplyClassification = Literal["answers_all", "answers_some", "declines_to_answer", "off_topic"]
+ClassificationSource = Literal["jev", "model"]
 RulingKind = Literal["choice", "suppression", "decline", "withdrawal", "reopened_choice"]
 AutonomyLevel = Literal["auto", "review"]
 
@@ -246,6 +247,10 @@ class ReplyRead(StrictModel):
     intent_id: str  # the intent the reply answers
     body_hash: str  # the hash of the delivered reply body that was read
     classification: ReplyClassification | None
+    classified_by: (
+        ClassificationSource | None
+    )  # who answered the classification; None for an abstention
+    jev_confidence: float | None  # the top probability Jev returned; None when Jev gave no answer
     abstention: AbstentionReason | None
     candidates: list[LocatedCandidate]
     dropped: list[
@@ -258,6 +263,8 @@ class ReplyRead(StrictModel):
             raise ValueError("a reply read holds exactly one of classification and abstention")
         if self.abstention is not None and (self.candidates or self.dropped):
             raise ValueError("an abstention has no candidates and none dropped")
+        if (self.classification is None) != (self.classified_by is None):
+            raise ValueError("a classification has a source and an abstention has none")
         return self
 
 

@@ -363,6 +363,7 @@ def _evaluate(
         "suite": suite,
         "control": None if control is None else control.value,
         "mode": settings.run_mode,
+        "jev": settings.typesafe_api_key is not None,
         "commit": settings.git_commit,
         "evaluator_hash": _evaluator_hash(),
         "case_set_id": case_set_id,
@@ -651,9 +652,18 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--suite", choices=sorted(SUITES), default="seed42")
     parser.add_argument("--control", choices=[c.value for c in Control])
     parser.add_argument("--hypothesis")
+    parser.add_argument(
+        "--jev",
+        action="store_true",
+        help="classify replies with Jev first, from recordings/jev; needs TYPESAFE_API_KEY set",
+    )
     args = parser.parse_args(argv)
     # Each run opens a database of its own, so the path the settings need is a placeholder.
     settings = Settings.load({**os.environ, "UWH_DB": "per run"})
+    if args.jev and settings.typesafe_api_key is None:
+        parser.error("--jev needs TYPESAFE_API_KEY set; the replay reads recordings/jev with it")
+    if not args.jev:
+        settings = replace(settings, typesafe_api_key=None)
     if settings.run_mode != "replay":
         parser.error("the suites replay recordings: set RUN_MODE=replay")
     if settings.git_commit == "unknown":

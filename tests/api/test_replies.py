@@ -1,5 +1,6 @@
 # ABOUTME: Tests the reply path of lead 008 through the running app: POST /api/replies and /api/replies/fixtures, the reading from the committed recording, the facts and round it settles, the quote packet draft, and the approval that sends it.
 # ABOUTME: The app runs in process with the real steps against Stand's leadgen and mailbox apps in process; replay serves the model's reading from recordings/, and hand-made readings stand in for the abnormal replies.
+import shutil
 import sqlite3
 from collections.abc import Iterator
 from dataclasses import replace
@@ -12,7 +13,7 @@ from fastapi.testclient import TestClient
 from tests.api.helpers import FIXTURE_REPLIES, LEAD_008, RECORDINGS, REGISTRY, first_pass
 from uwh.api import runtime
 from uwh.rules.registry import load_registry
-from uwh.runtime.event_types import EventType
+from uwh.runtime.event_types import EventType, ReplyRead
 from uwh.runtime.events import read_events
 from uwh.runtime.facts import effective_facts
 from uwh.runtime.leadgen_client import LeadgenClient
@@ -20,13 +21,14 @@ from uwh.runtime.mailbox_client import MailboxClient
 from uwh.runtime.recordings import (
     Exchange,
     RecordingKey,
+    input_hash,
     read_recording,
     write_recording,
 )
 from uwh.runtime.store import open_store
 from uwh.runtime.waits import open_blockers
 from uwh.settings import Settings
-from uwh.skills.read_reply import skill
+from uwh.skills.read_reply import jev, skill
 from uwh.skills.read_reply.skill import MAX_BODY_CHARACTERS
 
 FIXTURE_BODY = (FIXTURE_REPLIES / f"{LEAD_008}.txt").read_text(encoding="utf-8")
@@ -300,3 +302,62 @@ def test_a_fixture_reply_over_the_body_limit_is_refused_and_the_others_are_deliv
             (LEAD_008, True),
         ]
         assert "longer than" in response.json()["replies"][0]["reason"]
+
+
+def jev_settings(
+    settings: Settings, tmp_path: Path, probabilities: dict[str, float] | None
+) -> Settings:
+    """Settings with a Jev key, replaying the committed model recordings and, when `probabilities` is
+    given, a Jev recording of the fixture reply that returns them."""
+    recordings = tmp_path / "recordings"
+    shutil.copytree(RECORDINGS, recordings)
+    if probabilities is not None:
+        shown = {"state": FIXTURE_BODY, "options": jev.QUESTION.options}
+        key = RecordingKey("read_reply", jev.QUESTION.version, input_hash(shown))
+        exchange = Exchange(
+            skill=key.skill,
+            prompt_version=key.prompt_version,
+            input_hash=key.input_hash,
+            input={},
+            model_id="jev-1.13.0",
+            request_id="",
+            stop_reason="",
+            tokens_in=1,
+            tokens_out=1,
+            tool_input={"probabilities": probabilities},
+        )
+        write_recording(recordings / "jev", key, exchange)
+    return replace(settings, typesafe_api_key="not-used", recordings_dir=str(recordings))
+
+
+def test_with_a_jev_key_the_reply_is_classified_from_the_jev_recording(
+    settings: Settings, leadgen: LeadgenClient, mailbox: MailboxClient, tmp_path: Path
+) -> None:
+    probabilities = {option: 0.0 for option in jev.QUESTION.options}
+    probabilities |= {"declines_to_answer": 0.9, "answers_all": 0.1}
+    with first_pass(jev_settings(settings, tmp_path, probabilities), leadgen, mailbox) as app:
+        db = open_store(settings.db_path)
+
+        assert deliver(app, request_intent_id(db))["accepted"] is True
+
+        (read,) = [e.payload for e in read_events(db) if e.type is EventType.reply_read]
+        assert isinstance(read, ReplyRead)
+        assert (read.classification, read.classified_by, read.jev_confidence) == (
+            "declines_to_answer",
+            "jev",
+            0.9,
+        )
+        db.close()
+
+
+def test_with_a_jev_key_and_no_jev_recording_the_reply_fails_closed(
+    settings: Settings, leadgen: LeadgenClient, mailbox: MailboxClient, tmp_path: Path
+) -> None:
+    with first_pass(jev_settings(settings, tmp_path, None), leadgen, mailbox) as app:
+        db = open_store(settings.db_path)
+
+        answer = deliver(app, request_intent_id(db))
+
+        assert answer["accepted"] is False and "no recording" in answer["reason"]
+        assert [e.type for e in read_events(db) if e.type is EventType.reply_read] == []
+        db.close()
