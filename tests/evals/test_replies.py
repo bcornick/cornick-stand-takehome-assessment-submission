@@ -60,6 +60,11 @@ def test_the_row_says_jev_when_a_jev_key_is_set(
     )
 
     assert row["jev"] is True
+    by_model = row["measurements"]["by_model"]
+    assert {"deepseek-flash", "jev-1.13.0"} <= set(by_model)
+    assert row["tokens"] == {
+        key: sum(used[f"tokens_{key}"] for used in by_model.values()) for key in ("in", "out")
+    }
 
 
 # The state after the fixture replies is built by the first test that asks for it and shared with the rest.

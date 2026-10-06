@@ -210,8 +210,9 @@ def _expectations(labels: Mapping[str, Any], phase: Phase) -> Expectations:
     return {lead: label[phase] for lead, label in labels.items() if label[phase] is not None}
 
 
-def _measurements(db: sqlite3.Connection) -> dict[str, dict[str, float]]:
-    """Tokens and wall time per lead, from the events of the lead so far."""
+def _measurements(db: sqlite3.Connection) -> dict[str, Any]:
+    """Tokens and wall time per lead, from the events of the lead so far, and the tokens of every
+    `model_called` event of the run by the model that answered, Jev's among them."""
     per_lead: dict[str, dict[str, float]] = {}
     for (lead_id,) in db.execute("SELECT lead_id FROM leads ORDER BY lead_id"):
         events = read_events(db, lead_id=lead_id)
@@ -221,7 +222,15 @@ def _measurements(db: sqlite3.Connection) -> dict[str, dict[str, float]]:
             "tokens_out": sum(c.tokens_out for c in called),
             "wall_seconds": round((events[-1].real_ts - events[0].real_ts).total_seconds(), 3),
         }
-    return per_lead
+    by_model: dict[str, dict[str, int]] = {}
+    for event in read_events(db):
+        if not isinstance(event.payload, ModelCalled):
+            continue
+        assert event.model_id is not None  # a model call names its model
+        used = by_model.setdefault(event.model_id, {"tokens_in": 0, "tokens_out": 0})
+        used["tokens_in"] += event.payload.tokens_in
+        used["tokens_out"] += event.payload.tokens_out
+    return {"per_lead": per_lead, "by_model": by_model}
 
 
 def _reference_run(
@@ -230,9 +239,9 @@ def _reference_run(
     mailbox: MailboxClient,
     labels: Mapping[str, Any],
     scores: dict[str, Score],
-) -> tuple[list[str], dict[str, dict[str, float]]]:
+) -> tuple[list[str], dict[str, Any]]:
     """Run seed 42, grade the settle point, play the actions, grade again. Returns the critical
-    errors and the per-lead measurements."""
+    errors and the measurements."""
     critical: list[str] = []
     with open_runtime(settings, leadgen, mailbox) as runtime, runtime.database() as db:
         result, first_pass = runtime.submit_as_underwriter(db, "start_run", {"seed": SEED})
@@ -340,8 +349,12 @@ def _skill_results() -> dict[str, JsonValue]:
     }
 
 
-def _tokens(measurements: Mapping[str, Mapping[str, float]]) -> dict[str, float]:
-    return {key: sum(m[f"tokens_{key}"] for m in measurements.values()) for key in ("in", "out")}
+def _tokens(measurements: Mapping[str, Any]) -> dict[str, int]:
+    """The tokens of every model call of the run, whichever model answered."""
+    return {
+        key: sum(used[f"tokens_{key}"] for used in measurements["by_model"].values())
+        for key in ("in", "out")
+    }
 
 
 def _evaluate(
@@ -427,7 +440,7 @@ def evaluate_seed42(
             "skill_results": _skill_results(),
             "tokens": _tokens(measurements),
             "cost_usd": 0.0,  # a replay makes no billed call
-            "measurements": {"per_lead": measurements},
+            "measurements": measurements,
         }
 
     return _evaluate(
@@ -514,7 +527,7 @@ def evaluate_replies(
             },
             "tokens": _tokens(measurements),
             "cost_usd": 0.0,  # a replay makes no billed call
-            "measurements": {"per_lead": measurements},
+            "measurements": measurements,
         }
 
     return _evaluate(
@@ -604,7 +617,7 @@ def evaluate_chat(
             },
             "tokens": _tokens(measurements),
             "cost_usd": 0.0,  # a replay makes no billed call
-            "measurements": {"per_lead": measurements},
+            "measurements": measurements,
         }
 
     row = _evaluate(
