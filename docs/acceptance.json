@@ -61,5 +61,26 @@
     "description": "The results log shows one improvement cycle on reply reading: a run with a failing reply case and a hypothesis, a rerun that passes, and a decision row that keeps it. Expect: `true`.",
     "command": "jq -s -e '[.[] | select(.kind == \"run\" and .suite == \"replies\")] as $r | ($r | map(select(.hypothesis != null and (.scores | to_entries | any(.value.passed | not)))) | length >= 1) and ($r | map(select(.hypothesis != null and (.scores | to_entries | all(.value.passed)))) | length >= 1) and ([.[] | select(.kind == \"decision\" and .keep == true)] | length >= 1)' evals/results.jsonl",
     "passes": true
+  },
+  {
+    "id": "M4-A1",
+    "milestone": 4,
+    "description": "Every underwriter action works against the running app through the same routes the browser calls: approve, edit and reject a draft, approve and reject a pending observation, record an underwriter choice with a reason, resolve a fact, decline a lead, paste a reply. Expect: all pass.",
+    "command": "uv run pytest -m integration tests/integration/test_underwriter_actions.py",
+    "passes": false
+  },
+  {
+    "id": "M4-A2",
+    "milestone": 4,
+    "description": "The web page's controls post the right commands and render every item kind, from the browser build. Expect: all pass.",
+    "command": "cd web && pnpm test -- --run",
+    "passes": false
+  },
+  {
+    "id": "M4-A3",
+    "milestone": 4,
+    "description": "The chat cases pass in the eval: a question causes zero commands and cites event ids; a directive becomes a proposal card and a reworded refused directive stays refused. Expect: exit 0, then `true`.",
+    "command": "make eval ARGS='--suite chat' && tail -n 1 evals/results.jsonl | jq -e '.kind == \"run\" and .suite == \"chat\" and (.scores | to_entries | all(.value.passed))'",
+    "passes": false
   }
 ]
