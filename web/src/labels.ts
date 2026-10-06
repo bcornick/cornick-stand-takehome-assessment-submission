@@ -53,8 +53,8 @@ export const GROUP_ORDER: Group[] = [
 ]
 
 export const GROUP_LABELS: Record<Group, string> = {
-  blocked_on_underwriter: 'Blocked on the underwriter',
-  waiting_on_data_or_producer: 'Waiting on data or producer',
+  blocked_on_underwriter: 'Waiting on the underwriter',
+  waiting_on_data_or_producer: 'Waiting on the producer or data',
   finished: 'Finished',
 }
 

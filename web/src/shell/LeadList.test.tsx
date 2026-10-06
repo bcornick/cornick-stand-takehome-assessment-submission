@@ -1,0 +1,95 @@
+// ABOUTME: Tests the lead list: leads appear in the order served under their group headings, the selected entry is current, a lead without an address says so, and a click reports the conversation key.
+// ABOUTME: The run and the rows are typed objects of the generated API types.
+import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { describe, expect, it, vi } from 'vitest'
+import type { components } from '@/api/types'
+import { QUEUE } from '@/surface'
+import { LeadList } from './LeadList'
+
+type Schemas = components['schemas']
+
+const run: Schemas['RunView'] = {
+  run_id: 'run-1',
+  mode: 'replay',
+  seed: 42,
+  sim_now: '2026-06-29T08:00:00.000000Z',
+  first_pass_complete: true,
+  example_prompts: [],
+  summary: {
+    quotes_sent: 0,
+    follow_ups_sent: 1,
+    declines_approved: 0,
+    waiting_on_underwriter: 1,
+    waiting_on_producer: 1,
+    waiting_on_data: 0,
+    delivery_unknown: 0,
+  },
+}
+
+const row: Schemas['QueueRow'] = {
+  lead_id: 'LEAD-00000042-008',
+  label: '8924 Lakeview Blvd',
+  status: 'in_progress',
+  primary_next_action: 'underwriter_review',
+  waits_on: 'underwriter',
+  age_business_days: 0.5,
+  service_level_breached: false,
+  effective_date: '2026-07-23',
+  ask_count: 2,
+  group: 'blocked_on_underwriter',
+}
+const rows: Schemas['QueueRow'][] = [
+  { ...row, lead_id: 'LEAD-00000042-009', label: '1 Elm St' },
+  row,
+  {
+    ...row,
+    lead_id: 'LEAD-00000042-001',
+    label: 'LEAD-00000042-001',
+    primary_next_action: 'producer_reply',
+    waits_on: 'producer',
+    service_level_breached: true,
+    group: 'waiting_on_data_or_producer',
+  },
+]
+
+describe('LeadList', () => {
+  it('lists the leads in the order served under their group headings and marks the selected one', () => {
+    render(<LeadList run={run} rows={rows} selected={row.lead_id} onSelect={() => undefined} />)
+    const blocked = screen.getByRole('region', { name: 'Waiting on the underwriter' })
+    const waiting = screen.getByRole('region', { name: 'Waiting on the producer or data' })
+    expect(screen.queryByRole('region', { name: 'Finished' })).toBeNull()
+
+    const buttons = within(blocked).getAllByRole('button')
+    expect(buttons.map((button) => button.textContent)).toEqual([
+      expect.stringContaining('Lead 009'),
+      expect.stringContaining('Lead 008'),
+    ])
+    expect(within(blocked).getAllByText('Underwriter review')).toHaveLength(2)
+    expect(within(waiting).getByText('Producer reply')).toBeInTheDocument()
+    expect(within(waiting).getByText(/Past service level/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Lead 008/ })).toHaveAttribute('aria-current', 'true')
+    expect(screen.getByRole('button', { name: /Lead 009/ })).not.toHaveAttribute('aria-current')
+  })
+
+  it('says "no address" for a lead whose label is its id', () => {
+    render(<LeadList run={run} rows={rows} selected={QUEUE} onSelect={() => undefined} />)
+    expect(screen.getByRole('button', { name: /Lead 001/ })).toHaveTextContent('no address')
+    expect(screen.getByRole('button', { name: 'Queue' })).toHaveAttribute('aria-current', 'true')
+  })
+
+  it('reports the lead id of a clicked lead and the queue key of the Queue entry', async () => {
+    const onSelect = vi.fn()
+    render(<LeadList run={run} rows={rows} selected={QUEUE} onSelect={onSelect} />)
+    await userEvent.click(screen.getByRole('button', { name: /Lead 009/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Queue' }))
+    expect(onSelect.mock.calls).toEqual([['LEAD-00000042-009'], [QUEUE]])
+  })
+
+  it('points to the demo controls when no run is loaded', () => {
+    render(
+      <LeadList run={{ ...run, run_id: null }} rows={[]} selected={QUEUE} onSelect={() => undefined} />,
+    )
+    expect(screen.getByText('No leads are loaded. Use Demo controls, bottom right.')).toBeInTheDocument()
+  })
+})
