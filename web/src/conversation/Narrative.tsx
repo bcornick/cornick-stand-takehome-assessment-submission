@@ -43,7 +43,7 @@ function BulletRow({ bullet, leadId, onOpen }: { bullet: Bullet; leadId: string;
   return (
     <li>
       <details>
-        <summary className="cursor-pointer">{`Recorded ${bullet.events.length} facts`}</summary>
+        <summary>{`Recorded ${bullet.events.length} facts`}</summary>
         <ul className="mt-1 flex flex-col gap-1 pl-4">
           {bullet.events.map((event) => (
             <BulletRow key={event.id} bullet={{ kind: 'event', event }} leadId={leadId} onOpen={onOpen} />
@@ -110,7 +110,7 @@ function BlockView({ block, lead, onOpen, onChange }: { block: Block } & Omit<Pr
             <p>{firstLine}</p>
           ) : (
             <details>
-              <summary className="cursor-pointer">{firstLine}</summary>
+              <summary>{firstLine}</summary>
               <p className="mt-1 whitespace-pre-wrap">{rest.join('\n').trim()}</p>
             </details>
           )}

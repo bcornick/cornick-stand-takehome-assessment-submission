@@ -69,4 +69,9 @@
   html {
     @apply font-sans;
     }
+  /* Everything that can be clicked shows the pointer; a disabled button does not. */
+  button:not(:disabled),
+  summary {
+    @apply cursor-pointer;
+    }
 }

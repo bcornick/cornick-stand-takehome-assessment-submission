@@ -27,7 +27,7 @@ export function ChatTail({ turns, proposals, leadId, onOpen, onSelect, onChange 
                 <p className="max-w-[80%] self-end rounded-md bg-muted px-3 py-1.5 text-sm">{turn.message}</p>
                 {turn.steps.length > 0 && (
                   <details open={closing === null} className="text-xs text-muted-foreground">
-                    <summary className="cursor-pointer">What I looked at</summary>
+                    <summary>What I looked at</summary>
                     <ul>
                       {turn.steps.map((step, stepIndex) => (
                         <li key={stepIndex}>{step}</li>
