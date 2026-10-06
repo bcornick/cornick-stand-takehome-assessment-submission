@@ -7,7 +7,7 @@
 # and road_access are on the lead. kyc_score is fetched (2), so Profile does not apply.
 
 lead_id: LEAD-00000042-001
-reviewed_by: null
+reviewed_by: Brett
 first_pass:
   status: in_progress
   outcome: request_sent
@@ -74,4 +74,3 @@ first_pass:
   effects: []
 underwriter_actions: []
 after_actions: null
-questions: []

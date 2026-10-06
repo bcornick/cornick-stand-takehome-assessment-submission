@@ -7,7 +7,7 @@
 # vegetation_clearance and road_access; p_f (0.1) is on the lead. No validator fires.
 
 lead_id: LEAD-00000042-007
-reviewed_by: null
+reviewed_by: Brett
 first_pass:
   status: in_progress
   outcome: request_sent
@@ -82,5 +82,3 @@ first_pass:
       from: "02:HIGH2"
 underwriter_actions: []
 after_actions: null
-questions:
-  - "owner_email is missing; if the source is direct_web the lead has no contact route. The fixture does not carry the source; which is it?"

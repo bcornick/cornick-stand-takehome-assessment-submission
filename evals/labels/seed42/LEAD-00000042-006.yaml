@@ -10,7 +10,7 @@
 # are on the lead, so only above_ground_pool_ladder follows on. No validator fires.
 
 lead_id: LEAD-00000042-006
-reviewed_by: null
+reviewed_by: Brett
 first_pass:
   status: in_progress
   outcome: underwriter_card
@@ -138,5 +138,3 @@ alternatives:
           text: "Confirmation of Class A siding or its replacement"
           deadline: underwriting_period
           from: "06:HI_R"
-questions:
-  - "owner_email and owner_phone_number are both missing; if the source is direct_web the lead has no contact route and the request waits on the underwriter. The fixture does not carry the source; which is it?"

@@ -7,7 +7,7 @@
 # tolerance (I35): Submitted at Calculated RCE, Quote as Submitted.
 
 lead_id: LEAD-00000042-008
-reviewed_by: null
+reviewed_by: Brett
 first_pass:
   status: in_progress
   outcome: request_sent
@@ -90,4 +90,3 @@ after_actions:
     advisories: []
     obligations: []
     not_evaluated: [electrical, plumbing]
-questions: []

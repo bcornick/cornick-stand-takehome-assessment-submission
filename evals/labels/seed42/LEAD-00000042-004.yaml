@@ -7,7 +7,7 @@
 # criterion is not evaluated (I46) and carries a note.
 
 lead_id: LEAD-00000042-004
-reviewed_by: null
+reviewed_by: Brett
 first_pass:
   status: in_progress
   outcome: request_sent
@@ -67,5 +67,3 @@ first_pass:
   effects: []
 underwriter_actions: []
 after_actions: null
-questions:
-  - "Animals (I46) is listed under `not_evaluated` beside the two cut pages because has_animals is true; is that where the note belongs, or is it only a lead note outside this list?"

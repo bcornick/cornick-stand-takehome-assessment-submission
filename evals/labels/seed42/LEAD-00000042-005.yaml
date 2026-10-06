@@ -9,7 +9,7 @@
 # present and not asked. months_unoccupied is missing, so the Occupancy page cannot decide whether it applies.
 
 lead_id: LEAD-00000042-005
-reviewed_by: null
+reviewed_by: Brett
 first_pass:
   status: in_progress
   outcome: request_sent
@@ -87,5 +87,3 @@ first_pass:
       from: "02:SPOT2"
 underwriter_actions: []
 after_actions: null
-questions:
-  - "Pools is a cut page whose applies_when rests on the missing pool_type; it is left out of `not_evaluated` as unknown rather than applying. Agreed?"

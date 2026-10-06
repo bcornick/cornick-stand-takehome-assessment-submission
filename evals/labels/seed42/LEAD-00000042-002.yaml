@@ -7,7 +7,7 @@
 # pool_type is "None", so it is inactive.
 
 lead_id: LEAD-00000042-002
-reviewed_by: null
+reviewed_by: Brett
 first_pass:
   status: in_progress
   outcome: request_sent
@@ -77,5 +77,3 @@ first_pass:
       from: "02:HIGH2"
 underwriter_actions: []
 after_actions: null
-questions:
-  - "owner_email is missing and bind-only; if this lead's source is direct_web it has no contact route (section 10.3) and the request waits on the underwriter instead of sending. The fixture does not carry the source; which is it?"

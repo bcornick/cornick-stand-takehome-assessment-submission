@@ -12,7 +12,7 @@
 # kyc_score. months_unoccupied 3 on a Primary home trips the occupancy validator; the confirmation joins the request.
 
 lead_id: LEAD-00000042-003
-reviewed_by: null
+reviewed_by: Brett
 first_pass:
   status: in_progress
   outcome: underwriter_card
@@ -139,7 +139,3 @@ alternatives:
           text: "Confirmation of Class A siding or its replacement"
           deadline: underwriting_period
           from: "06:HI_R"
-questions:
-  - "The board's `UWing period` on the Siding requirement is labelled with the typed deadline `underwriting_period`; confirm the enum value."
-  - "After `legacy_underwriting`, the I16.distance card and the held mitigation question are labelled on this reading of the all_of fan-out; is `held_catalogue_questions` a key the graders should check, or only a note?"
-  - "After `decline`, the lead keeps `in_progress` because round 1 is sent and open; agreed?"
