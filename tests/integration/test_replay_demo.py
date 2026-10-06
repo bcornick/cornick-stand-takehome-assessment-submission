@@ -90,14 +90,22 @@ def test_the_demo_runs_from_recordings_to_a_sent_quote_packet(host_urls: dict[st
         (sent_packet,) = [m for m in sent if m["metadata"]["kind"] == "quote_packet"]
         assert sent_packet["metadata"]["payload_hash"] == packet["payload_hash"]
 
-        events = [
-            event
+        events = {
+            number: app.get(f"/api/leads/LEAD-00000042-{number}/events").json()["events"]
             for number in FIRST_PASS
-            for event in app.get(f"/api/leads/LEAD-00000042-{number}/events").json()["events"]
-        ]
-        by_type = Counter(event["type"] for event in events)
+        }
+        every_event = [event for lead_events in events.values() for event in lead_events]
         # The event store records the mode on every event; replay serves a model call from a
-        # recording only (a miss raises and is recorded as replay_miss).
-        assert {event["mode"] for event in events} == {"replay"}
-        assert by_type["replay_miss"] == 0
-        assert by_type["model_called"] >= len(fixtures)
+        # recording only, and a call with no recording is recorded as replay_miss.
+        assert {event["mode"] for event in every_event} == {"replay"}
+        assert Counter(e["type"] for e in every_event)["model_called"] >= len(fixtures)
+        # The second-round request of leads 003 and 007 has no polish recording; the rendered
+        # request goes out as it is. Every other model call is recorded.
+        misses = {
+            number: [e["summary"] for e in lead_events if e["type"] == "replay_miss"]
+            for number, lead_events in events.items()
+        }
+        assert {number: found for number, found in misses.items() if found} == {
+            "003": ["No recording was found for a polish_message call."],
+            "007": ["No recording was found for a polish_message call."],
+        }
