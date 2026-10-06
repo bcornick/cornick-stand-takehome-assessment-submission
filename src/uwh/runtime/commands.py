@@ -1,5 +1,5 @@
 # ABOUTME: The command layer of 7.4 and A.11: one entry point that takes the actor from the transport, applies the actor and class rules, runs the handler and the lead's re-evaluation in one transaction, and writes `command_refused` for a refusal.
-# ABOUTME: The handlers are start_run, deliver_reply, resolve_fact, edit_draft, record_ruling, decline_lead, and approve and reject of an observation, a draft, a delivery_unknown item or an event-raised review; a command type with no handler raises NotImplementedError after the checks.
+# ABOUTME: The handlers are start_run, deliver_reply, resolve_fact, edit_draft, record_ruling, decline_lead, propose_command, and approve and reject of an observation, a draft, a delivery_unknown item or an event-raised review; a command type with no handler raises NotImplementedError after the checks.
 import sqlite3
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
@@ -38,6 +38,7 @@ from uwh.runtime.facts import (
 from uwh.runtime.hashing import sha256_hex
 from uwh.runtime.modes import RecordingMiss
 from uwh.runtime.runs import RunEnvironment, begin_run, command_context, current_run, pass_context
+from uwh.runtime.proposals import create_proposal
 from uwh.runtime.rulings import active_rulings, declines_of, write_ruling
 from uwh.runtime.send import (
     Intent,
@@ -597,6 +598,35 @@ def _decline_lead(
     return _Outcome(write_ruling(db, context, lead_id, "decline", reason), lead_id)
 
 
+def _propose_command(
+    db: sqlite3.Connection,
+    context: EventContext,
+    env: RunEnvironment,
+    payload: Mapping[str, JsonValue],
+) -> _Outcome:
+    """Store a card for a command the underwriter may apply and run nothing (A.11). The proposed
+    command is one the underwriter submits, never `approve` or `reject`: those are the underwriter's
+    own decisions. The card's command is checked in full when the underwriter applies it."""
+    proposed, rationale = _text(payload, "type"), _nonempty_text(payload, "rationale")
+    declared = command_class(proposed)
+    if declared is None:
+        raise _Refusal(f"{proposed} is not a command")
+    if proposed in ("approve", "reject") or "underwriter" not in declared.actors:
+        raise _Refusal(f"a proposal cannot carry {proposed}; the underwriter decides that")
+    proposed_payload = payload.get("payload")
+    if not isinstance(proposed_payload, dict):
+        raise _Refusal("the payload needs payload, an object")
+    return _Outcome(
+        create_proposal(
+            db,
+            context,
+            {"type": proposed, "payload": proposed_payload, "rationale": rationale},
+            _lead_named(db, proposed_payload),
+        ),
+        None,
+    )
+
+
 def _settle(
     db: sqlite3.Connection,
     context: EventContext,
@@ -842,4 +872,5 @@ _HANDLERS: dict[str, Handler] = {
     "resolve_fact": _resolve_fact,
     "record_ruling": _record_ruling,
     "decline_lead": _decline_lead,
+    "propose_command": _propose_command,
 }
