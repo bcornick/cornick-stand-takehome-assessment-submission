@@ -14,6 +14,7 @@ const run: Schemas['RunView'] = {
   seed: 42,
   sim_now: '2026-06-29T08:00:00.000000Z',
   first_pass_complete: true,
+  example_prompts: [],
   summary: {
     quotes_sent: 0,
     follow_ups_sent: 1,
@@ -77,6 +78,7 @@ const lead: Schemas['LeadDetail'] = {
       event_id: 1,
     },
   ],
+  pages: [],
   plan: {
     effects: [
       {

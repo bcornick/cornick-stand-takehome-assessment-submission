@@ -814,7 +814,7 @@
       },
       "EventRow": {
         "additionalProperties": false,
-        "description": "One of a lead's events: its id, type, run mode, actor, simulated time and a summary of its payload.\n`item_id` is the item a blocker or approval event names, `fact_key` the key a fact event records and\n`message` the words of a sent request or a reply; each is None where the event has none.",
+        "description": "One of a lead's events: its id, type, run mode, actor, simulated time and a summary of its payload.\n`item_id` is the underwriter's item a blocker or approval event names (a wait on the producer or on\ndata is no item), `choice_ids` the choices a question card opened with or the one a ruling\nanswers, `fact_key` the key a fact event records and `message` the words of a sent request or a\nreply; each is None or empty where the event has none.",
         "properties": {
           "actor": {
             "enum": [
@@ -825,6 +825,13 @@
             ],
             "title": "Actor",
             "type": "string"
+          },
+          "choice_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Choice Ids",
+            "type": "array"
           },
           "fact_key": {
             "anyOf": [
@@ -891,6 +898,7 @@
           "sim_ts",
           "summary",
           "item_id",
+          "choice_ids",
           "fact_key",
           "message"
         ],
@@ -1158,6 +1166,13 @@
             "title": "Lead Id",
             "type": "string"
           },
+          "pages": {
+            "items": {
+              "$ref": "#/components/schemas/PlanPage"
+            },
+            "title": "Pages",
+            "type": "array"
+          },
           "plan": {
             "anyOf": [
               {
@@ -1191,6 +1206,7 @@
           "revision",
           "facts",
           "plan",
+          "pages",
           "blockers",
           "drafts",
           "fields"
@@ -1328,6 +1344,53 @@
           "show"
         ],
         "title": "OpenChoice",
+        "type": "object"
+      },
+      "PlanPage": {
+        "additionalProperties": false,
+        "description": "What the lead's stored plan holds for one playbook page.",
+        "properties": {
+          "declines_on_every_branch": {
+            "items": {
+              "$ref": "#/components/schemas/RuleTrace"
+            },
+            "title": "Declines On Every Branch",
+            "type": "array"
+          },
+          "effects": {
+            "items": {
+              "$ref": "#/components/schemas/PlannedEffect"
+            },
+            "title": "Effects",
+            "type": "array"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "not_evaluated": {
+            "items": {
+              "$ref": "#/components/schemas/NotEvaluatedNote"
+            },
+            "title": "Not Evaluated",
+            "type": "array"
+          },
+          "waits_on": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Waits On",
+            "type": "array"
+          }
+        },
+        "required": [
+          "key",
+          "effects",
+          "declines_on_every_branch",
+          "waits_on",
+          "not_evaluated"
+        ],
+        "title": "PlanPage",
         "type": "object"
       },
       "PlannedEffect": {
@@ -1904,6 +1967,13 @@
         "additionalProperties": false,
         "description": "`GET /api/run`; also the reply of `POST /api/run/start`. Before a run starts `run_id` and\n`sim_now` are null and the counts are zero.",
         "properties": {
+          "example_prompts": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Example Prompts",
+            "type": "array"
+          },
           "first_pass_complete": {
             "title": "First Pass Complete",
             "type": "boolean"
@@ -1953,7 +2023,8 @@
           "seed",
           "sim_now",
           "first_pass_complete",
-          "summary"
+          "summary",
+          "example_prompts"
         ],
         "title": "RunView",
         "type": "object"

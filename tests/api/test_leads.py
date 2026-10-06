@@ -230,8 +230,10 @@ def test_the_events_of_a_lead_come_in_id_order_with_a_summary_each(
 
 
 def test_an_event_row_carries_what_the_conversation_shows_of_it(db: sqlite3.Connection) -> None:
-    add_lead(db, "L-1", "in_progress", None, ("producer_reply", "producer"))
-    blocker_id = db.execute("SELECT id FROM blockers").fetchone()[0]
+    add_lead(
+        db, "L-1", "in_progress", None, ("underwriter_review", "underwriter"), ("data", "data_team")
+    )
+    blocker_id, data_wait_id = (id for (id,) in db.execute("SELECT id FROM blockers ORDER BY id"))
     db.execute("UPDATE intents SET subject = 'Need details', body = 'Please send them.'")
     append_event(
         db,
@@ -262,14 +264,19 @@ def test_an_event_row_carries_what_the_conversation_shows_of_it(db: sqlite3.Conn
         lead_id="L-1",
     )
     close_blocker(db, CONTEXT, blocker_id)
+    close_blocker(db, CONTEXT, data_wait_id)
     db.commit()
 
     lead = lead_events(db, "L-1")
 
     assert lead is not None
+    # The underwriter's review is an item when it opens and closes; the wait on data is none.
+    assert [
+        row.item_id
+        for row in lead.events
+        if row.type in (EventType.blocker_opened, EventType.blocker_closed)
+    ] == [blocker_id, None, blocker_id, None]
     rows = {row.type: row for row in lead.events}
-    assert rows[EventType.blocker_opened].item_id == blocker_id
-    assert rows[EventType.blocker_closed].item_id == blocker_id
     sent = rows[EventType.message_sent].message
     assert sent is not None and (sent.subject, sent.body) == ("Need details", "Please send them.")
     reply = rows[EventType.reply_received].message

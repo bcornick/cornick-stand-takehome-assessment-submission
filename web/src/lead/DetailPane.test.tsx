@@ -103,6 +103,7 @@ const lead: Schemas['LeadDetail'] = {
       event_id: 2,
     },
   ],
+  pages: [],
   plan: {
     effects: [],
     declines_on_every_branch: [],

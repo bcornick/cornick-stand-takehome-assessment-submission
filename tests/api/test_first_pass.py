@@ -6,8 +6,10 @@ from collections.abc import Iterator
 
 import pytest
 
-from tests.api.helpers import restore_first_pass
+from tests.api.helpers import REGISTRY, restore_first_pass
+from uwh.api.leads import lead_detail
 from uwh.rules.models import ActionPlan
+from uwh.rules.registry import load_registry
 from uwh.runtime.event_types import EventType, PlanBuilt, TriageCompleted
 from uwh.runtime.events import read_events
 from uwh.runtime.hashing import hash_json
@@ -76,6 +78,21 @@ def test_lead_008_has_its_plan_stored_with_the_two_pages_not_evaluated(
         e for e in read_events(first_pass, lead_id=LEAD_008) if e.type == EventType.plan_built
     ]
     assert built.payload == PlanBuilt(plan=plan.model_dump(mode="json"), plan_hash=plan_hash)
+
+
+def test_lead_008s_detail_groups_its_plan_by_page(first_pass: sqlite3.Connection) -> None:
+    detail = lead_detail(first_pass, LEAD_008, load_registry(str(REGISTRY)))
+
+    assert detail is not None
+    by_page = {page.key: page for page in detail.pages}
+    assert sorted(p.effect.rule for page in detail.pages for p in page.effects) == [
+        "RC-2",
+        "RF-1",
+        "SD-1",
+    ]
+    assert [n.ref for n in by_page["electrical"].not_evaluated] == ["electrical"]
+    assert by_page["electrical"].effects == [] and "plumbing" in by_page
+    assert len(by_page) == 5
 
 
 def test_the_request_to_a_web_applicant_speaks_to_them_and_one_to_a_broker_does_not(

@@ -63,6 +63,7 @@ class RunView(StrictModel):
     sim_now: str | None  # simulated time (section 7.6), ISO timestamp
     first_pass_complete: bool  # the run has settled (A.5)
     summary: RunSummary
+    example_prompts: list[str]  # the questions the queue conversation offers as buttons
 
 
 # ---- the queue (section 11) -------------------------------------------------------------------
@@ -150,6 +151,16 @@ class DraftView(StrictModel):
     round: int
 
 
+class PlanPage(StrictModel):
+    """What the lead's stored plan holds for one playbook page."""
+
+    key: str  # the graph's id, or the note's ref for a page with no graph
+    effects: list[PlannedEffect]
+    declines_on_every_branch: list[RuleTrace]
+    waits_on: list[str]
+    not_evaluated: list[NotEvaluatedNote]
+
+
 class LeadDetail(StrictModel):
     """`GET /api/leads/{id}`. The rule traces are the plan's (`effects[].trace`,
     `declines_on_every_branch`); its open choices and `not_evaluated` notes are the plan's too."""
@@ -160,21 +171,12 @@ class LeadDetail(StrictModel):
     revision: int
     facts: list[FactView]
     plan: ActionPlan | None  # None until the lead has been triaged
+    pages: list[PlanPage]  # the plan grouped by playbook page
     blockers: list[BlockerView]
     drafts: list[DraftView]  # every message of the lead, oldest first
     fields: list[
         FactField
     ]  # the keys `resolve_fact` accepts, with the label and type each is offered by
-
-
-class PlanPage(StrictModel):
-    """What the lead's stored plan holds for one playbook page."""
-
-    key: str  # the graph's id, or the note's ref for a page with no graph
-    effects: list[PlannedEffect]
-    declines_on_every_branch: list[RuleTrace]
-    waits_on: list[str]
-    not_evaluated: list[NotEvaluatedNote]
 
 
 # ---- events (A.1) --------------------------------------------------------------------------------
@@ -189,8 +191,10 @@ class EventMessage(StrictModel):
 
 class EventRow(StrictModel):
     """One of a lead's events: its id, type, run mode, actor, simulated time and a summary of its payload.
-    `item_id` is the item a blocker or approval event names, `fact_key` the key a fact event records and
-    `message` the words of a sent request or a reply; each is None where the event has none."""
+    `item_id` is the underwriter's item a blocker or approval event names (a wait on the producer or on
+    data is no item), `choice_ids` the choices a question card opened with or the one a ruling
+    answers, `fact_key` the key a fact event records and `message` the words of a sent request or a
+    reply; each is None or empty where the event has none."""
 
     id: int
     type: EventType
@@ -199,6 +203,7 @@ class EventRow(StrictModel):
     sim_ts: str
     summary: str
     item_id: int | None
+    choice_ids: list[str]
     fact_key: str | None
     message: EventMessage | None
 

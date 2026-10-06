@@ -7,6 +7,7 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException
 
 from uwh.api.event_summary import event_summary
+from uwh.api.pages import plan_pages
 from uwh.api.runtime import RuntimeDependency
 from uwh.api.views import (
     BlockerView,
@@ -20,6 +21,7 @@ from uwh.api.views import (
     QueueGroup,
     QueueRow,
 )
+from uwh.rules.graphs import load_graphs
 from uwh.rules.models import ActionPlan, StrictModel
 from uwh.rules.registry import Registry, fact_fields
 from uwh.runtime.clock import age_business_days
@@ -31,6 +33,7 @@ from uwh.runtime.event_types import (
     FactObserved,
     MessageSent,
     ReplyReceived,
+    RulingRecorded,
 )
 from uwh.runtime.events import StoredEvent, read_events
 from uwh.runtime.facts import effective_facts
@@ -149,6 +152,7 @@ def lead_detail(db: sqlite3.Connection, lead_id: str, registry: Registry) -> Lea
     if lead is None:
         return None
     status, revision, plan_json = lead
+    plan = None if plan_json is None else ActionPlan.model_validate_json(plan_json)
     facts = effective_facts(db, lead_id)
     drafts = db.execute(
         "SELECT id, payload_hash, kind, recipient, subject, body, state, round FROM intents"
@@ -161,7 +165,8 @@ def lead_detail(db: sqlite3.Connection, lead_id: str, registry: Registry) -> Lea
         status=status,
         revision=revision,
         facts=[FactView(**vars(fact)) for fact in facts.values()],
-        plan=None if plan_json is None else ActionPlan.model_validate_json(plan_json),
+        plan=plan,
+        pages=[] if plan is None else plan_pages(plan, load_graphs()),
         blockers=[_blocker_view(db, blocker) for blocker in open_blockers(db, lead_id)],
         drafts=[
             DraftView(
@@ -194,6 +199,28 @@ def _event_message(db: sqlite3.Connection, payload: StrictModel) -> EventMessage
             return None
 
 
+def _item_id(payload: StrictModel) -> int | None:
+    """The underwriter's item the event names; a wait on the producer or on data is no item."""
+    match payload:
+        case BlockerOpened(blocker_id=id, kind=kind) | BlockerClosed(blocker_id=id, kind=kind):
+            return id if kind in ITEM_KINDS else None
+        case ApprovalRecorded(item_id=id):
+            return id
+        case _:
+            return None
+
+
+def _choice_ids(payload: StrictModel) -> list[str]:
+    """The choices a question card opened with, or the one a ruling answers."""
+    match payload:
+        case BlockerOpened(detail=detail):
+            return detail.choice_ids
+        case RulingRecorded(choice_id=str(choice_id)):
+            return [choice_id]
+        case _:
+            return []
+
+
 def _event_row(db: sqlite3.Connection, event: StoredEvent) -> EventRow:
     payload = event.payload
     return EventRow(
@@ -203,11 +230,8 @@ def _event_row(db: sqlite3.Connection, event: StoredEvent) -> EventRow:
         actor=event.actor,
         sim_ts=event.sim_ts.isoformat(),
         summary=event_summary(payload),
-        item_id=payload.blocker_id
-        if isinstance(payload, BlockerOpened | BlockerClosed)
-        else payload.item_id
-        if isinstance(payload, ApprovalRecorded)
-        else None,
+        item_id=_item_id(payload),
+        choice_ids=_choice_ids(payload),
         fact_key=payload.key if isinstance(payload, FactObserved) else None,
         message=_event_message(db, payload),
     )

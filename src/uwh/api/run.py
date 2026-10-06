@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException
 
 from uwh.api.runtime import Runtime, RuntimeDependency
 from uwh.api.views import RunSummary, RunView
+from uwh.chat.examples import EXAMPLE_PROMPTS
 from uwh.runtime.event_types import REQUEST_KINDS
 from uwh.runtime.events import format_timestamp
 from uwh.runtime.runs import current_run, run_sim_now
@@ -57,6 +58,7 @@ def _run_view(db: sqlite3.Connection, runtime: Runtime) -> RunView:
         sim_now=None if run is None else format_timestamp(run_sim_now(run, runtime.env.now())),
         first_pass_complete=run is not None and run.status == "settled",
         summary=run_summary(db),
+        example_prompts=list(EXAMPLE_PROMPTS),
     )
 
 

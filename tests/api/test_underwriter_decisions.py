@@ -106,6 +106,21 @@ def test_answering_every_choice_of_a_card_closes_it(
     assert [kind for kind, _ in kinds(db, LEAD_003)] == ["producer_reply"]
 
 
+def test_a_closed_question_card_is_matched_to_its_ruling_through_the_choice_ids_of_the_event_rows(
+    app: TestClient,
+) -> None:
+    rule_fire(app, LEAD_003, "legacy_underwriting")
+
+    rows = app.get(f"/api/leads/{LEAD_003}/events").json()["events"]
+
+    card = next(r for r in rows if r["type"] == "blocker_opened" and r["choice_ids"])
+    ruling = next(r for r in rows if r["type"] == "ruling_recorded")
+    assert card["item_id"] is not None and card["choice_ids"] == ["I13.fire_fail"]
+    assert ruling["choice_ids"] == ["I13.fire_fail"] and ruling["actor"] == "underwriter"
+    # The wait on the producer that follows is no item of the underwriter's.
+    assert [r["item_id"] for r in rows if r["type"] == "blocker_opened"].count(None) >= 1
+
+
 def test_a_ruling_on_a_choice_that_is_not_open_is_refused(app: TestClient) -> None:
     answer = command(
         app,

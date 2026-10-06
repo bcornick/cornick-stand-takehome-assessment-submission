@@ -578,8 +578,10 @@ export interface components {
         /**
          * EventRow
          * @description One of a lead's events: its id, type, run mode, actor, simulated time and a summary of its payload.
-         *     `item_id` is the item a blocker or approval event names, `fact_key` the key a fact event records and
-         *     `message` the words of a sent request or a reply; each is None where the event has none.
+         *     `item_id` is the underwriter's item a blocker or approval event names (a wait on the producer or on
+         *     data is no item), `choice_ids` the choices a question card opened with or the one a ruling
+         *     answers, `fact_key` the key a fact event records and `message` the words of a sent request or a
+         *     reply; each is None or empty where the event has none.
          */
         EventRow: {
             /**
@@ -587,6 +589,8 @@ export interface components {
              * @enum {string}
              */
             actor: "workflow" | "underwriter" | "assistant" | "inbound";
+            /** Choice Ids */
+            choice_ids: string[];
             /** Fact Key */
             fact_key: string | null;
             /** Id */
@@ -711,6 +715,8 @@ export interface components {
             label: string;
             /** Lead Id */
             lead_id: string;
+            /** Pages */
+            pages: components["schemas"]["PlanPage"][];
             plan: components["schemas"]["ActionPlan"] | null;
             /** Revision */
             revision: number;
@@ -773,6 +779,22 @@ export interface components {
             prompt: string;
             /** Show */
             show: string[];
+        };
+        /**
+         * PlanPage
+         * @description What the lead's stored plan holds for one playbook page.
+         */
+        PlanPage: {
+            /** Declines On Every Branch */
+            declines_on_every_branch: components["schemas"]["RuleTrace"][];
+            /** Effects */
+            effects: components["schemas"]["PlannedEffect"][];
+            /** Key */
+            key: string;
+            /** Not Evaluated */
+            not_evaluated: components["schemas"]["NotEvaluatedNote"][];
+            /** Waits On */
+            waits_on: string[];
         };
         /** PlannedEffect */
         PlannedEffect: {
@@ -987,6 +1009,8 @@ export interface components {
          *     `sim_now` are null and the counts are zero.
          */
         RunView: {
+            /** Example Prompts */
+            example_prompts: string[];
             /** First Pass Complete */
             first_pass_complete: boolean;
             /**

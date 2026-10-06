@@ -17,6 +17,7 @@ const events: components['schemas']['LeadEvents'] = {
       summary: 'roof_year recorded as 2017 (submitted).',
       item_id: null,
       fact_key: 'roof_year',
+      choice_ids: [],
       message: null,
     },
     {
@@ -28,6 +29,7 @@ const events: components['schemas']['LeadEvents'] = {
       summary: 'The message was posted to the mailbox.',
       item_id: null,
       fact_key: null,
+      choice_ids: [],
       message: { subject: 'Roof details', body: 'Please confirm the roof year.' },
     },
   ],
