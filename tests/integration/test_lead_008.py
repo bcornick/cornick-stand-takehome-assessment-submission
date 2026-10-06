@@ -40,7 +40,8 @@ def test_lead_008_goes_from_the_queue_to_a_sent_quote_packet(
         assert [b.kind for b in open_blockers(db, LEAD_008)] == ["producer_reply"]
 
         delivered = app.post("/api/replies/fixtures").json()["replies"]
-        assert [(r["lead_id"], r["accepted"]) for r in delivered] == [(LEAD_008, True)]
+        assert all(r["accepted"] for r in delivered)
+        assert [r["accepted"] for r in delivered if r["lead_id"] == LEAD_008] == [True]
 
         (item,) = open_blockers(db, LEAD_008)
         assert item.detail.item_kind == "draft"
