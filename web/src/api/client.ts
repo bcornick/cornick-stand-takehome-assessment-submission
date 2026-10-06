@@ -1,4 +1,4 @@
-// ABOUTME: Typed fetch calls: the run, the queue and one lead's detail, and the three actions of the page: start the run, deliver the fixture replies and approve an item.
+// ABOUTME: Typed fetch calls: the run, the queue and one lead's detail, the three actions of the page (start the run, deliver the fixture replies, approve an item) and the chat panel's: a message, the open proposal cards, apply and dismiss.
 // ABOUTME: A response that is not 2xx throws an ApiError that names the route and the status.
 import type { components } from '@/api/types'
 
@@ -42,3 +42,11 @@ export const approve = (itemId: number, payloadHash: string) =>
     type: 'approve',
     payload: { item_id: itemId, artifact_hash: payloadHash, reason: 'Approved in the detail pane.' },
   })
+
+export const sendChat = (message: string, leadId: string | null) =>
+  post<Schemas['ChatResponse']>('/api/chat', { message, lead_id: leadId })
+export const getProposals = () => request<Schemas['ProposalView'][]>('/api/proposals')
+export const applyProposal = (proposalId: number) =>
+  post<Schemas['CommandResponse']>(`/api/proposals/${proposalId}/apply`)
+export const dismissProposal = (proposalId: number) =>
+  post<Schemas['ProposalView']>(`/api/proposals/${proposalId}/dismiss`)

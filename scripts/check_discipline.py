@@ -31,8 +31,10 @@ EXEMPT_FILES = {
     "evals/results.jsonl",
     "docs/progress.md",
 }
-# Text written in an applicant's or producer's voice, where everyday words are legitimate.
-QUOTED_VOICE = re.compile(r"^(evals/labels/replies[^/]*/|src/uwh/skills/[^/]+/cases/)")
+# Text written in an applicant's, producer's or underwriter's voice, where everyday words are legitimate.
+QUOTED_VOICE = re.compile(
+    r"^(evals/labels/replies[^/]*/|src/uwh/skills/[^/]+/cases/|src/uwh/chat/cases/)"
+)
 
 TEXT_SUFFIXES = {".py", ".md", ".yaml", ".yml", ".ts", ".tsx", ".sh", ".toml", ".css"}
 CODE_SUFFIXES = {".py", ".ts", ".tsx", ".sh"}

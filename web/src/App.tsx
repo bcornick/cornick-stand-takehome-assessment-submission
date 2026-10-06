@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { getLeads, getRun } from '@/api/client'
 import { useRemote } from '@/api/useRemote'
+import { ChatPanel } from '@/chat/ChatPanel'
 import { LeadDetailPage } from '@/lead/LeadDetailPage'
 import { QueuePage } from '@/queue/QueuePage'
 
@@ -39,6 +40,9 @@ function App() {
           <LeadDetailPage leadId={selectedLeadId} refresh={refresh} onChange={refetch} />
         )}
       </aside>
+      <div className="lg:col-span-2">
+        <ChatPanel leadId={selectedLeadId} onChange={refetch} />
+      </div>
     </main>
   )
 }
