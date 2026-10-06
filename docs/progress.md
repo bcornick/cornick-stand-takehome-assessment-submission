@@ -526,3 +526,25 @@ Brett's decisions carried into milestone 1: an underwriter's value that still tr
 **Brett's ruling on the branding:** the name STAND in capitals, as text, stands in for the wordmark, and Stand's favicon is fetched from standinsurance.com at his request (`web/public/favicon.svg`: one rectangle and one path, no script or link); the specification's branding lines and a README line say so. At his request the buttons follow those of standinsurance.com, read from its stylesheet: a pill in ink (#131311) that lightens to #4a4842 on hover, or an outlined pill (#b5b3ac) whose border darkens, both pressing in slightly; the accent no longer colours the primary button. The two styles are defined once, in `web/src/index.css`. The conversation column takes the site's beige (#f3f1e6) with white cards, and the demo controls its black (#06080b), where the buttons turn white as on the site's dark sections.
 
 **Next:** Brett's review of the surface.
+
+## Chat surface: the UI pass (c65710d)
+
+**Done:** the eight-point pass Brett approved (sent by the design session after a human look at the surface), with his one change: no colour changes, so the beige conversation and the ink-pill buttons stay.
+- A lead's conversation leads with the answer: `LeadDetail.summary`, written by `src/uwh/api/summary.py` from the status, the open items, the plan and the asks ("This lead failed the fire simulation at 0.79. I need you to choose between a decline and legacy underwriting. Meanwhile I asked the producer for the 17 missing fields and am waiting for the reply."; a finished lead states its outcome and date). The underwriter's cards follow; the timeline folds under "Show the work (N steps)". The queue greets with "3 leads need you. 7 are waiting on producers."
+- The log is cut: model calls, the rewrite checks, replay misses and faults are not narrated; a run of provider lookups is one line ("Looked up 6 providers: 2 found, 4 blocked on Date of Birth, City and Zip Code", from `EventRow.lookup`); repeated triage lines keep the last; chips are numbered within a message and appear only on fact lines and bubbles.
+- Registry labels wherever a human reads a field: the narrative, the cards, the facts table and the panel (`labelKeys`, `fieldLabel` in `web/src/format.ts`).
+- One decision per card: summary line, a folded preview of a draft with Edit inside, the choices as enabled buttons, one reason field after a choice with a confirm that repeats it.
+- The column is centred at 720px; assistant messages carry an "Assistant" label; two text sizes.
+- The lead list's chip says what differs ("Needs your decision", "Waiting on producer", "Quote sent"); the second line reads "Effective Jul 21 · in queue today"; the summary sentence left the sidebar.
+- The example prompts sit beside the composer.
+
+**Checks:** `make check` clean at c65710d (780 fast Python tests, 126 web tests). Screenshots of lead 003 and the queue were taken on the running app.
+
+**Readings, where the pass was silent (agreed with the design session):**
+- The summary line is written on the server; the queue greeting in the client from the run counts, with "K quotes sent." when any are.
+- Narrative chips open only the fact view and the message or reply view; a card's "details" opens the full lead; chat answers keep a chip per citation.
+- A committed decline is named by its playbook page and rule ("the post and pier page (PP-1)"): the plan holds no decline reason text.
+- Inside the fold an open item is its event's line; its card sits above the fold. Only the underwriter's items are cards above the fold; a producer or data wait is in the summary line.
+- "Show the work (N steps)" counts the lines the fold shows, a folded run as one.
+- The age reads "in queue today" under half a business day, else whole days.
+- An option button reads capitalised ("Legacy underwriting").
