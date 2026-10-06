@@ -27,6 +27,7 @@ nodes:
     effects: [{type: no_action, rule: RC-3}]
   above_150:
     kind: outcome
+    interpretation: I37
     board_path: ["12:ABOVE", "12:OVER150", "12:DOCS"]
     effects:
       - {type: requirement, rule: RC-4, text: "Documentation supporting the Coverage A amount requested, for example the current declarations page. Without it the quote is made at the calculated replacement cost."}

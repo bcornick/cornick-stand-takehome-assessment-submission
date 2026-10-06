@@ -65,7 +65,7 @@ nodes:
   old_composition_roof:
     kind: outcome
     interpretation: I52
-    board_path: ["05:UNK"]
+    board_path: ["I52"]  # the row: these roofs sit in neither of the board's Unknown Class lists
     effects:
-      - {type: advisory, rule: RF-5, text: "A composition shingle roof more than 20 years old may need a review of its condition"}
+      - {type: advisory, rule: RF-5, text: "A review of the roof's condition before binding, because a composition shingle roof more than 20 years old is a higher risk."}
   no_roof_advisory: {kind: outcome, board_path: [], effects: []}

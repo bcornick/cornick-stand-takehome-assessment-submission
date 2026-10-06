@@ -6,6 +6,7 @@ import pytest
 from pydantic import JsonValue
 
 from tests.skills.helpers import lead_008
+from uwh.rules.graphs import evaluate_graph, load_graphs
 from uwh.rules.models import ActionPlan, Rulings
 from uwh.skills.build_quote_packet import skill as build_quote_packet
 from uwh.skills.build_quote_packet.skill import BuildQuotePacketInput
@@ -40,8 +41,9 @@ SPOTLIGHT_EFFECTS = {
     ("exclusion_or_endorsement", "PF-1"),
     ("advisory", "PF-2"),
     ("advisory", "PF-3"),
+    ("advisory", "PF-4"),
 }
-HIGH_EFFECTS = {("exclusion_or_endorsement", "PF-5")}
+HIGH_EFFECTS = {("exclusion_or_endorsement", "PF-5"), ("advisory", "PF-6")}
 
 
 @pytest.mark.parametrize(
@@ -54,7 +56,7 @@ HIGH_EFFECTS = {("exclusion_or_endorsement", "PF-5")}
         (10, HIGH_EFFECTS, ["02:ROOT", "02:HIGH", "02:HIGH1"]),
     ],
 )
-def test_profile_carries_the_liability_exclusion_and_the_later_rungs_as_advisories(
+def test_profile_carries_the_liability_exclusion_and_every_later_rung_as_an_advisory(
     kyc_score: int, expected: set[tuple[str, str]], branch: list[str] | None
 ) -> None:
     plan = plan_for(kyc_score=kyc_score)
@@ -64,6 +66,26 @@ def test_profile_carries_the_liability_exclusion_and_the_later_rungs_as_advisori
     if branch is not None:
         first_rung = "PF-1" if kyc_score <= 7 else "PF-5"
         assert path_of(plan, first_rung) == branch
+        # The later rungs are for the underwriter alone: the producer's packet carries the first.
+        later = [p.effect for p in plan.effects if p.effect.type == "advisory"]
+        assert later and all(effect.internal for effect in later)  # type: ignore[union-attr]
+
+
+def test_a_later_rung_of_the_ladder_follows_the_boxes_of_the_rungs_before_it() -> None:
+    plan = plan_for(kyc_score=6)
+
+    assert path_of(plan, "PF-2") == ["02:ROOT", "02:SPOT", "02:SPOT1", "02:SPOT2", "02:SPOT3"]
+    assert path_of(plan, "PF-4") == [
+        "02:ROOT",
+        "02:SPOT",
+        "02:SPOT1",
+        "02:SPOT2",
+        "02:SPOT3",
+        "02:SPOT4",
+        "02:SPOT5",
+        "02:SPOT6",
+        "02:DECLINE",
+    ]
 
 
 def test_profile_is_undecided_while_the_score_is_unknown() -> None:
@@ -202,7 +224,11 @@ LEAD_003_FIRE = {
 LEGACY = Rulings(choices={"I13.fire_fail": "legacy_underwriting"})
 
 
-@pytest.mark.parametrize(("p_f", "applies"), [(0.50, False), (0.51, True), (0.54, True)])
+# I12: the hand cases at 0.21 and 0.54 record that the threshold is this submission's invention,
+# since no generated lead falls between 0.20 and 0.55.
+@pytest.mark.parametrize(
+    ("p_f", "applies"), [(0.21, False), (0.50, False), (0.51, True), (0.54, True)]
+)
 def test_fire_simulation_fails_above_a_fire_probability_of_one_half(
     p_f: float, applies: bool
 ) -> None:
@@ -344,6 +370,45 @@ def test_legacy_underwriting_reads_the_vegetation_clearance_by_the_rows_ruling(
     assert sorted(c.choice_id for c in plan.open_choices if c.choice_id != "I16.distance") == card
 
 
+def test_the_fire_simulation_traces_follow_the_board_edges() -> None:
+    rulings = Rulings(choices={**LEGACY.choices, "I16.distance": "adequate", "I16.slope": "gentle"})
+    facts = lead_008(
+        **{**LEAD_003_FIRE, "road_access": "Multiple Access Points", "q:willing_to_mitigate": False}
+    )
+
+    (graph,) = [g for g in load_graphs() if g.id == "fire_simulation"]
+    paths = [p.trace.board_path for p in evaluate_graph(graph, facts, rulings).effects]
+
+    # Unwilling to mitigate takes the board's WILL -> D_LIM edge, not the Limited box.
+    unwilling = [p for p in paths if p[-1] == "04:D_LIM"]  # heavy vegetation and no 7a compliance
+    assert len(unwilling) == 2
+    assert all(p[-2:] == ["04:WILL", "04:D_LIM"] and "04:LIMITED" not in p for p in unwilling)
+    (adequate,) = [p for p in paths if "04:ADEQ" in p]
+    assert adequate[3:] == ["04:MIND", "04:ADEQ", "04:CTQ_B", "04:QUOTE", "04:MITIG"]
+
+
+def test_the_old_roof_advisory_cites_the_row_and_the_rental_exception_cites_both_boxes() -> None:
+    old_roof = plan_for(
+        roof_replacement_year=2005, p_f=0.16, roof_material="Asphalt Fiberglass Composite"
+    )
+    rental = plan_for(
+        Rulings(choices={"I09.rental_exception": "exception"}),
+        is_rental="Long-Term Rentals",
+        has_primary_policy_with_stand=False,
+        broker_tier="Tier 2",
+    )
+
+    assert path_of(old_roof, "RF-5") == ["05:ROOT", "I52"]
+    assert path_of(rental, "OC-5") == [
+        "03:ROOT",
+        "03:RENT",
+        "03:R_NP",
+        "03:LEAD",
+        "03:WELL",
+        "03:W15",
+    ]
+
+
 # ---- Post & Pier -------------------------------------------------------------------------------
 
 PIER = {"foundation_type": "Piers"}
@@ -408,7 +473,9 @@ def test_a_high_deck_on_a_home_built_in_2000_or_later_declines_whatever_the_supp
     ]
 
 
-def test_a_deck_height_a_reply_supplies_declines_and_no_packet_is_built() -> None:
+def test_a_deck_above_twelve_feet_on_a_home_built_in_2000_or_later_declines_when_the_supports_are_known() -> (
+    None
+):
     plan = plan_for(
         **PIER, post_pier_supports_living_area=False, year_built=2005, deck_height_ft=15
     )
@@ -451,7 +518,7 @@ def test_an_underwriters_decline_is_a_proposed_decline_with_its_reason() -> None
 # ---- the quote packet -------------------------------------------------------------------------
 
 
-def test_the_packet_carries_the_exclusion_the_advisories_and_the_modifications_with_their_deadlines() -> (
+def test_the_packet_carries_the_exclusion_the_mitigation_advisory_and_the_modifications_with_their_deadlines() -> (
     None
 ):
     plan = plan_for(
@@ -481,8 +548,6 @@ def test_the_packet_carries_the_exclusion_the_advisories_and_the_modifications_w
         "- A low temperature alarm or a winterized home in a cold climate (for the duration of non-occupancy)"
         in body
     )
-    assert "- A preliminary mitigation plan will be discussed with the broker" in body  # I55
-    assert (
-        "- If the liability exclusion is a deal killer: a social media exclusion" in body
-    )  # I03, I05
+    assert "- We will discuss a preliminary mitigation plan with you." in body  # I55
+    assert "deal killer" not in body  # the fallbacks of I05 stay with the underwriter
     assert "PF-" not in body and "OC-" not in body  # no rule id reaches the producer

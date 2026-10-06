@@ -422,11 +422,11 @@ One YAML file per built detail page (seven files). Each declares `applies_when`.
 |---|---|
 | `one_of` | Exactly one child applies (bands, enumerations). The loader checks completeness and non-overlap. |
 | `all_of` | Every child is evaluated and effects combine. |
-| `ladder` | Ordered fallbacks used in negotiation after a quote. Only the first rung is an effect; the rest are recorded as an advisory. |
+| `ladder` | Ordered fallbacks used in negotiation after a quote. Only the first rung is an effect; every later rung, a decline included, is recorded as an advisory for the underwriter alone and is not in the producer's packet. |
 
 **Effects**
 
-`decline`, `requirement` (text, deadline), `surcharge` (percent, rule id, optional deadline), `exclusion_or_endorsement`, `coverage_adjustment` (field, proposed value, optional deadline; the submitted value is kept), `advisory`, `obligation` (post-bind, with owner and trigger, never executed), `no_action`. A deadline on a surcharge or a coverage adjustment says how long the modification applies (I56).
+`decline`, `requirement` (text, deadline), `surcharge` (percent, rule id, optional deadline), `exclusion_or_endorsement`, `coverage_adjustment` (field, proposed value, optional deadline; the submitted value is kept), `advisory`, `obligation` (post-bind, with a trigger, never executed), `no_action`. A deadline on a surcharge or a coverage adjustment says how long the modification applies (I56).
 
 Deadlines are a typed enum: `within_60_days`, `first_term`, `underwriting_period`, `within_30_days_of_bind`, `duration_of_non_occupancy`. They are never converted to one another.
 

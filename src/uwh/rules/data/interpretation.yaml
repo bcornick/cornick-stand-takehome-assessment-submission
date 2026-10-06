@@ -1,15 +1,5 @@
-# ABOUTME: The interpretation rows of the seven built playbook pages and of the rows that apply to every page, the choices an underwriter answers, and the Fire Simulation fan-out semantics.
+# ABOUTME: The interpretation rows of the seven built playbook pages and of the rows that apply to every page, and the choices an underwriter answers.
 # ABOUTME: A row holds its source page, the gap, the ruling, its kind, a rationale and the reviewer who accepted it; a flag marks a row that is not evaluated.
-
-# Branch semantics of the seven Fire Simulation board boxes that fan out (section 9.7).
-fan_outs:
-  "04:LEGACY": all_of
-  "04:MAP": all_of
-  "04:ACCESS": all_of
-  "04:VEG": one_of
-  "04:INGRESS": one_of
-  "04:MIND": one_of
-  "04:SLOPE": one_of
 
 rows:
   - id: I01

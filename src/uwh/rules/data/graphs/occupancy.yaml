@@ -62,7 +62,8 @@ nodes:
     prompt: "The rental has no primary policy with Stand and is not from a Tier 1 broker. Is there a justifiable exception, such as a lead line for a larger desirable account or a well-managed property in excess of $5m Coverage A?"
     show: [broker_tier, has_primary_policy_with_stand, coverage_a]
     options: {exception: rental_exception_granted, decline: no_justifiable_exception}
-  rental_exception_granted: {kind: outcome, board_path: ["03:LEAD", "03:W15"], effects: [{type: surcharge, rule: OC-5, percent: 15}]}
+  # The ruling does not say which exception the underwriter found, so the trace cites both boxes.
+  rental_exception_granted: {kind: outcome, board_path: ["03:LEAD", "03:WELL", "03:W15"], effects: [{type: surcharge, rule: OC-5, percent: 15}]}
   no_justifiable_exception: {kind: outcome, board_path: ["03:NOEX", "03:DECLINE"], effects: [{type: decline, rule: OC-6}]}
 
   # Vacant and unoccupied homes: the board's two boxes share their children, and I06 names the unoccupied box.
@@ -109,7 +110,7 @@ nodes:
       - {type: exclusion_or_endorsement, rule: OC-9, text: "A 100k AOP deductible, for the duration of non-occupancy"}
       - {type: exclusion_or_endorsement, rule: OC-10, text: "3% water cover, for the duration of non-occupancy"}
       - {type: requirement, rule: OC-11, text: "A low temperature alarm or a winterized home in a cold climate", deadline: duration_of_non_occupancy}
-      - {type: obligation, rule: OC-12, text: "Twice-weekly interior and exterior visits to the home", owner: insured, trigger: duration of non-occupancy}
+      - {type: obligation, rule: OC-12, text: "Twice-weekly interior and exterior visits to the home", trigger: for the duration of non-occupancy}
   over_60_days: {kind: outcome, board_path: ["03:GT60", "03:DECLINE"], effects: [{type: decline, rule: OC-13}]}
 
   # For sale

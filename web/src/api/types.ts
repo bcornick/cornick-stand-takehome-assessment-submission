@@ -632,8 +632,6 @@ export interface components {
          * @description A post-bind obligation; recorded and never executed.
          */
         ObligationEffect: {
-            /** Owner */
-            owner: string;
             /** Rule */
             rule: string;
             /** Text */

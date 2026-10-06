@@ -1,7 +1,7 @@
 # ABOUTME: The decision graphs of 9.6 and A.6: the graph files, the three-valued test of when a page applies, and the walk of a graph over a lead's usable facts and the underwriter's rulings.
 # ABOUTME: A walk is decided, undecided or a decline on every branch; it carries the effects, the open choices and the catalogue questions the walk collects, each effect with the board path from the root.
 import math
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from functools import cache
 from typing import Annotated, Literal, Self
@@ -62,9 +62,8 @@ class AllOf(_NodeBase):
 
 
 class Ladder(_NodeBase):
-    """Ordered fallbacks for negotiation after a quote (I05): the first rung is the effect, the
-    endorsements of the later rungs are an advisory, and a later decline is the underwriter's
-    decision in the negotiation, not an effect."""
+    """Ordered fallbacks for negotiation after a quote (I05): the first rung is the effect and
+    every later rung, a decline included, is an advisory for the underwriter alone."""
 
     kind: Literal["ladder"]
     rungs: list[str]
@@ -171,11 +170,31 @@ class NotEncodedPage(StrictModel):
     applies_when: dict[str, JsonValue]
 
 
+def check_rows_are_applied(
+    graphs: Sequence[Graph], rows: Sequence[Mapping[str, JsonValue]]
+) -> None:
+    """Raise ValueError for an interpretation row that no node cites, that is not marked
+    `not_evaluated` and that names no `applied_in` (9.6)."""
+    cited = {node.interpretation for graph in graphs for node in graph.nodes.values()}
+    unapplied = [
+        row["id"]
+        for row in rows
+        if row["id"] not in cited and not row.get("not_evaluated") and "applied_in" not in row
+    ]
+    if unapplied:
+        raise ValueError(
+            f"interpretation rows {unapplied} are cited by no node, not marked not_evaluated and "
+            "name no applied_in"
+        )
+
+
 @cache
 def load_graphs() -> tuple[Graph, ...]:
-    """Every graph file, in file name order."""
+    """Every graph file, in file name order, checked against the interpretation table."""
     paths = sorted(p for p in (DATA_DIR / "graphs").glob("*.yaml") if p.name != "_not_encoded.yaml")
-    return tuple(Graph.model_validate(read_yaml(f"graphs/{p.name}")) for p in paths)
+    graphs = tuple(Graph.model_validate(read_yaml(f"graphs/{p.name}")) for p in paths)
+    check_rows_are_applied(graphs, read_yaml("interpretation.yaml")["rows"])
+    return graphs
 
 
 @cache
@@ -342,6 +361,27 @@ class Walk:
         return branches
 
 
+def _fallback(rung: Walk) -> Walk:
+    """The effects of a ladder rung after the first, as advisories for the underwriter alone: the
+    fallbacks Stand holds in negotiation are not offered to the producer."""
+    fallbacks: list[PlannedEffect] = []
+    for planned in rung.effects:
+        match planned.effect:
+            case ExclusionOrEndorsementEffect(text=text):
+                pass
+            case DeclineEffect():
+                text = "If the earlier offers are deal killers: decline."
+            case effect:
+                raise ValueError(
+                    f"a ladder rung holds an exclusion or a decline, not {effect.type}"
+                )
+        advisory = AdvisoryEffect(
+            type="advisory", rule=planned.effect.rule, text=text, internal=True
+        )
+        fallbacks.append(planned.model_copy(update={"effect": advisory}))
+    return Walk(effects=tuple(fallbacks))
+
+
 @dataclass(frozen=True)
 class _Walker:
     graph: Graph
@@ -353,41 +393,36 @@ class _Walker:
         name: str,
         path: tuple[str, ...],
         assumed: tuple[Assumption, ...],
-        answered: tuple[str, ...],
+        decided_by: str | None = None,
     ) -> Walk:
         """Walk from the node. `path` holds the board boxes visited above it, `assumed` the cases
-        taken for unknown fields above it and `answered` the choices answered above it."""
+        taken for unknown fields above it and `decided_by` the choice whose option leads straight
+        to the node."""
         node = self.graph.nodes[name]
         path += tuple(node.board_path)
         match node:
             case Outcome() if not node.effects:
                 return Walk()
             case Outcome():
-                trace = RuleTrace(board_path=list(path), choice_ids=list(answered))
+                trace = RuleTrace(
+                    board_path=list(path), choice_ids=[] if decided_by is None else [decided_by]
+                )
                 return Walk(effects=tuple(self._committed(e, trace) for e in node.effects))
             case AllOf():
-                return sum(
-                    (self.walk(child, path, assumed, answered) for child in node.children), Walk()
-                )
+                return sum((self.walk(child, path, assumed) for child in node.children), Walk())
             case Ladder():
-                first, *later = node.rungs
-                fallbacks = tuple(
-                    PlannedEffect(
-                        effect=AdvisoryEffect(
-                            type="advisory", rule=planned.effect.rule, text=planned.effect.text
-                        ),
-                        trace=planned.trace,
-                        committed=True,
-                    )
-                    for rung in later
-                    for planned in self.walk(rung, path, assumed, answered).effects
-                    if isinstance(planned.effect, ExclusionOrEndorsementEffect)
-                )
-                return self.walk(first, path, assumed, answered) + Walk(effects=fallbacks)
+                walk = Walk()
+                for position, rung in enumerate(node.rungs):
+                    found = self.walk(rung, path, assumed)
+                    path += tuple(
+                        self.graph.nodes[rung].board_path
+                    )  # the next rung follows this one
+                    walk += found if position == 0 else _fallback(found)
+                return walk
             case Choice():
-                return self._choice(node, path, assumed, answered)
+                return self._choice(node, path, assumed)
             case FieldTest():
-                return self._test(node, path, assumed, answered)
+                return self._test(node, path, assumed)
 
     def _committed(self, effect: Effect, trace: RuleTrace) -> PlannedEffect:
         """A suppressed decline is decided with an advisory naming the overridden rule (9.6)."""
@@ -405,14 +440,13 @@ class _Walker:
         node: Choice,
         path: tuple[str, ...],
         assumed: tuple[Assumption, ...],
-        answered: tuple[str, ...],
     ) -> Walk:
         option = self.rulings.choices.get(node.choice)
         if option in node.options:
-            return self.walk(node.options[option], path, assumed, answered + (node.choice,))
+            return self._take(node, node.options[option], path, assumed)
         possible: list[PlannedEffect] = []
         for target in node.options.values():
-            found = self.walk(target, path, assumed, answered + (node.choice,))
+            found = self._take(node, target, path, assumed)
             possible += [p.model_copy(update={"committed": False}) for p in found.effects]
             possible += found.possible
         return Walk(
@@ -428,12 +462,19 @@ class _Walker:
             ),
         )
 
+    def _take(
+        self, node: Choice, target: str, path: tuple[str, ...], assumed: tuple[Assumption, ...]
+    ) -> Walk:
+        """Walk an option of the choice. A decline the option leads to directly is the choice's to
+        reopen; one further down the graph is not."""
+        direct = isinstance(self.graph.nodes[target], Outcome)
+        return self.walk(target, path, assumed, node.choice if direct else None)
+
     def _test(
         self,
         node: FieldTest,
         path: tuple[str, ...],
         assumed: tuple[Assumption, ...],
-        answered: tuple[str, ...],
     ) -> Walk:
         value = _value(node.field, self.facts)
         if value is not None:
@@ -449,23 +490,23 @@ class _Walker:
                 raise ValueError(
                     f"the {self.graph.id} graph has no case for {node.field} = {value}"
                 )
-            return self.walk(chosen.then, path, assumed, answered)
+            return self.walk(chosen.then, path, assumed)
         # The field is unknown: the page declines when every case it could take declines.
         branches: list[TraceBranch] = []
         for case in node.cases:
             taken = assumed + (Assumption(field=node.field, when=case.when),)
-            declined = self.walk(case.then, path, taken, answered).declined_branches(taken)
+            declined = self.walk(case.then, path, taken).declined_branches(taken)
             if not declined:
                 question = (
                     (node.field.removeprefix("q:"),) if node.kind == "producer_question" else ()
                 )
                 return Walk(waits_on=(node.field,), questions=question)
             branches += declined
-        trace = RuleTrace(board_path=[], alternatives=branches, choice_ids=list(answered))
+        trace = RuleTrace(board_path=[], alternatives=branches)
         return Walk(every_branch=(trace,))
 
 
 def evaluate_graph(graph: Graph, facts: Mapping[str, JsonValue], rulings: Rulings) -> Walk:
     """Walk the graph from its root over the usable facts and the underwriter's rulings. Raises
     ValueError for a value no case of a test covers."""
-    return _Walker(graph, facts, rulings).walk(graph.root, (), (), ())
+    return _Walker(graph, facts, rulings).walk(graph.root, (), ())

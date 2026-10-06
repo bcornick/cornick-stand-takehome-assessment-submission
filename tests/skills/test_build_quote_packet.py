@@ -79,9 +79,8 @@ def test_every_effect_is_on_its_own_line_with_its_deadline_and_no_rule_id() -> N
             {
                 "type": "obligation",
                 "rule": "O-1",
-                "text": "Inspect the panel.",
-                "owner": "underwriting",
-                "trigger": "bind",
+                "text": "Inspect the panel",
+                "trigger": "after bind",
             },
             {"type": "no_action", "rule": "N-1"},
             {"type": "no_action", "rule": "N-2"},
@@ -107,7 +106,7 @@ def test_every_effect_is_on_its_own_line_with_its_deadline_and_no_rule_id() -> N
             "\n- Confirm the roof replacement. (within 60 days)",
             "Exclusions and endorsements\n- Liability is excluded.",
             "Advisories\n- Siding is vinyl.",
-            "Obligations after binding\n- Inspect the panel. (owner: underwriting; when: bind)",
+            "Obligations after binding\n- Inspect the panel after bind.",
             "Not reviewed\n- Plumbing was not reviewed for this quote.",
         ]
     )

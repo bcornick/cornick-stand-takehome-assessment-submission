@@ -109,8 +109,7 @@ class ObligationEffect(StrictModel):
     type: Literal["obligation"]
     rule: str
     text: str
-    owner: str
-    trigger: str
+    trigger: str  # when it applies, read after the text: "for the duration of non-occupancy"
 
 
 class NoActionEffect(StrictModel):
@@ -155,8 +154,8 @@ class RuleTrace(StrictModel):
     # Non-empty only for a decline reached as `declines_on_every_branch`; then `board_path` is empty
     # and each branch carries its own full path.
     alternatives: list[TraceBranch] = []
-    # The underwriter choices answered on the path (A.11: rejecting a decline notice that followed
-    # a choice reopens it); for alternatives, the choices answered above the first unknown.
+    # The underwriter choice whose option leads straight to this outcome (A.11: rejecting a decline
+    # notice that followed that choice reopens it); empty for any other outcome.
     choice_ids: list[str] = []
 
     @model_validator(mode="after")

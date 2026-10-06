@@ -96,10 +96,7 @@ def _entry(effect: Effect, coverages: dict[str, Coverage]) -> tuple[str, str] | 
         case AdvisoryEffect():
             return None if effect.internal else ("Advisories", effect.text)
         case ObligationEffect():
-            return (
-                "Obligations after binding",
-                f"{effect.text} (owner: {effect.owner}; when: {effect.trigger})",
-            )
+            return "Obligations after binding", f"{effect.text} {effect.trigger}."
         case NoActionEffect():
             return None
         case DeclineEffect():

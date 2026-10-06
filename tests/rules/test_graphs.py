@@ -5,7 +5,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from uwh.rules.graphs import Graph, load_graphs
+from uwh.rules.graphs import Graph, check_rows_are_applied, load_graphs
 
 
 def graph_testing(*bands: dict[str, Any], field: str = "p_f") -> dict[str, Any]:
@@ -63,3 +63,15 @@ def test_a_test_on_discrete_values_need_not_cover_every_value() -> None:
 
 def test_the_shipped_graphs_load() -> None:
     assert {graph.id for graph in load_graphs()} >= {"roof", "siding", "replacement_cost"}
+
+
+def test_an_interpretation_row_that_nothing_applies_is_refused() -> None:
+    graph = Graph.model_validate(graph_testing(*COMPLETE))
+    rows = [
+        {"id": "I90", "applied_in": "validator"},
+        {"id": "I91", "not_evaluated": True},
+        {"id": "I92"},
+    ]
+
+    with pytest.raises(ValueError, match=r"\['I92'\]"):
+        check_rows_are_applied([graph], rows)

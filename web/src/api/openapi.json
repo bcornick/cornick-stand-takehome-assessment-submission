@@ -1108,10 +1108,6 @@
         "additionalProperties": false,
         "description": "A post-bind obligation; recorded and never executed.",
         "properties": {
-          "owner": {
-            "title": "Owner",
-            "type": "string"
-          },
           "rule": {
             "title": "Rule",
             "type": "string"
@@ -1134,7 +1130,6 @@
           "type",
           "rule",
           "text",
-          "owner",
           "trigger"
         ],
         "title": "ObligationEffect",
