@@ -67,14 +67,14 @@
     "milestone": 4,
     "description": "Every underwriter action works against the running app through the same routes the browser calls: approve, edit and reject a draft, approve and reject a pending observation, record an underwriter choice with a reason, resolve a fact, decline a lead, paste a reply. Expect: all pass.",
     "command": "uv run pytest -m integration tests/integration/test_underwriter_actions.py",
-    "passes": false
+    "passes": true
   },
   {
     "id": "M4-A2",
     "milestone": 4,
     "description": "The web page's controls post the right commands and render every item kind, from the browser build. Expect: all pass.",
     "command": "cd web && pnpm test -- --run",
-    "passes": false
+    "passes": true
   },
   {
     "id": "M4-A3",
