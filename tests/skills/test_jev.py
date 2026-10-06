@@ -74,12 +74,12 @@ def test_the_manifest_sets_the_threshold_at_seven_tenths() -> None:
 def test_jev_classifies_at_the_threshold_and_the_model_still_supplies_the_candidates(
     tmp_path: Path,
 ) -> None:
-    access = jev_returning(tmp_path / "jev", table(answers_some=0.7, answers_all=0.3))
+    access = jev_returning(tmp_path / "jev", table(declines_to_answer=0.7, answers_some=0.3))
 
     result = read(tmp_path, access)
 
     assert (result.classification, result.classified_by, result.jev_confidence) == (
-        "answers_some",
+        "declines_to_answer",
         "jev",
         0.7,
     )
@@ -89,7 +89,7 @@ def test_jev_classifies_at_the_threshold_and_the_model_still_supplies_the_candid
 def test_the_model_classifies_below_the_threshold_and_the_row_keeps_jevs_confidence(
     tmp_path: Path,
 ) -> None:
-    access = jev_returning(tmp_path / "jev", table(answers_some=0.69, answers_all=0.31))
+    access = jev_returning(tmp_path / "jev", table(declines_to_answer=0.69, answers_some=0.31))
 
     result = read(tmp_path, access)
 
@@ -97,6 +97,22 @@ def test_the_model_classifies_below_the_threshold_and_the_row_keeps_jevs_confide
         "off_topic",
         "model",
         0.69,
+    )
+
+
+def test_the_two_on_topic_options_count_as_one_outcome_and_the_leaning_one_is_named(
+    tmp_path: Path,
+) -> None:
+    access = jev_returning(
+        tmp_path / "jev", table(answers_all=0.5, answers_some=0.25, off_topic=0.25)
+    )
+
+    result = read(tmp_path, access)
+
+    assert (result.classification, result.classified_by, result.jev_confidence) == (
+        "answers_all",
+        "jev",
+        0.75,
     )
 
 

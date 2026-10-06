@@ -12,7 +12,7 @@ from uwh.skills.manifest import load_manifest
 # What a reply is read with when Jev gives no answer; the text of the `skill_fallback_used` event.
 FALLBACK = "the language model classifies the reply"
 
-# The options are the four classifications of the model's tool schema.
+# The options are the four classifications of the model's tool schema; the confidence reads them as three outcomes.
 QUESTION = ChoiceQuestion(
     skill="read_reply",
     instructions=(
@@ -30,7 +30,8 @@ QUESTION = ChoiceQuestion(
 
 @dataclass(frozen=True)
 class JevAnswer:
-    """Jev's classification of a reply and its confidence: the probability of the top option."""
+    """Jev's classification of a reply and its confidence: the probability of the top outcome, an on-topic
+    reply being one outcome."""
 
     classification: ReplyClassification
     confidence: float
@@ -56,10 +57,13 @@ def classify(body: str, jev: JevAccess) -> JevAnswer | JevFailure:
         return failure
     assert exchange.tool_input is not None  # a Jev exchange always holds its probabilities
     probabilities: dict[str, float] = exchange.tool_input["probabilities"]
-    top = max(QUESTION.options, key=lambda option: probabilities[option])
-    # `top` is one of the four classifications: the live call returns a probability for each option.
-    return JevAnswer(
-        classification=top,  # type: ignore[arg-type]
-        confidence=probabilities[top],
-        exchange=exchange,
-    )
+    # Jev's confidence is over three outcomes: an on-topic reply is one outcome, since code decides
+    # `answers_all` or `answers_some` from the asks. The on-topic option Jev leans to stands for it.
+    on_topic = max(("answers_all", "answers_some"), key=lambda option: probabilities[option])
+    outcomes: dict[ReplyClassification, float] = {
+        on_topic: probabilities["answers_all"] + probabilities["answers_some"],
+        "declines_to_answer": probabilities["declines_to_answer"],
+        "off_topic": probabilities["off_topic"],
+    }
+    top = max(outcomes, key=lambda outcome: outcomes[outcome])
+    return JevAnswer(classification=top, confidence=outcomes[top], exchange=exchange)
