@@ -1,4 +1,4 @@
-// ABOUTME: What a lead waits on, and the actions of each open item (A.11): a draft is approved, edited or rejected, a pending value or an unknown delivery is approved or rejected with a reason, and an underwriter question is one card of equal option buttons.
+// ABOUTME: The actions of one open item (A.11): a draft is approved, edited or rejected, a pending value or an unknown delivery is approved or rejected with a reason, and an underwriter question is one card of equal option buttons.
 // ABOUTME: A review the underwriter cannot decide shows how it closes; rejecting a decline notice says it sends the asks instead; every control shows the reason the command was refused.
 import { approve, editDraft, recordRuling, reject } from '@/api/client'
 import type { components } from '@/api/types'
@@ -31,19 +31,6 @@ export function OpenItem({ lead, blocker, onChange }: Props & { blocker: Blocker
       </p>
       <ItemActions lead={lead} blocker={blocker} onChange={onChange} />
     </div>
-  )
-}
-
-export function Blockers({ lead, onChange }: Props) {
-  if (lead.blockers.length === 0) return <p className="text-sm text-muted-foreground">Nothing is waiting.</p>
-  return (
-    <ul className="flex flex-col gap-4">
-      {lead.blockers.map((blocker) => (
-        <li key={blocker.item_id}>
-          <OpenItem lead={lead} blocker={blocker} onChange={onChange} />
-        </li>
-      ))}
-    </ul>
   )
 }
 

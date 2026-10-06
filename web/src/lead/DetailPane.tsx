@@ -1,4 +1,4 @@
-// ABOUTME: The lead detail pane: what the lead waits on with the actions of each item, the actions on the whole lead, its messages, plan, facts with source tags, and the events of what the system did.
+// ABOUTME: The lead detail pane: what the lead waits on, its facts with source tags, plan and messages, and the actions on the whole lead.
 // ABOUTME: Shows one LeadDetail; the plan is the internal view, so rule ids appear here and never in a message.
 import type { components } from '@/api/types'
 import { Badge } from '@/components/ui/badge'
@@ -12,23 +12,23 @@ import {
 } from '@/components/ui/table'
 import { formatValue } from '@/format'
 import {
+  BLOCKER_KIND_LABELS,
   DRAFT_STATE_LABELS,
-  EFFECT_LABELS,
   MESSAGE_KIND_LABELS,
+  OWNER_LABELS,
   SOURCE_LABELS,
   STATUS_LABELS,
 } from '@/labels'
-import { EventList } from './EventList'
-import { Blockers } from './ItemActions'
+import { effectLine } from '@/panel/effectLine'
 import { LeadActions } from './LeadActions'
 
 type Schemas = components['schemas']
 type LeadDetail = Schemas['LeadDetail']
 type Plan = Schemas['ActionPlan']
 
-type Props = { lead: LeadDetail; refresh: number; onChange: () => void }
+type Props = { lead: LeadDetail; onChange: () => void }
 
-export function DetailPane({ lead, refresh, onChange }: Props) {
+export function DetailPane({ lead, onChange }: Props) {
   return (
     <article className="flex flex-col gap-6">
       <header className="flex flex-col gap-1">
@@ -39,22 +39,19 @@ export function DetailPane({ lead, refresh, onChange }: Props) {
         </p>
       </header>
       <Section title="Waiting on">
-        <Blockers lead={lead} onChange={onChange} />
-      </Section>
-      <Section title="Lead actions">
-        <LeadActions lead={lead} onChange={onChange} />
-      </Section>
-      <Section title="Messages">
-        <Drafts drafts={lead.drafts} />
-      </Section>
-      <Section title="Plan">
-        {lead.plan === null ? <Empty>Not triaged yet.</Empty> : <PlanView plan={lead.plan} />}
+        <Blockers blockers={lead.blockers} />
       </Section>
       <Section title="Facts">
         <Facts facts={lead.facts} />
       </Section>
-      <Section title="What the system did">
-        <EventList leadId={lead.lead_id} refresh={refresh} />
+      <Section title="Plan">
+        {lead.plan === null ? <Empty>Not triaged yet.</Empty> : <PlanView plan={lead.plan} />}
+      </Section>
+      <Section title="Messages">
+        <Drafts drafts={lead.drafts} />
+      </Section>
+      <Section title="Lead actions">
+        <LeadActions lead={lead} onChange={onChange} />
       </Section>
     </article>
   )
@@ -95,19 +92,19 @@ function Drafts({ drafts }: { drafts: LeadDetail['drafts'] }) {
   )
 }
 
-function effectLine(effect: Plan['effects'][number]['effect']): string {
-  const label = `${EFFECT_LABELS[effect.type]} (${effect.rule})`
-  switch (effect.type) {
-    case 'surcharge':
-      return `${label}: ${effect.percent}%`
-    case 'coverage_adjustment':
-      return `${label}: ${effect.field} to ${effect.proposed_value}`
-    case 'decline':
-    case 'no_action':
-      return label
-    default:
-      return `${label}: ${effect.text}`
-  }
+function Blockers({ blockers }: { blockers: LeadDetail['blockers'] }) {
+  if (blockers.length === 0) return <Empty>Nothing is waiting.</Empty>
+  return (
+    <ul className="flex flex-col gap-2 text-sm">
+      {blockers.map((blocker) => (
+        <li key={blocker.item_id} className="flex flex-wrap items-baseline gap-2">
+          <Badge variant="outline">{BLOCKER_KIND_LABELS[blocker.kind]}</Badge>
+          <span className="text-muted-foreground">{`Waits on ${OWNER_LABELS[blocker.owner].toLowerCase()}`}</span>
+          <span>{blocker.detail.text}</span>
+        </li>
+      ))}
+    </ul>
+  )
 }
 
 function PlanView({ plan }: { plan: Plan }) {

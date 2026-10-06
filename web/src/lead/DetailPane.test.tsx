@@ -1,6 +1,6 @@
-// ABOUTME: Tests the detail pane's controls against fetch stubbed at the boundary: each action posts the command and payload the architecture names, a refusal reason renders, and a reason or a reply cannot be left empty.
+// ABOUTME: Tests the full lead view against fetch stubbed at the boundary: what the lead waits on is read-only, and each action on the lead posts the command and payload the architecture names.
 // ABOUTME: The lead is a typed object of the generated API types, so a shape the backend does not serve fails the type check.
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { components } from '@/api/types'
@@ -29,41 +29,21 @@ const packet: Schemas['DraftView'] = {
   round: 2,
 }
 
-const noDetail: Schemas['BlockerDetail'] = {
-  item_kind: null,
-  cause: null,
-  cause_persists: false,
-  resume_trigger: 'the underwriter decides',
-  intent_id: null,
-  observation_id: null,
-  choice_ids: [],
-  text: '',
-}
-
-const pending: Schemas['FactView'] = {
-  key: 'months_unoccupied',
-  value: 5,
-  source: 'reply',
-  status: 'pending_review',
-  confirmed: false,
-  evidence: {},
-  observation_id: 41,
-  event_id: 41,
-}
-
-function blocker(
-  itemId: number,
-  kind: Schemas['BlockerView']['kind'],
-  detail: Partial<Schemas['BlockerDetail']>,
-  observation: Schemas['FactView'] | null = null,
-): Schemas['BlockerView'] {
-  return {
-    item_id: itemId,
-    kind,
-    owner: 'underwriter',
-    detail: { ...noDetail, ...detail },
-    observation,
-  }
+const packetBlocker: Schemas['BlockerView'] = {
+  item_id: 17,
+  kind: 'underwriter_review',
+  owner: 'underwriter',
+  detail: {
+    item_kind: 'draft',
+    cause: null,
+    cause_persists: false,
+    resume_trigger: 'the underwriter decides',
+    intent_id: packet.intent_id,
+    observation_id: null,
+    choice_ids: [],
+    text: 'The packet is ready.',
+  },
+  observation: null,
 }
 
 const lead: Schemas['LeadDetail'] = {
@@ -71,77 +51,10 @@ const lead: Schemas['LeadDetail'] = {
   label: '12 Oak St',
   status: 'in_progress',
   revision: 1,
-  facts: [
-    {
-      key: 'coverage_a',
-      value: 400000,
-      source: 'submitted',
-      status: 'accepted',
-      confirmed: false,
-      evidence: {},
-      observation_id: 1,
-      event_id: 1,
-    },
-    {
-      key: 'months_unoccupied',
-      value: 0,
-      source: 'submitted',
-      status: 'accepted',
-      confirmed: false,
-      evidence: {},
-      observation_id: 3,
-      event_id: 3,
-    },
-    {
-      key: 'roof_age',
-      value: 12,
-      source: 'submitted',
-      status: 'accepted',
-      confirmed: false,
-      evidence: {},
-      observation_id: 2,
-      event_id: 2,
-    },
-  ],
+  facts: [],
   pages: [],
-  plan: {
-    effects: [],
-    declines_on_every_branch: [],
-    proposed_decline: false,
-    underwriter_decline: null,
-    undecided: [],
-    open_choices: [
-      {
-        choice_id: 'I13.fire_fail',
-        options: ['decline', 'legacy_underwriting'],
-        prompt: 'The fire simulation failed: decline, or continue?',
-        show: ['roof_age', 'wall_type'],
-      },
-    ],
-    catalogue_questions: [],
-    not_evaluated: [],
-  },
-  blockers: [
-    blocker(17, 'underwriter_review', { item_kind: 'draft', intent_id: packet.intent_id, text: 'The packet is ready.' }),
-    blocker(18, 'underwriter_review', { item_kind: 'observation', observation_id: 41, text: 'A reply gives 5.' }, pending),
-    blocker(19, 'underwriter_question', {
-      choice_ids: ['I13.fire_fail'],
-      text: 'The fire simulation failed: decline, or continue?',
-    }),
-    blocker(20, 'underwriter_review', { item_kind: 'review', cause: 'late_reply', text: 'A late reply.' }),
-    blocker(21, 'underwriter_review', {
-      item_kind: 'no_contact_route',
-      resume_trigger: 'a contact email is resolved',
-      text: 'No contact route.',
-    }),
-    {
-      ...blocker(22, 'producer_reply', {
-        resume_trigger: 'the producer replies',
-        text: 'Waiting for the producer’s reply to round 1.',
-      }),
-      owner: 'producer',
-    },
-  ],
+  plan: null,
+  blockers: [packetBlocker],
   fields: [
     { key: 'coverage_a', label: 'Coverage A', kind: 'integer', options: [] },
     { key: 'zip_code', label: 'Zip code', kind: 'text', options: [] },
@@ -150,46 +63,28 @@ const lead: Schemas['LeadDetail'] = {
   drafts: [sentRequest, packet],
 }
 
-const decline: Schemas['DraftView'] = {
-  ...packet,
-  intent_id: 'intent-decline',
-  payload_hash: 'c'.repeat(64),
-  kind: 'decline_notice',
-  subject: 'Your application',
-}
-
 function respond(body: unknown): Response {
   return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } })
 }
 
-// Answers every route with `answer` and records each call as `METHOD path` with its body.
+// Answers every command with `answer` and records each call as `path` with its body.
 function stubApi(answer: unknown = { accepted: true, event_id: 9, reason: null }) {
   const posted: { path: string; body: unknown }[] = []
   vi.stubGlobal(
     'fetch',
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const path = String(input)
-      if (init?.method === 'POST') {
-        posted.push({ path, body: JSON.parse(String(init.body)) })
-        return respond(answer)
-      }
-      return respond({ lead_id: lead.lead_id, events: [] })
+      posted.push({ path: String(input), body: JSON.parse(String(init?.body)) })
+      return respond(answer)
     }),
   )
   return posted
 }
 
 function pane(detail: Schemas['LeadDetail'] = lead) {
-  render(<DetailPane lead={detail} refresh={0} onChange={() => {}} />)
+  render(<DetailPane lead={detail} onChange={() => {}} />)
 }
 
-// The form of the given name inside the item whose text is `itemText`.
-function form(itemText: string, name: string) {
-  const item = screen.getByText(itemText).closest('li')!
-  return within(within(item).getByRole('form', { name }))
-}
-
-async function fill(scope: ReturnType<typeof form>, label: string, text: string) {
+async function fill(scope: ReturnType<typeof within>, label: string, text: string) {
   const field = scope.getByLabelText(label)
   await userEvent.clear(field)
   await userEvent.type(field, text)
@@ -199,171 +94,12 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-describe('the items of a lead', () => {
-  it('edits a draft with its new subject and body and a reason', async () => {
-    const posted = stubApi()
+describe('what the lead waits on', () => {
+  it('names each open item and offers no action on it', () => {
     pane()
-    const edit = form('The packet is ready.', 'Edit')
-    expect(edit.getByRole('button', { name: 'Edit' })).toBeDisabled()
-
-    await fill(edit, 'Subject', 'Your quote, checked')
-    await fill(edit, 'Body', 'Checked.')
-    await fill(edit, 'Reason', 'too stiff')
-    await userEvent.click(edit.getByRole('button', { name: 'Edit' }))
-
-    expect(posted).toEqual([
-      {
-        path: '/api/commands',
-        body: {
-          type: 'edit_draft',
-          payload: {
-            intent_id: packet.intent_id,
-            subject: 'Your quote, checked',
-            body: 'Checked.',
-            reason: 'too stiff',
-          },
-        },
-      },
-    ])
-  })
-
-  it('approves a draft with the underwriter’s own reason against the hash shown', async () => {
-    const posted = stubApi()
-    pane()
-    const approveForm = form('The packet is ready.', 'Approve')
-    expect(approveForm.getByRole('button', { name: 'Approve' })).toBeDisabled()
-
-    await fill(approveForm, 'Reason', 'matches the plan')
-    await userEvent.click(approveForm.getByRole('button', { name: 'Approve' }))
-
-    expect(posted).toEqual([
-      {
-        path: '/api/commands',
-        body: {
-          type: 'approve',
-          payload: { item_id: 17, artifact_hash: packet.payload_hash, reason: 'matches the plan' },
-        },
-      },
-    ])
-  })
-
-  it('rejects a decline notice as withdrawing the decline and sending the asks, and says so', async () => {
-    const posted = stubApi()
-    pane({
-      ...lead,
-      blockers: [blocker(30, 'underwriter_review', { item_kind: 'draft', intent_id: decline.intent_id, text: 'Review the notice.' })],
-      drafts: [decline],
-    })
-    const item = screen.getByText('Review the notice.').closest('li')!
-    expect(within(item).queryByRole('form', { name: 'Reject' })).toBeNull()
-    expect(within(item).getByText(/sends the requests for the facts still missing/)).toBeInTheDocument()
-    const withdraw = form('Review the notice.', 'Withdraw decline and send the asks')
-
-    await fill(withdraw, 'Reason', 'the roof is fine')
-    await userEvent.click(withdraw.getByRole('button', { name: 'Withdraw decline and send the asks' }))
-
-    expect(posted[0].body).toEqual({ type: 'reject', payload: { item_id: 30, reason: 'the roof is fine' } })
-  })
-
-  it('rejects a draft only with a reason', async () => {
-    const posted = stubApi()
-    pane()
-    const rejectForm = form('The packet is ready.', 'Reject')
-    expect(rejectForm.getByRole('button', { name: 'Reject' })).toBeDisabled()
-
-    await fill(rejectForm, 'Reason', 'the roof is wrong')
-    await userEvent.click(rejectForm.getByRole('button', { name: 'Reject' }))
-
-    expect(posted[0]).toEqual({
-      path: '/api/commands',
-      body: { type: 'reject', payload: { item_id: 17, reason: 'the roof is wrong' } },
-    })
-  })
-
-  it.each([
-    ['Approve', { type: 'approve', payload: { item_id: 18, artifact_hash: null, reason: 'clear' } }],
-    ['Reject', { type: 'reject', payload: { item_id: 18, reason: 'clear' } }],
-  ])('%s a pending value with a reason', async (name, body) => {
-    const posted = stubApi()
-    pane()
-    expect(screen.getByText('months_unoccupied: proposed 5, current 0')).toBeInTheDocument()
-
-    const scope = form('A reply gives 5.', name)
-    await fill(scope, 'Reason', 'clear')
-    await userEvent.click(scope.getByRole('button', { name }))
-
-    expect(posted).toEqual([{ path: '/api/commands', body }])
-  })
-
-  it('acknowledges a late-reply review but offers no reject, and a missing contact route offers neither', () => {
-    stubApi()
-    pane()
-    const review = screen.getByText('A late reply.').closest('li')!
-    expect(within(review).getByRole('form', { name: 'Acknowledge' })).toBeInTheDocument()
-    expect(within(review).queryByRole('form', { name: 'Approve' })).toBeNull()
-    expect(within(review).queryByRole('form', { name: 'Reject' })).toBeNull()
-    const route = screen.getByText('No contact route.').closest('li')!
-    expect(within(route).queryByRole('form')).toBeNull()
-    expect(within(route).getByText('This closes when a contact email is resolved.')).toBeInTheDocument()
-  })
-
-  it('says a wait for the producer closes when the producer replies', () => {
-    stubApi()
-    pane()
-    const wait = screen.getByText('Waiting for the producer’s reply to round 1.').closest('li')!
-    expect(within(wait).getByText('This closes when the producer replies.')).toBeInTheDocument()
-    expect(within(wait).queryByText(/resolved|declined/)).toBeNull()
-  })
-
-  it('shows the refusal reason the command returns', async () => {
-    stubApi({ accepted: false, event_id: null, reason: 'the cause persists' })
-    pane()
-    const scope = form('A reply gives 5.', 'Approve')
-    await fill(scope, 'Reason', 'clear')
-    await userEvent.click(scope.getByRole('button', { name: 'Approve' }))
-
-    expect(await scope.findByRole('alert')).toHaveTextContent('the cause persists')
-  })
-})
-
-describe('the question card', () => {
-  it('shows the choice with the values it needs and no option chosen', () => {
-    stubApi()
-    pane()
-    const card = screen.getByRole('region', { name: 'I13.fire_fail' })
-    expect(screen.getAllByText('The fire simulation failed: decline, or continue?')).toHaveLength(1)
-    expect(within(card).getByText('roof_age: 12')).toBeInTheDocument()
-    expect(within(card).getByText('wall_type: —')).toBeInTheDocument()
-    expect(within(card).getAllByRole('button').map((b) => b.textContent)).toEqual([
-      'decline',
-      'legacy underwriting',
-    ])
-  })
-
-  it('requires a reason before an option can be chosen, then posts the ruling', async () => {
-    const posted = stubApi()
-    pane()
-    const card = within(screen.getByRole('region', { name: 'I13.fire_fail' }))
-    for (const button of card.getAllByRole('button')) expect(button).toBeDisabled()
-
-    await userEvent.type(screen.getByLabelText('Reason for the choice'), 'the checklist is met')
-    await userEvent.click(card.getByRole('button', { name: 'legacy underwriting' }))
-
-    expect(posted).toEqual([
-      {
-        path: '/api/commands',
-        body: {
-          type: 'record_ruling',
-          payload: {
-            lead_id: 'LEAD-1',
-            choice_id: 'I13.fire_fail',
-            option: 'legacy_underwriting',
-            reason: 'the checklist is met',
-          },
-        },
-      },
-    ])
-    await waitFor(() => expect(screen.getByLabelText('Reason for the choice')).toHaveValue(''))
+    const waiting = within(screen.getByRole('region', { name: 'Waiting on' }))
+    expect(waiting.getByText('The packet is ready.')).toBeInTheDocument()
+    expect(waiting.queryByRole('form')).toBeNull()
   })
 })
 
@@ -443,7 +179,6 @@ describe('the actions on the lead', () => {
   })
 
   it('offers no paste box without a sent request and no decline once the lead is declined', () => {
-    stubApi()
     pane({ ...lead, status: 'declined', drafts: [packet] })
     expect(screen.queryByRole('form', { name: 'Paste a reply' })).toBeNull()
     expect(screen.queryByRole('form', { name: 'Decline lead' })).toBeNull()
