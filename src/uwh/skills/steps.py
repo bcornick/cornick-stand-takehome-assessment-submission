@@ -297,14 +297,15 @@ def _polished_body(
             round=rounds_used(db, lead_id) + 1,
         )
         try:
-            outcome, exchanges = polish_message.run(request, model)
+            outcome = polish_message.run(
+                request, model, lambda calls: append_model_calls(db, context, lead_id, calls)
+            )
         except RecordingMiss as miss:
             append_replay_miss(db, context, lead_id, miss)
             rejection = "no recording answers the call"
         except anthropic.APIError:
             rejection = "the model provider failed"
         else:
-            append_model_calls(db, context, lead_id, exchanges)
             if isinstance(outcome, polish_message.Rewritten):
                 return outcome.body
             status, rejection = "failing", outcome.reason

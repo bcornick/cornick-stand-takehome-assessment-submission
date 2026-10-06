@@ -28,6 +28,7 @@ from evals.cases import (
     SkillResult,
     load_chat_cases,
     load_reply_cases,
+    run_polish_cases,
     run_skill_cases,
 )
 from evals.controls import Control, applied, mailbox_client
@@ -333,9 +334,12 @@ def _skill_result(folder: Path, outcome: SkillResult) -> dict[str, JsonValue]:
 
 
 def _skill_results() -> dict[str, JsonValue]:
-    """`skill_results` of a seed42 run row: evaluate_playbook's table of cases. read_reply's cases are
-    the reply suite's."""
-    return {"evaluate_playbook": _skill_result(SKILLS_DIR / "evaluate_playbook", run_skill_cases())}
+    """`skill_results` of a seed42 run row: the cases of evaluate_playbook and polish_message. read_reply's
+    cases are the reply suite's."""
+    return {
+        "evaluate_playbook": _skill_result(SKILLS_DIR / "evaluate_playbook", run_skill_cases()),
+        "polish_message": _skill_result(SKILLS_DIR / "polish_message", run_polish_cases()),
+    }
 
 
 def _tokens(measurements: Mapping[str, Mapping[str, float]]) -> dict[str, float]:
@@ -430,7 +434,10 @@ def evaluate_seed42(
 
     return _evaluate(
         "seed42",
-        _case_set_id(LABELS_DIR, [SKILLS_DIR / "evaluate_playbook" / "cases"]),
+        _case_set_id(
+            LABELS_DIR,
+            [SKILLS_DIR / "evaluate_playbook" / "cases", SKILLS_DIR / "polish_message" / "cases"],
+        ),
         settings,
         leadgen_http,
         mailbox_http,

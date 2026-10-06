@@ -1,5 +1,6 @@
 # ABOUTME: Tests the rewrite of the first pass's requests through the running app (10.2): the rewritten body of lead 008 keeps the question block and is hashed and sent as it is, a rejected rewrite sends the rendered request and the log names the check, the approval of a sensitive request binds to the rewritten body, and a decline notice is never rewritten.
 # ABOUTME: The app runs in process in replay against Stand's leadgen and mailbox apps in process; the two calls per request are served from the committed recordings of the seed-42 record run.
+import shutil
 import sqlite3
 from collections.abc import Iterator
 from dataclasses import replace
@@ -8,7 +9,7 @@ from typing import Any
 
 import pytest
 
-from tests.api.helpers import LEAD_008, first_pass
+from tests.api.helpers import LEAD_008, RECORDINGS, first_pass
 from uwh.runtime.event_types import EventType
 from uwh.runtime.events import read_events
 from uwh.runtime.hashing import payload_hash
@@ -18,6 +19,7 @@ from uwh.runtime.store import open_store
 from uwh.runtime.waits import open_blockers
 from uwh.settings import Settings
 from uwh.skills.plan_asks import skill as plan_asks
+from uwh.skills.polish_message.skill import PolishInput, rewrite_call
 from uwh.skills.render_message import skill as render_message
 
 # The seed-42 request whose rewrite failed the model check in the record run.
@@ -153,4 +155,30 @@ def test_a_request_with_nothing_recorded_is_sent_rendered_and_the_miss_is_logged
         (fallback,) = events_of(db, LEAD_008, EventType.skill_fallback_used)
         assert fallback.status == "unavailable"
         assert "no recording answers the call" in fallback.fallback
+        db.close()
+
+
+def test_a_check_call_with_nothing_recorded_leaves_the_rewrite_call_logged(
+    settings: Settings, leadgen: LeadgenClient, mailbox: MailboxClient, tmp_path: Path
+) -> None:
+    rewrite_version = rewrite_call(
+        PolishInput(
+            rendered=render_message.RenderMessageOutput(
+                subject="", body="", ask_ids=[], question_block=""
+            ),
+            recipient_kind="producer",
+            round=1,
+        )
+    ).recording_key.prompt_version
+    only_rewrites = tmp_path / "recordings"
+    shutil.copytree(
+        RECORDINGS / "polish_message" / rewrite_version,
+        only_rewrites / "polish_message" / rewrite_version,
+    )
+    partial = replace(settings, recordings_dir=str(only_rewrites))
+    with first_pass(partial, leadgen, mailbox):
+        db = open_store(partial.db_path)
+
+        assert len(events_of(db, LEAD_008, EventType.model_called)) == 1
+        assert len(events_of(db, LEAD_008, EventType.replay_miss)) == 1
         db.close()

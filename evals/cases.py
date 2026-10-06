@@ -266,7 +266,9 @@ def observe_polish(case: Case) -> dict[str, Any]:
                     check.recording_key,
                     _hand_built_exchange(check, case.input["verdict"]),
                 )
-        result, _ = polish_message.run(request, ModelAccess("replay", recordings, None))
+        result = polish_message.run(
+            request, ModelAccess("replay", recordings, None), lambda _: None
+        )
     if isinstance(result, polish_message.Rejected):
         return {"result": "rejected", "check": result.check, "detail": result.detail}
     return {"result": "rewritten", "question_block_kept": rendered.question_block in result.body}

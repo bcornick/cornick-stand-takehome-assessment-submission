@@ -1,6 +1,7 @@
 # ABOUTME: The polish_message skill (10.2, A.10): two forced tool calls give a rendered request a conversational opening and closing, and judge them against the request; code builds the body around the question block and checks the pieces.
 # ABOUTME: The output is the rewritten body or the rejection that names the check that stopped it. A tool input that fails validation repeats the call once; a second failure, or a refusal, rejects the rewrite.
 import re
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Literal
 
@@ -112,19 +113,23 @@ def check_call(input: PolishInput, pieces: Pieces) -> ForcedToolCall:
     )
 
 
-def run(input: PolishInput, model: ModelAccess) -> tuple[Rewritten | Rejected, list[Exchange]]:
-    """Rewrite the request. Returns the rewritten body or the rejection, with the exchange of each
-    call made. The check call is made only for pieces the code check passes."""
+def run(
+    input: PolishInput, model: ModelAccess, record: Callable[[Sequence[Exchange]], None]
+) -> Rewritten | Rejected:
+    """Rewrite the request. Returns the rewritten body or the rejection. `record` is given the
+    exchanges of each call as the call completes, so a later call that raises leaves the earlier one
+    recorded. The check call is made only for pieces the code check passes."""
     pieces, exchanges = read_tool_input(model, rewrite_call(input), Pieces)
+    record(exchanges)
     if pieces is None:
-        return Rejected(check="rewrite", detail="the call abstained"), exchanges
+        return Rejected(check="rewrite", detail="the call abstained")
     broken = code_check(pieces)
     if broken is not None:
-        return Rejected(check="code_check", detail=broken), exchanges
+        return Rejected(check="code_check", detail=broken)
     verdict, checked = read_tool_input(model, check_call(input, pieces), Verdict)
-    exchanges += checked
+    record(checked)
     if verdict is None:
-        return Rejected(check="model_check", detail="the call abstained"), exchanges
+        return Rejected(check="model_check", detail="the call abstained")
     if verdict.verdict == "fail":
-        return Rejected(check="model_check", detail=verdict.offending_sentence), exchanges
-    return Rewritten(body=build_body(pieces, input.rendered)), exchanges
+        return Rejected(check="model_check", detail=verdict.offending_sentence)
+    return Rewritten(body=build_body(pieces, input.rendered))

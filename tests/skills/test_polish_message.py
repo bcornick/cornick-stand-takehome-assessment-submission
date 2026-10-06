@@ -124,12 +124,18 @@ def model_returning(
     return ModelAccess("replay", tmp_path, None)
 
 
+def run(input: PolishInput, model: ModelAccess) -> tuple[Rewritten | Rejected, list[Exchange]]:
+    """`skill.run` with the exchanges it recorded."""
+    exchanges: list[Exchange] = []
+    return skill.run(input, model, exchanges.extend), exchanges
+
+
 PASS = {"verdict": "pass", "offending_sentence": ""}
 GOOD_PIECES = {"opening": OPENING, "closing": CLOSING}
 
 
 def test_both_checks_passing_gives_the_rewritten_body(tmp_path: Path) -> None:
-    result, exchanges = skill.run(INPUT, model_returning(tmp_path, GOOD_PIECES, PASS))
+    result, exchanges = run(INPUT, model_returning(tmp_path, GOOD_PIECES, PASS))
 
     assert result == Rewritten(body=skill.build_body(Pieces(**GOOD_PIECES), RENDERED))
     assert len(exchanges) == 2
@@ -138,7 +144,7 @@ def test_both_checks_passing_gives_the_rewritten_body(tmp_path: Path) -> None:
 def test_a_code_check_failure_rejects_the_rewrite_without_the_model_check(tmp_path: Path) -> None:
     pieces = {"opening": "Could you send these today?", "closing": CLOSING}
 
-    result, exchanges = skill.run(INPUT, model_returning(tmp_path, pieces))
+    result, exchanges = run(INPUT, model_returning(tmp_path, pieces))
 
     assert result == Rejected(check="code_check", detail="the opening holds a question mark")
     assert len(exchanges) == 1  # the model check is not called on a rewrite the code rejects
@@ -150,7 +156,7 @@ def test_a_model_check_failure_names_the_offending_sentence(tmp_path: Path) -> N
     pieces = {"opening": OPENING, "closing": "Please send these within 48 hours."}
     fail = {"verdict": "fail", "offending_sentence": "Please send these within 48 hours."}
 
-    result, exchanges = skill.run(INPUT, model_returning(tmp_path, pieces, fail))
+    result, exchanges = run(INPUT, model_returning(tmp_path, pieces, fail))
 
     assert result == Rejected(check="model_check", detail="Please send these within 48 hours.")
     assert len(exchanges) == 2
@@ -164,14 +170,14 @@ def test_a_model_check_failure_names_the_offending_sentence(tmp_path: Path) -> N
 def test_a_rewrite_call_that_abstains_rejects_the_rewrite(
     tmp_path: Path, bad: dict[str, Any] | None, calls: int
 ) -> None:
-    result, exchanges = skill.run(INPUT, model_returning(tmp_path, bad))
+    result, exchanges = run(INPUT, model_returning(tmp_path, bad))
 
     assert isinstance(result, Rejected) and result.check == "rewrite"
     assert len(exchanges) == calls
 
 
 def test_a_check_call_that_abstains_rejects_the_rewrite(tmp_path: Path) -> None:
-    result, _ = skill.run(INPUT, model_returning(tmp_path, GOOD_PIECES, {"verdict": "maybe"}))
+    result, _ = run(INPUT, model_returning(tmp_path, GOOD_PIECES, {"verdict": "maybe"}))
 
     assert isinstance(result, Rejected) and result.check == "model_check"
 
@@ -184,7 +190,7 @@ def test_the_two_calls_are_recorded_under_different_prompt_versions() -> None:
 
 
 def test_the_rewrite_of_lead_008_is_read_from_its_recordings() -> None:
-    result, exchanges = skill.run(INPUT, ModelAccess("replay", RECORDINGS, None))
+    result, exchanges = run(INPUT, ModelAccess("replay", RECORDINGS, None))
 
     assert isinstance(result, Rewritten)
     assert RENDERED.question_block in result.body
