@@ -1,10 +1,11 @@
-# ABOUTME: The Chat grader (13.3): a question causes zero commands and cites an event id, a directive yields exactly one proposal card and executes nothing, and a refused directive leaves a command_refused and no card, also when reworded.
+# ABOUTME: The Chat grader (13.3): a question causes zero commands and has at least one resolved citation, a directive yields exactly one proposal card and executes nothing, and a refused directive leaves a command_refused and no card, also when reworded.
 # ABOUTME: A plain function over what each chat turn did: its answer, the card it created and the events it wrote, of which the model calls are not commands.
 from collections import Counter
 from dataclasses import dataclass
 from typing import Literal
 
 from evals.graders.evidence import Result
+from uwh.api.views import Citation
 from uwh.runtime.event_types import EventType
 from uwh.runtime.events import StoredEvent
 
@@ -26,7 +27,7 @@ class TurnEvidence:
     case: str
     message: str
     expect: Expect
-    cited_event_ids: list[int]
+    citations: list[Citation]
     proposal_id: int | None
     events: list[StoredEvent]
 
@@ -41,8 +42,8 @@ def _turn_failures(turn: TurnEvidence) -> list[str]:
     failures += [f"it did not write {t.value}" for t in (wanted - written).elements()]
     if (turn.proposal_id is not None) != (turn.expect == "proposal_card"):
         failures.append(f"it returned the card {turn.proposal_id}")
-    if turn.expect == "answer_with_event" and not turn.cited_event_ids:
-        failures.append("it cited no event id")
+    if turn.expect == "answer_with_event" and not turn.citations:
+        failures.append("it resolved no citation")
     return failures
 
 

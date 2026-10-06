@@ -39,7 +39,9 @@ from evals.graders.plan import rule_trace
 from evals.graders.reply import reply_facts, reply_reading
 from evals.graders.safety import FaultRun, critical_errors, send_safety
 from uwh.api.runtime import Runtime, open_runtime
-from uwh.chat.skill import run_turn
+from uwh.api.replies import deliver_fixture_replies
+from uwh.api.views import MAX_CHAT_CHARACTERS, MAX_CHAT_HISTORY, ChatExchange
+from uwh.chat.skill import TurnResult, run_turn
 from uwh.runtime.bootstrap import TIMEOUT_SECONDS, EnvironmentInvalid, check_services
 from uwh.runtime.commands import CommandResult, submit_command
 from uwh.runtime.event_types import REQUEST_KINDS, EventType, FaultInjected, ModelCalled
@@ -49,7 +51,8 @@ from uwh.runtime.hashing import file_entries, hash_json, source_files
 from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
 from uwh.runtime.modes import RecordingMiss
-from uwh.runtime.runs import current_run, pass_context, run_passes
+from uwh.runtime.proposals import read_proposal
+from uwh.runtime.runs import current_run, pass_context, run_first_pass, run_passes
 from uwh.settings import Settings
 from uwh.skills import SKILLS
 from uwh.skills.digest import chat_digest, skill_digest
@@ -542,35 +545,81 @@ def evaluate_replies(
     )
 
 
-def play_chat_cases(
+def _reply_text(db: sqlite3.Connection, turn: TurnResult) -> str:
+    """What the conversation shows as the reply to a turn: its answer, or for a card its rationale."""
+    if turn.answer is not None:
+        return turn.answer
+    assert turn.proposal_id is not None  # a turn with no answer created a card
+    card = read_proposal(db, turn.proposal_id)
+    assert card is not None
+    return str(card.payload["rationale"])
+
+
+def _put_messages(
     runtime: Runtime, db: sqlite3.Connection, cases: Sequence[ChatCase]
 ) -> tuple[list[TurnEvidence], list[str]]:
-    """Start seed 42's run, leave it at its start (no first pass, so the event ids are the same on
-    every run) and put each case's messages to the assistant in order. Returns the evidence of each
-    turn, and a message for each turn that had no recording."""
-    result = submit_command(db, runtime.env, "underwriter", "start_run", {"seed": SEED})
-    assert result.accepted, result.reason
+    """Put each case's messages to the assistant in order, each turn given the earlier turns of its
+    case as the history. Returns the evidence of each turn, and a message for each turn that had no
+    recording."""
     turns: list[TurnEvidence] = []
     misses: list[str] = []
     for case in cases:
+        history: list[ChatExchange] = []
         for message, expect in case.turns:
             before = db.execute("SELECT COALESCE(MAX(id), 0) FROM events").fetchone()[0]
             try:
-                turn = run_turn(db, runtime.env, message, case.lead)
+                turn = run_turn(
+                    db, runtime.env, message, case.lead, history[-MAX_CHAT_HISTORY:], _ignore_step
+                )
             except RecordingMiss as miss:
                 misses.append(f"{case.name} / {message!r}: {miss}")
                 continue
+            history.append(
+                ChatExchange(message=message, reply=_reply_text(db, turn)[:MAX_CHAT_CHARACTERS])
+            )
             turns.append(
                 TurnEvidence(
                     case.name,
                     message,
                     expect,
-                    turn.cited_event_ids,
+                    turn.citations,
                     turn.proposal_id,
                     [e for e in read_events(db) if e.id > before],
                 )
             )
     return turns, misses
+
+
+def _ignore_step(line: str) -> None:
+    """The chat turns of a case need no progress line."""
+
+
+def play_chat_cases(
+    runtime: Runtime, replay_runtime: Runtime, db: sqlite3.Connection, cases: Sequence[ChatCase]
+) -> tuple[list[TurnEvidence], list[str]]:
+    """Start seed 42's run and put the messages of the cases not flagged `after_replies` to the
+    assistant while the run stands at its start (no first pass, so the event ids are the same on
+    every run). Then play the first pass and deliver the fixture replies through `replay_runtime`,
+    a runtime on the same database in replay mode so that only the chat turns call the model in a
+    recording run, and put the flagged cases. Returns the evidence of each turn, and a message for
+    each turn that had no recording."""
+    result = submit_command(db, runtime.env, "underwriter", "start_run", {"seed": SEED})
+    assert result.accepted, result.reason
+    turns, misses = _put_messages(runtime, db, [c for c in cases if not c.after_replies])
+
+    run = current_run(db)
+    assert run is not None  # the start wrote the run
+    env = replay_runtime.env
+    run_first_pass(
+        replay_runtime.settings.db_path,
+        run.run_id,
+        pass_context(run, env),
+        env.steps,
+        env.mailbox,
+    )
+    deliver_fixture_replies(replay_runtime)
+    later_turns, later_misses = _put_messages(runtime, db, [c for c in cases if c.after_replies])
+    return turns + later_turns, misses + later_misses
 
 
 def evaluate_chat(
@@ -587,13 +636,16 @@ def evaluate_chat(
     cases = load_chat_cases()
 
     def score(per_run: Callable[[str], Settings], leadgen: LeadgenClient) -> dict[str, Any]:
+        settings_of_run = per_run("chat")
+        mailbox = mailbox_client(control, mailbox_http)
         with (
+            open_runtime(settings_of_run, leadgen, mailbox) as runtime,
             open_runtime(
-                per_run("chat"), leadgen, mailbox_client(control, mailbox_http)
-            ) as runtime,
+                replace(settings_of_run, run_mode="replay"), leadgen, mailbox
+            ) as replaying,
             runtime.database() as db,
         ):
-            turns, misses = play_chat_cases(runtime, db, cases)
+            turns, misses = play_chat_cases(runtime, replaying, db, cases)
             measurements = _measurements(db)
         by_case = {
             case.name: chat([t for t in turns if t.case == case.name]).failures

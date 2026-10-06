@@ -13,6 +13,7 @@ from evals.cases import load_chat_cases
 from evals.graders.chat import Expect, TurnEvidence, chat
 from evals.run import evaluate_chat
 from uwh.api.runtime import open_runtime
+from uwh.api.views import Citation
 from uwh.runtime.event_types import EventType
 from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
@@ -28,8 +29,12 @@ def turns(
 ) -> Iterator[list[TurnEvidence]]:
     mailbox = MailboxClient(stand_mailbox_client)
     mailbox.reset()
-    with open_runtime(settings, leadgen, mailbox) as runtime, runtime.database() as db:
-        played, misses = run.play_chat_cases(runtime, db, load_chat_cases())
+    with (
+        open_runtime(settings, leadgen, mailbox) as runtime,
+        open_runtime(replace(settings, run_mode="replay"), leadgen, mailbox) as replaying,
+        runtime.database() as db,
+    ):
+        played, misses = run.play_chat_cases(runtime, replaying, db, load_chat_cases())
     assert misses == []
     yield played
 
@@ -43,7 +48,7 @@ def test_the_chat_suite_passes_its_cases_and_its_row_holds_the_grader_and_the_ca
 
     assert row["status"] == "scored" and row["suite"] == "chat"
     assert row["scores"]["Chat"]["passed"] is True, row["scores"]["Chat"]["failures"]
-    assert row["skill_results"]["chat"] == {"cases_passed": 3, "cases_total": 3, "passed": True}
+    assert row["skill_results"]["chat"] == {"cases_passed": 4, "cases_total": 4, "passed": True}
     assert row["tokens"]["in"] > 0 and row["tokens"]["out"] > 0
     assert row["cost_usd"] == 0.0
     assert row["skill_digests"]["chat"] == chat_digest(Path(uwh.__file__).parent, settings.model_id)
@@ -57,6 +62,7 @@ def test_every_turn_of_the_cases_has_the_outcome_its_case_expects(
         "proposal_card",
         "refused",
         "refused",
+        "answer_with_event",
     ]
     assert chat(turns).failures == []
 
@@ -71,17 +77,25 @@ def test_a_turn_graded_against_another_outcome_fails(turns: list[TurnEvidence]) 
 def test_a_question_that_caused_a_command_fails(turns: list[TurnEvidence]) -> None:
     card = next(t for t in turns if t.expect == "proposal_card")
 
-    failures = chat([replace(card, expect="answer_with_event", cited_event_ids=[1])]).failures
+    failures = chat(
+        [
+            replace(
+                card,
+                expect="answer_with_event",
+                citations=[Citation(number=1, lead_id=card.case, kind="event", id=1)],
+            )
+        ]
+    ).failures
 
     assert any("proposal_created" in f for f in failures)
 
 
-def test_an_answer_that_cites_no_event_fails(turns: list[TurnEvidence]) -> None:
+def test_an_answer_with_no_resolved_citation_fails(turns: list[TurnEvidence]) -> None:
     question = next(t for t in turns if t.expect == "answer_with_event")
 
-    failures = chat([replace(question, cited_event_ids=[])]).failures
+    failures = chat([replace(question, citations=[])]).failures
 
-    assert failures == [f"{question.case} / {question.message!r}: it cited no event id"]
+    assert failures == [f"{question.case} / {question.message!r}: it resolved no citation"]
 
 
 def test_a_refusal_that_also_left_a_card_fails(turns: list[TurnEvidence]) -> None:

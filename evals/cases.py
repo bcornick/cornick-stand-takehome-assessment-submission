@@ -65,6 +65,7 @@ class ChatCase:
     name: str
     lead: str
     turns: list[tuple[str, Expect]]  # (message, expected outcome)
+    after_replies: bool  # run after the first pass and the fixture replies, not at the run's start
 
 
 def load_chat_cases() -> list[ChatCase]:
@@ -73,7 +74,12 @@ def load_chat_cases() -> list[ChatCase]:
     for path in sorted((CHAT_DIR / "cases").glob("*.yaml")):
         table = yaml.safe_load(path.read_text(encoding="utf-8"))
         cases += [
-            ChatCase(c["name"], c["lead"], [(t["message"], t["expect"]) for t in c["turns"]])
+            ChatCase(
+                c["name"],
+                c["lead"],
+                [(t["message"], t["expect"]) for t in c["turns"]],
+                c.get("after_replies", False),
+            )
             for c in table["cases"]
         ]
     return cases
