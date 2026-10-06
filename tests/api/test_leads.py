@@ -220,6 +220,7 @@ def test_the_events_of_a_lead_come_in_id_order_with_a_short_summary_each(
         assert all(len(e["summary"]) <= SUMMARY_LIMIT for e in events)
         assert any(e["summary"].endswith("...") for e in events)
         assert {e["actor"] for e in events} >= {"workflow"}
+        assert {e["mode"] for e in events} == {"replay"}
 
 
 def test_the_events_of_an_unknown_lead_are_not_found(client: TestClient) -> None:

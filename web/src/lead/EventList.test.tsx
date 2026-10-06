@@ -11,6 +11,7 @@ const events: components['schemas']['LeadEvents'] = {
     {
       id: 7,
       type: 'fact_observed',
+      mode: 'replay',
       actor: 'workflow',
       sim_ts: '2026-06-29T08:00:00.000000Z',
       summary: 'roof_year recorded as 2017 (submitted).',
@@ -18,6 +19,7 @@ const events: components['schemas']['LeadEvents'] = {
     {
       id: 9,
       type: 'message_sent',
+      mode: 'replay',
       actor: 'underwriter',
       sim_ts: '2026-06-29T09:30:00.000000Z',
       summary: 'The message was posted to the mailbox.',

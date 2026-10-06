@@ -168,10 +168,11 @@ class LeadDetail(StrictModel):
 
 
 class EventRow(StrictModel):
-    """One of a lead's events: its id, type, actor, simulated time and a one-line summary of its payload."""
+    """One of a lead's events: its id, type, run mode, actor, simulated time and a one-line summary of its payload."""
 
     id: int
     type: EventType
+    mode: RunMode
     actor: Actor
     sim_ts: str
     summary: str
