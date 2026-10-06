@@ -43,7 +43,7 @@ export function Conversation(props: Props) {
     if (latest !== undefined) end.current?.scrollIntoView({ block: 'end' })
   }, [turns.length, latest?.steps.length, latest?.closing])
   return (
-    <section aria-label="Conversation" className="flex h-full flex-col">
+    <section aria-label="Conversation" className="flex h-full flex-col bg-soft">
       <header className="flex items-center justify-between gap-4 border-b px-6 py-3">
         <h1 className="text-base font-semibold">{title}</h1>
         {headerAction}

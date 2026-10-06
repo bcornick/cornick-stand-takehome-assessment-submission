@@ -1,5 +1,5 @@
 // ABOUTME: The demo controls, apart from the product: load the day's leads and deliver the producers' fixture replies.
-// ABOUTME: A small card pinned bottom right, above the composer, that minimises to a pill.
+// ABOUTME: A small black card pinned bottom right, above the composer, that minimises to a pill.
 import { useState } from 'react'
 import type { components } from '@/api/types'
 import { deliverFixtureReplies, startRun } from '@/api/client'
@@ -27,7 +27,7 @@ export function DemoPanel({ run, onChange }: Props) {
         <button
           type="button"
           onClick={() => setMinimised(false)}
-          className="rounded-full border bg-white px-3 py-1 text-xs shadow"
+          className="rounded-full bg-inverse px-3 py-1 text-xs text-white shadow"
         >
           {run.mode} · {runId}
         </button>
@@ -38,15 +38,15 @@ export function DemoPanel({ run, onChange }: Props) {
   return (
     <aside
       aria-label="Demo controls"
-      className="fixed bottom-20 right-4 z-10 w-72 space-y-3 rounded-md border bg-white p-4 text-sm shadow"
+      className="on-inverse fixed bottom-20 right-4 z-10 w-72 space-y-3 rounded-md bg-inverse p-4 text-sm text-white shadow"
     >
       <div className="flex items-center justify-between">
         <h2 className="font-medium">Demo controls</h2>
-        <button type="button" onClick={() => setMinimised(true)} className="text-xs text-muted-foreground">
+        <button type="button" onClick={() => setMinimised(true)} className="text-xs text-white/70">
           Minimise
         </button>
       </div>
-      <dl className="text-xs text-muted-foreground">
+      <dl className="text-xs text-white/70">
         <div>Mode: {run.mode}</div>
         <div>Seed: {run.seed}</div>
         <div>{runId}</div>

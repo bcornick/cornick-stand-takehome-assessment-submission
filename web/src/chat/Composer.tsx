@@ -28,7 +28,7 @@ export function Composer({ placeholder, disabled, note, onSend }: Props) {
         onChange={(event) => setMessage(event.target.value)}
         placeholder={placeholder}
         disabled={disabled}
-        className="min-w-0 flex-1 rounded-md border px-3 py-1.5 text-sm disabled:opacity-50"
+        className="min-w-0 flex-1 rounded-md border bg-background px-3 py-1.5 text-sm disabled:opacity-50"
       />
       <button
         type="submit"

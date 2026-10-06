@@ -65,7 +65,7 @@ function ItemCard({ item, refresh, onSelect, onChange }: CardProps) {
   const blocker = lead.state === 'ready' ? lead.data.blockers.find((b) => b.item_id === item.item_id) : undefined
   if (lead.state === 'ready' && blocker === undefined) return null
   return (
-    <div className="flex flex-col gap-2 rounded-md border p-3">
+    <div className="flex flex-col gap-2 rounded-md border bg-background p-3">
       <button
         type="button"
         className="self-start text-sm font-medium underline-offset-2 hover:underline"

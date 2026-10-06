@@ -32,7 +32,7 @@ export function ProposalCard({ proposal, onDone }: Props) {
     rationale: string
   }
   return (
-    <li className="flex flex-col gap-2 rounded-md border p-3">
+    <li className="flex flex-col gap-2 rounded-md border bg-background p-3">
       <p className="text-sm">
         <span className="font-medium">{inWords(type, payload)}</span>
         {': '}

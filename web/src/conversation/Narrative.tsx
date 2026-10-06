@@ -72,7 +72,7 @@ function BlockView({ block, lead, onOpen, onChange }: { block: Block } & Omit<Pr
       )
     case 'open_card':
       return (
-        <div className="flex flex-col gap-2 rounded-md border border-gray-300 p-3">
+        <div className="flex flex-col gap-2 rounded-md border bg-background p-3">
           <OpenItem lead={lead} blocker={block.blocker} onChange={onChange} />
           <button
             type="button"
@@ -95,7 +95,7 @@ function BlockView({ block, lead, onOpen, onChange }: { block: Block } & Omit<Pr
       // The body folds under its first line; a one-line body has nothing to fold.
       const [firstLine, ...rest] = body.split('\n')
       return (
-        <div className="flex flex-col gap-1 rounded-md border border-gray-200 bg-gray-50 p-3">
+        <div className="flex flex-col gap-1 rounded-md border bg-background p-3">
           <p className="flex items-baseline gap-2 text-sm text-gray-600">
             <span>{sent ? 'To the producer' : 'From the producer'}</span>
             <span>{formatTime(block.event.sim_ts)}</span>

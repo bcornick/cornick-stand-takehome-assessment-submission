@@ -24,7 +24,7 @@ export function ChatTail({ turns, proposals, leadId, onOpen, onSelect, onChange 
             const { closing } = turn
             return (
               <li key={index} className="flex flex-col gap-2">
-                <p className="max-w-[80%] self-end rounded-md bg-muted px-3 py-1.5 text-sm">{turn.message}</p>
+                <p className="max-w-[80%] self-end rounded-md bg-background px-3 py-1.5 text-sm">{turn.message}</p>
                 {turn.steps.length > 0 && (
                   <details open={closing === null} className="text-xs text-muted-foreground">
                     <summary>What I looked at</summary>
