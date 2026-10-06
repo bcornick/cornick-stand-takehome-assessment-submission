@@ -95,13 +95,13 @@
     "milestone": 5,
     "description": "After a run, a routine request in the mailbox carries the rendered question block unchanged inside a rewritten opening and closing. Expect: all pass.",
     "command": "uv run pytest -m integration tests/integration/test_polish_message.py -k question_block_unchanged",
-    "passes": false
+    "passes": true
   },
   {
     "id": "M5-A3",
     "milestone": 5,
     "description": "A rewrite that fails either check sends the rendered request as it is. Expect: all pass.",
     "command": "uv run pytest -m integration tests/integration/test_polish_message.py -k rejected_rewrite",
-    "passes": false
+    "passes": true
   }
 ]
