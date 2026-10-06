@@ -1,5 +1,5 @@
 // ABOUTME: The demo controls, apart from the product: load the day's leads and deliver the producers' fixture replies.
-// ABOUTME: A small black card pinned to the bottom right corner, beside the composer, that minimises to a pill.
+// ABOUTME: A small black card pinned to the bottom right corner, beside the composer; it starts as a pill reading "Demo controls" and opens on a click.
 import { useState } from 'react'
 import type { components } from '@/api/types'
 import { deliverFixtureReplies, startRun } from '@/api/client'
@@ -8,7 +8,7 @@ import { ActionButton } from '@/components/ActionButton'
 type Props = { run: components['schemas']['RunView']; onChange: () => void }
 
 export function DemoPanel({ run, onChange }: Props) {
-  const [minimised, setMinimised] = useState(false)
+  const [minimised, setMinimised] = useState(true)
   const [confirming, setConfirming] = useState(false)
   const runId = run.run_id ?? 'No run loaded'
 
@@ -29,7 +29,7 @@ export function DemoPanel({ run, onChange }: Props) {
           onClick={() => setMinimised(false)}
           className="rounded-full bg-inverse px-3 py-1 text-xs text-white shadow-[0_14px_44px_rgba(0,0,0,0.55)]"
         >
-          {run.mode} · {runId}
+          Demo controls
         </button>
       </aside>
     )

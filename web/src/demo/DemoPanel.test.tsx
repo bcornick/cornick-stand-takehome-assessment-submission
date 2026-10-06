@@ -26,6 +26,12 @@ const run: Schemas['RunView'] = {
   },
 }
 
+// Renders the panel and opens its card from the pill it starts as.
+async function renderOpen(view: Schemas['RunView'] = run, onChange: () => void = () => undefined) {
+  render(<DemoPanel run={view} onChange={onChange} />)
+  await userEvent.click(screen.getByRole('button', { name: 'Demo controls' }))
+}
+
 function stubApi(body: unknown) {
   const calls: string[] = []
   vi.stubGlobal(
@@ -49,7 +55,7 @@ describe('DemoPanel', () => {
   it('starts the run at once when none is loaded', async () => {
     const calls = stubApi(run)
     const onChange = vi.fn()
-    render(<DemoPanel run={{ ...run, run_id: null }} onChange={onChange} />)
+    await renderOpen({ ...run, run_id: null }, onChange)
     expect(screen.getByText('No run loaded')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: "Load today's leads" }))
     expect(calls).toEqual(['POST /api/run/start?wait=true'])
@@ -58,7 +64,7 @@ describe('DemoPanel', () => {
 
   it('asks before clearing a loaded run, starts only on "Load anyway" and posts nothing on "Cancel"', async () => {
     const calls = stubApi(run)
-    render(<DemoPanel run={run} onChange={() => undefined} />)
+    await renderOpen(run)
 
     await userEvent.click(screen.getByRole('button', { name: "Load today's leads" }))
     expect(screen.getByText('This clears the current day')).toBeInTheDocument()
@@ -79,18 +85,19 @@ describe('DemoPanel', () => {
         { lead_id: 'LEAD-2', accepted: false, reason: 'The lead has no open ask.' },
       ],
     })
-    render(<DemoPanel run={run} onChange={() => undefined} />)
+    await renderOpen(run)
     await userEvent.click(screen.getByRole('button', { name: "Deliver the producers' replies" }))
     expect(calls).toEqual(['POST /api/replies/fixtures'])
     expect(await screen.findByRole('alert')).toHaveTextContent('The lead has no open ask.')
   })
 
-  it('minimises to a pill with the mode and the run id, and restores on a click', async () => {
+  it('starts as a pill, opens on a click and minimises again', async () => {
     stubApi({})
     render(<DemoPanel run={run} onChange={() => undefined} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Minimise' }))
     expect(screen.queryByRole('button', { name: "Load today's leads" })).toBeNull()
-    await userEvent.click(screen.getByRole('button', { name: 'replay · run-1' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Demo controls' }))
     expect(screen.getByRole('button', { name: "Load today's leads" })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Minimise' }))
+    expect(screen.getByRole('button', { name: 'Demo controls' })).toBeInTheDocument()
   })
 })

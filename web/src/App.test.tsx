@@ -238,6 +238,7 @@ describe('App', () => {
     const leads = within(screen.getByRole('navigation', { name: 'Leads' }))
     expect(leads.queryByRole('button', { name: /Lead 008/ })).toBeNull()
 
+    await userEvent.click(demo.getByRole('button', { name: 'Demo controls' }))
     await userEvent.click(demo.getByRole('button', { name: "Load today's leads" }))
     await userEvent.click(await leads.findByRole('button', { name: /Lead 008/ }))
 

@@ -141,7 +141,7 @@ The panel opens on a citation chip or on a card's "details" link. One click clos
 
 ### Demo panel
 
-- A small card pinned bottom right, titled "Demo controls", minimisable to a pill showing the mode and run id.
+- A small card pinned bottom right, titled "Demo controls". It starts minimised, as a pill reading "Demo controls" that opens the card, and minimises again from the card.
 - "Load today's leads" starts the run (`startRun`). When a run exists, an inline confirm says "This clears the current day".
 - "Deliver the producers' replies" delivers the fixtures (`deliverFixtureReplies`). The card shows the run id, seed and mode from `RunView`.
 - It is a separate component. With no run loaded, the product's empty state says so and points to it.
