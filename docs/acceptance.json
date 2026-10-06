@@ -81,6 +81,6 @@
     "milestone": 4,
     "description": "The chat cases pass in the eval: a question causes zero commands and cites event ids; a directive becomes a proposal card and a reworded refused directive stays refused. Expect: exit 0, then `true`.",
     "command": "make eval ARGS='--suite chat' && tail -n 1 evals/results.jsonl | jq -e '.kind == \"run\" and .suite == \"chat\" and (.scores | to_entries | all(.value.passed))'",
-    "passes": false
+    "passes": true
   }
 ]
