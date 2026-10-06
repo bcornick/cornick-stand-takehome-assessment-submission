@@ -6,13 +6,10 @@ from pydantic import Field, JsonValue, ValidationError, model_validator
 
 from uwh.rules.models import (
     ActionPlan,
-    OpenChoice,
     StrictModel,
 )
 from uwh.runtime.event_types import (
-    PAYLOAD_MODELS,
     Actor,
-    ApprovalItemKind,
     BlockerDetail,
     BlockerKind,
     BlockerOwner,
@@ -22,7 +19,6 @@ from uwh.runtime.event_types import (
     ObservationSource,
     ObservationStatus,
     ProposalState,
-    REQUEST_KINDS,
     Status,
 )
 from uwh.settings import RunMode
@@ -160,12 +156,6 @@ class DraftView(StrictModel):
     round: int
 
 
-class OpenChoiceView(OpenChoice):
-    """An open underwriter choice with the values of the fields it shows (section 11)."""
-
-    shown_values: dict[str, JsonValue]  # field -> its effective value; None when missing
-
-
 class LeadDetail(StrictModel):
     """`GET /api/leads/{id}`. The rule traces are the plan's (`effects[].trace`,
     `declines_on_every_branch`); its open choices and `not_evaluated` notes are the plan's too."""
@@ -184,30 +174,13 @@ class LeadDetail(StrictModel):
 
 
 class EventRow(StrictModel):
-    """An `events` row. `payload` is an object that follows `PAYLOAD_MODELS[type]`; the row checks
-    it, so the schema stays one object type rather than 28 row variants."""
+    """One of a lead's events: its id, type, actor, simulated time and a one-line summary of its payload."""
 
     id: int
-    run_id: str | None
-    mode: RunMode
-    lead_id: str | None  # None for a run-level event
     type: EventType
-    payload: dict[str, JsonValue]
     actor: Actor
-    ruleset_hash: str | None
-    prompt_versions: dict[str, str] | None
-    model_id: str | None
-    request_id: str | None
-    real_ts: str
     sim_ts: str
-
-    @model_validator(mode="after")
-    def payload_follows_its_type(self) -> Self:
-        try:
-            PAYLOAD_MODELS[self.type].model_validate(self.payload)
-        except ValidationError as error:
-            raise ValueError(f"the payload does not follow {self.type.value}: {error}") from None
-        return self
+    summary: str
 
 
 class LeadEvents(StrictModel):
@@ -217,84 +190,15 @@ class LeadEvents(StrictModel):
 
 # ---- items (section 11, A.11) --------------------------------------------------------------------
 
-ReviewItemName = Literal[
-    "draft_request",
-    "draft_quote_packet",
-    "draft_decline_notice",
-    "pending_observation",
-    "delivery_unknown",
-    "no_contact_route",
-    "review_raised_by_event",
-    "review_cause_persists",
-]
 
-# A.11's item table: row -> (blocker kind, approvals item kind).
-_REVIEW_ROWS: dict[ReviewItemName, tuple[BlockerKind, ApprovalItemKind]] = {
-    "draft_request": ("underwriter_review", "draft"),
-    "draft_quote_packet": ("underwriter_review", "draft"),
-    "draft_decline_notice": ("underwriter_review", "draft"),
-    "pending_observation": ("underwriter_review", "observation"),
-    "delivery_unknown": ("delivery_unknown", "delivery_unknown"),
-    "no_contact_route": ("underwriter_review", "no_contact_route"),
-    "review_raised_by_event": ("underwriter_review", "review"),
-    "review_cause_persists": ("underwriter_review", "review"),
-}
+class Item(StrictModel):
+    """An open item an underwriter acts on: a review, a question card or an unknown delivery. The
+    lead's detail carries what its action needs; this row says which lead to open."""
 
-
-# The message kinds of the draft each A.11 draft row holds.
-_DRAFT_ROW_KINDS: dict[ReviewItemName, tuple[MessageKind, ...]] = {
-    "draft_request": REQUEST_KINDS,
-    "draft_quote_packet": ("quote_packet",),
-    "draft_decline_notice": ("decline_notice",),
-}
-
-
-class ReviewItem(BlockerView):
-    """An open review: `item` says which A.11 row it is, so the client knows what `approve` and
-    `reject` do. A draft row carries the draft whose `payload_hash` an `approve` echoes."""
-
-    type: Literal["review"]
+    item_id: int  # `blockers.id`
     lead_id: str
-    item: ReviewItemName
-    draft: DraftView | None = None
-
-    @model_validator(mode="after")
-    def row_fits_the_blocker(self) -> Self:
-        blocker_kind, item_kind = _REVIEW_ROWS[self.item]
-        if (self.kind, self.detail.item_kind) != (blocker_kind, item_kind):
-            raise ValueError(f"{self.item} is a {blocker_kind} blocker with item_kind {item_kind}")
-        if item_kind == "draft":
-            if self.draft is None or self.draft.intent_id != self.detail.intent_id:
-                raise ValueError("a draft item carries the draft its blocker reviews: draft")
-            if self.draft.kind not in _DRAFT_ROW_KINDS[self.item]:
-                raise ValueError(f"{self.item} holds a draft of kind {_DRAFT_ROW_KINDS[self.item]}")
-        if self.item == "pending_observation" and self.observation is None:
-            raise ValueError("a pending_observation item carries its pending observation")
-        # The cause's flag (`BlockerView` checks it) picks the row.
-        if item_kind == "review" and self.detail.cause_persists != (
-            self.item == "review_cause_persists"
-        ):
-            raise ValueError("detail.cause_persists is true exactly for review_cause_persists")
-        return self
-
-
-class QuestionItem(BlockerView):
-    """The lead's open choices as one card (section 11). `item_id` is the question blocker's id."""
-
-    type: Literal["question"]
-    lead_id: str
-    choices: list[OpenChoiceView] = Field(min_length=1)
-
-    @model_validator(mode="after")
-    def card_is_a_question_blocker(self) -> Self:
-        if self.kind != "underwriter_question":
-            raise ValueError("a question item is an underwriter_question blocker")
-        if [c.choice_id for c in self.choices] != self.detail.choice_ids:
-            raise ValueError("the card holds the choices the blocker names")
-        return self
-
-
-Item = Annotated[ReviewItem | QuestionItem, Field(discriminator="type")]
+    kind: BlockerKind
+    detail: BlockerDetail
 
 
 # ---- commands (A.11) -----------------------------------------------------------------------------

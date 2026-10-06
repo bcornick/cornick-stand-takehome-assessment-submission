@@ -8,7 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tests.api.helpers import LEAD_008, first_pass
-from uwh.api.leads import queue_rows
+from uwh.api.leads import SUMMARY_LIMIT, queue_rows
 from uwh.runtime.event_types import BlockerDetail, BlockerKind, BlockerOwner
 from uwh.runtime.events import EventContext
 from uwh.runtime.leadgen_client import LeadgenClient
@@ -178,3 +178,46 @@ def test_lead_008_shows_its_waiting_request_then_the_packet_that_the_underwriter
 
 def test_an_unknown_lead_is_not_found(client: TestClient) -> None:
     assert client.get("/api/leads/LEAD-missing").status_code == 404
+
+
+def test_the_items_are_the_open_reviews_and_questions_of_every_lead_and_no_producer_wait(
+    settings: Settings, leadgen: LeadgenClient, mailbox: MailboxClient
+) -> None:
+    with first_pass(settings, leadgen, mailbox) as app:
+        items = app.get("/api/items").json()
+
+        assert [(i["lead_id"][-3:], i["kind"], i["detail"]["item_kind"]) for i in items] == [
+            ("000", "underwriter_review", "draft"),
+            ("003", "underwriter_question", None),
+            ("006", "underwriter_question", None),
+        ]
+        for item in items:
+            blockers = app.get(f"/api/leads/{item['lead_id']}").json()["blockers"]
+            assert item["item_id"] in [b["item_id"] for b in blockers]
+        assert items[1]["detail"]["choice_ids"] == ["I13.fire_fail"]
+        assert items[0]["detail"]["text"] != ""
+
+
+def test_before_a_run_there_are_no_items(client: TestClient) -> None:
+    assert client.get("/api/items").json() == []
+
+
+def test_the_events_of_a_lead_come_in_id_order_with_a_short_summary_each(
+    settings: Settings, leadgen: LeadgenClient, mailbox: MailboxClient
+) -> None:
+    with first_pass(settings, leadgen, mailbox) as app:
+        body = app.get(f"/api/leads/{LEAD_008}/events").json()
+
+        events = body["events"]
+        ids = [e["id"] for e in events]
+        assert body["lead_id"] == LEAD_008
+        assert ids == sorted(ids) and len(set(ids)) == len(ids)
+        (sent,) = [e for e in events if e["type"] == "message_sent"]
+        assert sent["summary"].startswith("intent_id: ")
+        assert all(len(e["summary"]) <= SUMMARY_LIMIT for e in events)
+        assert any(e["summary"].endswith("...") for e in events)
+        assert {e["actor"] for e in events} >= {"workflow"}
+
+
+def test_the_events_of_an_unknown_lead_are_not_found(client: TestClient) -> None:
+    assert client.get("/api/leads/LEAD-missing/events").status_code == 404

@@ -1,8 +1,9 @@
-// ABOUTME: Typed fetch calls: the run, the queue and one lead's detail, and the three actions of the page: start the run, deliver the fixture replies and approve an item.
-// ABOUTME: A response that is not 2xx throws an ApiError that names the route and the status.
-import type { components } from '@/api/types'
+// ABOUTME: Typed fetch calls: the run, the queue, one lead's detail and events and the open items, and the actions of the page: start the run, deliver the fixture replies, the underwriter's commands and a pasted reply.
+// ABOUTME: A response that is not 2xx throws an ApiError that names the route and the status; a command resolves to the reason it was refused, or null when it was accepted.
+import type { components, paths } from '@/api/types'
 
 type Schemas = components['schemas']
+type Command = paths['/api/commands']['post']['requestBody']['content']['application/json']
 
 class ApiError extends Error {
   readonly path: string
@@ -33,12 +34,52 @@ export const getRun = () => request<Schemas['RunView']>('/api/run')
 export const getLeads = () => request<Schemas['QueueRow'][]>('/api/leads')
 export const getLead = (leadId: string) =>
   request<Schemas['LeadDetail']>(`/api/leads/${encodeURIComponent(leadId)}`)
+export const getLeadEvents = (leadId: string) =>
+  request<Schemas['LeadEvents']>(`/api/leads/${encodeURIComponent(leadId)}/events`)
+export const getItems = () => request<Schemas['Item'][]>('/api/items')
 
 export const startRun = () => post<Schemas['RunView']>('/api/run/start?wait=true')
 export const deliverFixtureReplies = () =>
   post<Schemas['FixtureRepliesResponse']>('/api/replies/fixtures')
-export const approve = (itemId: number, payloadHash: string) =>
-  post<Schemas['CommandResponse']>('/api/commands', {
+
+const refusal = (answer: Schemas['CommandResponse']) =>
+  answer.accepted ? null : (answer.reason ?? 'The command was refused.')
+
+const command = async (body: Command) =>
+  refusal(await post<Schemas['CommandResponse']>('/api/commands', body))
+
+// A draft is approved against the hash shown with it; any other item has none.
+export const approve = (itemId: number, reason: string, payloadHash: string | null = null) =>
+  command({
     type: 'approve',
-    payload: { item_id: itemId, artifact_hash: payloadHash, reason: 'Approved in the detail pane.' },
+    payload: { item_id: itemId, artifact_hash: payloadHash, reason },
   })
+export const reject = (itemId: number, reason: string) =>
+  command({ type: 'reject', payload: { item_id: itemId, reason } })
+export const editDraft = (intentId: string, subject: string, body: string, reason: string) =>
+  command({
+    type: 'edit_draft',
+    payload: { intent_id: intentId, subject, body, reason },
+  })
+export const recordRuling = (leadId: string, choiceId: string, option: string, reason: string) =>
+  command({
+    type: 'record_ruling',
+    payload: { lead_id: leadId, choice_id: choiceId, option, reason },
+  })
+export const resolveFact = (
+  leadId: string,
+  key: string,
+  value: string | number | boolean,
+  reason: string,
+) => command({ type: 'resolve_fact', payload: { lead_id: leadId, key, value, reason } })
+export const declineLead = (leadId: string, reason: string) =>
+  command({ type: 'decline_lead', payload: { lead_id: leadId, reason } })
+
+export const deliverReply = async (leadId: string, intentId: string, body: string) =>
+  refusal(
+    await post<Schemas['ReplyResponse']>('/api/replies', {
+      lead_id: leadId,
+      intent_id: intentId,
+      body,
+    }),
+  )

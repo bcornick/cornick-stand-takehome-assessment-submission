@@ -688,7 +688,7 @@
       },
       "EventRow": {
         "additionalProperties": false,
-        "description": "An `events` row. `payload` is an object that follows `PAYLOAD_MODELS[type]`; the row checks\nit, so the schema stays one object type rather than 28 row variants.",
+        "description": "One of a lead's events: its id, type, actor, simulated time and a one-line summary of its payload.",
         "properties": {
           "actor": {
             "enum": [
@@ -704,97 +704,12 @@
             "title": "Id",
             "type": "integer"
           },
-          "lead_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Lead Id"
-          },
-          "mode": {
-            "enum": [
-              "live",
-              "replay",
-              "record"
-            ],
-            "title": "Mode",
-            "type": "string"
-          },
-          "model_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Model Id"
-          },
-          "payload": {
-            "additionalProperties": {
-              "$ref": "#/components/schemas/JsonValue"
-            },
-            "title": "Payload",
-            "type": "object"
-          },
-          "prompt_versions": {
-            "anyOf": [
-              {
-                "additionalProperties": {
-                  "type": "string"
-                },
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Prompt Versions"
-          },
-          "real_ts": {
-            "title": "Real Ts",
-            "type": "string"
-          },
-          "request_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Request Id"
-          },
-          "ruleset_hash": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Ruleset Hash"
-          },
-          "run_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Run Id"
-          },
           "sim_ts": {
             "title": "Sim Ts",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
             "type": "string"
           },
           "type": {
@@ -803,18 +718,10 @@
         },
         "required": [
           "id",
-          "run_id",
-          "mode",
-          "lead_id",
           "type",
-          "payload",
           "actor",
-          "ruleset_hash",
-          "prompt_versions",
-          "model_id",
-          "request_id",
-          "real_ts",
-          "sim_ts"
+          "sim_ts",
+          "summary"
         ],
         "title": "EventRow",
         "type": "object"
@@ -963,6 +870,42 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "Item": {
+        "additionalProperties": false,
+        "description": "An open item an underwriter acts on: a review, a question card or an unknown delivery. The\nlead's detail carries what its action needs; this row says which lead to open.",
+        "properties": {
+          "detail": {
+            "$ref": "#/components/schemas/BlockerDetail"
+          },
+          "item_id": {
+            "title": "Item Id",
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "delivery_unknown",
+              "underwriter_question",
+              "underwriter_review",
+              "data",
+              "producer_reply"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "lead_id": {
+            "title": "Lead Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "item_id",
+          "lead_id",
+          "kind",
+          "detail"
+        ],
+        "title": "Item",
         "type": "object"
       },
       "JsonValue": {},
@@ -1170,50 +1113,6 @@
         "title": "OpenChoice",
         "type": "object"
       },
-      "OpenChoiceView": {
-        "additionalProperties": false,
-        "description": "An open underwriter choice with the values of the fields it shows (section 11).",
-        "properties": {
-          "choice_id": {
-            "title": "Choice Id",
-            "type": "string"
-          },
-          "options": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Options",
-            "type": "array"
-          },
-          "prompt": {
-            "title": "Prompt",
-            "type": "string"
-          },
-          "show": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Show",
-            "type": "array"
-          },
-          "shown_values": {
-            "additionalProperties": {
-              "$ref": "#/components/schemas/JsonValue"
-            },
-            "title": "Shown Values",
-            "type": "object"
-          }
-        },
-        "required": [
-          "choice_id",
-          "options",
-          "prompt",
-          "show",
-          "shown_values"
-        ],
-        "title": "OpenChoiceView",
-        "type": "object"
-      },
       "PlannedEffect": {
         "additionalProperties": false,
         "properties": {
@@ -1393,78 +1292,6 @@
           "rationale"
         ],
         "title": "ProposeCommandPayload",
-        "type": "object"
-      },
-      "QuestionItem": {
-        "additionalProperties": false,
-        "description": "The lead's open choices as one card (section 11). `item_id` is the question blocker's id.",
-        "properties": {
-          "choices": {
-            "items": {
-              "$ref": "#/components/schemas/OpenChoiceView"
-            },
-            "minItems": 1,
-            "title": "Choices",
-            "type": "array"
-          },
-          "detail": {
-            "$ref": "#/components/schemas/BlockerDetail"
-          },
-          "item_id": {
-            "title": "Item Id",
-            "type": "integer"
-          },
-          "kind": {
-            "enum": [
-              "delivery_unknown",
-              "underwriter_question",
-              "underwriter_review",
-              "data",
-              "producer_reply"
-            ],
-            "title": "Kind",
-            "type": "string"
-          },
-          "lead_id": {
-            "title": "Lead Id",
-            "type": "string"
-          },
-          "observation": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/FactView"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "owner": {
-            "enum": [
-              "underwriter",
-              "producer",
-              "data_team"
-            ],
-            "title": "Owner",
-            "type": "string"
-          },
-          "type": {
-            "const": "question",
-            "title": "Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "item_id",
-          "kind",
-          "owner",
-          "detail",
-          "observation",
-          "type",
-          "lead_id",
-          "choices"
-        ],
-        "title": "QuestionItem",
         "type": "object"
       },
       "QueueRow": {
@@ -1825,95 +1652,6 @@
           "reason"
         ],
         "title": "ResolveFactPayload",
-        "type": "object"
-      },
-      "ReviewItem": {
-        "additionalProperties": false,
-        "description": "An open review: `item` says which A.11 row it is, so the client knows what `approve` and\n`reject` do. A draft row carries the draft whose `payload_hash` an `approve` echoes.",
-        "properties": {
-          "detail": {
-            "$ref": "#/components/schemas/BlockerDetail"
-          },
-          "draft": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/DraftView"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "item": {
-            "enum": [
-              "draft_request",
-              "draft_quote_packet",
-              "draft_decline_notice",
-              "pending_observation",
-              "delivery_unknown",
-              "no_contact_route",
-              "review_raised_by_event",
-              "review_cause_persists"
-            ],
-            "title": "Item",
-            "type": "string"
-          },
-          "item_id": {
-            "title": "Item Id",
-            "type": "integer"
-          },
-          "kind": {
-            "enum": [
-              "delivery_unknown",
-              "underwriter_question",
-              "underwriter_review",
-              "data",
-              "producer_reply"
-            ],
-            "title": "Kind",
-            "type": "string"
-          },
-          "lead_id": {
-            "title": "Lead Id",
-            "type": "string"
-          },
-          "observation": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/FactView"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "owner": {
-            "enum": [
-              "underwriter",
-              "producer",
-              "data_team"
-            ],
-            "title": "Owner",
-            "type": "string"
-          },
-          "type": {
-            "const": "review",
-            "title": "Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "item_id",
-          "kind",
-          "owner",
-          "detail",
-          "observation",
-          "type",
-          "lead_id",
-          "item",
-          "draft"
-        ],
-        "title": "ReviewItem",
         "type": "object"
       },
       "RuleTrace": {
@@ -2354,21 +2092,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "discriminator": {
-                      "mapping": {
-                        "question": "#/components/schemas/QuestionItem",
-                        "review": "#/components/schemas/ReviewItem"
-                      },
-                      "propertyName": "type"
-                    },
-                    "oneOf": [
-                      {
-                        "$ref": "#/components/schemas/ReviewItem"
-                      },
-                      {
-                        "$ref": "#/components/schemas/QuestionItem"
-                      }
-                    ]
+                    "$ref": "#/components/schemas/Item"
                   },
                   "title": "Response List Items Api Items Get",
                   "type": "array"
