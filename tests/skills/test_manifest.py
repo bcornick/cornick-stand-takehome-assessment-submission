@@ -50,6 +50,19 @@ def test_a_missing_part_is_named(tmp_path: Path, part: str) -> None:
         check_skill_folder(build(tmp_path, skip=(part,)))
 
 
+def test_a_skill_with_no_pass_threshold_needs_no_cases(tmp_path: Path) -> None:
+    manifest = {k: v for k, v in MANIFEST.items() if k != "pass_threshold"}
+
+    assert check_skill_folder(build(tmp_path, manifest, skip=("cases",))).pass_threshold is None
+
+
+def test_a_threshold_reason_without_a_pass_threshold_fails(tmp_path: Path) -> None:
+    manifest = {k: v for k, v in MANIFEST.items() if k != "pass_threshold"}
+
+    with pytest.raises(SkillFolderError, match="(?s)demo.*threshold_reason"):
+        check_skill_folder(build(tmp_path, {**manifest, "threshold_reason": "why"}))
+
+
 @pytest.mark.parametrize("model_skill", [True, False])
 def test_a_prompt_that_does_not_fit_the_skill_fails(tmp_path: Path, model_skill: bool) -> None:
     # A model skill needs a prompt and a deterministic skill must not carry one.

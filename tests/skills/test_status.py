@@ -6,7 +6,21 @@ from typing import Any
 
 import pytest
 
+from uwh.skills.manifest import SkillManifest
 from uwh.skills.status import skill_status
+
+
+def manifest(*, pass_threshold: float | None = 1.0, model_skill: bool = False) -> SkillManifest:
+    return SkillManifest(
+        name="triage_fields",
+        version="1",
+        purpose="Triages fields.",
+        trigger="a lead is received",
+        command_classes=[],
+        fallback="none",
+        pass_threshold=pass_threshold,
+        model_skill=model_skill,
+    )
 
 
 def row(
@@ -48,19 +62,24 @@ def test_the_latest_scored_row_at_the_current_digest_gives_the_status(
     log = tmp_path / "results.jsonl"
     log.write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
 
-    assert skill_status(log, "triage_fields", "d1", model_skill=False) == expected
+    assert skill_status(log, manifest(), "d1") == expected
 
 
 def test_a_model_skill_ignores_a_row_from_replay(tmp_path: Path) -> None:
     log = tmp_path / "results.jsonl"
     log.write_text(json.dumps(row(mode="replay")) + "\n", encoding="utf-8")
 
-    assert skill_status(log, "triage_fields", "d1", model_skill=True) == "untested"
+    assert skill_status(log, manifest(model_skill=True), "d1") == "untested"
     log.write_text(json.dumps(row(mode="live")) + "\n", encoding="utf-8")
-    assert skill_status(log, "triage_fields", "d1", model_skill=True) == "passing"
+    assert skill_status(log, manifest(model_skill=True), "d1") == "passing"
 
 
 def test_a_missing_log_leaves_the_skill_untested(tmp_path: Path) -> None:
-    assert skill_status(tmp_path / "none.jsonl", "triage_fields", "d1", model_skill=False) == (
-        "untested"
-    )
+    assert skill_status(tmp_path / "none.jsonl", manifest(), "d1") == "untested"
+
+
+def test_a_skill_with_no_pass_threshold_has_no_status(tmp_path: Path) -> None:
+    log = tmp_path / "results.jsonl"
+    log.write_text(json.dumps(row()) + "\n", encoding="utf-8")
+
+    assert skill_status(log, manifest(pass_threshold=None), "d1") is None
