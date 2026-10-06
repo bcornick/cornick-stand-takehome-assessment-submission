@@ -167,8 +167,17 @@ class LeadDetail(StrictModel):
 # ---- events (A.1) --------------------------------------------------------------------------------
 
 
+class EventMessage(StrictModel):
+    """The words of a sent request (subject and body) or of a received reply (body only)."""
+
+    subject: str | None
+    body: str
+
+
 class EventRow(StrictModel):
-    """One of a lead's events: its id, type, run mode, actor, simulated time and a one-line summary of its payload."""
+    """One of a lead's events: its id, type, run mode, actor, simulated time and a summary of its payload.
+    `item_id` is the item a blocker or approval event names, `fact_key` the key a fact event records and
+    `message` the words of a sent request or a reply; each is None where the event has none."""
 
     id: int
     type: EventType
@@ -176,6 +185,9 @@ class EventRow(StrictModel):
     actor: Actor
     sim_ts: str
     summary: str
+    item_id: int | None
+    fact_key: str | None
+    message: EventMessage | None
 
 
 class LeadEvents(StrictModel):
@@ -349,17 +361,73 @@ class ProposalView(StrictModel):
 MAX_CHAT_CHARACTERS = 2000
 
 
+# How many earlier exchanges of the open conversation a message carries.
+MAX_CHAT_HISTORY = 4
+
+
+class ChatExchange(StrictModel):
+    """An earlier message of the conversation and what it was answered with: the answer, a card's
+    rationale or an error."""
+
+    message: str = Field(max_length=MAX_CHAT_CHARACTERS)
+    reply: str = Field(max_length=MAX_CHAT_CHARACTERS)
+
+
 class ChatRequest(StrictModel):
-    """One chat turn: the underwriter's message, and the lead open in the page when there is one."""
+    """One chat turn: the underwriter's message, the lead whose conversation is open when there is
+    one, and the last exchanges of that conversation, oldest first."""
 
     lead_id: str | None = None
     message: str = Field(min_length=1, max_length=MAX_CHAT_CHARACTERS)
+    history: list[ChatExchange] = Field(default=[], max_length=MAX_CHAT_HISTORY)
 
 
-class ChatResponse(StrictModel):
-    """One answer. A directive the command layer accepts comes back as a card; one it refuses (an
-    approval, a rejection, a send) comes back as an answer that says why, with no card (7.4, A.11)."""
+CitationKind = Literal["event", "fact", "message", "reply", "page"]
 
+
+class Citation(StrictModel):
+    """What a reference number of one chat turn stands for. `id` is an event id for an `event`, for a
+    `fact` (the event that recorded it) and for a `reply` (its `reply_received` event), an intent id
+    for a `message`, and a page key for a `page`."""
+
+    number: int
+    lead_id: str
+    kind: CitationKind
+    id: int | str
+
+
+class StepEvent(StrictModel):
+    """A lookup of the turn has completed: what was read and what it held, in one line."""
+
+    type: Literal["step"]
+    summary: str
+
+
+class AnswerEvent(StrictModel):
+    """The turn closed with an answer. A directive the command layer refuses (an approval, a
+    rejection, a send) closes this way too, with the reason and no card (7.4, A.11)."""
+
+    type: Literal["answer"]
     answer: str
-    cited_event_ids: list[int]  # the events a read answer cites
-    proposal: ProposalView | None  # the card a directive created
+    citations: list[Citation]  # the cited references the turn's lookups showed
+
+
+class ProposalEvent(StrictModel):
+    """The turn closed with a card: `GET /api/proposals` holds it."""
+
+    type: Literal["proposal"]
+    proposal_id: int
+    lead_id: str | None  # the lead the card sits on
+
+
+class ErrorEvent(StrictModel):
+    """The turn closed without an answer."""
+
+    type: Literal["error"]
+    reason: str
+
+
+# One event of the `POST /api/chat` stream: any number of steps, then exactly one closing event.
+ChatEvent = Annotated[
+    StepEvent | AnswerEvent | ProposalEvent | ErrorEvent, Field(discriminator="type")
+]

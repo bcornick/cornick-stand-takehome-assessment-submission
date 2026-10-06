@@ -1,7 +1,6 @@
-# ABOUTME: Tests the chat turn's loop (section 11): the cap on calls, an answer that cites only events a tool showed, a proposal stored through the command layer or a refusal that points to the open item, the repeat on an invalid tool input, and the events a turn writes.
+# ABOUTME: Tests the chat turn's loop (section 11): the cap on calls, an answer that cites only references a lookup showed, a proposal stored through the command layer or a refusal that points to the open item, the repeat on an invalid tool input, and the events a turn writes.
 # ABOUTME: The model is scripted call by call, since the tests are of our loop and not of the model; the committed chat cases are graded from recordings by the eval.
 import sqlite3
-from copy import deepcopy
 from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
@@ -10,8 +9,10 @@ from typing import Any
 import pytest
 
 
+from tests.chat.helpers import Script
 from tests.runtime.helpers import RULESET, RUN_START, command_environment, events_of, insert_run
-from uwh.chat.skill import MAX_STEPS, NO_ANSWER_IN_STEPS, UNREADABLE_STEP, forced_call, run_turn
+from uwh.api.views import ChatExchange, Citation
+from uwh.chat.skill import MAX_STEPS, NO_ANSWER_IN_STEPS, UNREADABLE_STEP, TurnResult, run_turn
 from uwh.runtime.event_types import BlockerDetail, EventType
 from uwh.runtime.events import EventContext, read_events
 from uwh.runtime.leadgen_client import LeadgenClient
@@ -19,7 +20,6 @@ from uwh.runtime.mailbox_client import MailboxClient
 from uwh.runtime.model import ModelAccess
 from uwh.runtime.modes import RecordingMiss
 from uwh.runtime.proposals import open_proposals
-from uwh.runtime.recordings import Exchange, RecordingKey
 from uwh.runtime.runs import RunEnvironment
 from uwh.runtime.store import open_store
 from uwh.runtime.waits import open_blocker
@@ -35,29 +35,6 @@ DECLINE = {
     "command_payload": {"lead_id": LEAD, "reason": "vacant"},
     "rationale": "The building is vacant.",
 }
-
-
-class Script:
-    """A model that returns the next scripted tool input on each call and records what it was shown."""
-
-    def __init__(self, *tool_inputs: dict[str, Any]) -> None:
-        self.tool_inputs = list(tool_inputs)
-        self.shown: list[dict[str, Any]] = []
-
-    def __call__(self, call: Any, key: RecordingKey) -> Exchange:
-        self.shown.append(deepcopy(dict(call.shown)))
-        return Exchange(
-            skill=key.skill,
-            prompt_version=key.prompt_version,
-            input_hash=key.input_hash,
-            input=dict(call.shown),
-            model_id="scripted",
-            request_id="",
-            stop_reason="tool_use",
-            tokens_in=10,
-            tokens_out=5,
-            tool_input=self.tool_inputs.pop(0),
-        )
 
 
 @pytest.fixture
@@ -81,47 +58,46 @@ def scripted(
     return make
 
 
-def test_a_read_then_an_answer_cites_the_events_the_tool_showed(
+def turn_on(db: sqlite3.Connection, env: RunEnvironment, message: str) -> TurnResult:
+    """A turn on the lead's conversation with no earlier exchange, its steps unwatched."""
+    return run_turn(db, env, message, LEAD, [], lambda _line: None)
+
+
+def test_a_read_then_an_answer_cites_what_the_lookup_showed(
     db: sqlite3.Connection, scripted: Callable[..., tuple[RunEnvironment, Script]]
 ) -> None:
     (received,) = read_events(db, lead_id=LEAD)
     env, script = scripted(
-        READ_EVENTS,
-        {"action": "answer", "answer": "It arrived by web.", "cited_event_ids": [received.id]},
+        READ_EVENTS, {"action": "answer", "answer": "It arrived by web.", "citations": [1]}
     )
+    lines: list[str] = []
 
-    turn = run_turn(db, env, "How did L-1 arrive?", LEAD)
+    turn = run_turn(db, env, "How did L-1 arrive?", LEAD, [], lines.append)
 
-    assert turn.answer == "It arrived by web." and turn.cited_event_ids == [received.id]
+    assert turn.answer == "It arrived by web." and turn.proposal_id is None
+    assert turn.citations == [Citation(number=1, lead_id=LEAD, kind="event", id=received.id)]
     assert script.shown[0]["steps"] == []
     (step,) = script.shown[1]["steps"]
-    assert step["action"] == "lead_events" and step["result"]["events"][0]["id"] == received.id
-    assert turn.proposal_id is None
+    (shown_event,) = step["result"]["events"]
+    assert step["action"] == "lead_events" and shown_event["ref"] == 1 and "id" not in shown_event
+    assert lines == ["Read the events of lead 1: 1 events"]
 
 
-def test_an_answer_cites_no_event_id_a_tool_did_not_show(
+def test_a_citation_outside_this_turns_results_is_dropped(
     db: sqlite3.Connection, scripted: Callable[..., tuple[RunEnvironment, Script]]
 ) -> None:
-    (received,) = read_events(db, lead_id=LEAD)
-    env, _ = scripted(
-        READ_EVENTS,
-        {
-            "action": "answer",
-            "answer": "x",
-            "cited_event_ids": [received.id, 9999, received.id],
-        },
-    )
+    env, _ = scripted(READ_EVENTS, {"action": "answer", "answer": "x", "citations": [1, 99, 1]})
 
-    assert run_turn(db, env, "q", LEAD).cited_event_ids == [received.id]
+    assert [c.number for c in turn_on(db, env, "q").citations] == [1]
 
 
 def test_a_question_writes_only_the_model_calls(
     db: sqlite3.Connection, scripted: Callable[..., tuple[RunEnvironment, Script]]
 ) -> None:
     before = len(read_events(db))
-    env, _ = scripted(READ_EVENTS, {"action": "answer", "answer": "x", "cited_event_ids": []})
+    env, _ = scripted(READ_EVENTS, {"action": "answer", "answer": "x"})
 
-    run_turn(db, env, "q", LEAD)
+    turn_on(db, env, "q")
 
     written = read_events(db)[before:]
     assert [e.type for e in written] == [EventType.model_called, EventType.model_called]
@@ -133,7 +109,7 @@ def test_a_turn_stops_at_the_cap_and_makes_no_further_call(
 ) -> None:
     env, script = scripted(*[READ_EVENTS] * (MAX_STEPS + 3))
 
-    turn = run_turn(db, env, "q", LEAD)
+    turn = turn_on(db, env, "q")
 
     assert turn.answer == NO_ANSWER_IN_STEPS
     assert len(script.shown) == MAX_STEPS == len(turn.exchanges)
@@ -145,10 +121,10 @@ def test_a_proposal_stores_a_card_and_the_answer_points_to_it(
 ) -> None:
     env, script = scripted(DECLINE)
 
-    turn = run_turn(db, env, "Decline L-1, it is vacant", LEAD)
+    turn = turn_on(db, env, "Decline L-1, it is vacant")
 
     (card,) = open_proposals(db)
-    assert turn.proposal_id == card.id and "The building is vacant." in turn.answer
+    assert turn.proposal_id == card.id and turn.answer is None
     assert card.payload["type"] == "decline_lead"
     assert len(script.shown) == 1
     assert db.execute("SELECT status FROM leads").fetchone() == ("received",)
@@ -175,10 +151,10 @@ def test_a_directive_to_approve_reject_or_send_is_refused_and_the_answer_names_t
         {**DECLINE, "command_type": command, "command_payload": {"item_id": 1, "reason": "ok"}}
     )
 
-    turn = run_turn(db, env, "do it", LEAD)
+    turn = turn_on(db, env, "do it")
 
-    assert turn.proposal_id is None
-    assert "No contact." in turn.answer and "detail pane" in turn.answer
+    assert turn.proposal_id is None and turn.answer is not None
+    assert "No contact." in turn.answer and "conversation of lead 1" in turn.answer
     assert command not in turn.answer
     assert open_proposals(db) == []
     (refusal,) = events_of(db, EventType.command_refused)
@@ -190,8 +166,9 @@ def test_a_refused_directive_on_a_lead_with_no_open_item_says_nothing_is_waiting
 ) -> None:
     env, _ = scripted({**DECLINE, "command_type": "approve", "command_payload": {"item_id": 1}})
 
-    turn = run_turn(db, env, "do it", LEAD)
+    turn = turn_on(db, env, "do it")
 
+    assert turn.answer is not None
     assert "nothing is waiting" in turn.answer and "approve" not in turn.answer
 
 
@@ -200,9 +177,10 @@ def test_a_proposal_the_command_layer_refuses_for_another_reason_gives_that_reas
 ) -> None:
     env, _ = scripted({**DECLINE, "command_payload": {"lead_id": LEAD}, "rationale": ""})
 
-    turn = run_turn(db, env, "decline it", LEAD)
+    turn = turn_on(db, env, "decline it")
 
-    assert turn.proposal_id is None and turn.answer.startswith("I cannot propose that: ")
+    assert turn.proposal_id is None and turn.answer is not None
+    assert turn.answer.startswith("I cannot propose that: ")
 
 
 def test_an_invalid_tool_input_repeats_the_call_once_and_then_gives_up(
@@ -210,7 +188,7 @@ def test_an_invalid_tool_input_repeats_the_call_once_and_then_gives_up(
 ) -> None:
     env, script = scripted({"action": "answer"}, {"action": "answer"}, {"action": "answer"})
 
-    turn = run_turn(db, env, "q", LEAD)
+    turn = turn_on(db, env, "q")
 
     assert turn.answer == UNREADABLE_STEP and len(script.shown) == 2
     assert len(script.tool_inputs) == 1
@@ -222,14 +200,25 @@ def test_a_recording_miss_in_replay_is_recorded_and_raised(
     env = command_environment(tmp_path, mailbox, leadgen)
 
     with pytest.raises(RecordingMiss):
-        run_turn(db, env, "q", LEAD)
+        turn_on(db, env, "q")
 
     (miss,) = events_of(db, EventType.replay_miss)
     assert miss.payload.skill == "chat"  # type: ignore[attr-defined]
 
 
-def test_the_model_is_shown_the_message_the_lead_and_nothing_else() -> None:
-    call = forced_call({"message": "m", "lead_id": None, "steps": []})
+def test_the_model_is_shown_the_message_the_lead_the_history_and_nothing_else(
+    db: sqlite3.Connection, scripted: Callable[..., tuple[RunEnvironment, Script]]
+) -> None:
+    env, script = scripted({"action": "answer", "answer": "x"})
+    earlier = ChatExchange(message="Is it vacant?", reply="The records do not say.")
 
-    assert call.shown == {"message": "m", "lead_id": None, "steps": []}
-    assert call.tool_name == "chat_step"
+    run_turn(db, env, "why?", None, [earlier], lambda _line: None)
+
+    assert script.shown == [
+        {
+            "message": "why?",
+            "lead_id": None,
+            "history": [{"message": "Is it vacant?", "reply": "The records do not say."}],
+            "steps": [],
+        }
+    ]

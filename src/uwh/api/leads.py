@@ -11,6 +11,7 @@ from uwh.api.runtime import RuntimeDependency
 from uwh.api.views import (
     BlockerView,
     DraftView,
+    EventMessage,
     EventRow,
     FactView,
     Item,
@@ -19,11 +20,19 @@ from uwh.api.views import (
     QueueGroup,
     QueueRow,
 )
-from uwh.rules.models import ActionPlan
+from uwh.rules.models import ActionPlan, StrictModel
 from uwh.rules.registry import Registry, fact_fields
 from uwh.runtime.clock import age_business_days
-from uwh.runtime.event_types import REQUEST_KINDS
-from uwh.runtime.events import read_events
+from uwh.runtime.event_types import (
+    REQUEST_KINDS,
+    ApprovalRecorded,
+    BlockerClosed,
+    BlockerOpened,
+    FactObserved,
+    MessageSent,
+    ReplyReceived,
+)
+from uwh.runtime.events import StoredEvent, read_events
 from uwh.runtime.facts import effective_facts
 from uwh.runtime.runs import current_run, run_sim_now
 from uwh.runtime.waits import Blocker, open_blockers, primary_next_action
@@ -38,7 +47,6 @@ SERVICE_LEVEL_BUSINESS_DAYS = 2
 ITEM_KINDS = ("underwriter_review", "underwriter_question", "delivery_unknown")
 
 # The longest event summary the pane shows.
-SUMMARY_LIMIT = 120
 
 _GROUP_ORDER: tuple[QueueGroup, ...] = (
     "blocked_on_underwriter",
@@ -172,9 +180,37 @@ def lead_detail(db: sqlite3.Connection, lead_id: str, registry: Registry) -> Lea
     )
 
 
-def _cut(summary: str) -> str:
-    """The summary, cut to SUMMARY_LIMIT characters."""
-    return summary if len(summary) <= SUMMARY_LIMIT else summary[: SUMMARY_LIMIT - 3] + "..."
+def _event_message(db: sqlite3.Connection, payload: StrictModel) -> EventMessage | None:
+    """The words of a sent request, read from its intent, or of a reply; None for any other event."""
+    match payload:
+        case MessageSent(intent_id=intent_id):
+            subject, body = db.execute(
+                "SELECT subject, body FROM intents WHERE id = ?", (intent_id,)
+            ).fetchone()
+            return EventMessage(subject=subject, body=body)
+        case ReplyReceived(body=body):
+            return EventMessage(subject=None, body=body)
+        case _:
+            return None
+
+
+def _event_row(db: sqlite3.Connection, event: StoredEvent) -> EventRow:
+    payload = event.payload
+    return EventRow(
+        id=event.id,
+        type=event.type,
+        mode=event.mode,
+        actor=event.actor,
+        sim_ts=event.sim_ts.isoformat(),
+        summary=event_summary(payload),
+        item_id=payload.blocker_id
+        if isinstance(payload, BlockerOpened | BlockerClosed)
+        else payload.item_id
+        if isinstance(payload, ApprovalRecorded)
+        else None,
+        fact_key=payload.key if isinstance(payload, FactObserved) else None,
+        message=_event_message(db, payload),
+    )
 
 
 def lead_events(db: sqlite3.Connection, lead_id: str) -> LeadEvents | None:
@@ -183,17 +219,7 @@ def lead_events(db: sqlite3.Connection, lead_id: str) -> LeadEvents | None:
         return None
     return LeadEvents(
         lead_id=lead_id,
-        events=[
-            EventRow(
-                id=event.id,
-                type=event.type,
-                mode=event.mode,
-                actor=event.actor,
-                sim_ts=event.sim_ts.isoformat(),
-                summary=_cut(event_summary(event.payload)),
-            )
-            for event in read_events(db, lead_id=lead_id)
-        ],
+        events=[_event_row(db, event) for event in read_events(db, lead_id=lead_id)],
     )
 
 

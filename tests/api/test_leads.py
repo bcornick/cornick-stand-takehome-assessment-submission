@@ -8,13 +8,21 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tests.api.helpers import LEAD_008, first_pass
-from uwh.api.leads import SUMMARY_LIMIT, queue_rows
-from uwh.runtime.event_types import BlockerDetail, BlockerKind, BlockerOwner
-from uwh.runtime.events import EventContext
+from uwh.api.leads import lead_events, queue_rows
+from uwh.runtime.event_types import (
+    BlockerDetail,
+    BlockerKind,
+    BlockerOwner,
+    EventType,
+    FactObserved,
+    MessageSent,
+    ReplyReceived,
+)
+from uwh.runtime.events import EventContext, append_event
 from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
 from uwh.runtime.store import open_store
-from uwh.runtime.waits import open_blocker
+from uwh.runtime.waits import close_blocker, open_blocker
 from uwh.settings import Settings
 
 # Tuesday 07:00, a business day after every lead below was received.
@@ -205,7 +213,7 @@ def test_before_a_run_there_are_no_items(client: TestClient) -> None:
     assert client.get("/api/items").json() == []
 
 
-def test_the_events_of_a_lead_come_in_id_order_with_a_short_summary_each(
+def test_the_events_of_a_lead_come_in_id_order_with_a_summary_each(
     settings: Settings, leadgen: LeadgenClient, mailbox: MailboxClient
 ) -> None:
     with first_pass(settings, leadgen, mailbox) as app:
@@ -216,11 +224,59 @@ def test_the_events_of_a_lead_come_in_id_order_with_a_short_summary_each(
         assert body["lead_id"] == LEAD_008
         assert ids == sorted(ids) and len(set(ids)) == len(ids)
         (sent,) = [e for e in events if e["type"] == "message_sent"]
-        assert sent["summary"] == "The message was posted to the mailbox."
-        assert all(len(e["summary"]) <= SUMMARY_LIMIT for e in events)
-        assert any(e["summary"].endswith("...") for e in events)
+        assert sent["summary"] == "Sent the message to the producer"
         assert {e["actor"] for e in events} >= {"workflow"}
         assert {e["mode"] for e in events} == {"replay"}
+
+
+def test_an_event_row_carries_what_the_conversation_shows_of_it(db: sqlite3.Connection) -> None:
+    add_lead(db, "L-1", "in_progress", None, ("producer_reply", "producer"))
+    blocker_id = db.execute("SELECT id FROM blockers").fetchone()[0]
+    db.execute("UPDATE intents SET subject = 'Need details', body = 'Please send them.'")
+    append_event(
+        db,
+        CONTEXT,
+        EventType.message_sent,
+        MessageSent(intent_id="I-L-1", mailbox_id=1),
+        lead_id="L-1",
+    )
+    append_event(
+        db,
+        CONTEXT,
+        EventType.reply_received,
+        ReplyReceived(intent_id="I-L-1", body="Here they are.", body_hash="h"),
+        lead_id="L-1",
+    )
+    append_event(
+        db,
+        CONTEXT,
+        EventType.fact_observed,
+        FactObserved(
+            observation_id=1,
+            key="effective_date",
+            value="2026-07-01",
+            source="submitted",
+            evidence={},
+            status="accepted",
+        ),
+        lead_id="L-1",
+    )
+    close_blocker(db, CONTEXT, blocker_id)
+    db.commit()
+
+    lead = lead_events(db, "L-1")
+
+    assert lead is not None
+    rows = {row.type: row for row in lead.events}
+    assert rows[EventType.blocker_opened].item_id == blocker_id
+    assert rows[EventType.blocker_closed].item_id == blocker_id
+    sent = rows[EventType.message_sent].message
+    assert sent is not None and (sent.subject, sent.body) == ("Need details", "Please send them.")
+    reply = rows[EventType.reply_received].message
+    assert reply is not None and (reply.subject, reply.body) == (None, "Here they are.")
+    assert rows[EventType.fact_observed].fact_key == "effective_date"
+    assert rows[EventType.fact_observed].message is None
+    assert rows[EventType.message_sent].item_id is None
 
 
 def test_the_events_of_an_unknown_lead_are_not_found(client: TestClient) -> None:

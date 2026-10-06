@@ -114,6 +114,35 @@
         "title": "AdvisoryEffect",
         "type": "object"
       },
+      "AnswerEvent": {
+        "additionalProperties": false,
+        "description": "The turn closed with an answer. A directive the command layer refuses (an approval, a\nrejection, a send) closes this way too, with the reason and no card (7.4, A.11).",
+        "properties": {
+          "answer": {
+            "title": "Answer",
+            "type": "string"
+          },
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/Citation"
+            },
+            "title": "Citations",
+            "type": "array"
+          },
+          "type": {
+            "const": "answer",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "answer",
+          "citations"
+        ],
+        "title": "AnswerEvent",
+        "type": "object"
+      },
       "ApproveCommand": {
         "additionalProperties": false,
         "properties": {
@@ -339,10 +368,41 @@
         "title": "BlockerView",
         "type": "object"
       },
+      "ChatExchange": {
+        "additionalProperties": false,
+        "description": "An earlier message of the conversation and what it was answered with: the answer, a card's\nrationale or an error.",
+        "properties": {
+          "message": {
+            "maxLength": 2000,
+            "title": "Message",
+            "type": "string"
+          },
+          "reply": {
+            "maxLength": 2000,
+            "title": "Reply",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message",
+          "reply"
+        ],
+        "title": "ChatExchange",
+        "type": "object"
+      },
       "ChatRequest": {
         "additionalProperties": false,
-        "description": "One chat turn: the underwriter's message, and the lead open in the page when there is one.",
+        "description": "One chat turn: the underwriter's message, the lead whose conversation is open when there is\none, and the last exchanges of that conversation, oldest first.",
         "properties": {
+          "history": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ChatExchange"
+            },
+            "maxItems": 4,
+            "title": "History",
+            "type": "array"
+          },
           "lead_id": {
             "anyOf": [
               {
@@ -367,38 +427,48 @@
         "title": "ChatRequest",
         "type": "object"
       },
-      "ChatResponse": {
+      "Citation": {
         "additionalProperties": false,
-        "description": "One answer. A directive the command layer accepts comes back as a card; one it refuses (an\napproval, a rejection, a send) comes back as an answer that says why, with no card (7.4, A.11).",
+        "description": "What a reference number of one chat turn stands for. `id` is an event id for an `event`, for a\n`fact` (the event that recorded it) and for a `reply` (its `reply_received` event), an intent id\nfor a `message`, and a page key for a `page`.",
         "properties": {
-          "answer": {
-            "title": "Answer",
-            "type": "string"
-          },
-          "cited_event_ids": {
-            "items": {
-              "type": "integer"
-            },
-            "title": "Cited Event Ids",
-            "type": "array"
-          },
-          "proposal": {
+          "id": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/ProposalView"
+                "type": "integer"
               },
               {
-                "type": "null"
+                "type": "string"
               }
-            ]
+            ],
+            "title": "Id"
+          },
+          "kind": {
+            "enum": [
+              "event",
+              "fact",
+              "message",
+              "reply",
+              "page"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "lead_id": {
+            "title": "Lead Id",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "integer"
           }
         },
         "required": [
-          "answer",
-          "cited_event_ids",
-          "proposal"
+          "number",
+          "lead_id",
+          "kind",
+          "id"
         ],
-        "title": "ChatResponse",
+        "title": "Citation",
         "type": "object"
       },
       "CommandResponse": {
@@ -694,9 +764,57 @@
         "title": "EditDraftPayload",
         "type": "object"
       },
+      "ErrorEvent": {
+        "additionalProperties": false,
+        "description": "The turn closed without an answer.",
+        "properties": {
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "type": {
+            "const": "error",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "reason"
+        ],
+        "title": "ErrorEvent",
+        "type": "object"
+      },
+      "EventMessage": {
+        "additionalProperties": false,
+        "description": "The words of a sent request (subject and body) or of a received reply (body only).",
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          }
+        },
+        "required": [
+          "subject",
+          "body"
+        ],
+        "title": "EventMessage",
+        "type": "object"
+      },
       "EventRow": {
         "additionalProperties": false,
-        "description": "One of a lead's events: its id, type, run mode, actor, simulated time and a one-line summary of its payload.",
+        "description": "One of a lead's events: its id, type, run mode, actor, simulated time and a summary of its payload.\n`item_id` is the item a blocker or approval event names, `fact_key` the key a fact event records and\n`message` the words of a sent request or a reply; each is None where the event has none.",
         "properties": {
           "actor": {
             "enum": [
@@ -708,9 +826,41 @@
             "title": "Actor",
             "type": "string"
           },
+          "fact_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fact Key"
+          },
           "id": {
             "title": "Id",
             "type": "integer"
+          },
+          "item_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Id"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EventMessage"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "mode": {
             "enum": [
@@ -739,7 +889,10 @@
           "mode",
           "actor",
           "sim_ts",
-          "summary"
+          "summary",
+          "item_id",
+          "fact_key",
+          "message"
         ],
         "title": "EventRow",
         "type": "object"
@@ -1236,6 +1389,39 @@
           "committed"
         ],
         "title": "PlannedEffect",
+        "type": "object"
+      },
+      "ProposalEvent": {
+        "additionalProperties": false,
+        "description": "The turn closed with a card: `GET /api/proposals` holds it.",
+        "properties": {
+          "lead_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Id"
+          },
+          "proposal_id": {
+            "title": "Proposal Id",
+            "type": "integer"
+          },
+          "type": {
+            "const": "proposal",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "proposal_id",
+          "lead_id"
+        ],
+        "title": "ProposalEvent",
         "type": "object"
       },
       "ProposalView": {
@@ -1805,6 +1991,27 @@
         "title": "StartRunPayload",
         "type": "object"
       },
+      "StepEvent": {
+        "additionalProperties": false,
+        "description": "A lookup of the turn has completed: what was read and what it held, in one line.",
+        "properties": {
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "type": {
+            "const": "step",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "summary"
+        ],
+        "title": "StepEvent",
+        "type": "object"
+      },
       "SurchargeEffect": {
         "additionalProperties": false,
         "properties": {
@@ -1959,9 +2166,54 @@
         "responses": {
           "200": {
             "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChatResponse"
+              "text/event-stream": {
+                "itemSchema": {
+                  "properties": {
+                    "data": {
+                      "contentMediaType": "application/json",
+                      "contentSchema": {
+                        "discriminator": {
+                          "mapping": {
+                            "answer": "#/components/schemas/AnswerEvent",
+                            "error": "#/components/schemas/ErrorEvent",
+                            "proposal": "#/components/schemas/ProposalEvent",
+                            "step": "#/components/schemas/StepEvent"
+                          },
+                          "propertyName": "type"
+                        },
+                        "oneOf": [
+                          {
+                            "$ref": "#/components/schemas/StepEvent"
+                          },
+                          {
+                            "$ref": "#/components/schemas/AnswerEvent"
+                          },
+                          {
+                            "$ref": "#/components/schemas/ProposalEvent"
+                          },
+                          {
+                            "$ref": "#/components/schemas/ErrorEvent"
+                          }
+                        ],
+                        "title": "Streamitem Chat Api Chat Post"
+                      },
+                      "type": "string"
+                    },
+                    "event": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "retry": {
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "type": "object"
                 }
               }
             },

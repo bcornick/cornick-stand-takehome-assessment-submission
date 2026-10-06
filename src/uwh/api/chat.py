@@ -1,15 +1,30 @@
-# ABOUTME: The chat panel's routes (A.5, section 11): POST /api/chat runs one chat turn, GET /api/proposals lists the open cards, and a card is applied or dismissed.
-# ABOUTME: Applying a card submits its command as the underwriter, the actor the REST transport binds, and marks the card applied when the command is accepted.
+# ABOUTME: The chat routes (A.5, section 11): POST /api/chat runs one chat turn and answers as a server-sent-events stream, GET /api/proposals lists the open cards, and a card is applied or dismissed.
+# ABOUTME: A turn runs in a worker thread of its own, so a closed tab lets it finish; applying a card submits its command as the underwriter, the actor the REST transport binds.
+import asyncio
 import sqlite3
+import threading
+from collections.abc import AsyncIterable, Callable
 
 import anthropic
 from fastapi import APIRouter, HTTPException
+from fastapi.sse import EventSourceResponse
 
-from uwh.api.runtime import RuntimeDependency
-from uwh.api.views import ChatRequest, ChatResponse, CommandResponse, ProposalView
+from uwh.api.runtime import Runtime, RuntimeDependency
+from uwh.api.views import (
+    AnswerEvent,
+    ChatEvent,
+    ChatRequest,
+    CommandResponse,
+    ErrorEvent,
+    ProposalEvent,
+    ProposalView,
+    StepEvent,
+)
 from uwh.chat.skill import run_turn
-from uwh.runtime.modes import RecordingMiss
 from uwh.runtime.proposals import Proposal, open_proposals, read_proposal, settle_proposal
+
+# What a turn closes with in replay: nothing recorded answers a typed question.
+NEEDS_LIVE_MODE = "Questions need live mode"
 
 router = APIRouter()
 
@@ -27,26 +42,47 @@ def _open_card(db: sqlite3.Connection, proposal_id: int) -> Proposal:
     return card
 
 
-# The handlers carry no docstring: FastAPI copies one into the OpenAPI document.
-@router.post("/api/chat")
-def chat(request: ChatRequest, runtime: RuntimeDependency) -> ChatResponse:
+def _closing_event(
+    runtime: Runtime, request: ChatRequest, on_step: Callable[[str], None]
+) -> AnswerEvent | ProposalEvent | ErrorEvent:
+    """Run the turn on a connection of this thread and say how it closed."""
+    if runtime.env.mode == "replay":
+        return ErrorEvent(type="error", reason=NEEDS_LIVE_MODE)
     if not runtime.env.model.available:
-        raise HTTPException(status_code=503, detail="the assistant is unavailable: no model key")
+        return ErrorEvent(type="error", reason="The assistant has no model key")
     with runtime.database() as db:
         try:
-            turn = run_turn(db, runtime.env, request.message, request.lead_id)
-        except RecordingMiss as miss:
-            raise HTTPException(status_code=409, detail=str(miss)) from miss
+            turn = run_turn(
+                db, runtime.env, request.message, request.lead_id, request.history, on_step
+            )
         except anthropic.APIError as error:
-            raise HTTPException(
-                status_code=502, detail=f"the model call failed: {error}"
-            ) from error
-        card = None if turn.proposal_id is None else read_proposal(db, turn.proposal_id)
-    return ChatResponse(
-        answer=turn.answer,
-        cited_event_ids=turn.cited_event_ids,
-        proposal=None if card is None else _view(card),
-    )
+            return ErrorEvent(type="error", reason=f"The model call failed: {error}")
+        if turn.proposal_id is not None:
+            card = read_proposal(db, turn.proposal_id)
+            assert card is not None  # the turn stored it
+            return ProposalEvent(type="proposal", proposal_id=card.id, lead_id=card.lead_id)
+    assert turn.answer is not None  # a turn with no card has an answer
+    return AnswerEvent(type="answer", answer=turn.answer, citations=turn.citations)
+
+
+# The handlers carry no docstring: FastAPI copies one into the OpenAPI document.
+@router.post("/api/chat", response_class=EventSourceResponse)
+async def chat(request: ChatRequest, runtime: RuntimeDependency) -> AsyncIterable[ChatEvent]:
+    loop = asyncio.get_running_loop()
+    events: asyncio.Queue[ChatEvent] = asyncio.Queue()
+
+    def emit(event: ChatEvent) -> None:
+        loop.call_soon_threadsafe(events.put_nowait, event)
+
+    def turn() -> None:
+        emit(_closing_event(runtime, request, lambda s: emit(StepEvent(type="step", summary=s))))
+
+    threading.Thread(target=turn, name="chat-turn").start()
+    while True:
+        event = await events.get()
+        yield event
+        if not isinstance(event, StepEvent):
+            return
 
 
 @router.get("/api/proposals")

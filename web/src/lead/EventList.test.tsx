@@ -15,6 +15,9 @@ const events: components['schemas']['LeadEvents'] = {
       actor: 'workflow',
       sim_ts: '2026-06-29T08:00:00.000000Z',
       summary: 'roof_year recorded as 2017 (submitted).',
+      item_id: null,
+      fact_key: 'roof_year',
+      message: null,
     },
     {
       id: 9,
@@ -23,6 +26,9 @@ const events: components['schemas']['LeadEvents'] = {
       actor: 'underwriter',
       sim_ts: '2026-06-29T09:30:00.000000Z',
       summary: 'The message was posted to the mailbox.',
+      item_id: null,
+      fact_key: null,
+      message: { subject: 'Roof details', body: 'Please confirm the roof year.' },
     },
   ],
 }

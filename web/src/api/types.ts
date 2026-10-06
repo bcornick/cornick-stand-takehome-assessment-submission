@@ -290,6 +290,22 @@ export interface components {
              */
             type: "advisory";
         };
+        /**
+         * AnswerEvent
+         * @description The turn closed with an answer. A directive the command layer refuses (an approval, a
+         *     rejection, a send) closes this way too, with the reason and no card (7.4, A.11).
+         */
+        AnswerEvent: {
+            /** Answer */
+            answer: string;
+            /** Citations */
+            citations: components["schemas"]["Citation"][];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "answer";
+        };
         /** ApproveCommand */
         ApproveCommand: {
             payload: components["schemas"]["ApprovePayload"];
@@ -376,26 +392,50 @@ export interface components {
             owner: "underwriter" | "producer" | "data_team";
         };
         /**
+         * ChatExchange
+         * @description An earlier message of the conversation and what it was answered with: the answer, a card's
+         *     rationale or an error.
+         */
+        ChatExchange: {
+            /** Message */
+            message: string;
+            /** Reply */
+            reply: string;
+        };
+        /**
          * ChatRequest
-         * @description One chat turn: the underwriter's message, and the lead open in the page when there is one.
+         * @description One chat turn: the underwriter's message, the lead whose conversation is open when there is
+         *     one, and the last exchanges of that conversation, oldest first.
          */
         ChatRequest: {
+            /**
+             * History
+             * @default []
+             */
+            history: components["schemas"]["ChatExchange"][];
             /** Lead Id */
             lead_id?: string | null;
             /** Message */
             message: string;
         };
         /**
-         * ChatResponse
-         * @description One answer. A directive the command layer accepts comes back as a card; one it refuses (an
-         *     approval, a rejection, a send) comes back as an answer that says why, with no card (7.4, A.11).
+         * Citation
+         * @description What a reference number of one chat turn stands for. `id` is an event id for an `event`, for a
+         *     `fact` (the event that recorded it) and for a `reply` (its `reply_received` event), an intent id
+         *     for a `message`, and a page key for a `page`.
          */
-        ChatResponse: {
-            /** Answer */
-            answer: string;
-            /** Cited Event Ids */
-            cited_event_ids: number[];
-            proposal: components["schemas"]["ProposalView"] | null;
+        Citation: {
+            /** Id */
+            id: number | string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "event" | "fact" | "message" | "reply" | "page";
+            /** Lead Id */
+            lead_id: string;
+            /** Number */
+            number: number;
         };
         /** CommandResponse */
         CommandResponse: {
@@ -513,8 +553,33 @@ export interface components {
             subject: string;
         };
         /**
+         * ErrorEvent
+         * @description The turn closed without an answer.
+         */
+        ErrorEvent: {
+            /** Reason */
+            reason: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "error";
+        };
+        /**
+         * EventMessage
+         * @description The words of a sent request (subject and body) or of a received reply (body only).
+         */
+        EventMessage: {
+            /** Body */
+            body: string;
+            /** Subject */
+            subject: string | null;
+        };
+        /**
          * EventRow
-         * @description One of a lead's events: its id, type, run mode, actor, simulated time and a one-line summary of its payload.
+         * @description One of a lead's events: its id, type, run mode, actor, simulated time and a summary of its payload.
+         *     `item_id` is the item a blocker or approval event names, `fact_key` the key a fact event records and
+         *     `message` the words of a sent request or a reply; each is None where the event has none.
          */
         EventRow: {
             /**
@@ -522,8 +587,13 @@ export interface components {
              * @enum {string}
              */
             actor: "workflow" | "underwriter" | "assistant" | "inbound";
+            /** Fact Key */
+            fact_key: string | null;
             /** Id */
             id: number;
+            /** Item Id */
+            item_id: number | null;
+            message: components["schemas"]["EventMessage"] | null;
             /**
              * Mode
              * @enum {string}
@@ -711,6 +781,21 @@ export interface components {
             /** Effect */
             effect: components["schemas"]["DeclineEffect"] | components["schemas"]["RequirementEffect"] | components["schemas"]["SurchargeEffect"] | components["schemas"]["ExclusionOrEndorsementEffect"] | components["schemas"]["CoverageAdjustmentEffect"] | components["schemas"]["AdvisoryEffect"] | components["schemas"]["ObligationEffect"] | components["schemas"]["NoActionEffect"];
             trace: components["schemas"]["RuleTrace"];
+        };
+        /**
+         * ProposalEvent
+         * @description The turn closed with a card: `GET /api/proposals` holds it.
+         */
+        ProposalEvent: {
+            /** Lead Id */
+            lead_id: string | null;
+            /** Proposal Id */
+            proposal_id: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "proposal";
         };
         /**
          * ProposalView
@@ -931,6 +1016,19 @@ export interface components {
             /** Seed */
             seed: number;
         };
+        /**
+         * StepEvent
+         * @description A lookup of the turn has completed: what was read and what it held, in one line.
+         */
+        StepEvent: {
+            /** Summary */
+            summary: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "step";
+        };
         /** SurchargeEffect */
         SurchargeEffect: {
             deadline: components["schemas"]["Deadline"] | null;
@@ -1004,7 +1102,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatResponse"];
+                    "text/event-stream": unknown;
                 };
             };
             /** @description Validation Error */

@@ -32,7 +32,7 @@ _WAITING_COUNT = {
 }
 
 
-def _summary(db: sqlite3.Connection) -> RunSummary:
+def run_summary(db: sqlite3.Connection) -> RunSummary:
     """The seven counts of section 11. A lead counts once among the four waiting counts, by its
     primary next action; a terminal lead has none."""
     waiting = dict.fromkeys(_WAITING_COUNT.values(), 0)
@@ -56,7 +56,7 @@ def _run_view(db: sqlite3.Connection, runtime: Runtime) -> RunView:
         seed=runtime.settings.seed if run is None else run.seed,
         sim_now=None if run is None else format_timestamp(run_sim_now(run, runtime.env.now())),
         first_pass_complete=run is not None and run.status == "settled",
-        summary=_summary(db),
+        summary=run_summary(db),
     )
 
 
