@@ -1,0 +1,110 @@
+{
+  "input": {
+    "asks": [
+      {
+        "answer_type": "integer",
+        "ask_id": "coverage_a",
+        "field": "coverage_a",
+        "options": [],
+        "wording": "What Coverage A (dwelling) amount is requested?"
+      },
+      {
+        "answer_type": "select",
+        "ask_id": "dwelling_use_type",
+        "field": "dwelling_use_type",
+        "options": [
+          "Primary",
+          "Secondary",
+          "Seasonal",
+          "Tenant",
+          "Mixed (Secondary/Seasonal & Tenant)"
+        ],
+        "wording": "What is the occupancy type: primary, secondary, seasonal, tenant, or mixed (secondary or seasonal and tenant)?"
+      },
+      {
+        "answer_type": "date",
+        "ask_id": "property_purchase_date",
+        "field": "property_purchase_date",
+        "options": [],
+        "wording": "When was the property purchased?"
+      },
+      {
+        "answer_type": "integer",
+        "ask_id": "num_stories",
+        "field": "num_stories",
+        "options": [],
+        "wording": "How many stories does the home have?"
+      },
+      {
+        "answer_type": "select",
+        "ask_id": "fire_department_type",
+        "field": "fire_department_type",
+        "options": [
+          "Career",
+          "Mostly Career",
+          "Mostly Volunteer",
+          "Volunteer",
+          "Unknown"
+        ],
+        "wording": "Is the fire department career, mostly career, mostly volunteer or volunteer?"
+      },
+      {
+        "answer_type": "integer",
+        "ask_id": "no_residents_in_primary_home",
+        "field": "number_of_residents",
+        "options": [],
+        "wording": "The number of people living in the home is listed as 0. Can you confirm that number?"
+      }
+    ],
+    "body": "Hello,\n\nAnswers below for the Old Mill Rd risk in Naples.\n\nThe insureds would like Coverage A at $850,000. The home is their primary residence. They closed on the purchase on March 3, 2025, and it is a two-story house. The fire department serving the address is a career department.\n\nOn the number of people living in the home: zero is correct for the time being. They are finishing a renovation and have not moved in, so nobody is living there at the moment. They expect to be in before the policy starts.\n\nRegards,\nTom Alvarez\nGulf Coast Insurance Services\n"
+  },
+  "input_hash": "fb3c8f6d614a0ba2a0a1fbeb97da3e4dcc8f6ac00f0e26110771eb8dfa784770",
+  "model_id": "deepseek-flash",
+  "prompt_version": "1d1e49b888c22a1cb1f36f1a85ec4b5abbec90053fd4ded565b66b2f22bed09a",
+  "request_id": "",
+  "skill": "read_reply",
+  "stop_reason": "tool_use",
+  "tokens_in": 625,
+  "tokens_out": 309,
+  "tool_input": {
+    "candidates": [
+      {
+        "ask_id": "coverage_a",
+        "field": "coverage_a",
+        "quote": "The insureds would like Coverage A at $850,000.",
+        "value": 850000
+      },
+      {
+        "ask_id": "dwelling_use_type",
+        "field": "dwelling_use_type",
+        "quote": "The home is their primary residence.",
+        "value": "Primary"
+      },
+      {
+        "ask_id": "property_purchase_date",
+        "field": "property_purchase_date",
+        "quote": "They closed on the purchase on March 3, 2025",
+        "value": "2025-03-03"
+      },
+      {
+        "ask_id": "num_stories",
+        "field": "num_stories",
+        "quote": "it is a two-story house",
+        "value": 2
+      },
+      {
+        "ask_id": "fire_department_type",
+        "field": "fire_department_type",
+        "quote": "The fire department serving the address is a career department.",
+        "value": "Career"
+      },
+      {
+        "ask_id": "no_residents_in_primary_home",
+        "field": "number_of_residents",
+        "quote": "On the number of people living in the home: zero is correct for the time being.",
+        "value": 0
+      }
+    ],
+    "classification": "answers_all"
+  }
+}

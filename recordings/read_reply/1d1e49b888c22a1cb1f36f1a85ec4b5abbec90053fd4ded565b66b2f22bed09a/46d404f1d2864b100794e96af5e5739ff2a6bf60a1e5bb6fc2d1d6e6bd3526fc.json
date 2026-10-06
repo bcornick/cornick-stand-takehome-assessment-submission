@@ -1,0 +1,251 @@
+{
+  "input": {
+    "asks": [
+      {
+        "answer_type": "text",
+        "ask_id": "city",
+        "field": "city",
+        "options": [],
+        "wording": "What city is the property in?"
+      },
+      {
+        "answer_type": "text",
+        "ask_id": "zip",
+        "field": "zip",
+        "options": [],
+        "wording": "What is the property's zip code?"
+      },
+      {
+        "answer_type": "toggle",
+        "ask_id": "residence_held_in_trust",
+        "field": "residence_held_in_trust",
+        "options": [],
+        "wording": "Is the property owned by a trust?"
+      },
+      {
+        "answer_type": "text",
+        "ask_id": "trust_name",
+        "field": "trust_name",
+        "options": [],
+        "wording": "What is the name of the trust?"
+      },
+      {
+        "answer_type": "date",
+        "ask_id": "insured_dob",
+        "field": "insured_dob",
+        "options": [],
+        "wording": "What is the applicant's date of birth?"
+      },
+      {
+        "answer_type": "select",
+        "ask_id": "coverage_f",
+        "field": "coverage_f",
+        "options": [
+          "1000",
+          "3000",
+          "5000"
+        ],
+        "wording": "What Coverage F (medical payments) limit is requested: 1,000, 3,000 or 5,000?"
+      },
+      {
+        "answer_type": "toggle",
+        "ask_id": "has_animals",
+        "field": "has_animals",
+        "options": [],
+        "wording": "Are there any animals on the property?"
+      },
+      {
+        "answer_type": "select",
+        "ask_id": "foundation_type",
+        "field": "foundation_type",
+        "options": [
+          "Slab",
+          "Basement - Finished",
+          "Crawlspace",
+          "Stilts",
+          "Piers",
+          "Pilings",
+          "Other"
+        ],
+        "wording": "What type of foundation does the home have?"
+      },
+      {
+        "answer_type": "toggle",
+        "ask_id": "post_pier_supports_living_area",
+        "field": "post_pier_supports_living_area",
+        "options": [],
+        "wording": "Does the post and pier foundation support any part of the living area, or only decking?"
+      },
+      {
+        "answer_type": "integer",
+        "ask_id": "deck_height_ft",
+        "field": "deck_height_ft",
+        "options": [],
+        "wording": "How high is the deck above grade, in feet?"
+      },
+      {
+        "answer_type": "integer",
+        "ask_id": "num_stories",
+        "field": "num_stories",
+        "options": [],
+        "wording": "How many stories does the home have?"
+      },
+      {
+        "answer_type": "select",
+        "ask_id": "roof_material",
+        "field": "roof_material",
+        "options": [
+          "Architecture Shingles",
+          "Asphalt Fiberglass Composite",
+          "Clay Tile",
+          "Concrete Tile",
+          "Metal Shingles / Sheets",
+          "Slate",
+          "Standing Seam Metal",
+          "Wood Shake",
+          "Wood Shingle",
+          "Other"
+        ],
+        "wording": "What is the roof surface material?"
+      },
+      {
+        "answer_type": "select",
+        "ask_id": "roof_shape",
+        "field": "roof_shape",
+        "options": [
+          "Hip",
+          "Flat",
+          "Gable",
+          "Other"
+        ],
+        "wording": "What is the roof shape?"
+      },
+      {
+        "answer_type": "integer",
+        "ask_id": "electrical_panel_size_amps",
+        "field": "electrical_panel_size_amps",
+        "options": [],
+        "wording": "What is the size of the electrical panel, in amps?"
+      },
+      {
+        "answer_type": "integer",
+        "ask_id": "plumbing_age_years",
+        "field": "plumbing_age_years",
+        "options": [],
+        "wording": "How old is the plumbing, in years?"
+      },
+      {
+        "answer_type": "decimal",
+        "ask_id": "distance_to_fire_department",
+        "field": "distance_to_fire_department",
+        "options": [],
+        "wording": "How many miles is it to the fire department?"
+      },
+      {
+        "answer_type": "integer",
+        "ask_id": "months_unoccupied_in_primary_home",
+        "field": "months_unoccupied",
+        "options": [],
+        "wording": "The home is listed as unoccupied for 3 consecutive months. Can you confirm that?"
+      }
+    ],
+    "body": "Hi,\n\nHere is what I have from the owner on Hillside Ct.\n\nThe property is in Boulder, zip 80302. It is not held in a trust. The insured's date of birth is November 2, 1979. Medical payments at 1,000 is fine. There are no animals on the property. The house sits on a slab foundation and has two stories. The roof is standing seam metal with a gable shape. The electrical panel is 200 amps and the plumbing is about 12 years old. The fire department is 2.5 miles from the house.\n\nOne correction on the vacancy: the owner tells me the house was empty for 5 consecutive months, not 3. He was overseas for work from January through the end of May and the house sat unoccupied the whole time.\n\nBest,\nJordan Reyes\nFront Range Insurance Group\n"
+  },
+  "input_hash": "46d404f1d2864b100794e96af5e5739ff2a6bf60a1e5bb6fc2d1d6e6bd3526fc",
+  "model_id": "deepseek-flash",
+  "prompt_version": "1d1e49b888c22a1cb1f36f1a85ec4b5abbec90053fd4ded565b66b2f22bed09a",
+  "request_id": "",
+  "skill": "read_reply",
+  "stop_reason": "tool_use",
+  "tokens_in": 1238,
+  "tokens_out": 662,
+  "tool_input": {
+    "candidates": [
+      {
+        "ask_id": "city",
+        "field": "city",
+        "quote": "The property is in Boulder, zip 80302.",
+        "value": "Boulder"
+      },
+      {
+        "ask_id": "zip",
+        "field": "zip",
+        "quote": "The property is in Boulder, zip 80302.",
+        "value": "80302"
+      },
+      {
+        "ask_id": "residence_held_in_trust",
+        "field": "residence_held_in_trust",
+        "quote": "It is not held in a trust.",
+        "value": false
+      },
+      {
+        "ask_id": "insured_dob",
+        "field": "insured_dob",
+        "quote": "The insured's date of birth is November 2, 1979.",
+        "value": "1979-11-02"
+      },
+      {
+        "ask_id": "coverage_f",
+        "field": "coverage_f",
+        "quote": "Medical payments at 1,000 is fine.",
+        "value": "1000"
+      },
+      {
+        "ask_id": "has_animals",
+        "field": "has_animals",
+        "quote": "There are no animals on the property.",
+        "value": false
+      },
+      {
+        "ask_id": "foundation_type",
+        "field": "foundation_type",
+        "quote": "The house sits on a slab foundation and has two stories.",
+        "value": "Slab"
+      },
+      {
+        "ask_id": "num_stories",
+        "field": "num_stories",
+        "quote": "The house sits on a slab foundation and has two stories.",
+        "value": 2
+      },
+      {
+        "ask_id": "roof_material",
+        "field": "roof_material",
+        "quote": "The roof is standing seam metal with a gable shape.",
+        "value": "Standing Seam Metal"
+      },
+      {
+        "ask_id": "roof_shape",
+        "field": "roof_shape",
+        "quote": "The roof is standing seam metal with a gable shape.",
+        "value": "Gable"
+      },
+      {
+        "ask_id": "electrical_panel_size_amps",
+        "field": "electrical_panel_size_amps",
+        "quote": "The electrical panel is 200 amps and the plumbing is about 12 years old.",
+        "value": 200
+      },
+      {
+        "ask_id": "plumbing_age_years",
+        "field": "plumbing_age_years",
+        "quote": "The electrical panel is 200 amps and the plumbing is about 12 years old.",
+        "value": 12
+      },
+      {
+        "ask_id": "distance_to_fire_department",
+        "field": "distance_to_fire_department",
+        "quote": "The fire department is 2.5 miles from the house.",
+        "value": 2.5
+      },
+      {
+        "ask_id": "months_unoccupied_in_primary_home",
+        "field": "months_unoccupied",
+        "quote": "the owner tells me the house was empty for 5 consecutive months, not 3",
+        "value": 5
+      }
+    ],
+    "classification": "answers_all"
+  }
+}

@@ -1,0 +1,132 @@
+{
+  "input": {
+    "asks": [
+      {
+        "answer_type": "text",
+        "ask_id": "zip",
+        "field": "zip",
+        "options": [],
+        "wording": "What is the property's zip code?"
+      },
+      {
+        "answer_type": "select",
+        "ask_id": "coverage_e",
+        "field": "coverage_e",
+        "options": [
+          "100000",
+          "300000",
+          "500000"
+        ],
+        "wording": "What Coverage E (liability) limit is requested: 100,000, 300,000 or 500,000?"
+      },
+      {
+        "answer_type": "select",
+        "ask_id": "dwelling_type",
+        "field": "dwelling_type",
+        "options": [
+          "Owner Occupied Single Family Residence",
+          "Owner Occupied Multi Family Residence",
+          "Secondary Residence",
+          "Seasonal Residence"
+        ],
+        "wording": "How is the dwelling used: owner occupied single family, owner occupied multi family, secondary residence or seasonal residence?"
+      },
+      {
+        "answer_type": "date",
+        "ask_id": "property_purchase_date",
+        "field": "property_purchase_date",
+        "options": [],
+        "wording": "When was the property purchased?"
+      },
+      {
+        "answer_type": "toggle",
+        "ask_id": "has_animals",
+        "field": "has_animals",
+        "options": [],
+        "wording": "Are there any animals on the property?"
+      },
+      {
+        "answer_type": "integer",
+        "ask_id": "square_feet",
+        "field": "square_feet",
+        "options": [],
+        "wording": "What is the total living square footage?"
+      },
+      {
+        "answer_type": "select",
+        "ask_id": "roof_shape",
+        "field": "roof_shape",
+        "options": [
+          "Hip",
+          "Flat",
+          "Gable",
+          "Other"
+        ],
+        "wording": "What is the roof shape?"
+      },
+      {
+        "answer_type": "select",
+        "ask_id": "electrical_panel_brand",
+        "field": "electrical_panel_brand",
+        "options": [
+          "Federal Pacific",
+          "Stab-Lok",
+          "Zinsco",
+          "Challenger",
+          "Sylvania",
+          "Square D",
+          "Eaton",
+          "Siemens",
+          "GE",
+          "Other",
+          "Unknown"
+        ],
+        "wording": "What brand is the electrical panel?"
+      }
+    ],
+    "body": "Hi,\n\nPartial answers on Meadowlark Ln while I chase the owner for the rest.\n\nThe zip is 34102. They want liability at 300,000. No animals on the property. Living area is 2,800 square feet and the roof is a hip roof.\n\nI will send the remaining items as soon as I have them.\n\nThanks,\nMarcus Lee\nSuncoast Risk Partners\n"
+  },
+  "input_hash": "e0b31350d8fd4739a06b6a1192d513c674956275e11e54723cb9d4c9336de656",
+  "model_id": "deepseek-flash",
+  "prompt_version": "1d1e49b888c22a1cb1f36f1a85ec4b5abbec90053fd4ded565b66b2f22bed09a",
+  "request_id": "",
+  "skill": "read_reply",
+  "stop_reason": "tool_use",
+  "tokens_in": 698,
+  "tokens_out": 233,
+  "tool_input": {
+    "candidates": [
+      {
+        "ask_id": "zip",
+        "field": "zip",
+        "quote": "The zip is 34102.",
+        "value": "34102"
+      },
+      {
+        "ask_id": "coverage_e",
+        "field": "coverage_e",
+        "quote": "They want liability at 300,000.",
+        "value": "300000"
+      },
+      {
+        "ask_id": "has_animals",
+        "field": "has_animals",
+        "quote": "No animals on the property.",
+        "value": false
+      },
+      {
+        "ask_id": "square_feet",
+        "field": "square_feet",
+        "quote": "Living area is 2,800 square feet",
+        "value": 2800
+      },
+      {
+        "ask_id": "roof_shape",
+        "field": "roof_shape",
+        "quote": "the roof is a hip roof",
+        "value": "Hip"
+      }
+    ],
+    "classification": "answers_some"
+  }
+}

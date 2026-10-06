@@ -1,0 +1,297 @@
+{
+  "input": {
+    "asks": [
+      {
+        "answer_type": "text",
+        "ask_id": "state",
+        "field": "state",
+        "options": [],
+        "wording": "What state is the property in?"
+      },
+      {
+        "answer_type": "text",
+        "ask_id": "first_name",
+        "field": "first_name",
+        "options": [],
+        "wording": "What is the applicant's first name?"
+      },
+      {
+        "answer_type": "toggle",
+        "ask_id": "residence_held_in_trust",
+        "field": "residence_held_in_trust",
+        "options": [],
+        "wording": "Is the property owned by a trust?"
+      },
+      {
+        "answer_type": "text",
+        "ask_id": "trust_name",
+        "field": "trust_name",
+        "options": [],
+        "wording": "What is the name of the trust?"
+      },
+      {
+        "answer_type": "select",
+        "ask_id": "coverage_e",
+        "field": "coverage_e",
+        "options": [
+          "100000",
+          "300000",
+          "500000"
+        ],
+        "wording": "What Coverage E (liability) limit is requested: 100,000, 300,000 or 500,000?"
+      },
+      {
+        "answer_type": "integer",
+        "ask_id": "months_unoccupied",
+        "field": "months_unoccupied",
+        "options": [],
+        "wording": "How many consecutive months has the home been unoccupied?"
+      },
+      {
+        "answer_type": "select",
+        "ask_id": "pool_type",
+        "field": "pool_type",
+        "options": [
+          "None",
+          "Above Ground",
+          "Inground"
+        ],
+        "wording": "Does the property have a pool, and if so, is it above ground or inground?"
+      },
+      {
+        "answer_type": "select",
+        "ask_id": "pool_security",
+        "field": "pool_security",
+        "options": [
+          "None",
+          "Unfenced",
+          "Fenced"
+        ],
+        "wording": "How is the pool secured: none, unfenced or fenced?"
+      },
+      {
+        "answer_type": "toggle",
+        "ask_id": "above_ground_pool_ladder",
+        "field": "above_ground_pool_ladder",
+        "options": [],
+        "wording": "Does the above-ground pool have a pull-up locking ladder?"
+      },
+      {
+        "answer_type": "integer",
+        "ask_id": "square_feet",
+        "field": "square_feet",
+        "options": [],
+        "wording": "What is the total living square footage?"
+      },
+      {
+        "answer_type": "integer",
+        "ask_id": "num_stories",
+        "field": "num_stories",
+        "options": [],
+        "wording": "How many stories does the home have?"
+      },
+      {
+        "answer_type": "select",
+        "ask_id": "roof_material",
+        "field": "roof_material",
+        "options": [
+          "Architecture Shingles",
+          "Asphalt Fiberglass Composite",
+          "Clay Tile",
+          "Concrete Tile",
+          "Metal Shingles / Sheets",
+          "Slate",
+          "Standing Seam Metal",
+          "Wood Shake",
+          "Wood Shingle",
+          "Other"
+        ],
+        "wording": "What is the roof surface material?"
+      },
+      {
+        "answer_type": "integer",
+        "ask_id": "electrical_panel_size_amps",
+        "field": "electrical_panel_size_amps",
+        "options": [],
+        "wording": "What is the size of the electrical panel, in amps?"
+      },
+      {
+        "answer_type": "select",
+        "ask_id": "water_heater_type",
+        "field": "water_heater_type",
+        "options": [
+          "Tank",
+          "Tankless"
+        ],
+        "wording": "Is the water heater a tank or a tankless unit?"
+      },
+      {
+        "answer_type": "integer",
+        "ask_id": "water_heater_age_years",
+        "field": "water_heater_age_years",
+        "options": [],
+        "wording": "How old is the water heater, in years?"
+      },
+      {
+        "answer_type": "select",
+        "ask_id": "water_heater_location",
+        "field": "water_heater_location",
+        "options": [
+          "In or Above Finished Space",
+          "Unfinished Space"
+        ],
+        "wording": "Where is the water heater: in or above finished space, or in unfinished space?"
+      },
+      {
+        "answer_type": "decimal",
+        "ask_id": "distance_to_fire_department",
+        "field": "distance_to_fire_department",
+        "options": [],
+        "wording": "How many miles is it to the fire department?"
+      },
+      {
+        "answer_type": "select",
+        "ask_id": "fire_department_type",
+        "field": "fire_department_type",
+        "options": [
+          "Career",
+          "Mostly Career",
+          "Mostly Volunteer",
+          "Volunteer",
+          "Unknown"
+        ],
+        "wording": "Is the fire department career, mostly career, mostly volunteer or volunteer?"
+      },
+      {
+        "answer_type": "integer",
+        "ask_id": "dist_to_nearest_fire_hydrant",
+        "field": "dist_to_nearest_fire_hydrant",
+        "options": [],
+        "wording": "How many feet is it to the nearest fire hydrant?"
+      },
+      {
+        "answer_type": "integer",
+        "ask_id": "no_residents_in_primary_home",
+        "field": "number_of_residents",
+        "options": [],
+        "wording": "The number of people living in the home is listed as 0. Can you confirm that number?"
+      }
+    ],
+    "body": "Hello,\n\nHappy to fill in the gaps, sorry the form came through so patchy.\n\nThe state is Colorado, CO. My first name is Grace. The house isn't in a trust, it's just in our names. For liability we'd like three hundred thousand. It has never sat empty, so zero months unoccupied. No pool, never wanted one. It's roughly 2,100 square feet, a single-story ranch. The roof is standing-seam metal, the long vertical panels. The breaker panel is a 200-amp service. The water heater is a tank, about six years old, down in the unfinished basement. The fire station is about a mile and a half from us and they're a career department, full-time firefighters. The nearest hydrant is maybe 150 feet down the street.\n\nOn the number of people in the home: that zero on the form must be a typo. There are two of us living here full time, my husband and me.\n\nThanks so much,\nGrace Ahn\n"
+  },
+  "input_hash": "58eedfb4d1251ac2858b75c9b5e414e61e7b5c883f885d7526df424e7c77be36",
+  "model_id": "deepseek-flash",
+  "prompt_version": "1d1e49b888c22a1cb1f36f1a85ec4b5abbec90053fd4ded565b66b2f22bed09a",
+  "request_id": "",
+  "skill": "read_reply",
+  "stop_reason": "tool_use",
+  "tokens_in": 1468,
+  "tokens_out": 829,
+  "tool_input": {
+    "candidates": [
+      {
+        "ask_id": "state",
+        "field": "state",
+        "quote": "The state is Colorado, CO.",
+        "value": "Colorado"
+      },
+      {
+        "ask_id": "first_name",
+        "field": "first_name",
+        "quote": "My first name is Grace.",
+        "value": "Grace"
+      },
+      {
+        "ask_id": "residence_held_in_trust",
+        "field": "residence_held_in_trust",
+        "quote": "The house isn't in a trust, it's just in our names.",
+        "value": false
+      },
+      {
+        "ask_id": "coverage_e",
+        "field": "coverage_e",
+        "quote": "For liability we'd like three hundred thousand.",
+        "value": "300000"
+      },
+      {
+        "ask_id": "months_unoccupied",
+        "field": "months_unoccupied",
+        "quote": "It has never sat empty, so zero months unoccupied.",
+        "value": 0
+      },
+      {
+        "ask_id": "pool_type",
+        "field": "pool_type",
+        "quote": "No pool, never wanted one.",
+        "value": "None"
+      },
+      {
+        "ask_id": "square_feet",
+        "field": "square_feet",
+        "quote": "It's roughly 2,100 square feet, a single-story ranch.",
+        "value": 2100
+      },
+      {
+        "ask_id": "num_stories",
+        "field": "num_stories",
+        "quote": "It's roughly 2,100 square feet, a single-story ranch.",
+        "value": 1
+      },
+      {
+        "ask_id": "roof_material",
+        "field": "roof_material",
+        "quote": "The roof is standing-seam metal, the long vertical panels.",
+        "value": "Standing Seam Metal"
+      },
+      {
+        "ask_id": "electrical_panel_size_amps",
+        "field": "electrical_panel_size_amps",
+        "quote": "The breaker panel is a 200-amp service.",
+        "value": 200
+      },
+      {
+        "ask_id": "water_heater_type",
+        "field": "water_heater_type",
+        "quote": "The water heater is a tank, about six years old, down in the unfinished basement.",
+        "value": "Tank"
+      },
+      {
+        "ask_id": "water_heater_age_years",
+        "field": "water_heater_age_years",
+        "quote": "The water heater is a tank, about six years old, down in the unfinished basement.",
+        "value": 6
+      },
+      {
+        "ask_id": "water_heater_location",
+        "field": "water_heater_location",
+        "quote": "The water heater is a tank, about six years old, down in the unfinished basement.",
+        "value": "Unfinished Space"
+      },
+      {
+        "ask_id": "distance_to_fire_department",
+        "field": "distance_to_fire_department",
+        "quote": "The fire station is about a mile and a half from us and they're a career department, full-time firefighters.",
+        "value": 1.5
+      },
+      {
+        "ask_id": "fire_department_type",
+        "field": "fire_department_type",
+        "quote": "The fire station is about a mile and a half from us and they're a career department, full-time firefighters.",
+        "value": "Career"
+      },
+      {
+        "ask_id": "dist_to_nearest_fire_hydrant",
+        "field": "dist_to_nearest_fire_hydrant",
+        "quote": "The nearest hydrant is maybe 150 feet down the street.",
+        "value": 150
+      },
+      {
+        "ask_id": "no_residents_in_primary_home",
+        "field": "number_of_residents",
+        "quote": "There are two of us living here full time, my husband and me.",
+        "value": 2
+      }
+    ],
+    "classification": "answers_all"
+  }
+}

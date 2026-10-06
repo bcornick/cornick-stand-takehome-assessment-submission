@@ -1,0 +1,89 @@
+{
+  "input": {
+    "asks": [
+      {
+        "answer_type": "toggle",
+        "ask_id": "residence_held_in_trust",
+        "field": "residence_held_in_trust",
+        "options": [],
+        "wording": "Is the property owned by a trust?"
+      },
+      {
+        "answer_type": "text",
+        "ask_id": "trust_name",
+        "field": "trust_name",
+        "options": [],
+        "wording": "What is the name of the trust?"
+      },
+      {
+        "answer_type": "integer",
+        "ask_id": "coverage_a",
+        "field": "coverage_a",
+        "options": [],
+        "wording": "What Coverage A (dwelling) amount is requested?"
+      },
+      {
+        "answer_type": "select",
+        "ask_id": "is_rental",
+        "field": "is_rental",
+        "options": [
+          "No",
+          "Short-Term Rentals",
+          "Long-Term Rentals"
+        ],
+        "wording": "Is the home rented out, and if so, is it short-term or long-term?"
+      },
+      {
+        "answer_type": "select",
+        "ask_id": "roof_shape",
+        "field": "roof_shape",
+        "options": [
+          "Hip",
+          "Flat",
+          "Gable",
+          "Other"
+        ],
+        "wording": "What is the roof shape?"
+      },
+      {
+        "answer_type": "select",
+        "ask_id": "electrical_panel_brand",
+        "field": "electrical_panel_brand",
+        "options": [
+          "Federal Pacific",
+          "Stab-Lok",
+          "Zinsco",
+          "Challenger",
+          "Sylvania",
+          "Square D",
+          "Eaton",
+          "Siemens",
+          "GE",
+          "Other",
+          "Unknown"
+        ],
+        "wording": "What brand is the electrical panel?"
+      },
+      {
+        "answer_type": "integer",
+        "ask_id": "dist_to_nearest_fire_hydrant",
+        "field": "dist_to_nearest_fire_hydrant",
+        "options": [],
+        "wording": "How many feet is it to the nearest fire hydrant?"
+      }
+    ],
+    "body": "Hi,\n\nThe client has decided to renew with their current carrier and has asked us to withdraw the Old Mill Rd submission. Please close the file; we won't be sending the information requested.\n\nRegards,\nLee Donovan\nHigh Desert Insurance Agency\n"
+  },
+  "input_hash": "c63241865e1815d32eee0929cb7ed6b76b4795665da6fe38e28e259750564fd2",
+  "model_id": "deepseek-flash",
+  "prompt_version": "1d1e49b888c22a1cb1f36f1a85ec4b5abbec90053fd4ded565b66b2f22bed09a",
+  "request_id": "",
+  "skill": "read_reply",
+  "stop_reason": "tool_use",
+  "tokens_in": 605,
+  "tokens_out": 55,
+  "tool_input": {
+    "candidates": [],
+    "classification": "declines_to_answer"
+  }
+}

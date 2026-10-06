@@ -1,0 +1,227 @@
+{
+  "input": {
+    "asks": [
+      {
+        "answer_type": "text",
+        "ask_id": "state",
+        "field": "state",
+        "options": [],
+        "wording": "What state is the property in?"
+      },
+      {
+        "answer_type": "text",
+        "ask_id": "zip",
+        "field": "zip",
+        "options": [],
+        "wording": "What is the property's zip code?"
+      },
+      {
+        "answer_type": "text",
+        "ask_id": "last_name",
+        "field": "last_name",
+        "options": [],
+        "wording": "What is the applicant's last name?"
+      },
+      {
+        "answer_type": "select",
+        "ask_id": "coverage_e",
+        "field": "coverage_e",
+        "options": [
+          "100000",
+          "300000",
+          "500000"
+        ],
+        "wording": "What Coverage E (liability) limit is requested: 100,000, 300,000 or 500,000?"
+      },
+      {
+        "answer_type": "select",
+        "ask_id": "coverage_f",
+        "field": "coverage_f",
+        "options": [
+          "1000",
+          "3000",
+          "5000"
+        ],
+        "wording": "What Coverage F (medical payments) limit is requested: 1,000, 3,000 or 5,000?"
+      },
+      {
+        "answer_type": "integer",
+        "ask_id": "year_built",
+        "field": "year_built",
+        "options": [],
+        "wording": "What year was the home built?"
+      },
+      {
+        "answer_type": "select",
+        "ask_id": "pool_type",
+        "field": "pool_type",
+        "options": [
+          "None",
+          "Above Ground",
+          "Inground"
+        ],
+        "wording": "Does the property have a pool, and if so, is it above ground or inground?"
+      },
+      {
+        "answer_type": "toggle",
+        "ask_id": "above_ground_pool_ladder",
+        "field": "above_ground_pool_ladder",
+        "options": [],
+        "wording": "Does the above-ground pool have a pull-up locking ladder?"
+      },
+      {
+        "answer_type": "decimal",
+        "ask_id": "acreage",
+        "field": "acreage",
+        "options": [],
+        "wording": "How many acres is the lot?"
+      },
+      {
+        "answer_type": "select",
+        "ask_id": "structure_type",
+        "field": "structure_type",
+        "options": [
+          "Single Family",
+          "Duplex",
+          "Townhouse",
+          "Rowhome",
+          "Other"
+        ],
+        "wording": "What type of structure is it: single family, duplex, townhouse, rowhome or other?"
+      },
+      {
+        "answer_type": "integer",
+        "ask_id": "square_feet",
+        "field": "square_feet",
+        "options": [],
+        "wording": "What is the total living square footage?"
+      },
+      {
+        "answer_type": "integer",
+        "ask_id": "num_stories",
+        "field": "num_stories",
+        "options": [],
+        "wording": "How many stories does the home have?"
+      },
+      {
+        "answer_type": "integer",
+        "ask_id": "roof_replacement_year",
+        "field": "roof_replacement_year",
+        "options": [],
+        "wording": "In what year was the roof last replaced?"
+      },
+      {
+        "answer_type": "select",
+        "ask_id": "roof_material",
+        "field": "roof_material",
+        "options": [
+          "Architecture Shingles",
+          "Asphalt Fiberglass Composite",
+          "Clay Tile",
+          "Concrete Tile",
+          "Metal Shingles / Sheets",
+          "Slate",
+          "Standing Seam Metal",
+          "Wood Shake",
+          "Wood Shingle",
+          "Other"
+        ],
+        "wording": "What is the roof surface material?"
+      },
+      {
+        "answer_type": "select",
+        "ask_id": "heating_source",
+        "field": "heating_source",
+        "options": [
+          "Central Gas",
+          "Thermostatically Controlled Electrical Heat",
+          "Heat Pump",
+          "Radiator",
+          "Wood/Pellet Stove",
+          "Space Heater",
+          "Other"
+        ],
+        "wording": "What is the primary heating system?"
+      },
+      {
+        "answer_type": "integer",
+        "ask_id": "plumbing_age_years",
+        "field": "plumbing_age_years",
+        "options": [],
+        "wording": "How old is the plumbing, in years?"
+      },
+      {
+        "answer_type": "select",
+        "ask_id": "water_heater_type",
+        "field": "water_heater_type",
+        "options": [
+          "Tank",
+          "Tankless"
+        ],
+        "wording": "Is the water heater a tank or a tankless unit?"
+      },
+      {
+        "answer_type": "integer",
+        "ask_id": "water_heater_age_years",
+        "field": "water_heater_age_years",
+        "options": [],
+        "wording": "How old is the water heater, in years?"
+      },
+      {
+        "answer_type": "select",
+        "ask_id": "water_heater_location",
+        "field": "water_heater_location",
+        "options": [
+          "In or Above Finished Space",
+          "Unfinished Space"
+        ],
+        "wording": "Where is the water heater: in or above finished space, or in unfinished space?"
+      },
+      {
+        "answer_type": "select",
+        "ask_id": "fire_alarm",
+        "field": "fire_alarm",
+        "options": [
+          "None",
+          "Local Alarm",
+          "Central Alarm",
+          "Direct Alarm"
+        ],
+        "wording": "What fire protective devices does the home have: none, local alarm, central alarm or direct alarm?"
+      },
+      {
+        "answer_type": "select",
+        "ask_id": "fire_department_type",
+        "field": "fire_department_type",
+        "options": [
+          "Career",
+          "Mostly Career",
+          "Mostly Volunteer",
+          "Volunteer",
+          "Unknown"
+        ],
+        "wording": "Is the fire department career, mostly career, mostly volunteer or volunteer?"
+      },
+      {
+        "answer_type": "integer",
+        "ask_id": "dist_to_nearest_fire_hydrant",
+        "field": "dist_to_nearest_fire_hydrant",
+        "options": [],
+        "wording": "How many feet is it to the nearest fire hydrant?"
+      }
+    ],
+    "body": "Hi,\n\nBefore I go back to the owner with a list this long, can you tell me whether this one is going anywhere? It's a wood shake house up on Hillside Ct and the last carrier walked away over the wildfire exposure. If your model is going to do the same, I'd rather know up front than make the owner dig out twenty answers.\n\nWho should I call to talk it through?\n\nThanks,\nChris Nakamura\nCascade Insurance Partners\n"
+  },
+  "input_hash": "75de3199078dd5bf98bc6a2a46a72a3c0edeb134b5582911a69d46e5cdff2781",
+  "model_id": "deepseek-flash",
+  "prompt_version": "1d1e49b888c22a1cb1f36f1a85ec4b5abbec90053fd4ded565b66b2f22bed09a",
+  "request_id": "",
+  "skill": "read_reply",
+  "stop_reason": "tool_use",
+  "tokens_in": 1490,
+  "tokens_out": 54,
+  "tool_input": {
+    "candidates": [],
+    "classification": "off_topic"
+  }
+}
