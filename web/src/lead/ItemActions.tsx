@@ -1,8 +1,7 @@
 // ABOUTME: What a lead waits on, and the actions of each open item (A.11): a draft is approved, edited or rejected, a pending value or an unknown delivery is approved or rejected with a reason, and an underwriter question is one card of equal option buttons.
-// ABOUTME: A review the underwriter cannot decide shows how it closes; every control shows the reason the command was refused.
+// ABOUTME: A review the underwriter cannot decide shows how it closes; rejecting a decline notice says it sends the asks instead; every control shows the reason the command was refused.
 import { approve, editDraft, recordRuling, reject } from '@/api/client'
 import type { components } from '@/api/types'
-import { ActionButton } from '@/components/ActionButton'
 import { ActionForm } from '@/components/ActionForm'
 import { Badge } from '@/components/ui/badge'
 import { useAction } from '@/components/useAction'
@@ -30,7 +29,7 @@ export function Blockers({ lead, onChange }: Props) {
             <span className="text-sm text-muted-foreground">
               {`Waits on ${OWNER_LABELS[blocker.owner].toLowerCase()}`}
             </span>
-            <span>{blocker.detail.text}</span>
+            {blocker.kind !== 'underwriter_question' && <span>{blocker.detail.text}</span>}
           </p>
           <ItemActions lead={lead} blocker={blocker} onChange={onChange} />
         </li>
@@ -51,35 +50,41 @@ function ItemActions({ lead, blocker, onChange }: Props & { blocker: Blocker }) 
   }
   if (itemKind === 'observation') {
     const pending = blocker.observation
+    const current = lead.facts.find((fact) => fact.key === pending?.key)
     return (
       <>
         {pending !== null && (
-          <p className="text-sm">{`Pending value for ${pending.key}: ${formatValue(pending.value)}`}</p>
+          <p className="text-sm">
+            {`${pending.key}: proposed ${formatValue(pending.value)}, current ${formatValue(current?.value)}`}
+          </p>
         )}
-        <ApproveOrReject itemId={itemId} canReject onChange={onChange} />
+        <ApproveOrReject itemId={itemId} approveLabel="Approve" canReject onChange={onChange} />
       </>
     )
   }
   if (itemKind === 'delivery_unknown') {
-    return <ApproveOrReject itemId={itemId} canReject onChange={onChange} />
+    return <ApproveOrReject itemId={itemId} approveLabel="Approve" canReject onChange={onChange} />
   }
   if (itemKind === 'review' && !persists) {
-    return <ApproveOrReject itemId={itemId} canReject={false} onChange={onChange} />
+    return <ApproveOrReject itemId={itemId} approveLabel="Acknowledge" canReject={false} onChange={onChange} />
   }
   return (
-    <p className="text-sm text-muted-foreground">
-      This closes when a fact is resolved or the lead is declined.
-    </p>
+    <p className="text-sm text-muted-foreground">{`This closes when ${blocker.detail.resume_trigger}.`}</p>
   )
 }
 
-type ApproveOrRejectProps = { itemId: number; canReject: boolean; onChange: () => void }
+type ApproveOrRejectProps = {
+  itemId: number
+  approveLabel: string
+  canReject: boolean
+  onChange: () => void
+}
 
-function ApproveOrReject({ itemId, canReject, onChange }: ApproveOrRejectProps) {
+function ApproveOrReject({ itemId, approveLabel, canReject, onChange }: ApproveOrRejectProps) {
   return (
     <div className="flex flex-col gap-3">
       <ActionForm
-        label="Approve"
+        label={approveLabel}
         fields={[REASON]}
         act={({ reason }) => approve(itemId, reason!)}
         onDone={onChange}
@@ -99,11 +104,15 @@ function ApproveOrReject({ itemId, canReject, onChange }: ApproveOrRejectProps) 
 type DraftActionsProps = { itemId: number; draft: Draft; onChange: () => void }
 
 function DraftActions({ itemId, draft, onChange }: DraftActionsProps) {
+  const isDecline = draft.kind === 'decline_notice'
   return (
     <div className="flex flex-col gap-3">
-      <ActionButton
+      <ActionForm
+        // A new hash is a new draft, which the reason given for the old one does not cover.
+        key={`approve-${draft.payload_hash}`}
         label="Approve"
-        act={() => approve(itemId, 'Approved in the detail pane.', draft.payload_hash)}
+        fields={[REASON]}
+        act={({ reason }) => approve(itemId, reason!, draft.payload_hash)}
         onDone={onChange}
       />
       <ActionForm
@@ -118,8 +127,13 @@ function DraftActions({ itemId, draft, onChange }: DraftActionsProps) {
         act={({ subject, body, reason }) => editDraft(draft.intent_id, subject!, body!, reason!)}
         onDone={onChange}
       />
+      {isDecline && (
+        <p className="text-sm text-muted-foreground">
+          Withdrawing the decline suppresses it for this lead and sends the requests for the facts still missing.
+        </p>
+      )}
       <ActionForm
-        label="Reject"
+        label={isDecline ? 'Withdraw decline and send the asks' : 'Reject'}
         fields={[REASON]}
         act={({ reason }) => reject(itemId, reason!)}
         onDone={onChange}

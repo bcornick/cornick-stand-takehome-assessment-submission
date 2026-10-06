@@ -81,7 +81,8 @@ describe('ChatPanel', () => {
 
     const cards = await screen.findByRole('list', { name: 'Proposals' })
     expect(within(cards).getByText('The building is vacant.')).toBeInTheDocument()
-    expect(within(cards).getByText(/decline_lead/)).toBeInTheDocument()
+    expect(within(cards).getByText('Decline lead LEAD-1')).toBeInTheDocument()
+    expect(within(cards).queryByText(/decline_lead|\{/)).toBeNull()
     await userEvent.click(within(cards).getByRole('button', { name: 'Apply' }))
 
     await vi.waitFor(() => expect(screen.queryByRole('list', { name: 'Proposals' })).toBeNull())
@@ -109,14 +110,27 @@ describe('ChatPanel', () => {
     expect(calls).toContain('POST /api/proposals/4/dismiss')
   })
 
-  it('shows why a message got no answer', async () => {
+  it('shows the reason the server gives for a message that got no answer', async () => {
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) =>
-      String(input) === '/api/proposals' ? respond([]) : new Response('{}', { status: 409 })))
+      String(input) === '/api/proposals'
+        ? respond([])
+        : new Response(JSON.stringify({ detail: 'no recording for skill chat' }), { status: 409 })))
     render(<ChatPanel leadId={null} onChange={() => {}} />)
 
     await userEvent.type(screen.getByRole('textbox', { name: 'Message' }), 'hello')
     await userEvent.click(screen.getByRole('button', { name: 'Send' }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('/api/chat answered 409')
+    expect(await screen.findByRole('alert')).toHaveTextContent('no recording for skill chat')
+  })
+
+  it('names the route and the status when the server gives no reason', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) =>
+      String(input) === '/api/proposals' ? respond([]) : new Response('Bad gateway', { status: 502 })))
+    render(<ChatPanel leadId={null} onChange={() => {}} />)
+
+    await userEvent.type(screen.getByRole('textbox', { name: 'Message' }), 'hello')
+    await userEvent.click(screen.getByRole('button', { name: 'Send' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('/api/chat answered 502')
   })
 })

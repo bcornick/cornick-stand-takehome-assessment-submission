@@ -81,6 +81,15 @@ const lead: Schemas['LeadDetail'] = {
       observation_id: 1,
     },
     {
+      key: 'months_unoccupied',
+      value: 0,
+      source: 'submitted',
+      status: 'accepted',
+      confirmed: false,
+      evidence: {},
+      observation_id: 3,
+    },
+    {
       key: 'roof_age',
       value: 12,
       source: 'submitted',
@@ -110,11 +119,38 @@ const lead: Schemas['LeadDetail'] = {
   blockers: [
     blocker(17, 'underwriter_review', { item_kind: 'draft', intent_id: packet.intent_id, text: 'The packet is ready.' }),
     blocker(18, 'underwriter_review', { item_kind: 'observation', observation_id: 41, text: 'A reply gives 5.' }, pending),
-    blocker(19, 'underwriter_question', { choice_ids: ['I13.fire_fail'], text: 'The fire simulation failed.' }),
+    blocker(19, 'underwriter_question', {
+      choice_ids: ['I13.fire_fail'],
+      text: 'The fire simulation failed: decline, or continue?',
+    }),
     blocker(20, 'underwriter_review', { item_kind: 'review', cause: 'late_reply', text: 'A late reply.' }),
-    blocker(21, 'underwriter_review', { item_kind: 'no_contact_route', text: 'No contact route.' }),
+    blocker(21, 'underwriter_review', {
+      item_kind: 'no_contact_route',
+      resume_trigger: 'a contact email is resolved',
+      text: 'No contact route.',
+    }),
+    {
+      ...blocker(22, 'producer_reply', {
+        resume_trigger: 'the producer replies',
+        text: 'Waiting for the producer’s reply to round 1.',
+      }),
+      owner: 'producer',
+    },
+  ],
+  fields: [
+    { key: 'coverage_a', label: 'Coverage A', kind: 'integer', options: [] },
+    { key: 'zip_code', label: 'Zip code', kind: 'text', options: [] },
+    { key: 'fire_alarm', label: 'Fire alarm', kind: 'toggle', options: [] },
   ],
   drafts: [sentRequest, packet],
+}
+
+const decline: Schemas['DraftView'] = {
+  ...packet,
+  intent_id: 'intent-decline',
+  payload_hash: 'c'.repeat(64),
+  kind: 'decline_notice',
+  subject: 'Your application',
 }
 
 function respond(body: unknown): Response {
@@ -186,6 +222,44 @@ describe('the items of a lead', () => {
     ])
   })
 
+  it('approves a draft with the underwriter’s own reason against the hash shown', async () => {
+    const posted = stubApi()
+    pane()
+    const approveForm = form('The packet is ready.', 'Approve')
+    expect(approveForm.getByRole('button', { name: 'Approve' })).toBeDisabled()
+
+    await fill(approveForm, 'Reason', 'matches the plan')
+    await userEvent.click(approveForm.getByRole('button', { name: 'Approve' }))
+
+    expect(posted).toEqual([
+      {
+        path: '/api/commands',
+        body: {
+          type: 'approve',
+          payload: { item_id: 17, artifact_hash: packet.payload_hash, reason: 'matches the plan' },
+        },
+      },
+    ])
+  })
+
+  it('rejects a decline notice as withdrawing the decline and sending the asks, and says so', async () => {
+    const posted = stubApi()
+    pane({
+      ...lead,
+      blockers: [blocker(30, 'underwriter_review', { item_kind: 'draft', intent_id: decline.intent_id, text: 'Review the notice.' })],
+      drafts: [decline],
+    })
+    const item = screen.getByText('Review the notice.').closest('li')!
+    expect(within(item).queryByRole('form', { name: 'Reject' })).toBeNull()
+    expect(within(item).getByText(/sends the requests for the facts still missing/)).toBeInTheDocument()
+    const withdraw = form('Review the notice.', 'Withdraw decline and send the asks')
+
+    await fill(withdraw, 'Reason', 'the roof is fine')
+    await userEvent.click(withdraw.getByRole('button', { name: 'Withdraw decline and send the asks' }))
+
+    expect(posted[0].body).toEqual({ type: 'reject', payload: { item_id: 30, reason: 'the roof is fine' } })
+  })
+
   it('rejects a draft only with a reason', async () => {
     const posted = stubApi()
     pane()
@@ -207,7 +281,7 @@ describe('the items of a lead', () => {
   ])('%s a pending value with a reason', async (name, body) => {
     const posted = stubApi()
     pane()
-    expect(screen.getByText('Pending value for months_unoccupied: 5')).toBeInTheDocument()
+    expect(screen.getByText('months_unoccupied: proposed 5, current 0')).toBeInTheDocument()
 
     const scope = form('A reply gives 5.', name)
     await fill(scope, 'Reason', 'clear')
@@ -220,11 +294,20 @@ describe('the items of a lead', () => {
     stubApi()
     pane()
     const review = screen.getByText('A late reply.').closest('li')!
-    expect(within(review).getByRole('form', { name: 'Approve' })).toBeInTheDocument()
+    expect(within(review).getByRole('form', { name: 'Acknowledge' })).toBeInTheDocument()
+    expect(within(review).queryByRole('form', { name: 'Approve' })).toBeNull()
     expect(within(review).queryByRole('form', { name: 'Reject' })).toBeNull()
     const route = screen.getByText('No contact route.').closest('li')!
     expect(within(route).queryByRole('form')).toBeNull()
-    expect(within(route).getByText(/resolved or the lead is declined/)).toBeInTheDocument()
+    expect(within(route).getByText('This closes when a contact email is resolved.')).toBeInTheDocument()
+  })
+
+  it('says a wait for the producer closes when the producer replies', () => {
+    stubApi()
+    pane()
+    const wait = screen.getByText('Waiting for the producer’s reply to round 1.').closest('li')!
+    expect(within(wait).getByText('This closes when the producer replies.')).toBeInTheDocument()
+    expect(within(wait).queryByText(/resolved|declined/)).toBeNull()
   })
 
   it('shows the refusal reason the command returns', async () => {
@@ -243,7 +326,7 @@ describe('the question card', () => {
     stubApi()
     pane()
     const card = screen.getByRole('region', { name: 'I13.fire_fail' })
-    expect(within(card).getByText('The fire simulation failed: decline, or continue?')).toBeInTheDocument()
+    expect(screen.getAllByText('The fire simulation failed: decline, or continue?')).toHaveLength(1)
     expect(within(card).getByText('roof_age: 12')).toBeInTheDocument()
     expect(within(card).getByText('wall_type: —')).toBeInTheDocument()
     expect(within(card).getAllByRole('button').map((b) => b.textContent)).toEqual([
@@ -280,13 +363,16 @@ describe('the question card', () => {
 })
 
 describe('the actions on the lead', () => {
-  it('resolves a fact as a number when the lead holds that fact as a number', async () => {
+  it('resolves a fact from a choice of the lead’s registry fields, as a number for an integer', async () => {
     const posted = stubApi()
     pane()
     const scope = within(screen.getByRole('form', { name: 'Resolve fact' }))
     expect(scope.getByRole('button', { name: 'Resolve fact' })).toBeDisabled()
+    expect(
+      scope.getAllByRole('option').map((option) => option.textContent),
+    ).toEqual(['', 'Coverage A (coverage_a)', 'Zip code (zip_code)', 'Fire alarm (fire_alarm)'])
 
-    await fill(scope, 'Field', 'coverage_a')
+    await userEvent.selectOptions(scope.getByLabelText('Field'), 'coverage_a')
     await fill(scope, 'Value', '500000')
     await fill(scope, 'Reason', 'by phone')
     await userEvent.click(scope.getByRole('button', { name: 'Resolve fact' }))
@@ -299,6 +385,26 @@ describe('the actions on the lead', () => {
           payload: { lead_id: 'LEAD-1', key: 'coverage_a', value: 500000, reason: 'by phone' },
         },
       },
+    ])
+  })
+
+  it('sends a text field as text, so a zip code keeps its digits, and a toggle as a flag', async () => {
+    const posted = stubApi()
+    pane()
+    const scope = within(screen.getByRole('form', { name: 'Resolve fact' }))
+
+    await userEvent.selectOptions(scope.getByLabelText('Field'), 'zip_code')
+    await fill(scope, 'Value', '34102')
+    await fill(scope, 'Reason', 'by phone')
+    await userEvent.click(scope.getByRole('button', { name: 'Resolve fact' }))
+    await userEvent.selectOptions(scope.getByLabelText('Field'), 'fire_alarm')
+    await fill(scope, 'Value', 'Yes')
+    await fill(scope, 'Reason', 'by phone')
+    await userEvent.click(scope.getByRole('button', { name: 'Resolve fact' }))
+
+    expect(posted.map((call) => (call.body as { payload: { key: string; value: unknown } }).payload)).toEqual([
+      { lead_id: 'LEAD-1', key: 'zip_code', value: '34102', reason: 'by phone' },
+      { lead_id: 'LEAD-1', key: 'fire_alarm', value: true, reason: 'by phone' },
     ])
   })
 

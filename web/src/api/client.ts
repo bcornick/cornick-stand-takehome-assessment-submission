@@ -1,5 +1,5 @@
 // ABOUTME: Typed fetch calls: the run, the queue, one lead's detail and events, the open items and the proposal cards, and the actions of the page: start the run, deliver the fixture replies, the underwriter's commands, a pasted reply, a chat message, apply or dismiss a card.
-// ABOUTME: A response that is not 2xx throws an ApiError that names the route and the status; a command resolves to the reason it was refused, or null when it was accepted.
+// ABOUTME: A response that is not 2xx throws an ApiError that carries the server's `detail` when it has one, and otherwise names the route and the status; a command resolves to the reason it was refused, or null when it was accepted.
 import type { components, paths } from '@/api/types'
 
 type Schemas = components['schemas']
@@ -9,17 +9,28 @@ class ApiError extends Error {
   readonly path: string
   readonly status: number
 
-  constructor(path: string, status: number) {
-    super(`${path} answered ${status}`)
+  constructor(path: string, status: number, detail: string | null) {
+    super(detail ?? `${path} answered ${status}`)
     this.name = 'ApiError'
     this.path = path
     this.status = status
   }
 }
 
+// The reason the server gives for a failure, when it gives one as text.
+async function detailOf(response: Response): Promise<string | null> {
+  try {
+    const body: unknown = await response.json()
+    const detail = (body as { detail?: unknown }).detail
+    return typeof detail === 'string' ? detail : null
+  } catch {
+    return null
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, init)
-  if (!response.ok) throw new ApiError(path, response.status)
+  if (!response.ok) throw new ApiError(path, response.status, await detailOf(response))
   return (await response.json()) as T
 }
 

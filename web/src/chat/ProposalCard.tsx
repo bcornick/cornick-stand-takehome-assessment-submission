@@ -1,12 +1,33 @@
-// ABOUTME: One proposal card of the chat panel: the command the assistant proposes with its payload and its reason, an Apply button that submits the command as the underwriter, and a Dismiss button.
+// ABOUTME: One proposal card of the chat panel: the command the assistant proposes in words with its reason, an Apply button that submits the command as the underwriter, and a Dismiss button.
 // ABOUTME: A refused command shows its reason beside the button and the card stays; nothing runs until Apply is pressed.
 import { applyProposal, dismissProposal } from '@/api/client'
 import type { components } from '@/api/types'
 import { ActionButton } from '@/components/ActionButton'
+import { formatValue } from '@/format'
 
 type Proposal = components['schemas']['ProposalView']
 
 type Props = { proposal: Proposal; onDone: () => void }
+
+// The proposed command as a sentence the underwriter reads, from its type and payload.
+function inWords(type: string, payload: Record<string, unknown>): string {
+  switch (type) {
+    case 'decline_lead':
+      return `Decline lead ${payload.lead_id}`
+    case 'resolve_fact':
+      return `Set ${payload.key} to ${formatValue(payload.value)} on lead ${payload.lead_id}`
+    case 'record_ruling':
+      return `Choose ${String(payload.option).replace(/_/g, ' ')} for ${payload.choice_id} on lead ${payload.lead_id}`
+    case 'edit_draft':
+      return `Edit the draft ${payload.intent_id}`
+    case 'deliver_reply':
+      return `Record the producer's reply on lead ${payload.lead_id}`
+    case 'start_run':
+      return `Start a run with seed ${payload.seed}`
+    default:
+      return type.replace(/_/g, ' ')
+  }
+}
 
 export function ProposalCard({ proposal, onDone }: Props) {
   const { type, payload, rationale } = proposal.payload as {
@@ -16,8 +37,11 @@ export function ProposalCard({ proposal, onDone }: Props) {
   }
   return (
     <li className="flex flex-col gap-2 rounded-md border p-3">
-      <p className="text-sm">{rationale}</p>
-      <p className="font-mono text-xs text-muted-foreground">{`${type} ${JSON.stringify(payload)}`}</p>
+      <p className="text-sm">
+        <span className="font-medium">{inWords(type, payload)}</span>
+        {': '}
+        <span>{rationale}</span>
+      </p>
       <span className="flex flex-wrap gap-2">
         <ActionButton
           label="Apply"

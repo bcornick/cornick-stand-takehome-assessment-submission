@@ -1,4 +1,4 @@
-// ABOUTME: Human-readable labels for the API's value sets: statuses, blocker kinds, owners, sources, groups, message kinds and effects.
+// ABOUTME: Human-readable labels for the API's value sets: statuses, blocker kinds, owners, sources, groups, message kinds, effects, event types and actors.
 // ABOUTME: One mapping module, so no screen carries its own string literals for these.
 import type { components } from '@/api/types'
 
@@ -11,6 +11,8 @@ type Group = Schemas['QueueRow']['group']
 type MessageKind = Schemas['DraftView']['kind']
 type DraftState = Schemas['DraftView']['state']
 type EffectType = Schemas['PlannedEffect']['effect']['type']
+type EventType = Schemas['EventRow']['type']
+type Actor = Schemas['EventRow']['actor']
 
 export const STATUS_LABELS: Record<Status, string> = {
   received: 'Received',
@@ -80,4 +82,39 @@ export const EFFECT_LABELS: Record<EffectType, string> = {
   advisory: 'Advisory',
   obligation: 'Obligation',
   no_action: 'No action',
+}
+
+export const EVENT_LABELS: Record<EventType, string> = {
+  run_started: 'Run started',
+  replay_miss: 'Recording missing',
+  draft_edited: 'Draft edited',
+  proposal_created: 'Proposal made',
+  lead_received: 'Lead received',
+  fact_observed: 'Fact observed',
+  fact_selected: 'Fact chosen',
+  conflict_opened: 'Conflict opened',
+  conflict_closed: 'Conflict closed',
+  triage_completed: 'Triage done',
+  provider_called: 'Data looked up',
+  plan_built: 'Plan built',
+  blocker_opened: 'Wait opened',
+  blocker_closed: 'Wait closed',
+  intent_created: 'Message drafted',
+  message_sent: 'Message sent',
+  delivery_unknown: 'Delivery unknown',
+  reply_received: 'Reply received',
+  reply_read: 'Reply read',
+  approval_recorded: 'Decision recorded',
+  ruling_recorded: 'Ruling recorded',
+  command_refused: 'Command refused',
+  skill_fallback_used: 'Fallback used',
+  model_called: 'Model called',
+  fault_injected: 'Fault injected',
+}
+
+export const ACTOR_LABELS: Record<Actor, string> = {
+  workflow: 'The system',
+  underwriter: 'The underwriter',
+  assistant: 'The assistant',
+  inbound: 'The producer',
 }

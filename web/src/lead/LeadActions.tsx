@@ -1,4 +1,4 @@
-// ABOUTME: The actions on a whole lead: resolve a fact, decline the lead, and paste a producer's reply to the lead's latest sent request.
+// ABOUTME: The actions on a whole lead: resolve a fact of the lead's registry fields, decline the lead, and paste a producer's reply to the lead's latest sent request.
 // ABOUTME: Each form requires its reason, or the reply text, and shows the reason the command was refused.
 import { declineLead, deliverReply, resolveFact } from '@/api/client'
 import type { components } from '@/api/types'
@@ -10,12 +10,15 @@ type Props = { lead: LeadDetail; onChange: () => void }
 
 const REASON = { name: 'reason', label: 'Reason' }
 
-// The command takes a number or a flag as such: a fact that is held as one is sent as one, and
-// a fact not held yet is sent as a number when the text is one.
-function factValue(text: string, held: unknown): string | number | boolean {
+// The command carries the value as the field's registry type: a number for an integer or a decimal, a
+// flag for a toggle, and text for every other type, so a zip code stays "34102". Text that does not fit
+// the type is sent as it is, and the command refuses it with the reason.
+function factValue(text: string, kind: string): string | number | boolean {
   const value = text.trim()
-  if (typeof held === 'boolean') return value.toLowerCase() === 'true'
-  if (typeof held === 'number' || (held === undefined && /^-?\d+(\.\d+)?$/.test(value))) {
+  const flag = value.toLowerCase()
+  if (kind === 'toggle' && (flag === 'true' || flag === 'yes')) return true
+  if (kind === 'toggle' && (flag === 'false' || flag === 'no')) return false
+  if ((kind === 'integer' || kind === 'decimal') && value !== '' && !Number.isNaN(Number(value))) {
     return Number(value)
   }
   return value
@@ -44,15 +47,22 @@ export function LeadActions({ lead, onChange }: Props) {
           <ActionForm
             label="Resolve fact"
             fields={[
-              { name: 'key', label: 'Field' },
+              {
+                name: 'key',
+                label: 'Field',
+                options: lead.fields.map((field) => ({
+                  value: field.key,
+                  label: `${field.label} (${field.key})`,
+                })),
+              },
               { name: 'value', label: 'Value' },
               REASON,
             ]}
             act={({ key, value, reason }) =>
               resolveFact(
                 lead.lead_id,
-                key!.trim(),
-                factValue(value!, lead.facts.find((fact) => fact.key === key!.trim())?.value),
+                key!,
+                factValue(value!, lead.fields.find((field) => field.key === key)!.kind),
                 reason!,
               )
             }

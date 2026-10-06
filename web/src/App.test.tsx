@@ -116,6 +116,7 @@ const lead: Schemas['LeadDetail'] = {
       observation: null,
     },
   ],
+  fields: [],
   drafts: [packet],
 }
 
@@ -183,12 +184,14 @@ describe('App', () => {
     const pane = await screen.findByRole('article')
     expect(within(pane).getByText(/Coverage A \(Dwelling\): \$875,000/, { selector: 'pre' })).toBeInTheDocument()
 
-    await userEvent.click(within(pane).getByRole('button', { name: 'Approve' }))
+    const approve = within(within(pane).getByRole('form', { name: 'Approve' }))
+    await userEvent.type(approve.getByRole('textbox', { name: 'Reason' }), 'matches the plan')
+    await userEvent.click(approve.getByRole('button', { name: 'Approve' }))
 
     expect(calls).toContain('POST /api/commands')
     expect(bodies[0]).toMatchObject({
       type: 'approve',
-      payload: { item_id: 17, artifact_hash: packet.payload_hash },
+      payload: { item_id: 17, artifact_hash: packet.payload_hash, reason: 'matches the plan' },
     })
     // The queue and the lead are fetched again after the action.
     await vi.waitFor(() => expect(calls.filter((c) => c === 'GET /api/leads')).toHaveLength(2))

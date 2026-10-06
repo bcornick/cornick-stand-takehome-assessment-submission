@@ -1,7 +1,9 @@
-// ABOUTME: What the system did on a lead: its events in order, each with its id, type, actor, time and a one-line summary.
+// ABOUTME: What the system did on a lead: its events in order, each with its id, a plain label for its type, who acted, the local time and a one-line summary.
 // ABOUTME: Loads the events itself and fetches them again when the page refetches; a request that fails shows a plain message.
 import { getLeadEvents } from '@/api/client'
 import { useRemote } from '@/api/useRemote'
+import { formatTime } from '@/format'
+import { ACTOR_LABELS, EVENT_LABELS } from '@/labels'
 
 type Props = { leadId: string; refresh: number }
 
@@ -14,7 +16,9 @@ export function EventList({ leadId, refresh }: Props) {
       {events.data.events.map((event) => (
         <li key={event.id}>
           <span className="font-mono">{`#${event.id}`}</span>
-          {` ${event.type} (${event.actor}, ${event.sim_ts}): ${event.summary}`}
+          <span className="font-medium">{` ${EVENT_LABELS[event.type]}`}</span>
+          <span className="text-muted-foreground">{` ${ACTOR_LABELS[event.actor]}, ${formatTime(event.sim_ts)}`}</span>
+          {` ${event.summary}`}
         </li>
       ))}
     </ol>

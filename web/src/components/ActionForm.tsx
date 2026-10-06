@@ -1,9 +1,16 @@
-// ABOUTME: A form of required text fields with one submit button; it shows the reason when the action is refused or fails, and tells the page to refetch when the action is done.
+// ABOUTME: A form of required text or choice fields with one submit button; it shows the reason when the action is refused or fails, and tells the page to refetch when the action is done.
 // ABOUTME: The button stays disabled until every field has text, so a reason cannot be skipped; the fields return to their initial text after an accepted action.
 import { useState } from 'react'
 import { useAction } from './useAction'
 
-export type FormField = { name: string; label: string; multiline?: boolean; initial?: string }
+export type FormField = {
+  name: string
+  label: string
+  multiline?: boolean
+  initial?: string
+  // A field with options is a choice of one of them, shown by its label.
+  options?: { value: string; label: string }[]
+}
 
 type Props = {
   label: string
@@ -30,7 +37,20 @@ export function ActionForm({ label, fields, act, onDone }: Props) {
       {fields.map((field) => (
         <label key={field.name} className="flex flex-col gap-1 text-sm">
           {field.label}
-          {field.multiline === true ? (
+          {field.options !== undefined ? (
+            <select
+              className={inputClass}
+              value={values[field.name]}
+              onChange={(e) => setValues({ ...values, [field.name]: e.target.value })}
+            >
+              <option value="" />
+              {field.options.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          ) : field.multiline === true ? (
             <textarea
               rows={6}
               className={inputClass}
