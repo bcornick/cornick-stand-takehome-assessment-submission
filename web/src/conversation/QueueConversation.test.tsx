@@ -42,7 +42,7 @@ const lead: Schemas['LeadDetail'] = {
   lead_id: 'LEAD-00000042-008',
   label: '8924 Lakeview Blvd',
   status: 'in_progress',
-  revision: 3,
+  summary: 'Triage is running.',  revision: 3,
   facts: [],
   pages: [],
   plan: {

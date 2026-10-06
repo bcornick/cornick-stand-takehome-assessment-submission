@@ -727,6 +727,8 @@ export interface components {
              * @enum {string}
              */
             status: "received" | "triaged" | "in_progress" | "quote_sent" | "declined";
+            /** Summary */
+            summary: string;
         };
         /** LeadEvents */
         LeadEvents: {

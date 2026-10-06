@@ -47,7 +47,7 @@ const lead: Schemas['LeadDetail'] = {
   lead_id: 'LEAD-1',
   label: '12 Oak St',
   status: 'in_progress',
-  revision: 1,
+  summary: 'Triage is running.',  revision: 1,
   facts: [
     {
       key: 'roof_age',

@@ -1208,12 +1208,17 @@
             ],
             "title": "Status",
             "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
           }
         },
         "required": [
           "lead_id",
           "label",
           "status",
+          "summary",
           "revision",
           "facts",
           "plan",

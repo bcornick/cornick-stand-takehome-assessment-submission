@@ -96,7 +96,7 @@ const lead: Schemas['LeadDetail'] = {
   lead_id: row.lead_id,
   label: row.label,
   status: 'in_progress',
-  revision: 3,
+  summary: 'Triage is running.',  revision: 3,
   facts: [],
   pages: [],
   plan,

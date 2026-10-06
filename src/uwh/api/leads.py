@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException
 from uwh.api.event_summary import event_summary
 from uwh.api.pages import plan_pages
 from uwh.api.runtime import RuntimeDependency
+from uwh.api.summary import summary_line
 from uwh.api.views import (
     BlockerView,
     DraftView,
@@ -155,6 +156,7 @@ def lead_detail(db: sqlite3.Connection, lead_id: str, registry: Registry) -> Lea
         return None
     status, revision, plan_json = lead
     plan = None if plan_json is None else ActionPlan.model_validate_json(plan_json)
+    blockers = open_blockers(db, lead_id)
     facts = effective_facts(db, lead_id)
     drafts = db.execute(
         "SELECT id, payload_hash, kind, recipient, subject, body, state, round FROM intents"
@@ -165,11 +167,12 @@ def lead_detail(db: sqlite3.Connection, lead_id: str, registry: Registry) -> Lea
         lead_id=lead_id,
         label=lead_label(db, lead_id),
         status=status,
+        summary=summary_line(db, lead_id, status, plan, blockers),
         revision=revision,
         facts=[FactView(**vars(fact)) for fact in facts.values()],
         plan=plan,
         pages=[] if plan is None else plan_pages(plan, load_graphs()),
-        blockers=[_blocker_view(db, blocker) for blocker in open_blockers(db, lead_id)],
+        blockers=[_blocker_view(db, blocker) for blocker in blockers],
         drafts=[
             DraftView(
                 intent_id=d[0],

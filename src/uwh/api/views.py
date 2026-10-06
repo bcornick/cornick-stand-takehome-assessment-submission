@@ -169,6 +169,7 @@ class LeadDetail(StrictModel):
     lead_id: str
     label: str
     status: Status
+    summary: str  # the sentence the conversation opens with
     revision: int
     facts: list[FactView]
     plan: ActionPlan | None  # None until the lead has been triaged
