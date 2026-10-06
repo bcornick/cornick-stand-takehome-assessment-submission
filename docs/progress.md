@@ -405,3 +405,21 @@ Brett's decisions carried into milestone 1: an underwriter's value that still tr
 **Open with Brett:** the label signatures and the disagreements above; the wording of RF-5 ("A review of the roof's condition before binding, because a composition shingle roof more than 20 years old is a higher risk.") and the mitigation question ("Would the applicant be willing to mitigate greater distance?"); the default `RUN_MODE`.
 
 **Next:** milestone 3: `make eval` with the seed-42 suite and graders, the reply suite, the three controls, per-skill cases, the results log, one improvement cycle on reply reading.
+
+## Milestone 3: Evals (12917bf)
+
+**Done:** `make eval` runs in the containers against its own leadgen and mailbox services, from an empty database, in replay. M3-A1 (the reference run passes every grader), M3-A2 (do nothing is caught by Coverage, email everything by Forbidden asks and Asks, send twice by Send safety and One open request) and M3-A3 (the log shows the improvement cycle and Brett's keep decision) pass, run by the lead.
+- Runner `evals/run.py` (`--suite seed42 | replies`, `--control`, `--hypothesis`), refusing a dirty tree so a row's commit names the code that ran; the graders Coverage (statuses, underwriter items, not-evaluated notes), One open request, Asks, Forbidden asks, Rule trace, Packet fidelity, Reply facts, Send safety (two fault runs on lead 008), Stand's key (counts pinned in `evals/labels/seed42/exemptions.yaml`), Reply reading; the four critical errors; the three controls as runner seams; `cases/` for `evaluate_playbook` (82 rows) and `read_reply` (8 fixtures); skill digests, evaluator hash and `skill_results` on each row; `src/uwh/skills/status.py` reads a skill's status from the log (milestones 4 and 6 read it).
+- Eight reply fixtures with expected readings (`fixtures/replies/`, three held back under `held/`; `evals/labels/replies/`), written by a fresh author on the lead's model.
+- The improvement cycle in `evals/results.jsonl`: a run failing on held-back lead 005 (`state` read as "Colorado"), one prompt clause (return the shortest conventional form), the rerun passing that value, then a code rule deciding `answers_all` from the asks because the model cannot see which follow-ons its own answers made inactive, the final run 8 of 8, and Brett's `decision` row keeping it. Two rows run on an uncommitted tree carry `decision` rows discarding them.
+- Brett's rulings: lead 000's label status is `in_progress`; a restated confirmation closes its conflict and a filled missing field of the pair does not reopen it (lead 004 goes to a quote packet); the label word `pending_observation` became the contract's `observation`.
+
+**Live calls:** two record runs of `read_reply`, nineteen calls, no retries: eight fixtures 8,036 in / 2,869 out, then nine fixtures after the prompt change 8,923 in / 2,994 out. Project total: 18,265 in, 6,159 out. Lead 008's re-recorded call reports 391 input tokens against 1,165 the first time, for the same input; unexplained.
+
+**Checks:** `make check` clean at 44723b7, run by the builders: 625 fast Python tests; the lead ran the acceptance commands and the integration tests (pass). Python lines: `src/` and `tests/` to be recounted in milestone 6.
+
+**Decisions:** the classification of an on-topic reply is decided by code from the asks (§10.4 amended). Replay rows count toward a model skill's status (§8 amended); the three-repeat check is not run (§13.3). The per-page case-coverage check and `excluded_edges.yaml` are dropped; cases are a table per page (§13.2). The graders Field resolution, Escalation, Approval binding, Policy and Key isolation are cut (Brett); `threshold_reason` is removed. `alternatives` and `held_catalogue_questions` in the 003/006 labels are unread. The reviewer's milestone 3 read found six blockers, all fixed above; findings on unreached paths: none.
+
+**Open with Brett:** the label signatures (`reviewed_by` on the ten seed-42 files); the default `RUN_MODE`.
+
+**Next:** milestone 4: the underwriter surface.
