@@ -77,6 +77,20 @@ def test_a_class_the_workflow_actor_may_not_submit_fails(tmp_path: Path, name: s
         check_skill_folder(folder)
 
 
+def test_an_assistant_skill_may_name_what_the_assistant_submits_and_no_workflow_class(
+    tmp_path: Path,
+) -> None:
+    assistant = {**MANIFEST, "actor": "assistant"}
+    allowed = build(tmp_path, {**assistant, "command_classes": ["propose_command"]})
+    assert check_skill_folder(allowed).command_classes == ["propose_command"]
+
+    refused = tmp_path / "other"
+    refused.mkdir()
+    folder = build(refused, {**assistant, "command_classes": ["fetch_data"]})
+    with pytest.raises(SkillFolderError, match="(?s)demo.*fetch_data"):
+        check_skill_folder(folder)
+
+
 SKILLS_DIR = Path(uwh.skills.__file__).parent
 
 
