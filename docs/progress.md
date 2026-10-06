@@ -463,3 +463,31 @@ Brett's decisions carried into milestone 1: an underwriter's value that still tr
 **Open with Brett:** the ten label signatures (`reviewed_by` in `evals/labels/seed42/*.yaml`).
 
 **Next:** Brett's review of the submission.
+
+## Chat surface 1: Server (219da4b)
+
+**Done:** the server half of `docs/chat-surface.md`. C1-A1 (the pinned server tests: 82 pass), C1-A2 (the chat suite from its recordings, `make check` clean) and C1-A3 (lead 008's events read as sentences through the running app's events endpoint) pass, run by the lead.
+- `event_summary` writes narrative sentences ("Triaged the fields: 14 missing", "Fetched the replacement cost: 928992", "Jev classified this reply (0.83, at or above the 0.70 threshold). ..."); nothing cuts them.
+- `EventRow` carries `item_id`, `fact_key` and `message`; `FactView` carries `event_id`; `ProposalView` carries `lead_id`.
+- Six lookups in `src/uwh/chat/tools.py` (lead events, lead summary, messages, playbook path, current draft, queue summary) with turn-local reference numbers; an answer's citations are resolved by the server and a number no lookup showed is dropped. `plan_pages` groups a stored plan by page.
+- `ChatRequest.history` (at most four exchanges), the prompt for the lookups, the numbers and the history; the proposable set is the four commands.
+- `POST /api/chat` answers as a server-sent-events stream: `step` per lookup, then one of `answer`, `proposal`, `error`. The turn runs in its own thread. Replay closes with "Questions need live mode" and calls no model.
+- The chat eval sends a case's earlier turns as history and runs the lead 001 case after the first pass and the fixture replies; the grader reads resolved citations. `ChatPanel.tsx` reads the stream.
+
+**Live calls:** two record runs of the chat suite on `deepseek-flash`: 11 calls, 11,678 in / 993 out, in which the reworded refusal used its four steps on lookups and wrote no refusal; then, after one prompt sentence (an instruction is proposed at once), 9 calls, 10,892 in / 942 out, all five turns passing. The specification names one re-record; the second is the fix for the failing case. Jev: none.
+
+**Checks:** `make check` clean at 219da4b (763 fast Python tests, 29 web tests); `make test-slow` 33 passed and the chat suite's replay row passes, both at 1428848. The reviewer read the milestone once: one blocker (a turn whose thread raised left the stream open and the panel on "Working…"), fixed with a test; its removals (an assertion that could not fail, `TurnResult.exchanges`, stale wording in the manifest and the `propose_command` refusal) are made. No finding contradicts the specification's settled decisions.
+
+**Readings, where the specification is silent:**
+- A `step` event carries one field, `summary`: the lookup in words and its result in one line.
+- Citation kinds are `event`, `fact` (the event that recorded it), `message` (an intent id), `reply` (its `reply_received` event) and `page` (the page key).
+- A lookup names a lead in full or by the end of its id, so "lead 008" needs no queue lookup first.
+- `lead_summary` shows the plan's open choices and `current_draft` shows its `intent_id`, so `record_ruling` and `edit_draft` can be proposed; the model sees no event id.
+- `message_sent` reads "Sent the message to the producer": the payload does not hold the message kind.
+- The endpoint refuses replay before any model call, so it handles no recording miss.
+- The chat suite's first pass and fixture replies always replay, on a second runtime over the same database; only chat turns run in the suite's mode. The eval CLI replays only, so a record run is a host script that calls `evaluate_chat` in `record`.
+- The first chat row of this milestone in `evals/results.jsonl` (commit f707881) is a replay run made before the recordings existed; every case reports a miss.
+
+**Friction:** a builder in a worktree cannot commit (the worktree guard refuses its git writes), so the lead applies each builder's patch and commits it. Five builders ran in isolated worktrees; two returned no report text and the lead read their diffs.
+
+**Next:** chat surface 2, the client.
