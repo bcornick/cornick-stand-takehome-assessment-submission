@@ -92,6 +92,8 @@ function BlockView({ block, lead, onOpen, onChange }: { block: Block } & Omit<Pr
     case 'bubble': {
       const sent = block.event.type === 'message_sent'
       const { subject, body } = block.message
+      // The body folds under its first line; a one-line body has nothing to fold.
+      const [firstLine, ...rest] = body.split('\n')
       return (
         <div className="flex flex-col gap-1 rounded-md border border-gray-200 bg-gray-50 p-3">
           <p className="flex items-baseline gap-2 text-sm text-gray-600">
@@ -104,10 +106,14 @@ function BlockView({ block, lead, onOpen, onChange }: { block: Block } & Omit<Pr
             />
           </p>
           {subject && <p className="font-medium">{subject}</p>}
-          <details>
-            <summary className="cursor-pointer">{body.split('\n')[0]}</summary>
-            <p className="mt-1 whitespace-pre-wrap">{body}</p>
-          </details>
+          {rest.length === 0 ? (
+            <p>{firstLine}</p>
+          ) : (
+            <details>
+              <summary className="cursor-pointer">{firstLine}</summary>
+              <p className="mt-1 whitespace-pre-wrap">{rest.join('\n').trim()}</p>
+            </details>
+          )}
         </div>
       )
     }
