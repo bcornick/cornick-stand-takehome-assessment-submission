@@ -25,5 +25,6 @@ up:
 	docker compose up --build
 
 eval:
+	uv run python -m evals.clean_tree
 	touch evals/results.jsonl
 	docker compose --profile eval run --build --rm $(RUN_OPTS) eval $(ARGS)

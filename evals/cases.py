@@ -1,7 +1,7 @@
 # ABOUTME: The per-skill eval cases (section 8): a skill's `cases/*.yaml` is a table of cases, each an input and the properties its output must hold; this module runs evaluate_playbook on each and reports the failures.
 # ABOUTME: Lead values come from the provider fixture's captured seed-42 leads; a case changes the values it names, and a null removes the value. A skill's pass is its share of passing cases against its manifest threshold.
 import json
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -102,7 +102,7 @@ def _page_rules(page: str | None) -> set[str]:
     }
 
 
-def _evaluate(case: Case) -> dict[str, Any]:
+def observe(case: Case) -> dict[str, Any]:
     facts = lead_facts(case.input["lead"], case.input.get("facts", {}))
     plan = evaluate_playbook.run(
         evaluate_playbook.EvaluatePlaybookInput(
@@ -136,10 +136,6 @@ def _evaluate(case: Case) -> dict[str, Any]:
     }
 
 
-# The skills whose cases this module runs; the other skill with cases, read_reply, has the reply suite.
-OBSERVERS: dict[str, Callable[[Case], dict[str, Any]]] = {"evaluate_playbook": _evaluate}
-
-
 def mismatches(expected: Any, observed: Any, where: str = "") -> list[str]:
     """What differs between the expected properties and the observed ones. A mapping is compared
     on the keys it names; `includes` and `excludes` name members a list must and must not hold."""
@@ -164,13 +160,15 @@ def mismatches(expected: Any, observed: Any, where: str = "") -> list[str]:
     return []
 
 
-def run_skill_cases(skill: str) -> SkillResult:
-    """Run every case of the skill."""
+def run_skill_cases() -> SkillResult:
+    """Run every case of evaluate_playbook, the skill with a table of cases here; read_reply's cases
+    are the reply suite's."""
+    skill = "evaluate_playbook"
     failures: list[str] = []
     cases = load_cases(skill)
     failed = 0
     for case in cases:
-        found = mismatches(case.expect, OBSERVERS[skill](case))
+        found = mismatches(case.expect, observe(case))
         failed += bool(found)
         failures += [f"{skill} / {case.name}: {message}" for message in found]
     return SkillResult(len(cases) - failed, len(cases), failures)

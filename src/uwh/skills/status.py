@@ -6,6 +6,8 @@ from pathlib import Path
 from uwh.runtime.event_types import SkillStatus
 from uwh.skills.manifest import SkillManifest
 
+# The skills list and the lead's unevaluated-skill note read a skill's status through `skill_status` (section 8).
+
 # A model skill's rows count only when the model was called for real (section 8).
 _MODEL_MODES = ("live", "record")
 

@@ -1,4 +1,4 @@
-# ABOUTME: The eval runner (section 13): `python -m evals.run --suite seed42 [--control NAME] [--hypothesis TEXT]` runs seed 42's first pass in replay mode, grades it at the settle point, plays each label's underwriter actions and grades the state after them, runs the fault runs, and appends one `run` row to the results log.
+# ABOUTME: The eval runner (section 13): `python -m evals.run --suite seed42|replies [--control NAME] [--hypothesis TEXT]`; the seed42 suite runs seed 42's first pass in replay mode, grades it at the settle point, plays each label's underwriter actions and grades the state after them, runs the fault runs, and appends one `run` row to the results log.
 # ABOUTME: Every run opens its own empty database; the leadgen and mailbox services are the eval ones named by LEADGEN_URL and MAILBOX_URL, and a failed health or bootstrap check writes an `invalid` row, never a score.
 import argparse
 import json
@@ -21,7 +21,6 @@ from pydantic import JsonValue
 
 import uwh
 from evals.cases import (
-    OBSERVERS,
     SKILLS_DIR,
     ReplyCase,
     SkillResult,
@@ -33,7 +32,7 @@ from evals.graders import answer_key
 from evals.graders.delivery import asks, coverage, forbidden_asks, one_open_request, packet_fidelity
 from evals.graders.evidence import Evidence, Expectations, Result
 from evals.graders.plan import rule_trace
-from evals.graders.reply import reply_reading
+from evals.graders.reply import reply_facts, reply_reading
 from evals.graders.safety import FaultRun, critical_errors, send_safety
 from uwh.api.runtime import Runtime, open_runtime
 from uwh.runtime.bootstrap import TIMEOUT_SECONDS, EnvironmentInvalid, check_services
@@ -79,6 +78,7 @@ GRADERS: tuple[tuple[str, Grader, tuple[Phase, ...]], ...] = (
     ("Forbidden asks", forbidden_asks, (FIRST_PASS, AFTER_ACTIONS)),
     ("Rule trace", rule_trace, (FIRST_PASS, AFTER_ACTIONS)),
     ("Packet fidelity", packet_fidelity, (FIRST_PASS, AFTER_ACTIONS)),
+    ("Reply facts", reply_facts, (AFTER_ACTIONS,)),
     ("Stand's key", _stands_key, (FIRST_PASS,)),
 )
 
@@ -111,7 +111,7 @@ def load_labels() -> dict[str, dict[str, Any]]:
     """The seed-42 labels by lead id."""
     return {
         path.stem: yaml.safe_load(path.read_text(encoding="utf-8"))
-        for path in sorted(LABELS_DIR.glob("*.yaml"))
+        for path in sorted(LABELS_DIR.glob("LEAD-*.yaml"))
     }
 
 
@@ -326,9 +326,9 @@ def _skill_result(skill: str, outcome: SkillResult) -> dict[str, JsonValue]:
 
 
 def _skill_results() -> dict[str, JsonValue]:
-    """`skill_results` of a seed42 run row: each skill with a table of cases here. read_reply's cases
-    are the reply suite's."""
-    return {skill: _skill_result(skill, run_skill_cases(skill)) for skill in OBSERVERS}
+    """`skill_results` of a seed42 run row: evaluate_playbook's table of cases. read_reply's cases are
+    the reply suite's."""
+    return {"evaluate_playbook": _skill_result("evaluate_playbook", run_skill_cases())}
 
 
 def _tokens(measurements: Mapping[str, Mapping[str, float]]) -> dict[str, float]:
@@ -422,7 +422,7 @@ def evaluate_seed42(
 
     return _evaluate(
         "seed42",
-        _case_set_id(LABELS_DIR, OBSERVERS),
+        _case_set_id(LABELS_DIR, ["evaluate_playbook"]),
         settings,
         leadgen_http,
         mailbox_http,

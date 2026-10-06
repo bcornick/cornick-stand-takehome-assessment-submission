@@ -1,15 +1,15 @@
-# ABOUTME: Runs the `cases/` tables of the skills the case runner covers (section 8) through the case runner of the evals: each case is one test, and a deliberately wrong expectation is shown to fail.
+# ABOUTME: Runs the `cases/` table of evaluate_playbook, the skill the case runner covers (section 8) through the case runner of the evals: each case is one test, and a deliberately wrong expectation is shown to fail.
 # ABOUTME: The same tables feed `make eval`, so a case that passes here is the one the run row counts.
 import pytest
 
-from evals.cases import Case, OBSERVERS, load_cases, mismatches
+from evals.cases import Case, load_cases, mismatches, observe
 
-CASES = [(skill, case) for skill in OBSERVERS for case in load_cases(skill)]
+CASES = load_cases("evaluate_playbook")
 
 
-@pytest.mark.parametrize(("skill", "case"), CASES, ids=[f"{s}: {c.name}" for s, c in CASES])
-def test_a_case_holds(skill: str, case: Case) -> None:
-    assert mismatches(case.expect, OBSERVERS[skill](case)) == []
+@pytest.mark.parametrize("case", CASES, ids=[c.name for c in CASES])
+def test_a_case_holds(case: Case) -> None:
+    assert mismatches(case.expect, observe(case)) == []
 
 
 def test_a_wrong_expectation_is_reported() -> None:

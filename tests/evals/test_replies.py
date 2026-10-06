@@ -12,7 +12,7 @@ import pytest
 from evals import run
 from evals.cases import load_reply_cases
 from evals.graders.evidence import Evidence
-from evals.graders.reply import reply_reading
+from evals.graders.reply import reply_facts, reply_reading
 from evals.run import evaluate_replies
 from uwh.api.runtime import open_runtime
 from uwh.runtime.event_types import ReplyRead
@@ -168,3 +168,35 @@ def test_a_reading_that_matches_its_label_passes_and_a_draft_awaiting_approval_i
     lead: str, after_replies: Evidence
 ) -> None:
     assert reply_reading(after_replies, {lead: labels()[lead]}).failures == []
+
+
+# (lead, the `next` a label could name wrongly)
+WRONG_NEXT = [
+    (LEAD_009, "request_round_2"),
+    (LEAD_009, "underwriter_card"),
+    (LEAD_009, "declined_pending"),
+    (LEAD_007, "quote_packet_waiting"),
+    (LEAD_003, "quote_packet_waiting"),
+]
+
+
+@pytest.mark.parametrize(("lead", "wrong"), WRONG_NEXT)
+def test_a_wrong_next_fails_the_reply_reading_grader(
+    lead: str, wrong: str, after_replies: Evidence
+) -> None:
+    label = labels()[lead]
+    set_path(label, ["state_after", "next"], wrong)
+
+    result = reply_reading(after_replies, {lead: label})
+
+    assert [f for f in result.failures if f.startswith(f"{lead}: next: expected {wrong}")]
+
+
+def test_a_labelled_fact_the_reply_did_not_supply_fails_the_after_actions_grader(
+    after_replies: Evidence,
+) -> None:
+    assert reply_facts(after_replies, {LEAD_009: {"facts": {"acreage": 1.5}}}).failures == []
+
+    result = reply_facts(after_replies, {LEAD_009: {"facts": {"acreage": 9}}})
+
+    assert [f.startswith(f"{LEAD_009}: fact acreage") for f in result.failures] == [True]

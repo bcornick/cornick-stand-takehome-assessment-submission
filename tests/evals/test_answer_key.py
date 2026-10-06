@@ -1,17 +1,21 @@
 # ABOUTME: Grades the seed-42 first pass against Stand's answer key, pins its exemption counts, and shows the grader fails when a lead's asks or decline are tampered with.
 # ABOUTME: The key is the debug history of Stand's generator, regenerated in process; the system's state is read from the database of a real first pass.
 import sqlite3
+from pathlib import Path
 from collections import Counter
 from dataclasses import replace
 
 import pytest
 
+from evals.graders import answer_key
 from evals.graders.answer_key import (
     LeadState,
     Verdict,
     grade,
+    pinned_exemptions,
     read_lead_state,
     regenerate_history,
+    stands_key,
     summary,
 )
 from uwh.rules.registry import Registry, load_registry
@@ -44,20 +48,14 @@ def test_the_key_agrees_on_every_seed_42_record_it_decides(
     assert not [j for j in judgements if j.verdict == Verdict.disagrees], report
 
 
-# The records of lead 000, the one proposed decline of seed 42, that its decline holds back, and no
-# record whose field is blocked. The labels list the asks the decline suppresses but not the count
-# of key records they stand for, so the count is written here.
-EXEMPT_PROPOSED_DECLINE = 26
-EXEMPT_BLOCKED = 0
-
-
 def test_the_exemptions_the_system_decides_are_the_counts_the_labels_pin(
     states: dict[str, LeadState], registry: Registry
 ) -> None:
     counts = Counter(j.verdict for j in grade(regenerate_history(42), states, registry))
 
-    assert counts[Verdict.exempt_proposed_decline] == EXEMPT_PROPOSED_DECLINE
-    assert counts[Verdict.exempt_blocked] == EXEMPT_BLOCKED
+    pinned = pinned_exemptions(42)
+    assert pinned == {Verdict.exempt_proposed_decline: 26, Verdict.exempt_blocked: 0}
+    assert {verdict: counts[verdict] for verdict in pinned} == pinned
 
 
 def test_a_lead_wrongly_proposed_as_a_decline_moves_the_exemption_count(
@@ -67,7 +65,10 @@ def test_a_lead_wrongly_proposed_as_a_decline_moves_the_exemption_count(
 
     counts = Counter(j.verdict for j in grade(regenerate_history(42), tampered, registry))
 
-    assert counts[Verdict.exempt_proposed_decline] > EXEMPT_PROPOSED_DECLINE
+    assert (
+        counts[Verdict.exempt_proposed_decline]
+        > pinned_exemptions(42)[Verdict.exempt_proposed_decline]
+    )
 
 
 def test_a_removed_ask_is_a_disagreement(states: dict[str, LeadState], registry: Registry) -> None:
@@ -100,3 +101,25 @@ def test_a_conflict_with_no_confirmation_is_a_disagreement(
     (conflict,) = after
     assert (conflict.record.lead_id, conflict.record.kind) == (lead, "conflict")
     assert conflict.reason == "no confirmation covers the conflict"
+
+
+def test_the_key_grader_fails_when_an_exemption_count_differs_from_the_pinned_one(
+    first_pass_db: sqlite3.Connection,
+    registry: Registry,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    assert stands_key(first_pass_db, registry, 42).failures == []
+    pins = tmp_path / "evals" / "labels" / "seed42"
+    pins.mkdir(parents=True)
+    (pins / "exemptions.yaml").write_text(
+        "exemptions: {proposed_decline: 25, blocked: 1}\n", encoding="utf-8"
+    )
+    monkeypatch.setattr(answer_key, "ROOT", tmp_path)
+
+    failures = stands_key(first_pass_db, registry, 42).failures
+
+    assert failures == [
+        "exempt_proposed_decline is 26, the labels pin 25",
+        "exempt_blocked is 0, the labels pin 1",
+    ]

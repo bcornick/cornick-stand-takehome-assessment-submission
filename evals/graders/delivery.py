@@ -52,9 +52,28 @@ def outcome_of(ev: Evidence, lead_id: str) -> str:
     return "none"
 
 
+def open_items(ev: Evidence, lead_id: str) -> set[str]:
+    """The underwriter's open items in the label's terms: the choice ids of an open question card,
+    `decline_notice` for a decline notice awaiting approval, and the cause of an open review."""
+    items: set[str] = set()
+    for blocker in open_blockers(ev.db, lead_id):
+        detail = blocker.detail
+        items |= set(detail.choice_ids)
+        if detail.item_kind == "review" and detail.cause is not None:
+            items.add(detail.cause)
+        if detail.item_kind == "draft" and detail.intent_id is not None:
+            (kind,) = ev.db.execute(
+                "SELECT kind FROM intents WHERE id = ?", (detail.intent_id,)
+            ).fetchone()
+            if kind == "decline_notice":
+                items.add(kind)
+    return items
+
+
 def coverage(ev: Evidence, expected: Expectations) -> Result:
     """Every lead has a primary next action or is terminal, none is skipped, and each lead the labels
-    describe is at the labelled status and outcome."""
+    describe is at the labelled status and outcome, with the labelled open items and the labelled
+    not-evaluated notes."""
     held = lead_ids(ev)
     failures = [
         f"{lead_id} has no next action and is not terminal"
@@ -72,6 +91,17 @@ def coverage(ev: Evidence, expected: Expectations) -> Result:
         ):
             if expectation[name] != found:
                 failures.append(f"{lead_id} {name} is {found}, expected {expectation[name]}")
+        plan = plan_of(ev, lead_id)
+        for key, what, held_now in (
+            ("underwriter_items", "open item", open_items(ev, lead_id)),
+            (
+                "not_evaluated",
+                "not-evaluated note",
+                {n.ref for n in plan.not_evaluated} if plan is not None else set(),
+            ),
+        ):
+            if key in expectation:
+                failures += _differences(what, lead_id, set(expectation[key]), held_now)
     return Result(failures)
 
 

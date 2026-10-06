@@ -8,9 +8,7 @@ from functools import partial
 import anthropic
 from pydantic import JsonValue
 
-from uwh.rules.derivations import derived_from
 from uwh.rules.models import FieldTriage
-from uwh.rules.triage import triage_fields
 from uwh.runtime.event_types import (
     Actor,
     ApprovalDecision,
@@ -69,6 +67,7 @@ from uwh.runtime.workflow import (
 )
 from uwh.skills.manifest import load_manifest
 from uwh.skills.read_reply import skill as read_reply
+from uwh.skills.triage_fields import skill as triage_fields
 from uwh.skills.vertical import ROUND_REVIEW_CAUSES, command_class
 
 
@@ -327,7 +326,11 @@ def _triage_with_reply(
     facts = {key: fact.value for key, fact in usable_facts(db, lead_id).items()}
     facts |= {candidate.field: candidate.value for candidate in reading.candidates}
     conflicting = [name for conflict in open_conflicts(db, lead_id) for name in conflict.fields]
-    return triage_fields(env.registry, facts, conflicting, derived_from())
+    return triage_fields.run(
+        triage_fields.TriageFieldsInput(
+            registry=env.registry, facts=facts, conflicting_fields=conflicting
+        )
+    ).fields
 
 
 def _read_reply_first(

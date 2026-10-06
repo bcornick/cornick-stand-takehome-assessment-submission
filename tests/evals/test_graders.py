@@ -91,6 +91,43 @@ def test_coverage_fails_a_labelled_lead_the_run_skipped(run_state: RunState) -> 
     ]
 
 
+STANDING = {
+    LEAD_000: {"status": "in_progress", "outcome": "proposed_decline"},
+    LEAD_003: {"status": "in_progress", "outcome": "underwriter_card"},
+    LEAD_008: {"status": "in_progress", "outcome": "request_sent"},
+}
+
+
+def test_coverage_checks_the_open_items_of_a_lead(run_state: RunState) -> None:
+    ev = run_state.settled.evidence()
+    items = {LEAD_003: ["I13.fire_fail"], LEAD_000: ["decline_notice"], LEAD_008: []}
+    wrong = {LEAD_003: ["I16.distance"], LEAD_000: [], LEAD_008: ["decline_notice"]}
+
+    def labelled(by_lead: dict[str, list[str]]) -> dict[str, dict[str, Any]]:
+        return {lead: {**STANDING[lead], "underwriter_items": by_lead[lead]} for lead in by_lead}
+
+    assert delivery.coverage(ev, labelled(items)).failures == []
+    assert delivery.coverage(ev, labelled(wrong)).failures == [
+        f"{LEAD_003}: open item I16.distance is missing",
+        f"{LEAD_003}: open item I13.fire_fail is extra",
+        f"{LEAD_000}: open item decline_notice is extra",
+        f"{LEAD_008}: open item decline_notice is missing",
+    ]
+
+
+def test_coverage_checks_the_not_evaluated_notes_of_a_lead(run_state: RunState) -> None:
+    ev = run_state.settled.evidence()
+
+    def labelled(refs: list[str]) -> dict[str, dict[str, Any]]:
+        return {LEAD_008: {**STANDING[LEAD_008], "not_evaluated": refs}}
+
+    assert delivery.coverage(ev, labelled(["electrical", "plumbing"])).failures == []
+    assert delivery.coverage(ev, labelled(["electrical", "animals"])).failures == [
+        f"{LEAD_008}: not-evaluated note animals is missing",
+        f"{LEAD_008}: not-evaluated note plumbing is extra",
+    ]
+
+
 # ---- One open request --------------------------------------------------------------------------
 
 

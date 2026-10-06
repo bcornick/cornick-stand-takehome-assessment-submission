@@ -163,16 +163,18 @@ def decide_classification(
 ) -> Reading:
     """The reading with its classification decided from the asks (10.4). The model's classification only
     tells an on-topic reply from `off_topic` and `declines_to_answer`, which stand. An on-topic reply is
-    `answers_all` when every ask is answered or inactive, and `answers_some` otherwise. `triage` is the
+    `answers_all` when every ask is answered or inactive, and `answers_some` otherwise. An ask is one
+    field of a question, so a confirmation is answered only when each field its question reports has a
+    candidate; a value that goes to review still counts as answered. `triage` is the
     lead's field triage with the reply's values applied: a follow-on whose condition those values make
     inactive is neither answered nor outstanding, which the model cannot know."""
     if reading.classification in ("off_topic", "declines_to_answer"):
         return reading
-    answered = {candidate.ask_id for candidate in reading.candidates}
+    answered = {(candidate.ask_id, candidate.field) for candidate in reading.candidates}
     outstanding = [
         ask
         for ask in asks
-        if ask.ask_id not in answered
+        if (ask.ask_id, ask.field) not in answered
         and not (
             ask.field in triage
             and triage[ask.field].requirement == Requirement.conditional_inactive

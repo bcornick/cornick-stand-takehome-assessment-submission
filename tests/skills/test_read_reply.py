@@ -19,6 +19,7 @@ from uwh.skills.read_reply.skill import (
     Abstention,
     OpenAsk,
     ReadReplyInput,
+    LocatedCandidate,
     Reading,
     ReplyReading,
 )
@@ -259,3 +260,64 @@ def test_a_candidate_is_kept_only_for_a_field_the_confirmation_reports() -> None
 
     assert [(c.field, c.value) for c in result.candidates] == [("number_of_residents", 0)]
     assert result.dropped == [unreported]
+
+
+COMBINED_FIELDS = ["dwelling_type", "dwelling_use_type", "is_rental"]
+COMBINED = [
+    ConflictOpened(
+        validator=validator,
+        fields=COMBINED_FIELDS,
+        values={
+            "dwelling_type": "Owner Occupied Single Family Residence",
+            "dwelling_use_type": "Tenant",
+            "is_rental": "No",
+        },
+        question="q",
+    )
+    for validator in ("owner_occupied_with_other_use", "tenant_use_without_rental")
+]
+ANSWER = {
+    "dwelling_type": "Owner Occupied Single Family Residence",
+    "dwelling_use_type": "Primary",
+    "is_rental": "No",
+}
+
+
+def located(ask_id: str, field: str, value: str | int) -> LocatedCandidate:
+    return LocatedCandidate(
+        ask_id=ask_id, field=field, value=value, quote="q", span_start=0, span_end=1
+    )
+
+
+# (the model's classification, the fields of the confirmation the reply answers, whether
+# property_purchase_date is answered, the classification decided)
+CLASSIFICATIONS = [
+    ("answers_some", COMBINED_FIELDS, True, "answers_all"),
+    ("answers_all", COMBINED_FIELDS[:2], True, "answers_some"),
+    ("answers_all", COMBINED_FIELDS[1:], True, "answers_some"),
+    ("answers_all", [], True, "answers_some"),
+    ("answers_all", COMBINED_FIELDS, False, "answers_some"),
+    ("off_topic", COMBINED_FIELDS, True, "off_topic"),
+    ("declines_to_answer", [], False, "declines_to_answer"),
+]
+
+
+@pytest.mark.parametrize(("model_said", "answered", "purchase", "decided"), CLASSIFICATIONS)
+def test_a_confirmation_is_answered_only_when_each_field_its_question_reports_has_a_candidate(
+    model_said: str, answered: list[str], purchase: bool, decided: str
+) -> None:
+    registry = load_registry(str(REGISTRY))
+    asks = skill.open_asks(["dwelling_use_conflict", "property_purchase_date"], registry, COMBINED)
+    candidates = [located("dwelling_use_conflict", field, ANSWER[field]) for field in answered]
+    if purchase:
+        candidates.append(located("property_purchase_date", "property_purchase_date", "2019-07-12"))
+
+    result = skill.decide_classification(
+        Reading.model_validate(
+            {"classification": model_said, "candidates": candidates, "dropped": []}
+        ),
+        asks,
+        {},
+    )
+
+    assert result.classification == decided

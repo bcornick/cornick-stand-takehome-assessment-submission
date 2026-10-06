@@ -25,7 +25,6 @@ class SkillManifest(StrictModel):
     command_classes: list[str]
     fallback: str
     pass_threshold: float | None = Field(default=None, gt=0, le=1)
-    threshold_reason: str | None = None
     model_skill: bool = False
 
     @model_validator(mode="after")
@@ -42,12 +41,6 @@ class SkillManifest(StrictModel):
             raise ValueError(
                 f"command_classes lists a class twice: duplicate {', '.join(repeated)}"
             )
-        if self.pass_threshold is None and self.threshold_reason:
-            raise ValueError("a threshold_reason accompanies a pass_threshold")
-        if self.pass_threshold not in (None, 1.0) and not self.threshold_reason:
-            raise ValueError("a pass_threshold other than 1.0 needs a threshold_reason")
-        if self.pass_threshold == 1.0 and self.threshold_reason:
-            raise ValueError("a threshold_reason accompanies a pass_threshold other than 1.0")
         return self
 
 

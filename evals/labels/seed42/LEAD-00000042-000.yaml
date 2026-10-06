@@ -4,9 +4,8 @@
 #
 # Post & Pier applies (foundation_type Piers, I23) and post_pier_supports_living_area is true, so the page's root
 # reaches Decline. A decline at the root of an applying page makes the lead a proposed decline and suppresses every
-# request, confirmations included (section 9.6, precedence rule 1). The 24 registry asks, 3 pool follow-ons and the
-# months_unoccupied confirmation that would otherwise go out are listed under `suppressed`, so the answer-key
-# grader's decline exemption count is pinned here (section 13.2).
+# request, confirmations included (section 9.6, precedence rule 1). The answer-key grader's decline exemption count
+# is pinned in exemptions.yaml (section 13.2).
 
 lead_id: LEAD-00000042-000
 reviewed_by: null
@@ -14,36 +13,6 @@ first_pass:
   status: in_progress
   outcome: proposed_decline
   request: null
-  suppressed:                      # what the registry and validators would have asked, held back by the decline
-    asks:
-      - street_address
-      - city
-      - county
-      - state
-      - zip
-      - first_name
-      - last_name
-      - insured_dob
-      - number_of_residents
-      - year_built
-      - property_purchase_date
-      - pool_type
-      - pool_security               # follow-on: "If the property has a pool"
-      - pool_has_diving_board_or_slide   # follow-on: same preamble
-      - above_ground_pool_ladder    # follow-on: "If the pool is above ground"
-      - has_animals
-      - construction_type
-      - deck_height_ft              # conditional active: foundation_type Piers
-      - num_stories
-      - roof_replacement_year
-      - roof_shape
-      - electrical_panel_brand
-      - electrical_panel_size_amps
-      - fire_alarm
-      - distance_to_fire_department
-      - fire_department_type
-      - is_7a_compliant
-    confirmations: [months_unoccupied_in_primary_home]
   not_asked:
     kyc_score: blocked              # provider needs first_name, last_name, insured_dob; all missing
     replacement_cost: blocked       # provider needs the full address; none of its four fields is present

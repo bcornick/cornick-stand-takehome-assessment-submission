@@ -242,9 +242,20 @@ def summary(judgements: list[Judgement]) -> str:
     return "\n".join(lines)
 
 
+def pinned_exemptions(seed: int) -> dict[Verdict, int]:
+    """The exemption counts the labels of `seed` pin, by verdict."""
+    path = ROOT / "evals" / "labels" / f"seed{seed}" / "exemptions.yaml"
+    pinned = yaml.safe_load(path.read_text(encoding="utf-8"))["exemptions"]
+    return {
+        Verdict.exempt_proposed_decline: pinned["proposed_decline"],
+        Verdict.exempt_blocked: pinned["blocked"],
+    }
+
+
 def stands_key(db: sqlite3.Connection, registry: Registry, seed: int) -> Result:
     """The grader of 13.2: Stand's key, regenerated for `seed`, against every lead's first pass. It fails
-    on any disagreement; the verdict counts are its measures."""
+    on any disagreement and on an exemption count that differs from the one the labels pin; the verdict
+    counts are its measures."""
     planless = [
         lead_id for (lead_id,) in db.execute("SELECT lead_id FROM leads WHERE plan_hash IS NULL")
     ]
@@ -261,6 +272,11 @@ def stands_key(db: sqlite3.Connection, registry: Registry, seed: int) -> Result:
             f"{j.record.lead_id} {j.record.kind} {j.record.field}: {j.reason}"
             for j in judgements
             if j.verdict == Verdict.disagrees
+        ]
+        + [
+            f"{verdict.value} is {counts[verdict]}, the labels pin {pinned}"
+            for verdict, pinned in pinned_exemptions(seed).items()
+            if counts[verdict] != pinned
         ],
         {
             **{verdict.value: counts[verdict] for verdict in Verdict},

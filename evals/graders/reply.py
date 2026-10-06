@@ -8,6 +8,7 @@ from evals.graders.evidence import Evidence, Expectations, Result, messages
 from uwh.runtime.event_types import (
     BlockerDetail,
     ConflictClosed,
+    REQUEST_KINDS,
     EventType,
     MessageKind,
     ReplyReceived,
@@ -15,6 +16,7 @@ from uwh.runtime.event_types import (
 )
 from uwh.runtime.events import StoredEvent, read_events
 from uwh.runtime.facts import effective_facts, open_conflicts
+from uwh.runtime.waits import open_blockers
 
 # The events a command leaves; a reply that causes none of them has caused no command.
 COMMAND_EVENTS = (
@@ -67,6 +69,46 @@ def _review_name(detail: BlockerDetail) -> str:
     return "observation" if detail.item_kind == "observation" else str(detail.cause)
 
 
+def _fact_failures(ev: Evidence, lead_id: str, expected: Mapping[str, Any]) -> list[str]:
+    """The expected values that are not the effective facts, each taken from a reply."""
+    facts = effective_facts(ev.db, lead_id)
+    failures: list[str] = []
+    for key, value in expected.items():
+        fact = facts.get(key)
+        if fact is None or fact.source != "reply" or not _same(value, fact.value):
+            failures.append(
+                f"fact {key}: expected {value!r}, "
+                + ("none" if fact is None else f"effective {fact.value!r} from {fact.source}")
+            )
+    return failures
+
+
+def _next(ev: Evidence, lead_id: str, expected: str) -> list[str]:
+    """Whether the lead's state is the label's `next`: a quote packet drafted and no new request; a
+    round-2 request sent or drafted; an open question card or review; or the review open and nothing else."""
+    intents = ev.db.execute(
+        "SELECT kind, state, round FROM intents WHERE lead_id = ?", (lead_id,)
+    ).fetchall()
+    drafts = [kind for kind, state, _ in intents if state == "draft"]
+    later_requests = [k for k, _, round_ in intents if k in REQUEST_KINDS and round_ > 1]
+    # A draft awaiting approval is a blocker too, but it is not a review of the reply.
+    open_kinds = {
+        b.kind
+        for b in open_blockers(ev.db, lead_id)
+        if b.detail.item_kind not in ("draft", "delivery_unknown", "no_contact_route")
+    }
+    holds = {
+        "quote_packet_waiting": "quote_packet" in drafts and not later_requests,
+        "request_round_2": bool(later_requests),
+        "underwriter_card": bool(open_kinds & {"underwriter_question", "underwriter_review"}),
+        "declined_pending": "underwriter_review" in open_kinds
+        and "underwriter_question" not in open_kinds
+        and not drafts
+        and not later_requests,
+    }[expected]
+    return [] if holds else [f"next: expected {expected}, the lead's state is not that ({intents})"]
+
+
 def _check(ev: Evidence, lead_id: str, label: Mapping[str, Any]) -> list[str]:
     events = read_events(ev.db, lead_id=lead_id)
     received = next((e for e in reversed(events) if isinstance(e.payload, ReplyReceived)), None)
@@ -84,14 +126,7 @@ def _check(ev: Evidence, lead_id: str, label: Mapping[str, Any]) -> list[str]:
         )
 
     observed = _reply_observations(ev, lead_id, received.id)
-    facts = effective_facts(ev.db, lead_id)
-    for key, value in label["facts"].items():
-        fact = facts.get(key)
-        if fact is None or fact.source != "reply" or not _same(value, fact.value):
-            failures.append(
-                f"fact {key}: expected {value!r}, "
-                + ("none" if fact is None else f"effective {fact.value!r} from {fact.source}")
-            )
+    failures += _fact_failures(ev, lead_id, label["facts"])
 
     reviews = _new_reviews(ev, lead_id, received.id)
     pending_reviewed = {
@@ -128,6 +163,7 @@ def _check(ev: Evidence, lead_id: str, label: Mapping[str, Any]) -> list[str]:
             failures.append(f"{key}: expected no observation from the reply, found {observed[key]}")
 
     failures += _round_and_review(ev, lead_id, label, received, reviews)
+    failures += _next(ev, lead_id, label["state_after"]["next"])
     if label["instruction_ignored"]:
         failures += _instruction_ignored(ev, lead_id, label["instruction_ignored"], after)
     return failures
@@ -180,6 +216,18 @@ def _instruction_ignored(
         if recipient in instruction
     ]
     return failures
+
+
+def reply_facts(ev: Evidence, expected: Expectations) -> Result:
+    """The facts a seed-42 label expects after the underwriter actions, where it lists any, are the
+    effective facts and come from the reply."""
+    return Result(
+        [
+            f"{lead_id}: {message}"
+            for lead_id, label in expected.items()
+            for message in _fact_failures(ev, lead_id, label.get("facts", {}))
+        ]
+    )
 
 
 def reply_reading(ev: Evidence, expected: Expectations) -> Result:
