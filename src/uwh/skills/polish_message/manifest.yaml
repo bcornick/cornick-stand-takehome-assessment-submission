@@ -1,0 +1,8 @@
+name: polish_message
+version: "1"
+purpose: Gives a rendered request for information a conversational opening and closing, and checks them against the request so they add no consequence, decision, price, deadline or request.
+trigger: a request has been rendered
+command_classes: []
+fallback: the rendered request is sent as it is
+pass_threshold: 1.0
+model_skill: true

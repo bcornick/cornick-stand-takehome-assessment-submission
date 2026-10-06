@@ -7,6 +7,7 @@ SKILLS: list[str] = [
     "evaluate_playbook",
     "plan_asks",
     "render_message",
+    "polish_message",
     "read_reply",
     "build_quote_packet",
 ]

@@ -1,0 +1,19 @@
+{
+  "input": {
+    "recipient_kind": "producer",
+    "request": "Thank you for your submission. To complete the quote we need the items below. One reply covering all of them is ideal.\n\nLocation\n1. What is the property's zip code?\n\nPrimary Coverages\n2. What Coverage E (liability) limit is requested: 100,000, 300,000 or 500,000?\n\nProperty\n3. How is the dwelling used: owner occupied single family, owner occupied multi family, secondary residence or seasonal residence?\n4. When was the property purchased?\n5. Are there any animals on the property?\n\nConstruction\n6. What is the total living square footage?\n7. What is the roof shape?\n8. What brand is the electrical panel?",
+    "round": 1
+  },
+  "input_hash": "43e82b2637cdbbb8829cd64156b861c8218f129d2f11d8d93db96f862d1ce1a2",
+  "model_id": "deepseek-flash",
+  "prompt_version": "c5f2df36af50f8fff9e0dff202951caf536736edf2ba18087ba73b7b4649848f",
+  "request_id": "",
+  "skill": "polish_message",
+  "stop_reason": "tool_use",
+  "tokens_in": 387,
+  "tokens_out": 103,
+  "tool_input": {
+    "closing": "A single reply covering all of the items above is ideal. Thank you for your help in getting this wrapped up.",
+    "opening": "Thank you for sending over your client's property submission. The underwriter has reviewed it and needs a few more details before the quote can be completed."
+  }
+}

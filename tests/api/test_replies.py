@@ -70,6 +70,15 @@ def review_causes(db: sqlite3.Connection) -> list[str | None]:
     return [b.detail.cause for b in open_blockers(db, LEAD_008) if b.kind == "underwriter_review"]
 
 
+def reply_reads(db: sqlite3.Connection) -> list[Any]:
+    """The `model_called` events of read_reply; the first pass's request rewrites are not among them."""
+    return [
+        e
+        for e in read_events(db)
+        if e.type is EventType.model_called and e.payload.skill == "read_reply"  # type: ignore[attr-defined]
+    ]
+
+
 def facts_of(db: sqlite3.Connection) -> dict[str, Any]:
     return {key: fact.value for key, fact in effective_facts(db, LEAD_008).items()}
 
@@ -98,7 +107,7 @@ def test_the_fixture_reply_fills_the_two_fields_closes_the_round_and_drafts_the_
     assert draft == ("quote_packet", "draft")
     assert review_causes(db) == [None]  # the packet's own review item, no reading problem
     assert len(mailbox.list_for_lead(LEAD_008)) == 1  # the request; the packet waits for approval
-    (model_call,) = [e for e in read_events(db) if e.type is EventType.model_called]
+    (model_call,) = reply_reads(db)
     assert model_call.payload.tokens_in > 0  # type: ignore[attr-defined]
 
 
@@ -125,7 +134,7 @@ def test_a_reply_for_an_intent_that_is_not_sent_is_refused(
 
     assert answer["accepted"] is False and state in answer["reason"]
     assert facts_of(db).get("electrical_panel_brand") is None
-    assert [e for e in read_events(db) if e.type is EventType.model_called] == []
+    assert reply_reads(db) == []
 
 
 def test_a_reply_after_the_round_closed_raises_a_review_and_applies_nothing(
@@ -260,15 +269,16 @@ def test_the_model_is_called_with_no_write_lock_held(
     locked: list[bool] = []
 
     def model_call(call: Any, key: RecordingKey) -> Exchange:
-        other = sqlite3.connect(settings.db_path, timeout=0)
-        try:
-            other.execute("BEGIN IMMEDIATE")
-            locked.append(False)
-        except sqlite3.OperationalError:
-            locked.append(True)
-        finally:
-            other.rollback()
-            other.close()
+        if key.skill == "read_reply":
+            other = sqlite3.connect(settings.db_path, timeout=0)
+            try:
+                other.execute("BEGIN IMMEDIATE")
+                locked.append(False)
+            except sqlite3.OperationalError:
+                locked.append(True)
+            finally:
+                other.rollback()
+                other.close()
         recorded = read_recording(RECORDINGS, key)
         assert recorded is not None
         return recorded

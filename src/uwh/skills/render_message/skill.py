@@ -38,6 +38,7 @@ class RenderMessageOutput(StrictModel):
     subject: str
     body: str
     ask_ids: list[str]  # in the order the body numbers them
+    question_block: str  # the body after its fixed opening; empty for a decline notice
 
 
 def run(input: RenderMessageInput) -> RenderMessageOutput:
@@ -46,6 +47,7 @@ def run(input: RenderMessageInput) -> RenderMessageOutput:
             subject=f"Regarding your submission: {input.lead_label}",
             body=DECLINE_NOTICE,
             ask_ids=[],
+            question_block="",
         )
     groups: dict[str, list[Ask]] = {field.section: [] for field in input.registry.values()}
     groups[ADDITIONAL_QUESTIONS] = []
@@ -54,7 +56,7 @@ def run(input: RenderMessageInput) -> RenderMessageOutput:
             groups[input.registry[ask.ask_id].section].append(ask)
         else:
             groups[ADDITIONAL_QUESTIONS].append(ask)
-    blocks = [OPENING]
+    blocks: list[str] = []
     ordered: list[Ask] = []
     for heading, asks in groups.items():
         if asks:
@@ -65,8 +67,10 @@ def run(input: RenderMessageInput) -> RenderMessageOutput:
             ]
             blocks.append("\n".join([heading, *lines]))
             ordered += asks
+    question_block = "\n\n".join(blocks)
     return RenderMessageOutput(
         subject=f"Information needed for your quote: {input.lead_label}",
-        body="\n\n".join(blocks),
+        body=f"{OPENING}\n\n{question_block}",
         ask_ids=[ask.ask_id for ask in ordered],
+        question_block=question_block,
     )

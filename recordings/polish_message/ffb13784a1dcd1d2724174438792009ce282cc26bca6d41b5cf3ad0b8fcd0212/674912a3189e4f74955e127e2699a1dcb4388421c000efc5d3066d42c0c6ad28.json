@@ -1,0 +1,19 @@
+{
+  "input": {
+    "closing": "A single reply covering the items is ideal. If anything below does not apply to your property, just let us know.",
+    "opening": "Thank you for sending in your property insurance application. The underwriter has reviewed it and needs a few more details to complete the quote. The items below are grouped by topic, and anything you can fill in is a help.",
+    "request": "Thank you for your submission. To complete the quote we need the items below. One reply covering all of them is ideal.\n\nLocation\n1. What state is the property in?\n\nInsured\n2. What is your first name?\n3. Is the property owned by a trust?\n4. If the property is held in a trust: what is the name of the trust?\n\nPrimary Coverages\n5. What Coverage E (liability) limit is requested: 100,000, 300,000 or 500,000?\n\nProperty\n6. How many consecutive months has the home been unoccupied?\n7. Does the property have a pool, and if so, is it above ground or inground?\n8. If the property has a pool: how is the pool secured: none, unfenced or fenced?\n9. If the pool is above ground: does the above-ground pool have a pull-up locking ladder?\n\nConstruction\n10. What is the total living square footage?\n11. How many stories does the home have?\n12. What is the roof surface material?\n13. What is the size of the electrical panel, in amps?\n\nPlumbing\n14. Is the water heater a tank or a tankless unit?\n15. If the water heater is a tank: how old is the water heater, in years?\n16. If the water heater is a tank: where is the water heater: in or above finished space, or in unfinished space?\n\nProtection\n17. How many miles is it to the fire department?\n18. Is the fire department career, mostly career, mostly volunteer or volunteer?\n19. How many feet is it to the nearest fire hydrant?\n\nAdditional questions\n20. The number of people living in the home is listed as 0. Can you confirm that number?"
+  },
+  "input_hash": "674912a3189e4f74955e127e2699a1dcb4388421c000efc5d3066d42c0c6ad28",
+  "model_id": "deepseek-flash",
+  "prompt_version": "ffb13784a1dcd1d2724174438792009ce282cc26bca6d41b5cf3ad0b8fcd0212",
+  "request_id": "",
+  "skill": "polish_message",
+  "stop_reason": "tool_use",
+  "tokens_in": 605,
+  "tokens_out": 67,
+  "tool_input": {
+    "offending_sentence": "The underwriter has reviewed it and needs a few more details to complete the quote.",
+    "verdict": "fail"
+  }
+}

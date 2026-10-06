@@ -1,0 +1,19 @@
+{
+  "input": {
+    "recipient_kind": "producer",
+    "request": "Thank you for your submission. To complete the quote we need the items below. One reply covering all of them is ideal.\n\nPrimary Coverages\n1. What Coverage A (dwelling) amount is requested?\n\nProperty\n2. What is the occupancy type: primary, secondary, seasonal, tenant, or mixed (secondary or seasonal and tenant)?\n3. When was the property purchased?\n\nConstruction\n4. How many stories does the home have?\n\nProtection\n5. Is the fire department career, mostly career, mostly volunteer or volunteer?\n\nAdditional questions\n6. The number of people living in the home is listed as 0. Can you confirm that number?",
+    "round": 1
+  },
+  "input_hash": "542be26ab72d96b429a827158191e9aaeb02e13e0e9bf0e7beeb03d9c48ab42d",
+  "model_id": "deepseek-flash",
+  "prompt_version": "c5f2df36af50f8fff9e0dff202951caf536736edf2ba18087ba73b7b4649848f",
+  "request_id": "",
+  "skill": "polish_message",
+  "stop_reason": "tool_use",
+  "tokens_in": 890,
+  "tokens_out": 113,
+  "tool_input": {
+    "closing": "A single reply covering all of the items above would be ideal. Thank you for your help in getting this wrapped up.",
+    "opening": "Thank you for sending over this submission for your client. The underwriter has reviewed it and needs a few more details before the quote can be completed. The items below are the ones still outstanding."
+  }
+}

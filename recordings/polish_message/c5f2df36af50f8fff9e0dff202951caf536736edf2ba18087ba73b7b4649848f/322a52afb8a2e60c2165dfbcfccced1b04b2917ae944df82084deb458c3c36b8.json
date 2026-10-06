@@ -1,0 +1,19 @@
+{
+  "input": {
+    "recipient_kind": "producer",
+    "request": "Thank you for your submission. To complete the quote we need the items below. One reply covering all of them is ideal.\n\nProperty\n1. When was the property purchased?\n\nConstruction\n2. What brand is the electrical panel?",
+    "round": 1
+  },
+  "input_hash": "322a52afb8a2e60c2165dfbcfccced1b04b2917ae944df82084deb458c3c36b8",
+  "model_id": "deepseek-flash",
+  "prompt_version": "c5f2df36af50f8fff9e0dff202951caf536736edf2ba18087ba73b7b4649848f",
+  "request_id": "",
+  "skill": "polish_message",
+  "stop_reason": "tool_use",
+  "tokens_in": 283,
+  "tokens_out": 107,
+  "tool_input": {
+    "closing": "A single reply covering the items above would be ideal. Thank you for your help with this.",
+    "opening": "Thank you for sending over your client's property submission. To complete the quote, the underwriter needs a few more details about the property, and your help in gathering them is much appreciated."
+  }
+}

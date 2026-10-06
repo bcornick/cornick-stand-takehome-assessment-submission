@@ -85,7 +85,9 @@ def applied(control: Control | None) -> Iterator[None]:
     - send twice: nothing is replaced here; `mailbox_client` builds the doubling client.
     """
     if control == Control.do_nothing:
-        with _replaced(uwh.api.runtime, "build_steps", lambda registry, providers, rules: ()):
+        with _replaced(
+            uwh.api.runtime, "build_steps", lambda registry, providers, rules, model: ()
+        ):
             yield
     elif control == Control.email_everything:
         with _replaced(plan_asks, "run", _ask_every_missing_field):

@@ -156,13 +156,14 @@ def open_runtime(
             jev = JevAccess(
                 settings.run_mode, Path(settings.recordings_dir) / "jev", jev_call(jev_http)
             )
+        model = ModelAccess(settings.run_mode, Path(settings.recordings_dir), live, jev)
         env = RunEnvironment(
             settings.run_mode,
             ruleset_hash(IMAGE_RULES_DATA),
             rules,
             registry,
-            ModelAccess(settings.run_mode, Path(settings.recordings_dir), live, jev),
-            build_steps(registry, StandInProviders.for_seed(settings.seed), rules),
+            model,
+            build_steps(registry, StandInProviders.for_seed(settings.seed), rules, model),
             Path(uwh.skills.__file__).parent,
             lambda: datetime.now(UTC),
             mailbox,
