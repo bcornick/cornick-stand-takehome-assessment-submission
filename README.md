@@ -22,13 +22,13 @@ To see the demo:
 
 Leads 000, 003 and 006 need the underwriter on the first pass, and the **Queue** conversation lists their cards: 000 is a proposed decline that waits for approval, and 003 and 006 each show one question card.
 
-Below a conversation's timeline the underwriter can type a question or an instruction. An answer cites what it rests on as numbered chips; an instruction becomes a card that the underwriter applies or dismisses.
+Below a conversation's timeline the underwriter can type a question or an instruction. An answer cites what it rests on as numbered chips; an instruction becomes a card that the underwriter applies or dismisses. In replay, try one of the three example questions in the **Queue** conversation before delivering the replies; typing needs `RUN_MODE=live` and a key.
 
 ### Run modes
 
 `RUN_MODE` in `.env` picks the mode, and the demo controls always show it.
 
-- `replay` (the default): every model and Jev exchange is served from `recordings/`. No key is needed and no model host is called. A request with no recording fails closed with a visible error; a Jev miss falls back to the language model. The composer is disabled in replay, with the note "Questions need live mode": a typed question needs a live model, and a `live` or `record` run answers it.
+- `replay` (the default): every model and Jev exchange is served from `recordings/`. No key is needed and no model host is called. A request with no recording fails closed with a visible error; a Jev miss falls back to the language model. The composer is disabled in replay, with the note "Questions need live mode": a typed question needs a live model, and a `live` or `record` run answers it. The three example questions in the Queue conversation are recorded, so each answers in replay when asked first on the day as loaded.
 - `live`: calls DeepSeek with `MODEL_API_KEY`. Nothing reads or writes a recording.
 - `record`: as live, and each exchange is written to `recordings/`. Also set `RECORDINGS_ACCESS=rw`, because the folder is mounted read-only otherwise.
 
@@ -77,7 +77,7 @@ For the rest (rules core, the interpretation table, ledger rules, message classe
 
 - `seed42`: the ten leads against the ten labels in `evals/labels/seed42/`, graded at the settle point and again after scripted underwriter actions. The labels were written from the playbook, the registry and the data files without reading the rules code.
 - `replies`: eight reply fixtures (three held back under `fixtures/replies/held/`; lead 008's reply, the ninth, is the demo's) read by `read_reply`, graded against `evals/labels/replies/`.
-- `chat`: four cases with nine recordings; a question causes zero commands, a refused directive stays refused when reworded, and a producer's reply that carries an instruction is read back without one being followed.
+- `chat`: four cases with nine recordings (the three example questions have seven more); a question causes zero commands, a refused directive stays refused when reworded, and a producer's reply that carries an instruction is read back without one being followed.
 
 **The nine graders.**
 
@@ -164,7 +164,7 @@ What the reviews found and what is left as it is in this proof of concept.
 - An edited draft is not checked for pricing, a decline reason or internal notes before it is sent; the underwriter approves every edited draft and sees its text.
 - A chat turn that finishes after a new run has started writes its proposal card into the new run.
 - Proposal-card ids restart with each run (item ids do not), so a stale tab's Apply can hit the new run's card with the same number.
-- The assistant does not answer in the replay demo: the composer is disabled with "Questions need live mode"; a `live` or `record` run answers it.
+- In the replay demo the assistant answers only the three example questions, each asked first in the Queue conversation on the day as first loaded; once the replies are delivered, or after another question, an example closes with "Questions need live mode". A `live` or `record` run answers any question.
 - A citation proves the assistant was shown the item, not that the item supports the claim.
 - Dismissing a proposal card writes outside the command layer and records no event.
 - A round-2 rewrite runs inside the command's transaction, so a slow model call holds the write lock for other leads.
