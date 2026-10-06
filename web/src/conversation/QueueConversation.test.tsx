@@ -163,10 +163,12 @@ describe('QueueConversation', () => {
     expect(chat.send).toHaveBeenCalledWith(QUEUE, run.example_prompts[0])
   })
 
-  it('disables the example prompts in replay', () => {
+  it('offers the example prompts in replay too, since they are recorded', async () => {
     stubLead(lead)
-    renderQueue({ run: { ...run, mode: 'replay' } })
-    expect(screen.getByRole('button', { name: run.example_prompts[0]! })).toBeDisabled()
+    const chat = renderQueue({ run: { ...run, mode: 'replay' } })
+
+    await userEvent.click(screen.getByRole('button', { name: run.example_prompts[0]! }))
+    expect(chat.send).toHaveBeenCalledWith(QUEUE, run.example_prompts[0])
   })
 
   it('offers no example prompts once something has been asked', () => {

@@ -21,13 +21,21 @@ from uwh.api.views import (
     ProposalView,
     StepEvent,
 )
+from uwh.chat.examples import EXAMPLE_PROMPTS
 from uwh.chat.skill import run_turn
+from uwh.runtime.modes import RecordingMiss
 from uwh.runtime.proposals import Proposal, open_proposals, read_proposal, settle_proposal
 
 logger = logging.getLogger(__name__)
 
 # What a turn closes with in replay: nothing recorded answers a typed question.
 NEEDS_LIVE_MODE = "Questions need live mode"
+
+
+def _is_example(request: ChatRequest) -> bool:
+    """An example prompt asked first in the queue conversation: the one turn replay has recordings for."""
+    return request.message in EXAMPLE_PROMPTS and request.lead_id is None and not request.history
+
 
 router = APIRouter()
 
@@ -49,7 +57,7 @@ def _closing_event(
     runtime: Runtime, request: ChatRequest, on_step: Callable[[str], None]
 ) -> AnswerEvent | ProposalEvent | ErrorEvent:
     """Run the turn on a connection of this thread and say how it closed."""
-    if runtime.env.mode == "replay":
+    if runtime.env.mode == "replay" and not _is_example(request):
         return ErrorEvent(type="error", reason=NEEDS_LIVE_MODE)
     if not runtime.env.model.available:
         return ErrorEvent(type="error", reason="The assistant has no model key")
@@ -58,6 +66,9 @@ def _closing_event(
             turn = run_turn(
                 db, runtime.env, request.message, request.lead_id, request.history, on_step
             )
+        except RecordingMiss:
+            # The examples were recorded on the day as first loaded; a day that has moved on misses.
+            return ErrorEvent(type="error", reason=NEEDS_LIVE_MODE)
         except anthropic.APIError as error:
             return ErrorEvent(type="error", reason=f"The model call failed: {error}")
         if turn.proposal_id is not None:

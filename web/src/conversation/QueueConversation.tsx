@@ -39,7 +39,7 @@ export function QueueConversation({ items, ...shared }: Props) {
                   key={prompt}
                   type="button"
                   className="rounded-md border px-3 py-1 text-left text-sm hover:bg-muted disabled:opacity-50"
-                  disabled={run.mode === 'replay' || chat.running}
+                  disabled={chat.running}
                   onClick={() => chat.send(QUEUE, prompt)}
                 >
                   {prompt}

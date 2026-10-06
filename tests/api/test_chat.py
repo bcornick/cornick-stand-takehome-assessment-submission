@@ -13,10 +13,13 @@ from tests.api.helpers import replay_settings
 from tests.chat.helpers import Script
 from uwh.api import runtime
 from uwh.api.app import create_app
+from uwh.chat.examples import EXAMPLE_PROMPTS
+from uwh.chat.skill import forced_call
 from uwh.runtime.event_types import EventType
 from uwh.runtime.events import read_events
 from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
+from uwh.runtime.recordings import Exchange, write_recording
 from uwh.runtime.store import open_store
 from uwh.settings import Settings
 
@@ -52,7 +55,7 @@ def propose(command_type: str, payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def chat(client: TestClient, message: str, lead_id: str) -> list[dict[str, Any]]:
+def chat(client: TestClient, message: str, lead_id: str | None) -> list[dict[str, Any]]:
     """The events of the turn's stream, in order."""
     response = client.post("/api/chat", json={"lead_id": lead_id, "message": message})
     assert response.status_code == 200, response.text
@@ -109,6 +112,41 @@ def test_replay_answers_that_questions_need_live_mode_and_calls_no_model(
     assert stream == [{"type": "error", "reason": "Questions need live mode"}]
     assert events(settings, EventType.model_called) == []
     assert events(settings, EventType.replay_miss) == []
+
+
+def test_replay_answers_an_example_prompt_from_its_recording_and_any_other_turn_needs_live_mode(
+    tmp_path: Path, leadgen: LeadgenClient, mailbox: MailboxClient
+) -> None:
+    example = EXAMPLE_PROMPTS[0]
+    settings = replay_settings(tmp_path, 7, UWH_RECORDINGS=str(tmp_path / "recordings"))
+    call = forced_call({"message": example, "lead_id": None, "history": [], "steps": []})
+    key = call.recording_key
+    write_recording(
+        Path(settings.recordings_dir),
+        key,
+        Exchange(
+            skill=key.skill,
+            prompt_version=key.prompt_version,
+            input_hash=key.input_hash,
+            input=dict(call.shown),
+            model_id="deepseek-flash",
+            request_id="",
+            stop_reason="tool_use",
+            tokens_in=1,
+            tokens_out=1,
+            tool_input={"action": "answer", "answer": "Nothing is waiting on you."},
+        ),
+    )
+    needs_live = [{"type": "error", "reason": "Questions need live mode"}]
+    with TestClient(create_app(settings, leadgen=leadgen, mailbox=mailbox)) as client:
+        client.post("/api/run/start?wait=true")
+        (closing,) = chat(client, example, None)
+        # The same words in a lead's conversation, and an example with no recording, are not answered.
+        on_a_lead = chat(client, example, "L-1")
+        unrecorded = chat(client, EXAMPLE_PROMPTS[1], None)
+
+    assert closing == {"type": "answer", "answer": "Nothing is waiting on you.", "citations": []}
+    assert on_a_lead == needs_live and unrecorded == needs_live
 
 
 def test_a_turn_with_no_model_key_closes_with_an_error(
