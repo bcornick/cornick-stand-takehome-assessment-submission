@@ -56,7 +56,7 @@ def test_a_proposal_stores_an_open_card_and_its_event_and_runs_nothing(
     (event,) = events_of(db, EventType.proposal_created)
     assert event.id == result.event_id and event.actor == "assistant" and event.lead_id == LEAD_ID
     assert isinstance(event.payload, ProposalCreated)
-    assert open_proposals(db) == [Proposal(event.payload.proposal_id, DECLINE, "open")]
+    assert open_proposals(db) == [Proposal(event.payload.proposal_id, DECLINE, "open", LEAD_ID)]
     assert db.execute("SELECT status FROM leads").fetchone() == ("received",)
     assert events_of(db, EventType.ruling_recorded) == []
 
@@ -100,7 +100,7 @@ def test_a_card_leaves_open_once(db: sqlite3.Connection, env: RunEnvironment) ->
     (card,) = open_proposals(db)
 
     assert settle_proposal(db, card.id, "applied")
-    assert read_proposal(db, card.id) == Proposal(card.id, DECLINE, "applied")
+    assert read_proposal(db, card.id) == Proposal(card.id, DECLINE, "applied", LEAD_ID)
     assert open_proposals(db) == []
     assert not settle_proposal(db, card.id, "dismissed")
     assert not settle_proposal(db, 99, "dismissed")

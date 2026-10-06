@@ -15,7 +15,7 @@ router = APIRouter()
 
 
 def _view(card: Proposal) -> ProposalView:
-    return ProposalView(proposal_id=card.id, payload=card.payload)
+    return ProposalView(proposal_id=card.id, lead_id=card.lead_id, payload=card.payload)
 
 
 def _open_card(db: sqlite3.Connection, proposal_id: int) -> Proposal:

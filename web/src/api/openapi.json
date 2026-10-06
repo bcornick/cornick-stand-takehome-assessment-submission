@@ -841,6 +841,10 @@
             "title": "Confirmed",
             "type": "boolean"
           },
+          "event_id": {
+            "title": "Event Id",
+            "type": "integer"
+          },
           "evidence": {
             "additionalProperties": {
               "$ref": "#/components/schemas/JsonValue"
@@ -888,7 +892,8 @@
           "status",
           "confirmed",
           "evidence",
-          "observation_id"
+          "observation_id",
+          "event_id"
         ],
         "title": "FactView",
         "type": "object"
@@ -1237,6 +1242,17 @@
         "additionalProperties": false,
         "description": "A proposal card (A.1). A command proposal's payload is `{type, payload, rationale}`.",
         "properties": {
+          "lead_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Id"
+          },
           "payload": {
             "additionalProperties": {
               "$ref": "#/components/schemas/JsonValue"
@@ -1251,6 +1267,7 @@
         },
         "required": [
           "proposal_id",
+          "lead_id",
           "payload"
         ],
         "title": "ProposalView",

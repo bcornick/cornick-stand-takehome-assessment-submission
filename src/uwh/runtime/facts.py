@@ -100,6 +100,7 @@ class Fact:
     confirmed: bool
     evidence: dict[str, JsonValue]
     observation_id: int
+    event_id: int  # the event that recorded the observation
 
 
 @dataclass
@@ -297,7 +298,7 @@ def _confirmed_conflicts(db: sqlite3.Connection, lead_id: str) -> list[Conflict]
 def effective_facts(db: sqlite3.Connection, lead_id: str) -> dict[str, Fact]:
     """The lead's effective fact per key."""
     rows = db.execute(
-        "SELECT e.key, o.value_json, o.source, o.status, e.confirmed, o.evidence_json, o.id"
+        "SELECT e.key, o.value_json, o.source, o.status, e.confirmed, o.evidence_json, o.id, o.event_id"
         " FROM effective_facts e JOIN observations o ON o.id = e.observation_id"
         " WHERE e.lead_id = ? ORDER BY e.key",
         (lead_id,),
@@ -311,6 +312,7 @@ def effective_facts(db: sqlite3.Connection, lead_id: str) -> dict[str, Fact]:
             confirmed=bool(row[4]),
             evidence=json.loads(row[5]),
             observation_id=row[6],
+            event_id=row[7],
         )
         for row in rows
     }

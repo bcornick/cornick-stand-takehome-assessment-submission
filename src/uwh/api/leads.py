@@ -103,8 +103,9 @@ def queue_rows(db: sqlite3.Connection, now: datetime) -> list[QueueRow]:
 
 
 def _pending_observation(db: sqlite3.Connection, observation_id: int) -> FactView:
-    key, value, source, status, evidence = db.execute(
-        "SELECT key, value_json, source, status, evidence_json FROM observations WHERE id = ?",
+    key, value, source, status, evidence, event_id = db.execute(
+        "SELECT key, value_json, source, status, evidence_json, event_id FROM observations"
+        " WHERE id = ?",
         (observation_id,),
     ).fetchone()
     return FactView(
@@ -115,6 +116,7 @@ def _pending_observation(db: sqlite3.Connection, observation_id: int) -> FactVie
         confirmed=False,
         evidence=json.loads(evidence),
         observation_id=observation_id,
+        event_id=event_id,
     )
 
 

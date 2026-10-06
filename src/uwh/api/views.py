@@ -98,6 +98,7 @@ class FactView(StrictModel):
     confirmed: bool
     evidence: dict[str, JsonValue]
     observation_id: int  # `observations.id`, which `BlockerDetail.observation_id` joins on
+    event_id: int  # the event that recorded the observation
 
 
 class BlockerView(StrictModel):
@@ -337,6 +338,7 @@ class ProposalView(StrictModel):
     """A proposal card (A.1). A command proposal's payload is `{type, payload, rationale}`."""
 
     proposal_id: int
+    lead_id: str | None  # the lead the proposed command names; None for a card about no lead
     payload: dict[str, JsonValue]
 
 

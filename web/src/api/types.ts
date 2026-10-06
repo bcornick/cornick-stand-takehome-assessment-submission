@@ -573,6 +573,8 @@ export interface components {
         FactView: {
             /** Confirmed */
             confirmed: boolean;
+            /** Event Id */
+            event_id: number;
             /** Evidence */
             evidence: {
                 [key: string]: components["schemas"]["JsonValue"];
@@ -715,6 +717,8 @@ export interface components {
          * @description A proposal card (A.1). A command proposal's payload is `{type, payload, rationale}`.
          */
         ProposalView: {
+            /** Lead Id */
+            lead_id: string | null;
             /** Payload */
             payload: {
                 [key: string]: components["schemas"]["JsonValue"];

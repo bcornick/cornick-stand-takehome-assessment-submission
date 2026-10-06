@@ -18,6 +18,7 @@ class Proposal:
     id: int
     payload: dict[str, JsonValue]  # {type, payload, rationale}
     state: ProposalState
+    lead_id: str | None  # the lead of the card's `proposal_created` event
 
 
 def is_proposable(command_type: str) -> bool:
@@ -56,23 +57,25 @@ def create_proposal(
     return event_id
 
 
-def _proposal(row: tuple[int, str, ProposalState]) -> Proposal:
-    return Proposal(row[0], json.loads(row[1]), row[2])
+# A card with the lead of its `proposal_created` event; the `proposals` table holds no lead.
+_SELECT = (
+    "SELECT p.id, p.payload_json, p.state, e.lead_id"
+    " FROM proposals p LEFT JOIN events e ON e.id = p.event_id"
+)
+
+
+def _proposal(row: tuple[int, str, ProposalState, str | None]) -> Proposal:
+    return Proposal(row[0], json.loads(row[1]), row[2], row[3])
 
 
 def read_proposal(db: sqlite3.Connection, proposal_id: int) -> Proposal | None:
-    row = db.execute(
-        "SELECT id, payload_json, state FROM proposals WHERE id = ?",
-        (proposal_id,),
-    ).fetchone()
+    row = db.execute(f"{_SELECT} WHERE p.id = ?", (proposal_id,)).fetchone()
     return None if row is None else _proposal(row)
 
 
 def open_proposals(db: sqlite3.Connection) -> list[Proposal]:
     """The cards still open, oldest first."""
-    rows = db.execute(
-        "SELECT id, payload_json, state FROM proposals WHERE state = 'open' ORDER BY id"
-    ).fetchall()
+    rows = db.execute(f"{_SELECT} WHERE p.state = 'open' ORDER BY p.id").fetchall()
     return [_proposal(row) for row in rows]
 
 
