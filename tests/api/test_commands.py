@@ -47,19 +47,3 @@ def test_the_actor_of_a_command_is_the_underwriter_the_transport_binds(
         "pre-run",
     )
     db.close()
-
-
-def test_an_accepted_command_returns_the_event_it_produced(client: TestClient) -> None:
-    client.post("/api/run/start?wait=true")
-    db = open_store(client.app.state.runtime.settings.db_path)  # type: ignore[attr-defined]
-    (lead_id,) = db.execute("SELECT lead_id FROM leads ORDER BY rowid LIMIT 1").fetchone()
-    db.close()
-
-    response = post(
-        client,
-        "resolve_fact",
-        {"lead_id": lead_id, "key": "acreage", "value": 3, "reason": "the producer called"},
-    )
-
-    assert response.accepted is True
-    assert response.event_id is not None

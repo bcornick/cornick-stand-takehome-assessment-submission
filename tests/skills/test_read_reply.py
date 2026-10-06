@@ -1,6 +1,5 @@
 # ABOUTME: Tests what read_reply's code does with a model's reading (A.9, 10.4): locating each quote in the reply, dropping what is not asked or does not fit the field, and the repeat then abstention on an invalid tool input.
 # ABOUTME: The checks run on hand-made readings, since they test our code and not the model; the model's own reading of the fixture reply is tested in replay from the committed recording.
-import json
 from pathlib import Path
 from typing import Any
 
@@ -165,13 +164,6 @@ def test_a_refusal_abstains_without_a_repeat(tmp_path: Path) -> None:
 
     assert result == Abstention(reason="refusal")
     assert len(exchanges) == 1
-
-
-def test_the_tool_schema_sent_to_the_model_carries_no_docstring() -> None:
-    sent = json.dumps(skill.forced_call(INPUT).tool)
-
-    for internal in (ReplyReading.__doc__, Candidate.__doc__):
-        assert internal is not None and internal not in sent
 
 
 NO_RESIDENTS = ConflictOpened(

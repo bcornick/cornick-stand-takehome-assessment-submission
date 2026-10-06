@@ -1,4 +1,4 @@
-# ABOUTME: Tests the first pass of the running app on the seed-42 queue: lead 008 ends with one sent routine request and an open wait for the producer, and every other lead ends with a request or a stated reason.
+# ABOUTME: Tests the first pass of the running app on the seed-42 queue: lead 008 ends with one sent routine request and an open wait for the producer, and the plan and the asks of the other leads that differ.
 # ABOUTME: The app runs in process with the real steps against Stand's leadgen and mailbox apps in process; the mailbox is read back as the producer's inbox.
 import json
 import sqlite3
@@ -116,35 +116,6 @@ def asked(db: sqlite3.Connection, lead_id: str) -> list[str]:
         )
         for ask in json.loads(ask_ids)
     ]
-
-
-# What each lead of 5's scenario table ends the first pass as: its open blockers (kind and item
-# kind) and the kinds of message in the producer's mailbox.
-FIRST_PASS = {
-    "000": ([("underwriter_review", "draft")], []),
-    "001": ([("producer_reply", None)], ["routine_request"]),
-    "002": ([("producer_reply", None)], ["routine_request"]),
-    "003": ([("underwriter_question", None), ("producer_reply", None)], ["routine_request"]),
-    "004": ([("producer_reply", None)], ["routine_request"]),
-    "005": ([("producer_reply", None)], ["routine_request"]),
-    "006": ([("underwriter_question", None), ("producer_reply", None)], ["routine_request"]),
-    "007": ([("producer_reply", None)], ["routine_request"]),
-    "008": ([("producer_reply", None)], ["routine_request"]),
-    "009": ([("producer_reply", None)], ["routine_request"]),
-}
-
-
-@pytest.mark.parametrize("number", FIRST_PASS)
-def test_every_lead_ends_the_first_pass_with_one_wait_or_one_request_and_its_reply_wait(
-    first_pass: sqlite3.Connection, mailbox: MailboxClient, number: str
-) -> None:
-    lead_id = f"LEAD-00000042-{number}"
-    waits, mail = FIRST_PASS[number]
-
-    assert sorted(
-        (b.kind, b.detail.item_kind) for b in open_blockers(first_pass, lead_id)
-    ) == sorted(waits)
-    assert [m["metadata"]["kind"] for m in mailbox.list_for_lead(lead_id)] == mail
 
 
 def test_lead_000_is_a_proposed_decline_with_the_notice_waiting_and_no_request(

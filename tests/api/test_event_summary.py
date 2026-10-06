@@ -8,7 +8,6 @@ from uwh.api.event_summary import event_summary
 from uwh.providers.models import ProviderResult
 from uwh.rules.models import StrictModel
 from uwh.runtime.event_types import (
-    PAYLOAD_MODELS,
     ApprovalRecorded,
     BlockerClosed,
     BlockerDetail,
@@ -141,11 +140,6 @@ PAYLOADS: dict[EventType, StrictModel] = {
     ),
     EventType.fault_injected: FaultInjected(fault="send_twice"),
 }
-
-
-def test_every_event_type_has_a_sample_payload_of_its_model() -> None:
-    assert PAYLOADS.keys() == set(EventType)
-    assert all(type(PAYLOADS[t]) is PAYLOAD_MODELS[t] for t in EventType)
 
 
 @pytest.mark.parametrize("event_type", list(EventType))

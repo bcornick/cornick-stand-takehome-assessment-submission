@@ -12,13 +12,12 @@ import pytest
 from evals import run
 from evals.graders.evidence import Evidence
 from tests.api.helpers import (
-    FIXTURE_REPLIES,
     LEAD_008,
-    RECORDINGS,
     REGISTRY,
+    replay_settings,
     restore_first_pass,
+    use_empty_rules_data,
 )
-from uwh.api import runtime
 from uwh.api.runtime import open_runtime
 from uwh.rules.registry import load_registry
 from uwh.runtime.leadgen_client import LeadgenClient
@@ -29,21 +28,8 @@ from uwh.settings import Settings
 
 @pytest.fixture
 def settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Settings:
-    data = tmp_path / "rules-data"
-    data.mkdir()
-    (data / "interpretation.yaml").write_text("rows: []\n", encoding="utf-8")
-    monkeypatch.setattr(runtime, "IMAGE_RULES_DATA", data)
-    return Settings.load(
-        {
-            "UWH_DB": str(tmp_path / "app.db"),
-            "RUN_MODE": "replay",
-            "SEED": "42",
-            "GIT_COMMIT": "0123abc",
-            "UWH_REGISTRY": str(REGISTRY),
-            "UWH_RECORDINGS": str(RECORDINGS),
-            "UWH_FIXTURE_REPLIES": str(FIXTURE_REPLIES),
-        }
-    )
+    use_empty_rules_data(tmp_path, monkeypatch)
+    return replay_settings(tmp_path, 42, GIT_COMMIT="0123abc")
 
 
 @pytest.fixture

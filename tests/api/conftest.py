@@ -8,7 +8,7 @@ import httpx2
 import pytest
 from fastapi.testclient import TestClient
 
-from tests.api.helpers import FIXTURE_REPLIES, RECORDINGS, REGISTRY
+from tests.api.helpers import replay_settings, use_empty_rules_data
 from uwh.api import runtime
 from uwh.api.app import create_app
 from uwh.runtime.leadgen_client import LeadgenClient
@@ -21,25 +21,12 @@ OpenClient = Callable[..., AbstractContextManager[TestClient]]
 
 @pytest.fixture(autouse=True)
 def rules_data(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    data = tmp_path / "rules-data"
-    data.mkdir()
-    (data / "interpretation.yaml").write_text("rows: []\n", encoding="utf-8")
-    monkeypatch.setattr(runtime, "IMAGE_RULES_DATA", data)
-    return data
+    return use_empty_rules_data(tmp_path, monkeypatch)
 
 
 @pytest.fixture
 def settings(tmp_path: Path) -> Settings:
-    return Settings.load(
-        {
-            "UWH_DB": str(tmp_path / "app.db"),
-            "RUN_MODE": "replay",
-            "SEED": "7",
-            "UWH_REGISTRY": str(REGISTRY),
-            "UWH_RECORDINGS": str(RECORDINGS),
-            "UWH_FIXTURE_REPLIES": str(FIXTURE_REPLIES),
-        }
-    )
+    return replay_settings(tmp_path, 7)
 
 
 @pytest.fixture

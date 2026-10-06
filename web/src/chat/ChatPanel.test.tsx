@@ -15,9 +15,6 @@ const card: Schemas['ProposalView'] = {
     payload: { lead_id: 'LEAD-1', reason: 'vacant' },
     rationale: 'The building is vacant.',
   },
-  state: 'open',
-  actor: 'assistant',
-  event_id: 30,
 }
 
 function respond(body: unknown): Response {
@@ -43,7 +40,7 @@ function stubApi(options: { proposals: Schemas['ProposalView'][]; answer?: Schem
       }
       if (path === '/api/proposals/4/dismiss') {
         proposals = []
-        return respond({ ...card, state: 'dismissed' })
+        return respond(null)
       }
       return new Response('{}', { status: 404 })
     }),

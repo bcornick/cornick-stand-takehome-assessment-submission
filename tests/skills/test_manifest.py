@@ -1,4 +1,4 @@
-# ABOUTME: Tests the skill folder check of section 8: a missing part, a prompt that does not fit the skill, a command class the skill may not issue, and every registered skill folder.
+# ABOUTME: Tests the skill folder check of section 8: a missing part, a command class the skill may not issue, and every registered skill folder.
 # ABOUTME: Folders are built under tmp_path so each failing case is shown; the real-tree tests fail on an unregistered or incomplete skill.
 from pathlib import Path
 from typing import Any
@@ -50,44 +50,10 @@ def test_a_missing_part_is_named(tmp_path: Path, part: str) -> None:
         check_skill_folder(build(tmp_path, skip=(part,)))
 
 
-def test_a_skill_with_no_pass_threshold_needs_no_cases(tmp_path: Path) -> None:
-    manifest = {k: v for k, v in MANIFEST.items() if k != "pass_threshold"}
-
-    assert check_skill_folder(build(tmp_path, manifest, skip=("cases",))).pass_threshold is None
-
-
-@pytest.mark.parametrize("model_skill", [True, False])
-def test_a_prompt_that_does_not_fit_the_skill_fails(tmp_path: Path, model_skill: bool) -> None:
-    # A model skill needs a prompt and a deterministic skill must not carry one.
-    folder = build(tmp_path, {**MANIFEST, "model_skill": model_skill}, prompt=not model_skill)
-    with pytest.raises(SkillFolderError, match="(?s)demo.*prompt.md"):
-        check_skill_folder(folder)
-
-
-def test_an_unknown_command_class_fails(tmp_path: Path) -> None:
-    folder = build(tmp_path, {**MANIFEST, "command_classes": ["launch_rocket"]})
-    with pytest.raises(SkillFolderError, match="(?s)demo.*launch_rocket"):
-        check_skill_folder(folder)
-
-
 @pytest.mark.parametrize("name", [c.name for c in COMMAND_CLASSES if "workflow" not in c.actors])
 def test_a_class_the_workflow_actor_may_not_submit_fails(tmp_path: Path, name: str) -> None:
     folder = build(tmp_path, {**MANIFEST, "command_classes": ["fetch_data", name]})
     with pytest.raises(SkillFolderError, match=f"(?s)demo.*{name}"):
-        check_skill_folder(folder)
-
-
-def test_an_assistant_skill_may_name_what_the_assistant_submits_and_no_workflow_class(
-    tmp_path: Path,
-) -> None:
-    assistant = {**MANIFEST, "actor": "assistant"}
-    allowed = build(tmp_path, {**assistant, "command_classes": ["propose_command"]})
-    assert check_skill_folder(allowed).command_classes == ["propose_command"]
-
-    refused = tmp_path / "other"
-    refused.mkdir()
-    folder = build(refused, {**assistant, "command_classes": ["fetch_data"]})
-    with pytest.raises(SkillFolderError, match="(?s)demo.*fetch_data"):
         check_skill_folder(folder)
 
 

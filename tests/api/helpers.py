@@ -11,8 +11,10 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
 
+from uwh.api import runtime
 from uwh.api.app import create_app
 from uwh.rules.registry import load_registry
 from uwh.runtime.facts import open_conflicts
@@ -30,6 +32,30 @@ REGISTRY = ROOT / "docs" / "brief" / "field_registry.json"
 RECORDINGS = ROOT / "recordings"
 FIXTURE_REPLIES = ROOT / "fixtures" / "replies"
 LEAD_008 = "LEAD-00000042-008"
+
+
+def replay_settings(tmp_path: Path, seed: int, **extra: str) -> Settings:
+    """Replay settings over a database in `tmp_path`, the committed recordings and Stand's registry."""
+    return Settings.load(
+        {
+            "UWH_DB": str(tmp_path / "app.db"),
+            "RUN_MODE": "replay",
+            "SEED": str(seed),
+            "UWH_REGISTRY": str(REGISTRY),
+            "UWH_RECORDINGS": str(RECORDINGS),
+            "UWH_FIXTURE_REPLIES": str(FIXTURE_REPLIES),
+            **extra,
+        }
+    )
+
+
+def use_empty_rules_data(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Replace the image's rules data with a directory that holds an empty interpretation table."""
+    data = tmp_path / "rules-data"
+    data.mkdir()
+    (data / "interpretation.yaml").write_text("rows: []\n", encoding="utf-8")
+    monkeypatch.setattr(runtime, "IMAGE_RULES_DATA", data)
+    return data
 
 
 def wait_for(condition: Callable[[], bool]) -> None:
