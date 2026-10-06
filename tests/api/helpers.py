@@ -1,6 +1,8 @@
 # ABOUTME: The helpers the API tests share: waiting for a condition, reading whether the first pass of the run is complete and the app after the first pass of the seed-42 run.
 # ABOUTME: A plain module rather than conftest.py, which pytest loads under its own module name and tests do not import.
 import json
+import os
+import shutil
 import sqlite3
 import time
 from collections.abc import Callable, Iterator
@@ -44,14 +46,45 @@ def first_pass_complete(client: TestClient) -> bool:
 
 
 @contextmanager
-def first_pass(
+def fresh_first_pass(
     settings: Settings, leadgen: LeadgenClient, mailbox: MailboxClient
 ) -> Iterator[TestClient]:
-    """The app after the first pass of the seed-42 run."""
+    """The app after the first pass of the seed-42 run, run now with these settings."""
     with TestClient(
         create_app(replace(settings, seed=42), leadgen=leadgen, mailbox=mailbox)
     ) as client:
         assert client.post("/api/run/start?wait=true").status_code == 200
+        yield client
+
+
+# Copies of the app's database and of the mailbox's after the first pass on the committed recordings,
+# made by the first test that asks and put back for every later one.
+_SAVED_DIR = Path(os.environ["MAILBOX_DB"]).parent / "first-pass"
+_MAILBOX_DB = Path(os.environ["MAILBOX_DB"])
+
+
+def restore_first_pass(settings: Settings, leadgen: LeadgenClient, mailbox: MailboxClient) -> None:
+    """Leave the app's database and the mailbox as the first pass of the seed-42 run on the committed
+    recordings leaves them. The test's settings must name those recordings."""
+    if not _SAVED_DIR.exists():
+        with fresh_first_pass(settings, leadgen, mailbox):
+            pass
+        _SAVED_DIR.mkdir()
+        shutil.copy(settings.db_path, _SAVED_DIR / "app.db")
+        shutil.copy(_MAILBOX_DB, _SAVED_DIR / "mailbox.db")
+    shutil.copy(_SAVED_DIR / "app.db", settings.db_path)
+    shutil.copy(_SAVED_DIR / "mailbox.db", _MAILBOX_DB)
+
+
+@contextmanager
+def first_pass(
+    settings: Settings, leadgen: LeadgenClient, mailbox: MailboxClient
+) -> Iterator[TestClient]:
+    """The app after the first pass of the seed-42 run on the committed recordings."""
+    restore_first_pass(settings, leadgen, mailbox)
+    with TestClient(
+        create_app(replace(settings, seed=42), leadgen=leadgen, mailbox=mailbox)
+    ) as client:
         yield client
 
 

@@ -9,7 +9,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from tests.api.helpers import first_pass, record_reading
+from tests.api.helpers import fresh_first_pass, record_reading
 from uwh.rules.models import ActionPlan
 from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
@@ -23,7 +23,9 @@ LEAD_000 = "LEAD-00000042-000"
 def app(
     settings: Settings, leadgen: LeadgenClient, mailbox: MailboxClient, tmp_path: Path
 ) -> Iterator[TestClient]:
-    with first_pass(replace(settings, recordings_dir=str(tmp_path)), leadgen, mailbox) as client:
+    with fresh_first_pass(
+        replace(settings, recordings_dir=str(tmp_path)), leadgen, mailbox
+    ) as client:
         yield client
 
 

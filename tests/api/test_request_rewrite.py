@@ -11,7 +11,7 @@ from typing import Any
 
 import pytest
 
-from tests.api.helpers import LEAD_008, RECORDINGS, first_pass
+from tests.api.helpers import LEAD_008, RECORDINGS, first_pass, fresh_first_pass
 from uwh.api import runtime
 from uwh.runtime.event_types import EventType
 from uwh.runtime.events import read_events
@@ -148,7 +148,7 @@ def test_the_model_is_called_for_a_rewrite_outside_every_unit_of_work(
     monkeypatch.setattr(steps, "unit_of_work", counted)
     monkeypatch.setattr(runtime, "anthropic_call", lambda client, model_id: model_call)
     keyed = replace(settings, run_mode="live", model_api_key="not-used")
-    with first_pass(keyed, leadgen, mailbox):
+    with fresh_first_pass(keyed, leadgen, mailbox):
         assert depths and set(depths) == {0}
 
 
@@ -169,7 +169,7 @@ def test_the_approval_of_a_sensitive_request_binds_to_the_rewritten_body_shown(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(plan_asks, "_message_class", lambda asks: "sensitive_request")
-    with first_pass(settings, leadgen, mailbox) as app:
+    with fresh_first_pass(settings, leadgen, mailbox) as app:
         db = open_store(settings.db_path)
         intent_id, recipient, subject, body = request_of(db, LEAD_008)
         (item,) = [b for b in open_blockers(db, LEAD_008) if b.detail.intent_id == intent_id]
@@ -202,7 +202,7 @@ def test_a_request_with_nothing_recorded_is_sent_rendered_and_the_miss_is_logged
     settings: Settings, leadgen: LeadgenClient, mailbox: MailboxClient, tmp_path: Path
 ) -> None:
     empty = replace(settings, recordings_dir=str(tmp_path / "none"))
-    with first_pass(empty, leadgen, mailbox):
+    with fresh_first_pass(empty, leadgen, mailbox):
         db = open_store(empty.db_path)
         _, _, _, body = request_of(db, LEAD_008)
 
@@ -232,7 +232,7 @@ def test_a_check_call_with_nothing_recorded_leaves_the_rewrite_call_logged(
         only_rewrites / "polish_message" / rewrite_version,
     )
     partial = replace(settings, recordings_dir=str(only_rewrites))
-    with first_pass(partial, leadgen, mailbox):
+    with fresh_first_pass(partial, leadgen, mailbox):
         db = open_store(partial.db_path)
 
         assert len(events_of(db, LEAD_008, EventType.model_called)) == 1

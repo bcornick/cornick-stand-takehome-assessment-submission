@@ -1,8 +1,6 @@
 # ABOUTME: Tests the reply suite (13.2, 13.3 Reply reading): its row holds the grader, the read_reply case result and the not-applicable repeat check, and the grader fails on each wrong expectation.
 # ABOUTME: Every fixture reply is read from its recording; a wrong expectation is a label changed to a value no reading can hold.
 import json
-import sqlite3
-from collections.abc import Iterator
 from copy import deepcopy
 from dataclasses import replace
 from typing import Any
@@ -15,6 +13,7 @@ from evals.cases import load_reply_cases
 from evals.graders.evidence import Evidence
 from evals.graders.reply import reply_facts, reply_reading
 from evals.run import evaluate_replies
+from tests.evals.conftest import Snapshot, copy_of
 from uwh.api.runtime import open_runtime
 from uwh.runtime.event_types import ReplyRead
 from uwh.runtime.events import read_events
@@ -63,19 +62,25 @@ def test_the_row_says_jev_when_a_jev_key_is_set(
     assert row["jev"] is True
 
 
+# The state after the fixture replies is built by the first test that asks for it and shared with the rest.
+_BUILT: list[Snapshot] = []
+
+
 @pytest.fixture
 def after_replies(
     settings: Settings, leadgen: LeadgenClient, stand_mailbox_client: httpx2.Client
-) -> Iterator[Evidence]:
+) -> Evidence:
     """The evidence after every fixture reply is delivered, over a copy of the database."""
-    mailbox = MailboxClient(stand_mailbox_client)
-    mailbox.reset()
-    with open_runtime(settings, leadgen, mailbox) as runtime, runtime.database() as db:
-        ev, refused = run.read_replies(runtime, db, load_reply_cases())
-        assert refused == []
-        copy = sqlite3.connect(":memory:")
-        db.backup(copy)
-        yield Evidence(copy, ev.registry, ev.mail, ev.earlier)
+    if not _BUILT:
+        mailbox = MailboxClient(stand_mailbox_client)
+        mailbox.reset()
+        with open_runtime(settings, leadgen, mailbox) as runtime, runtime.database() as db:
+            ev, refused = run.read_replies(runtime, db, load_reply_cases())
+            assert refused == []
+            _BUILT.append(
+                Snapshot(copy_of(db), {lead: list(held) for lead, held in ev.mail.items()})
+            )
+    return _BUILT[0].evidence()
 
 
 # lead -> the classification of its fixture reply: an on-topic reply is answers_all when every ask still

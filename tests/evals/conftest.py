@@ -8,13 +8,17 @@ from typing import Any
 
 import httpx2
 import pytest
-from fastapi.testclient import TestClient
 
 from evals import run
 from evals.graders.evidence import Evidence
-from tests.api.helpers import FIXTURE_REPLIES, LEAD_008, RECORDINGS, REGISTRY
+from tests.api.helpers import (
+    FIXTURE_REPLIES,
+    LEAD_008,
+    RECORDINGS,
+    REGISTRY,
+    restore_first_pass,
+)
 from uwh.api import runtime
-from uwh.api.app import create_app
 from uwh.api.runtime import open_runtime
 from uwh.rules.registry import load_registry
 from uwh.runtime.leadgen_client import LeadgenClient
@@ -47,16 +51,13 @@ def first_pass_db(
     settings: Settings, leadgen: LeadgenClient, stand_mailbox_client: httpx2.Client
 ) -> Iterator[sqlite3.Connection]:
     """The database of the app after the first pass of the seed-42 run."""
-    mailbox = MailboxClient(stand_mailbox_client)
-    mailbox.reset()
-    with TestClient(create_app(settings, leadgen=leadgen, mailbox=mailbox)) as client:
-        assert client.post("/api/run/start?wait=true").status_code == 200
+    restore_first_pass(settings, leadgen, MailboxClient(stand_mailbox_client))
     db = open_store(settings.db_path)
     yield db
     db.close()
 
 
-def _copy(db: sqlite3.Connection) -> sqlite3.Connection:
+def copy_of(db: sqlite3.Connection) -> sqlite3.Connection:
     copy = sqlite3.connect(":memory:")
     db.backup(copy)
     return copy
@@ -72,7 +73,7 @@ class Snapshot:
     def evidence(self, earlier: frozenset[str] = frozenset()) -> Evidence:
         """Evidence over a copy of the snapshot, which a test may change."""
         mail = {lead: [dict(m) for m in held] for lead, held in self.mail.items()}
-        return Evidence(_copy(self.db), load_registry(str(REGISTRY)), mail, earlier)
+        return Evidence(copy_of(self.db), load_registry(str(REGISTRY)), mail, earlier)
 
 
 @dataclass
@@ -99,7 +100,7 @@ def run_state(
 
             def snapshot() -> Snapshot:
                 ev = run._evidence(app, db)
-                return Snapshot(_copy(db), {lead: list(held) for lead, held in ev.mail.items()})
+                return Snapshot(copy_of(db), {lead: list(held) for lead, held in ev.mail.items()})
 
             settled = snapshot()
             assert run._play(app, db, LEAD_008, labels[LEAD_008]["underwriter_actions"]) == []

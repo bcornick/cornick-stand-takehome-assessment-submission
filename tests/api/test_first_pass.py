@@ -2,12 +2,11 @@
 # ABOUTME: The app runs in process with the real steps against Stand's leadgen and mailbox apps in process; the mailbox is read back as the producer's inbox.
 import json
 import sqlite3
-from dataclasses import replace
+from collections.abc import Iterator
 
 import pytest
-from fastapi.testclient import TestClient
 
-from uwh.api.app import create_app
+from tests.api.helpers import restore_first_pass
 from uwh.rules.models import ActionPlan
 from uwh.runtime.event_types import EventType, PlanBuilt, TriageCompleted
 from uwh.runtime.events import read_events
@@ -24,12 +23,12 @@ LEAD_008 = "LEAD-00000042-008"
 @pytest.fixture
 def first_pass(
     settings: Settings, leadgen: LeadgenClient, mailbox: MailboxClient
-) -> sqlite3.Connection:
+) -> Iterator[sqlite3.Connection]:
     """The database of the app after the first pass of the seed-42 run."""
-    seed_42 = replace(settings, seed=42)
-    with TestClient(create_app(seed_42, leadgen=leadgen, mailbox=mailbox)) as client:
-        assert client.post("/api/run/start?wait=true").status_code == 200
-    return open_store(settings.db_path)
+    restore_first_pass(settings, leadgen, mailbox)
+    db = open_store(settings.db_path)
+    yield db
+    db.close()
 
 
 def test_lead_008_ends_the_first_pass_with_one_sent_routine_request_for_its_two_asks(

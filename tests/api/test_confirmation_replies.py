@@ -9,7 +9,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from tests.api.helpers import first_pass, record_reading
+from tests.api.helpers import fresh_first_pass, record_reading
 from uwh.runtime.event_types import EventType
 from uwh.runtime.events import read_events
 from uwh.runtime.facts import effective_facts, open_conflicts
@@ -27,7 +27,9 @@ CONFIRMATION = "no_residents_in_primary_home"
 def app(
     settings: Settings, leadgen: LeadgenClient, mailbox: MailboxClient, tmp_path: Path
 ) -> Iterator[TestClient]:
-    with first_pass(replace(settings, recordings_dir=str(tmp_path)), leadgen, mailbox) as client:
+    with fresh_first_pass(
+        replace(settings, recordings_dir=str(tmp_path)), leadgen, mailbox
+    ) as client:
         yield client
 
 
