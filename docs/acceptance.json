@@ -103,5 +103,26 @@
     "description": "A rewrite that fails either check sends the rendered request as it is. Expect: all pass.",
     "command": "uv run pytest -m integration tests/integration/test_polish_message.py -k rejected_rewrite",
     "passes": true
+  },
+  {
+    "id": "M6-A1",
+    "milestone": 6,
+    "description": "A fresh clone runs with `cp .env.example .env` and one command, with no keys: the three services come up healthy and a waited run start settles. Expect: exit 0.",
+    "command": "uv run python tools/fresh_clone.py",
+    "passes": false
+  },
+  {
+    "id": "M6-A2",
+    "milestone": 6,
+    "description": "Replay reproduces the demo run with no network call to a model: a run start, the fixture replies and lead 008's packet approval against the running app in replay, while the app's outbound HTTP shows no request to a model or Jev host. Expect: all pass.",
+    "command": "uv run pytest -m integration tests/integration/test_replay_demo.py",
+    "passes": false
+  },
+  {
+    "id": "M6-A3",
+    "milestone": 6,
+    "description": "The reviewer and the cross-review report no blocker, and the README holds the run command, the architecture overview, the eval loop, the skills table and \"Cut and why\". Expect: `5`.",
+    "command": "grep -c -E '^## (Run it|Architecture|The eval loop|Skills|Cut and why)' README.md",
+    "passes": false
   }
 ]
