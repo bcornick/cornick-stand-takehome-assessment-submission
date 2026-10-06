@@ -1,0 +1,84 @@
+# ABOUTME: Cases of triage_fields on the real seed-42 lead values: lead 008's nulls and what each becomes, a blocked dependent, a follow-on question, an open conflict, and the gated-community pool rule.
+# ABOUTME: A case's facts change the lead's captured fields; a null removes the value. `expect` names the triage attributes by field.
+cases:
+  - name: lead 008's two producer fields are asked and every other null is deferred, derived, fetched or not required
+    input: {lead: LEAD-00000042-008}
+    expect:
+      asked: [electrical_panel_brand, property_purchase_date]
+      resolution:
+        electrical_panel_brand: ask
+        property_purchase_date: ask
+        occupation: defer              # bind only
+        opening_protection: not_required   # no page uses it
+        siding_classification: derive
+        replacement_cost: fetch
+        slope_angle_deg: fetch
+        min_distance_to_neighbor_ft: fetch
+        deck_height_ft: not_required   # foundation is Slab
+        post_pier_supports_living_area: not_required
+        trust_name: not_required       # not held in a trust
+        above_ground_pool_ladder: not_required   # no pool
+        water_heater_age_years: not_required     # tankless
+        water_heater_location: not_required
+        fire_dept_response_time: not_required    # protection class 5
+        alternative_water_source: not_required
+        interior_sprinklers: not_required
+        physical_barriers: not_required
+        street_address: none
+
+  - name: a missing system-owned controlling field blocks its dependents
+    input: {lead: LEAD-00000042-008, facts: {protection_class: null}}
+    expect:
+      resolution: {fire_dept_response_time: blocked, protection_class: fetch}
+      depends_on: {fire_dept_response_time: [protection_class]}
+
+  - name: a dependent of a missing producer field is a follow-on question
+    input: {lead: LEAD-00000042-008, facts: {pool_type: null, pool_security: null}}
+    expect:
+      resolution: {pool_type: ask, pool_security: ask_follow_on}
+      requirement: {pool_security: conditional_unknown}
+
+  - name: a field in an open conflict is verified, not asked
+    input: {lead: LEAD-00000042-008, conflicting_fields: [roof_replacement_year]}
+    expect:
+      value_status: {roof_replacement_year: conflicting}
+      resolution: {roof_replacement_year: verify}
+
+  - name: a missing field beside a conflict over a present value is asked
+    input:
+      lead: LEAD-00000042-008
+      facts: {number_of_residents: 0, dwelling_use_type: null}
+      conflicting_fields: [number_of_residents, dwelling_type]
+    expect:
+      resolution: {number_of_residents: verify, dwelling_use_type: ask}
+      value_status: {dwelling_use_type: missing}
+
+  # 9.2: is_gated_community is inactive when pool_type is known and not Inground or pool_security is Fenced,
+  # active for an inground pool with a known security that is not Fenced, unknown otherwise.
+  - name: gated community, no pool
+    input: {lead: LEAD-00000042-008, facts: {is_gated_community: null, pool_type: "None", pool_security: null}}
+    expect: {requirement: {is_gated_community: conditional_inactive}, resolution: {is_gated_community: not_required}}
+  - name: gated community, above-ground pool
+    input: {lead: LEAD-00000042-008, facts: {is_gated_community: null, pool_type: Above Ground, pool_security: null}}
+    expect: {requirement: {is_gated_community: conditional_inactive}, resolution: {is_gated_community: not_required}}
+  - name: gated community, inground pool, fenced
+    input: {lead: LEAD-00000042-008, facts: {is_gated_community: null, pool_type: Inground, pool_security: Fenced}}
+    expect: {requirement: {is_gated_community: conditional_inactive}, resolution: {is_gated_community: not_required}}
+  - name: gated community, fenced pool of an unknown type
+    input: {lead: LEAD-00000042-008, facts: {is_gated_community: null, pool_type: null, pool_security: Fenced}}
+    expect: {requirement: {is_gated_community: conditional_inactive}, resolution: {is_gated_community: not_required}}
+  - name: gated community, inground pool, unfenced
+    input: {lead: LEAD-00000042-008, facts: {is_gated_community: null, pool_type: Inground, pool_security: Unfenced}}
+    expect: {requirement: {is_gated_community: conditional_active}, resolution: {is_gated_community: ask}}
+  - name: gated community, inground pool, no security
+    input: {lead: LEAD-00000042-008, facts: {is_gated_community: null, pool_type: Inground, pool_security: "None"}}
+    expect: {requirement: {is_gated_community: conditional_active}, resolution: {is_gated_community: ask}}
+  - name: gated community, inground pool of unknown security
+    input: {lead: LEAD-00000042-008, facts: {is_gated_community: null, pool_type: Inground, pool_security: null}}
+    expect: {requirement: {is_gated_community: conditional_unknown}, resolution: {is_gated_community: ask_follow_on}}
+  - name: gated community, unfenced pool of an unknown type
+    input: {lead: LEAD-00000042-008, facts: {is_gated_community: null, pool_type: null, pool_security: Unfenced}}
+    expect: {requirement: {is_gated_community: conditional_unknown}, resolution: {is_gated_community: ask_follow_on}}
+  - name: gated community, no pool facts
+    input: {lead: LEAD-00000042-008, facts: {is_gated_community: null, pool_type: null, pool_security: null}}
+    expect: {requirement: {is_gated_community: conditional_unknown}, resolution: {is_gated_community: ask_follow_on}}

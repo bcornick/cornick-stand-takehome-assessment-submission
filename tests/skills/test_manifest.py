@@ -37,12 +37,14 @@ def build(
         (folder / "manifest.yaml").write_text(text, encoding="utf-8")
     if "skill.py" not in skip:
         (folder / "skill.py").write_text("# skill\n", encoding="utf-8")
+    if "cases" not in skip:
+        (folder / "cases").mkdir()
     if prompt:
         (folder / "prompt.md").write_text("prompt\n", encoding="utf-8")
     return folder
 
 
-@pytest.mark.parametrize("part", ["manifest.yaml", "skill.py"])
+@pytest.mark.parametrize("part", ["manifest.yaml", "skill.py", "cases"])
 def test_a_missing_part_is_named(tmp_path: Path, part: str) -> None:
     with pytest.raises(SkillFolderError, match=f"(?s)demo.*{part}"):
         check_skill_folder(build(tmp_path, skip=(part,)))

@@ -1,0 +1,147 @@
+# ABOUTME: Cases of the Roof page of evaluate_playbook: a Class A roof, the other classes by fire probability band (I18), a missing class, and the old composition roof advisory (I52) with the values around it.
+# ABOUTME: Each case starts from lead 008 after its first pass and changes the values it names; a null removes the value.
+page: roof
+cases:
+- name: a Class A roof needs no action
+  input:
+    lead: LEAD-00000042-008
+  expect:
+    committed:
+    - no_action RF-1
+    paths:
+      RF-1:
+      - 05:ROOT
+      - 05:CA
+      - 05:OK_A
+- name: Class C at 0.15 needs no action (I18)
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      roof_classification: Class C
+      p_f: 0.15
+  expect:
+    committed:
+      includes:
+      - no_action RF-2
+- name: Class C at 0.16 takes the first-term requirement
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      roof_classification: Class C
+      p_f: 0.16
+  expect:
+    committed:
+      includes:
+      - requirement RF-3
+    deadlines:
+      RF-3: first_term
+- name: Class C at 0.49 takes the first-term requirement
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      roof_classification: Class C
+      p_f: 0.49
+  expect:
+    committed:
+      includes:
+      - requirement RF-3
+- name: Class C at 0.50 takes the 60-day requirement (I18)
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      roof_classification: Class C
+      p_f: 0.5
+  expect:
+    committed:
+      includes:
+      - requirement RF-4
+    deadlines:
+      RF-4: within_60_days
+- name: a missing class leaves the page undecided
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      roof_classification: null
+  expect:
+    committed: []
+    undecided:
+    - roof_classification
+- name: composition shingles replaced 21 years ago above 0.15 take the age advisory (I52)
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      roof_replacement_year: 2005
+      p_f: 0.16
+      roof_material: Asphalt Fiberglass Composite
+  expect:
+    committed:
+      includes:
+      - advisory RF-5
+    paths:
+      RF-5:
+      - 05:ROOT
+      - I52
+- name: architecture shingles take the age advisory too
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      roof_replacement_year: 2005
+      p_f: 0.16
+      roof_material: Architecture Shingles
+  expect:
+    committed:
+      includes:
+      - advisory RF-5
+- name: exactly 20 years is not more than 20
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      roof_replacement_year: 2006
+      p_f: 0.16
+      roof_material: Architecture Shingles
+  expect:
+    committed:
+      excludes:
+      - advisory RF-5
+- name: a fire probability of 0.15 is not above 0.15
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      roof_replacement_year: 2005
+      p_f: 0.15
+      roof_material: Architecture Shingles
+  expect:
+    committed:
+      excludes:
+      - advisory RF-5
+- name: slate is not composition
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      roof_replacement_year: 2005
+      p_f: 0.16
+      roof_material: Slate
+  expect:
+    committed:
+      excludes:
+      - advisory RF-5
+- name: standing seam metal is not composition
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      roof_replacement_year: 2005
+      p_f: 0.16
+      roof_material: Standing Seam Metal
+  expect:
+    committed:
+      excludes:
+      - advisory RF-5
+- name: the age advisory waits for the year the roof was replaced
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      roof_material: Architecture Shingles
+      roof_replacement_year: null
+  expect:
+    undecided:
+    - roof_age_years

@@ -1,0 +1,228 @@
+# ABOUTME: Cases of the Occupancy page of evaluate_playbook: each rental and vacancy branch, the 60-day boundary and its two-month choice (I07), the rental exception (I09), and an unknown month count.
+# ABOUTME: Each case starts from lead 008 after its first pass and changes the values it names; a null removes the value.
+page: occupancy
+cases:
+- name: long-term rental with a primary policy
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      is_rental: Long-Term Rentals
+      has_primary_policy_with_stand: true
+  expect:
+    committed:
+    - surcharge OC-1
+    choices: []
+    proposed_decline: false
+- name: short-term rental with a primary policy
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      is_rental: Short-Term Rentals
+      has_primary_policy_with_stand: true
+  expect:
+    committed:
+    - exclusion_or_endorsement OC-3
+    - surcharge OC-2
+    choices: []
+    proposed_decline: false
+- name: long-term rental, no primary policy, Tier 1 broker
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      is_rental: Long-Term Rentals
+      has_primary_policy_with_stand: false
+      broker_tier: Tier 1
+  expect:
+    committed:
+    - surcharge OC-4
+    choices: []
+    proposed_decline: false
+- name: one month unoccupied is under 60 days
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      months_unoccupied: 1
+      has_primary_policy_with_stand: true
+  expect:
+    committed:
+    - exclusion_or_endorsement OC-10
+    - exclusion_or_endorsement OC-9
+    - obligation OC-12
+    - requirement OC-11
+    - surcharge OC-8
+    choices: []
+    proposed_decline: false
+- name: three months unoccupied declines
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      months_unoccupied: 3
+      has_primary_policy_with_stand: true
+  expect:
+    committed:
+    - decline OC-13
+    choices: []
+    proposed_decline: true
+- name: eight months unoccupied declines
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      months_unoccupied: 8
+      has_primary_policy_with_stand: true
+  expect:
+    committed:
+    - decline OC-13
+    choices: []
+    proposed_decline: true
+- name: unoccupied with no primary policy declines
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      months_unoccupied: 8
+      has_primary_policy_with_stand: false
+  expect:
+    committed:
+    - decline OC-7
+    choices: []
+    proposed_decline: true
+- name: listed for sale declines
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      listed_for_sale: true
+  expect:
+    committed:
+    - decline OC-14
+    choices: []
+    proposed_decline: true
+- name: 'occupied, not rented, not listed: the page does not apply'
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      months_unoccupied: 0
+      is_rental: 'No'
+      listed_for_sale: false
+  expect:
+    committed: []
+    choices: []
+    proposed_decline: false
+- name: the modifications of a vacant home last for the duration of non-occupancy
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      months_unoccupied: 1
+      has_primary_policy_with_stand: true
+  expect:
+    deadlines:
+      OC-8: duration_of_non_occupancy
+      OC-11: duration_of_non_occupancy
+    paths:
+      OC-8:
+      - 03:ROOT
+      - 03:UNOCC
+      - 03:V_P
+      - 03:LT60
+      - 03:MODS
+- name: exactly two months is the underwriter's choice (I07)
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      months_unoccupied: 2
+      has_primary_policy_with_stand: true
+  expect:
+    committed: []
+    possible:
+    - decline OC-13
+    - exclusion_or_endorsement OC-10
+    - exclusion_or_endorsement OC-9
+    - obligation OC-12
+    - requirement OC-11
+    - surcharge OC-8
+    choices:
+    - I07.two_months
+    proposed_decline: false
+    undecided:
+    - I07.two_months
+- name: two months ruled under 60 days
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      months_unoccupied: 2
+      has_primary_policy_with_stand: true
+    rulings:
+      choices:
+        I07.two_months: under_60_days
+  expect:
+    committed:
+    - exclusion_or_endorsement OC-10
+    - exclusion_or_endorsement OC-9
+    - obligation OC-12
+    - requirement OC-11
+    - surcharge OC-8
+    choices: []
+- name: two months ruled over 60 days
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      months_unoccupied: 2
+      has_primary_policy_with_stand: true
+    rulings:
+      choices:
+        I07.two_months: over_60_days
+  expect:
+    committed:
+    - decline OC-13
+    choices: []
+- name: a rental with no primary policy and no Tier 1 broker is the underwriter's choice (I09)
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      is_rental: Long-Term Rentals
+      has_primary_policy_with_stand: false
+      broker_tier: Tier 2
+  expect:
+    choices:
+    - I09.rental_exception
+- name: the rental exception ruled as an exception
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      is_rental: Long-Term Rentals
+      has_primary_policy_with_stand: false
+      broker_tier: Tier 2
+    rulings:
+      choices:
+        I09.rental_exception: exception
+  expect:
+    committed:
+    - surcharge OC-5
+    paths:
+      OC-5:
+      - 03:ROOT
+      - 03:RENT
+      - 03:R_NP
+      - 03:LEAD
+      - 03:WELL
+      - 03:W15
+- name: the rental exception ruled as a decline
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      is_rental: Long-Term Rentals
+      has_primary_policy_with_stand: false
+      broker_tier: Tier 2
+    rulings:
+      choices:
+        I09.rental_exception: decline
+  expect:
+    committed:
+    - decline OC-6
+- name: months unoccupied in an open conflict leave the page undecided
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      months_unoccupied: null
+  expect:
+    committed: []
+    undecided:
+    - months_unoccupied

@@ -1,0 +1,57 @@
+# ABOUTME: Cases of render_message (10.2, A.8): the request body numbers the asks through the registry's section groups in registry order with the additional questions last, a request to the applicant says "you", and the decline notice is fixed.
+# ABOUTME: The asks are lead 004's, with their stored wording, given out of registry order to show the body follows the registry; the registry is Stand's file.
+cases:
+  - name: asks are numbered through the section groups with confirmations last
+    input:
+      lead_label: 14 Oak St
+      asks:
+        - {ask_id: no_residents_in_primary_home, kind: confirmation, fields: [no_residents_in_primary_home], reason: Values reported for these fields conflict., wording: "The number of people living in the home is listed as 0. Can you confirm that number?"}
+        - {ask_id: fire_department_type, kind: field_request, fields: [fire_department_type], reason: The registry requires it to quote., wording: "Is the fire department career, mostly career, mostly volunteer or volunteer?"}
+        - {ask_id: num_stories, kind: field_request, fields: [num_stories], reason: The registry requires it to quote., wording: "How many stories does the home have?"}
+        - {ask_id: property_purchase_date, kind: field_request, fields: [property_purchase_date], reason: The registry requires it to quote., wording: "When was the property purchased?"}
+        - {ask_id: coverage_a, kind: field_request, fields: [coverage_a], reason: The registry requires it to quote., wording: "What Coverage A (dwelling) amount is requested?"}
+    expect:
+      subject: "Information needed for your quote: 14 Oak St"
+      ask_ids: [coverage_a, property_purchase_date, num_stories, fire_department_type, no_residents_in_primary_home]
+      body: |-
+        Thank you for your submission. To complete the quote we need the items below. One reply covering all of them is ideal.
+
+        Primary Coverages
+        1. What Coverage A (dwelling) amount is requested?
+
+        Property
+        2. When was the property purchased?
+
+        Construction
+        3. How many stories does the home have?
+
+        Protection
+        4. Is the fire department career, mostly career, mostly volunteer or volunteer?
+
+        Additional questions
+        5. The number of people living in the home is listed as 0. Can you confirm that number?
+
+  - name: a request to the applicant says you and your
+    input:
+      lead_label: 14 Oak St
+      to_applicant: true
+      asks:
+        - {ask_id: insured_dob, kind: field_request, fields: [insured_dob], reason: The registry requires it to quote., wording: "What is the applicant's date of birth?"}
+        - {ask_id: first_name, kind: field_request, fields: [first_name], reason: The registry requires it to quote., wording: "Would the applicant be willing to mitigate?"}
+    expect:
+      body: {includes: ["What is your date of birth?", "Would you be willing to mitigate?"]}
+
+  - name: a request to a producer keeps the applicant's wording
+    input:
+      lead_label: 14 Oak St
+      asks:
+        - {ask_id: insured_dob, kind: field_request, fields: [insured_dob], reason: The registry requires it to quote., wording: "What is the applicant's date of birth?"}
+    expect:
+      body: {includes: ["What is the applicant's date of birth?"]}
+
+  - name: the decline notice is fixed and states no reason
+    input: {kind: decline_notice, lead_label: 14 Oak St, asks: []}
+    expect:
+      subject: "Regarding your submission: 14 Oak St"
+      ask_ids: []
+      body: Thank you for your submission. After review we are unable to offer coverage for this property. We appreciate the opportunity to consider it.

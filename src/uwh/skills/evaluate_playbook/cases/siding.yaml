@@ -1,0 +1,78 @@
+# ABOUTME: Cases of the Siding page of evaluate_playbook: non-combustible and class C siding, and wood siding by fire probability band including the 0.15 and 0.50 boundaries.
+# ABOUTME: Each case starts from lead 008 after its first pass and changes the values it names; a null removes the value.
+page: siding
+cases:
+- name: stucco, class B, needs no action
+  input:
+    lead: LEAD-00000042-008
+  expect:
+    committed:
+    - no_action SD-1
+    paths:
+      SD-1:
+      - 06:ROOT
+      - 06:NC
+      - 06:NC_OK
+- name: class C takes no action with an advisory (I21)
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      siding_classification: C
+  expect:
+    committed:
+      includes:
+      - advisory SD-2
+- name: wood siding at the default fire probability needs no action
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      siding_classification: D
+  expect:
+    committed:
+    - no_action SD-3
+- name: wood siding at 0.15 needs no action
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      siding_classification: D
+      p_f: 0.15
+  expect:
+    committed:
+    - no_action SD-3
+- name: wood siding at 0.16 takes the first-term requirement
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      siding_classification: D
+      p_f: 0.16
+  expect:
+    committed:
+    - requirement SD-4
+    deadlines:
+      SD-4: first_term
+- name: wood siding at 0.50 takes the first-term requirement (the board's at most 0.50)
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      siding_classification: D
+      p_f: 0.5
+  expect:
+    committed:
+    - requirement SD-4
+- name: wood siding above 0.50 takes the underwriting-period requirement
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      siding_classification: D
+      p_f: 0.79
+  expect:
+    committed:
+    - requirement SD-5
+    deadlines:
+      SD-5: underwriting_period
+    paths:
+      SD-5:
+      - 06:ROOT
+      - 06:WOOD
+      - 06:HI
+      - 06:HI_R

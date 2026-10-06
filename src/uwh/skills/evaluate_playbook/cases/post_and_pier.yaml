@@ -1,0 +1,139 @@
+# ABOUTME: Cases of the Post & Pier page of evaluate_playbook: each branch by supports, year built and deck height, the 12 foot boundary, a decline on every branch, and the unknowns that leave the page undecided.
+# ABOUTME: Each case starts from lead 008 after its first pass and changes the values it names; a null removes the value.
+page: post_and_pier
+cases:
+- name: 'piers: supports the living area (lead 000)'
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      foundation_type: Piers
+      post_pier_supports_living_area: true
+  expect:
+    committed:
+    - decline PP-1
+    proposed_decline: true
+- name: 'piers: built before 2000'
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      foundation_type: Piers
+      post_pier_supports_living_area: false
+      year_built: 1999
+  expect:
+    committed:
+    - decline PP-2
+    proposed_decline: true
+- name: 'piers: an 8 foot deck'
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      foundation_type: Piers
+      post_pier_supports_living_area: false
+      year_built: 2000
+      deck_height_ft: 8
+  expect:
+    committed:
+    - surcharge PP-3
+    proposed_decline: false
+- name: 'piers: a 9 foot deck'
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      foundation_type: Piers
+      post_pier_supports_living_area: false
+      year_built: 2000
+      deck_height_ft: 9
+  expect:
+    committed:
+    - surcharge PP-4
+    proposed_decline: false
+- name: 'piers: a 12 foot deck'
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      foundation_type: Piers
+      post_pier_supports_living_area: false
+      year_built: 2000
+      deck_height_ft: 12
+  expect:
+    committed:
+    - surcharge PP-4
+    proposed_decline: false
+- name: 'piers: a 13 foot deck'
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      foundation_type: Piers
+      post_pier_supports_living_area: false
+      year_built: 2000
+      deck_height_ft: 13
+  expect:
+    committed:
+    - decline PP-5
+    proposed_decline: true
+- name: a slab foundation does not reach the page
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      post_pier_supports_living_area: true
+  expect:
+    committed: []
+- name: a high deck on a home built in 2000 or later declines whatever the supports field holds
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      foundation_type: Piers
+      year_built: 2005
+      deck_height_ft: 15
+  expect:
+    proposed_decline: true
+    committed: []
+    decline_alternatives:
+    - - PP-1
+      - - 07:ROOT
+        - 07:LIVING
+        - 07:D1
+    - - PP-5
+      - - 07:ROOT
+        - 07:DECK
+        - 07:POST2000
+        - 07:HIGH
+        - 07:D2
+- name: a deck above twelve feet declines when the supports are known
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      foundation_type: Piers
+      post_pier_supports_living_area: false
+      year_built: 2005
+      deck_height_ft: 15
+  expect:
+    proposed_decline: true
+    committed:
+    - decline PP-5
+- name: an unknown supports field leaves a branch that does not decline undecided
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      foundation_type: Piers
+      year_built: 2005
+      deck_height_ft: 8
+      post_pier_supports_living_area: null
+  expect:
+    proposed_decline: false
+    decline_alternatives: []
+    undecided:
+    - post_pier_supports_living_area
+- name: an unknown year built leaves a branch that does not decline undecided
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      foundation_type: Piers
+      year_built: null
+      deck_height_ft: 8
+      post_pier_supports_living_area: false
+  expect:
+    proposed_decline: false
+    decline_alternatives: []
+    undecided:
+    - year_built

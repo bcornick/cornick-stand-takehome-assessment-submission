@@ -1,0 +1,71 @@
+# ABOUTME: Cases of the Replacement Cost page of evaluate_playbook: coverage against the replacement cost at the 0.90, 1.10 and 1.50 boundaries (I35).
+# ABOUTME: Each case starts from lead 008 after its first pass, coverage A 875,000, and changes the replacement cost it names.
+page: replacement_cost
+cases:
+- name: coverage at 0.94 of the replacement cost is at the estimate
+  input:
+    lead: LEAD-00000042-008
+  expect:
+    committed:
+    - no_action RC-2
+    paths:
+      RC-2:
+      - 12:ROOT
+      - 12:AT
+      - 12:AT_R
+- name: 'replacement cost 1,000,000: coverage under the estimate'
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      replacement_cost: 1000000
+  expect:
+    committed:
+    - advisory RC-1
+- name: ratio 0.90 is at the estimate
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      replacement_cost: 972222
+  expect:
+    committed:
+    - no_action RC-2
+- name: just below 0.90 is under the estimate
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      replacement_cost: 972223
+  expect:
+    committed:
+    - advisory RC-1
+- name: ratio 1.10 is at the estimate
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      replacement_cost: 795455
+  expect:
+    committed:
+    - no_action RC-2
+- name: just above 1.10 is above the estimate, within 150 percent
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      replacement_cost: 795454
+  expect:
+    committed:
+    - no_action RC-3
+- name: just within 150 percent
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      replacement_cost: 583334
+  expect:
+    committed:
+    - no_action RC-3
+- name: just over 150 percent takes the documentation requirement
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      replacement_cost: 583333
+  expect:
+    committed:
+    - requirement RC-4

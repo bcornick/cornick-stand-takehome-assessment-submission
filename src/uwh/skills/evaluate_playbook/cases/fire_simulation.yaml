@@ -1,0 +1,283 @@
+# ABOUTME: Cases of the Fire Simulation page of evaluate_playbook: the 0.50 threshold (I12), the failed-simulation choice (I13), and each legacy underwriting branch by road access, vegetation, slope, compliance and distance (I14 to I16).
+# ABOUTME: Each case starts from lead 008 after its first pass and changes the values it names; lead 003's legacy checklist values are the ones a failed simulation shows.
+page: fire_simulation
+cases:
+- name: 'fire probability 0.21: the simulation passes (I12)'
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      p_f: 0.21
+  expect:
+    choices: []
+- name: 'fire probability 0.5: the simulation passes (I12)'
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      p_f: 0.5
+  expect:
+    choices: []
+- name: 'fire probability 0.51: the simulation fails (I12)'
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      p_f: 0.51
+  expect:
+    choices:
+    - I13.fire_fail
+- name: 'fire probability 0.54: the simulation fails (I12)'
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      p_f: 0.54
+  expect:
+    choices:
+    - I13.fire_fail
+- name: a failed simulation is one open choice with the legacy values shown
+  input:
+    lead: LEAD-00000042-008
+    facts: &id001
+      p_f: 0.79
+      vegetation_clearance: Too Close
+      slope_angle_deg: 30.0
+      min_distance_to_neighbor_ft: 14
+      is_7a_compliant: false
+      road_access: null
+  expect:
+    choices:
+    - I13.fire_fail
+    catalogue_questions: []
+    proposed_decline: false
+    committed: []
+    possible:
+      includes:
+      - decline FS-1
+    undecided:
+    - I13.fire_fail
+- name: deciding to decline proposes the decline and shows no card
+  input:
+    lead: LEAD-00000042-008
+    facts: *id001
+    rulings:
+      choices:
+        I13.fire_fail: decline
+  expect:
+    proposed_decline: true
+    choices: []
+    committed:
+    - decline FS-1
+    paths:
+      FS-1:
+      - 04:ROOT
+      - 04:FAIL
+      - 04:D_FAIL
+- name: legacy underwriting asks the mitigation question and opens the distance choice
+  input:
+    lead: LEAD-00000042-008
+    facts: *id001
+    rulings: &id003
+      choices:
+        I13.fire_fail: legacy_underwriting
+  expect:
+    choices:
+    - I16.distance
+    catalogue_questions:
+    - willing_to_mitigate
+    proposed_decline: false
+    undecided:
+    - I16.distance
+    - q:willing_to_mitigate
+    - road_access
+- name: legacy underwriting with the distance adequate and mitigation accepted
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      p_f: 0.79
+      vegetation_clearance: Too Close
+      slope_angle_deg: 30.0
+      min_distance_to_neighbor_ft: 14
+      is_7a_compliant: false
+      road_access: Multiple Access Points
+      q:willing_to_mitigate: true
+    rulings:
+      choices:
+        I13.fire_fail: legacy_underwriting
+        I16.distance: adequate
+  expect:
+    committed:
+    - advisory FS-2
+    proposed_decline: false
+- name: legacy underwriting with the distance too_close and mitigation accepted
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      p_f: 0.79
+      vegetation_clearance: Too Close
+      slope_angle_deg: 30.0
+      min_distance_to_neighbor_ft: 14
+      is_7a_compliant: false
+      road_access: Multiple Access Points
+      q:willing_to_mitigate: true
+    rulings:
+      choices:
+        I13.fire_fail: legacy_underwriting
+        I16.distance: too_close
+  expect:
+    committed:
+    - advisory FS-2
+    - decline FS-4
+    proposed_decline: true
+- name: legacy underwriting with the distance adequate and mitigation refused
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      p_f: 0.79
+      vegetation_clearance: Too Close
+      slope_angle_deg: 30.0
+      min_distance_to_neighbor_ft: 14
+      is_7a_compliant: false
+      road_access: Multiple Access Points
+      q:willing_to_mitigate: false
+    rulings:
+      choices:
+        I13.fire_fail: legacy_underwriting
+        I16.distance: adequate
+  expect:
+    committed:
+    - advisory FS-2
+    - decline FS-3
+    proposed_decline: true
+- name: legacy underwriting reads the road access 'Multiple Access Points' by its row (I14)
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      p_f: 0.79
+      vegetation_clearance: Adequate
+      is_7a_compliant: true
+      road_access: Multiple Access Points
+    rulings: &id002
+      choices:
+        I13.fire_fail: legacy_underwriting
+        I16.distance: adequate
+        I16.slope: gentle
+  expect:
+    committed:
+      includes:
+      - advisory FS-2
+    choices: []
+- name: legacy underwriting reads the road access 'Limited / Dead-end / No Turnaround' by its row (I14)
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      p_f: 0.79
+      vegetation_clearance: Adequate
+      is_7a_compliant: true
+      road_access: Limited / Dead-end / No Turnaround
+    rulings: *id002
+  expect:
+    committed:
+      includes:
+      - decline FS-3
+    choices: []
+- name: legacy underwriting reads the road access 'Single Access Point' by its row (I14)
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      p_f: 0.79
+      vegetation_clearance: Adequate
+      is_7a_compliant: true
+      road_access: Single Access Point
+    rulings: *id002
+  expect:
+    committed:
+      includes: []
+    choices:
+    - I14.road_access
+- name: legacy underwriting reads the road access 'Unknown' by its row (I14)
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      p_f: 0.79
+      vegetation_clearance: Adequate
+      is_7a_compliant: true
+      road_access: Unknown
+    rulings: *id002
+  expect:
+    committed:
+      includes: []
+    choices:
+    - I14.road_access
+- name: legacy underwriting reads the vegetation clearance 'Too Close' by its row (I15)
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      p_f: 0.79
+      vegetation_clearance: Too Close
+      road_access: Multiple Access Points
+      is_7a_compliant: true
+      min_distance_to_neighbor_ft: 60
+    rulings: *id003
+  expect:
+    choices:
+    - I16.distance
+- name: legacy underwriting reads the vegetation clearance 'Adequate' by its row (I15)
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      p_f: 0.79
+      vegetation_clearance: Adequate
+      road_access: Multiple Access Points
+      is_7a_compliant: true
+      min_distance_to_neighbor_ft: 60
+    rulings: *id003
+  expect:
+    choices:
+    - I16.distance
+    - I16.slope
+- name: legacy underwriting reads the vegetation clearance 'Marginal' by its row (I15)
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      p_f: 0.79
+      vegetation_clearance: Marginal
+      road_access: Multiple Access Points
+      is_7a_compliant: true
+      min_distance_to_neighbor_ft: 60
+    rulings: *id003
+  expect:
+    choices:
+    - I15.vegetation
+    - I16.distance
+- name: legacy underwriting reads the vegetation clearance 'Unknown' by its row (I15)
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      p_f: 0.79
+      vegetation_clearance: Unknown
+      road_access: Multiple Access Points
+      is_7a_compliant: true
+      min_distance_to_neighbor_ft: 60
+    rulings: *id003
+  expect:
+    choices:
+    - I15.vegetation
+    - I16.distance
+- name: unwilling to mitigate takes the board's WILL to D_LIM edge
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      p_f: 0.79
+      vegetation_clearance: Too Close
+      slope_angle_deg: 30.0
+      min_distance_to_neighbor_ft: 14
+      is_7a_compliant: false
+      road_access: Multiple Access Points
+      q:willing_to_mitigate: false
+    rulings:
+      choices:
+        I13.fire_fail: legacy_underwriting
+        I16.distance: adequate
+        I16.slope: gentle
+  expect:
+    committed:
+      includes:
+      - decline FS-3

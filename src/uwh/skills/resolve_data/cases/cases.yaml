@@ -1,0 +1,28 @@
+# ABOUTME: Cases of resolve_data (9.3): a found lookup is a fetched fact, a protection class the provider does not find is assumed to be 9, a blocked lookup yields nothing, and a lookup with no default that is not found or unavailable raises.
+# ABOUTME: `input` is the provider results by field; `expect` is the facts as [key, value, source] or the pattern of the error.
+cases:
+  - name: a found replacement cost is a fetched fact
+    input:
+      provider_results:
+        replacement_cost: {status: found, value: 500000, source: Verisk LOCATION PPC, fetched_at: "2026-06-29T08:00:00Z"}
+    expect: {facts: [[replacement_cost, 500000, fetched]]}
+  - name: a protection class the provider does not find is assumed to be 9
+    input:
+      provider_results:
+        protection_class: {status: not_found, value: null, source: Verisk LOCATION PPC, fetched_at: "2026-06-29T08:00:00Z"}
+    expect: {facts: [[protection_class, "9", assumed]]}
+  - name: a blocked lookup yields no fact
+    input:
+      provider_results:
+        protection_class: {status: blocked, value: null, source: Verisk LOCATION PPC, fetched_at: "2026-06-29T08:00:00Z", missing_inputs: [zip]}
+    expect: {facts: []}
+  - name: a field with no default that is not found stops the lead
+    input:
+      provider_results:
+        replacement_cost: {status: not_found, value: null, source: Verisk LOCATION PPC, fetched_at: "2026-06-29T08:00:00Z"}
+    expect: {raises: did not find replacement_cost}
+  - name: an unavailable provider raises
+    input:
+      provider_results:
+        protection_class: {status: unavailable, value: null, source: Verisk LOCATION PPC, fetched_at: "2026-06-29T08:00:00Z"}
+    expect: {raises: unavailable for protection_class}

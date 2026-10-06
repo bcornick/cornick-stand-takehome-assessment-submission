@@ -1,0 +1,108 @@
+# ABOUTME: Cases of the Profile page of evaluate_playbook: the KYC 5 to 6 boundary (I02), the first rung of each branch and its later rungs (I03, I05), and an unknown score.
+# ABOUTME: Each case starts from lead 008 after its first pass and changes the values it names; a null removes the value.
+page: profile
+cases:
+- name: 'kyc 5: the page does not apply (I02)'
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      kyc_score: 5
+  expect:
+    committed: []
+    proposed_decline: false
+- name: 'kyc 6: the spotlight branch, its exclusion first (I03)'
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      kyc_score: 6
+  expect:
+    committed:
+    - advisory PF-2
+    - advisory PF-3
+    - advisory PF-4
+    - exclusion_or_endorsement PF-1
+    proposed_decline: false
+    paths:
+      PF-1:
+      - 02:ROOT
+      - 02:SPOT
+      - 02:SPOT1
+- name: 'kyc 7: the spotlight branch'
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      kyc_score: 7
+  expect:
+    committed:
+    - advisory PF-2
+    - advisory PF-3
+    - advisory PF-4
+    - exclusion_or_endorsement PF-1
+    proposed_decline: false
+    paths:
+      PF-1:
+      - 02:ROOT
+      - 02:SPOT
+      - 02:SPOT1
+- name: 'kyc 8: the high-risk branch, its exclusion first'
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      kyc_score: 8
+  expect:
+    committed:
+    - advisory PF-6
+    - exclusion_or_endorsement PF-5
+    proposed_decline: false
+    paths:
+      PF-5:
+      - 02:ROOT
+      - 02:HIGH
+      - 02:HIGH1
+- name: 'kyc 10: the high-risk branch'
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      kyc_score: 10
+  expect:
+    committed:
+    - advisory PF-6
+    - exclusion_or_endorsement PF-5
+    proposed_decline: false
+    paths:
+      PF-5:
+      - 02:ROOT
+      - 02:HIGH
+      - 02:HIGH1
+- name: a later rung follows the boxes of the rungs before it (I05)
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      kyc_score: 6
+  expect:
+    paths:
+      PF-2:
+      - 02:ROOT
+      - 02:SPOT
+      - 02:SPOT1
+      - 02:SPOT2
+      - 02:SPOT3
+      PF-4:
+      - 02:ROOT
+      - 02:SPOT
+      - 02:SPOT1
+      - 02:SPOT2
+      - 02:SPOT3
+      - 02:SPOT4
+      - 02:SPOT5
+      - 02:SPOT6
+      - 02:DECLINE
+- name: an unknown score leaves the page undecided
+  input:
+    lead: LEAD-00000042-008
+    facts:
+      kyc_score: null
+  expect:
+    committed: []
+    undecided:
+    - kyc_score
