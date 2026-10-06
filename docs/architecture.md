@@ -279,7 +279,7 @@ Rules:
 - The skill list is a plain list in code. A test fails when a folder lacks any part. `cases/` is a part only of a skill whose manifest has a `pass_threshold`; the other skills are covered by plain unit tests and the seed-42 graders.
 - A write that issues a command class refuses one the issuing skill's manifest does not declare: `create_draft` for the send classes, the resolve step for `fetch_data`.
 - **Status** is one of `untested`, `passing`, `failing`, `unavailable`. The eval runner writes `skill_results.<name>: {cases_passed, cases_total, passed}` into each `run` row, computed from the skill's `cases/` against its manifest threshold, for the two skills that have one. A skill's status is read from the latest `run` row that has `status: scored`, no `control`, a digest matching the skill's current digest (appendix A.4) and a result for that skill. Control runs and invalid runs are ignored. A changed skill with cases is `untested` until evaluated. A skill with no `pass_threshold` has no eval status: the status reader returns none for it, dispatch runs it as `passing` and the lead shows no "unevaluated skill" note, and the README's skills table shows a dash in its status column. Evals do not run at startup. `evals/results.jsonl` is mounted read-only into the app container; labels are not.
-- Status precedence: `unavailable`, then `failing`, `untested`, `passing`. Only rows from live or record mode count toward a model skill's status.
+- Status precedence: `unavailable`, then `failing`, `untested`, `passing`. Rows from live, record and replay mode count toward a model skill's status; a replay row scores the recorded live exchanges.
 - Dispatch by status:
   - `passing`: runs.
   - `untested`: runs, and the lead shows "unevaluated skill". It never falls back silently.
@@ -597,7 +597,7 @@ Then code:
 2. coerces values to the registry's types and option strings; a candidate for a field that was not asked, or whose value does not fit the field's type or options, is dropped and the drop is recorded, as for an unlocated quote;
 3. runs the conflict validators;
 4. applies the source-authority rules of section 7.3, for a reply classified `answers_all` or `answers_some` only;
-5. closes the round when the classification is `answers_all` or `answers_some`; `off_topic` and `declines_to_answer` leave the round open and raise an underwriter review.
+5. closes the round when the classification is `answers_all` or `answers_some`; `off_topic` and `declines_to_answer` leave the round open and raise an underwriter review. The model's classification tells an on-topic reply from `off_topic` and `declines_to_answer`; for an on-topic reply, code decides `answers_all` or `answers_some` from the asks: `answers_all` when every ask still active after the reply's values is answered, a follow-on question those values make inactive counting as neither answered nor outstanding.
 
 When `read_reply` abstains (A.10), the `reply_read` event records the abstention in place of a reading, the round stays open, and the reply goes to the underwriter unread as an underwriter review.
 
@@ -651,9 +651,9 @@ Labels are written from the playbook transcriptions, the registry and the data f
 
 Labels and graphs share one id scheme: board boxes are named by page number and Mermaid node id from `docs/playbook/` (for example `07:LIVING`, `07:D1`), and traces are built as section 9.6 describes.
 
-**Case coverage.** The per-page cases cover every edge into a terminal box on each page, except the edges listed in `evals/labels/excluded_edges.yaml`. The Profile page, whose terminal edges are all excluded, instead needs one case per first-rung box (`02:SPOT1`, `02:HIGH1`) and one at the KYC 5 to 6 boundary. Each exclusion cites the interpretation row that removes the edge: 02 `REP→DECLINE` (I04); 02 rungs after the first (I05); 04 `DNW→D_DNW` (I12); 04 the `TURN` branch (I14); 05 every edge under Unknown Class (I20). Brett reviews the list with the interpretation table.
+**Case coverage.** The per-page cases are a table per page under `evaluate_playbook/cases/`: one row per outcome node plus every boundary named in section 9.7. `evals/labels/seed42/exemptions.yaml` pins the answer-key exemption counts for seed 42 (26 records exempt on lead 000's proposed decline, 0 exempt as blocked); the grader fails when a run's counts differ.
 
-**Held-back reply cases.** Three further hand-written replies are written at stage 3 and kept from the `read_reply` implementer until the stage 9 eval run. The improvement cycle is run on a case that fails that run. If none fails, the results log says so and no cycle is staged.
+**Held-back reply cases.** Three further hand-written replies, under `fixtures/replies/held/`, are kept from the `read_reply` implementer until the eval run. The improvement cycle is run on a case that fails that run. If none fails, the results log says so and no cycle is staged.
 
 ### 13.3 Graders
 
@@ -669,7 +669,7 @@ Nine graders, plain functions over the mailbox, event log and fact ledger. The C
 | Packet fidelity | Every effect in the plan appears in the delivered packet |
 | Send safety | Crash after mailbox acceptance, and query-empty-while-in-flight, each yield no second message. A fault run with no `fault_injected` event fails. |
 | Stand's key | The residual described in section 13.2 is zero |
-| Reply reading | Extraction and classification against fixtures. In live mode, three repeats that must all agree; in replay the repeat check is reported as not applicable. |
+| Reply reading | Extraction and classification against fixtures. The eval runs in replay, where the repeat check is reported as not applicable. |
 | Chat | A question causes zero commands; a refused directive stays refused when reworded |
 
 No `/debug` path under `src/` is a static check in `scripts/check_discipline.py`, not a grader.
