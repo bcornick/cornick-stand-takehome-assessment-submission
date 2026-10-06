@@ -2,7 +2,7 @@
 # ABOUTME: Each test compares the digest before and after one change to a small tree under tmp_path.
 from pathlib import Path
 
-from uwh.skills.digest import skill_digest
+from uwh.skills.digest import chat_digest, skill_digest
 
 FILES = {
     "skills/__init__.py": "",
@@ -19,6 +19,12 @@ FILES = {
     "rules/data/interpretation.yaml": "I01: ruling\n",
     "providers/lookup.py": "LOOKUP = 1\n",
     "runtime/store.py": "STORE = 1\n",
+    "chat/__init__.py": "",
+    "chat/manifest.yaml": "name: chat\n",
+    "chat/prompt.md": "prompt\n",
+    "chat/skill.py": "STEPS = 4\n",
+    "chat/tools.py": "TOOLS = 1\n",
+    "chat/cases/chat.yaml": "cases: []\n",
 }
 
 
@@ -83,3 +89,27 @@ def test_the_model_id_is_part_of_a_model_skills_digest(tmp_path: Path) -> None:
     b = skill_digest(root, "demo", "model-b")
     assert len({none, a, b}) == 3
     assert a == skill_digest(root, "demo", "model-a")
+
+
+def test_the_chat_digest_covers_the_prompt_the_manifest_the_tools_and_the_skill(
+    tmp_path: Path,
+) -> None:
+    root = build(tmp_path)
+    base = chat_digest(root, "model-a")
+    for rel in ("manifest.yaml", "prompt.md", "skill.py", "tools.py"):
+        edit(root, f"chat/{rel}", "changed\n")
+        assert chat_digest(root, "model-a") != base, rel
+        edit(root, f"chat/{rel}", FILES[f"chat/{rel}"])
+        assert chat_digest(root, "model-a") == base, rel
+
+
+def test_the_chat_digest_ignores_its_cases_and_other_folders_and_follows_the_model_id(
+    tmp_path: Path,
+) -> None:
+    root = build(tmp_path)
+    base = chat_digest(root, "model-a")
+    edit(root, "chat/cases/chat.yaml", "cases: [x]\n")
+    edit(root, "skills/demo/skill.py", "CHANGED = 1\n")
+    edit(root, "runtime/store.py", "CHANGED = 1\n")
+    assert chat_digest(root, "model-a") == base
+    assert chat_digest(root, "model-b") != base

@@ -2,10 +2,12 @@
 # ABOUTME: The turns are the recorded chat cases played in replay; a wrong expectation is the turn graded against another outcome, or given a command it must not cause.
 from collections.abc import Iterator
 from dataclasses import replace
+from pathlib import Path
 
 import httpx2
 import pytest
 
+import uwh
 from evals import run
 from evals.cases import load_chat_cases
 from evals.graders.chat import Expect, TurnEvidence, chat
@@ -15,6 +17,7 @@ from uwh.runtime.event_types import EventType
 from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
 from uwh.settings import Settings
+from uwh.skills.digest import chat_digest
 
 OUTCOMES: tuple[Expect, ...] = ("answer_with_event", "proposal_card", "refused")
 
@@ -43,6 +46,7 @@ def test_the_chat_suite_passes_its_cases_and_its_row_holds_the_grader_and_the_ca
     assert row["skill_results"]["chat"] == {"cases_passed": 3, "cases_total": 3, "passed": True}
     assert row["tokens"]["in"] > 0 and row["tokens"]["out"] > 0
     assert row["cost_usd"] == 0.0
+    assert row["skill_digests"]["chat"] == chat_digest(Path(uwh.__file__).parent, settings.model_id)
 
 
 def test_every_turn_of_the_cases_has_the_outcome_its_case_expects(

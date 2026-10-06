@@ -52,7 +52,7 @@ from uwh.runtime.modes import RecordingMiss
 from uwh.runtime.runs import current_run, pass_context, run_passes
 from uwh.settings import Settings
 from uwh.skills import SKILLS
-from uwh.skills.digest import skill_digest
+from uwh.skills.digest import chat_digest, skill_digest
 from uwh.skills.manifest import load_manifest
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -604,7 +604,7 @@ def evaluate_chat(
             "measurements": {"per_lead": measurements},
         }
 
-    return _evaluate(
+    row = _evaluate(
         "chat",
         _case_set_id(None, [CHAT_DIR / "cases"]),
         settings,
@@ -614,6 +614,9 @@ def evaluate_chat(
         hypothesis,
         score,
     )
+    # The chat panel is not one of the SKILLS; its own digest says which prompt and tools the row ran.
+    row["skill_digests"]["chat"] = chat_digest(CHAT_DIR.parent, settings.model_id)
+    return row
 
 
 def failed(row: Mapping[str, Any]) -> list[str]:

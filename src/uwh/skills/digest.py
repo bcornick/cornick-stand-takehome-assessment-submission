@@ -1,4 +1,4 @@
-# ABOUTME: The skill digest of A.4: the skill's own source, one shared hash of the Python source outside the skill folders, the image's rules data and the model id.
+# ABOUTME: The skill digest of A.4: the skill's own source, one shared hash of the Python source outside the skill folders, the image's rules data and the model id; and the chat panel's digest over its own folder.
 # ABOUTME: Takes the `src/uwh` directory as a path; it never reads settings or the environment.
 from pathlib import Path
 
@@ -44,3 +44,11 @@ def skill_digest(src_root: Path, skill: str, model_id: str | None = None) -> str
             "model_id": model_id,
         }
     )
+
+
+def chat_digest(src_root: Path, model_id: str) -> str:
+    """The digest of the chat panel, under `src_root` (the `src/uwh` directory): every source file in
+    `chat/` except `cases/` (the prompt, the manifest, the tools and the skill), and `model_id`."""
+    chat_dir = src_root / "chat"
+    files = [p for p in source_files(chat_dir) if p.relative_to(chat_dir).parts[0] != "cases"]
+    return hash_json({"chat_files": file_entries(chat_dir, files), "model_id": model_id})
