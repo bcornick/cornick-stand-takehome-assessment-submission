@@ -103,7 +103,7 @@ The runner also grades reply facts and chat, and four critical errors fail a run
 
 1. `polish_message` has no cases and no repeat check. Its judge call decides whether an opening and closing add a consequence; measure its consistency across repeats and build a case table of rewrites it should reject.
 2. Reply reading on confirmations and catalogue questions. The reply suite's nine fixtures are mostly field answers; add fixtures where the producer restates, corrects or partly answers a confirmation, and extend the held-back set.
-3. Jev's confidence. The 0.7 threshold is the architecture's default and no Jev recordings are committed, so replay never exercises the cascade; record Jev's probabilities over the four classifications and set the threshold from them.
+3. Jev's confidence. The 0.7 threshold is the architecture's default, applied to three outcomes (on topic, off topic, declines to answer). The nine Jev recordings exercise the cascade in replay, where Jev classifies seven of the eight reply fixtures and the model the other; record more replies and set the threshold from their probabilities.
 4. Lead 008's recorded `read_reply` call reports 391 input tokens on its second recording against 1,165 on the first, for the same input. The cause is unexplained.
 
 Live-call totals recorded in `docs/progress.md` through milestone 4: 27,506 input and 6,896 output tokens on `deepseek-flash` across `read_reply` and the chat recordings.
