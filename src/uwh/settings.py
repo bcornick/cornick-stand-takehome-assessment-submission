@@ -18,6 +18,8 @@ class Settings:
     model_id: str
     model_base_url: str
     model_api_key: str | None  # None when the environment holds no key
+    typesafe_api_key: str | None  # the Jev key; None when the environment holds none
+    typesafe_base_url: str
     leadgen_url: str
     mailbox_url: str
     registry_path: str
@@ -45,6 +47,8 @@ class Settings:
             model_id=env.get("MODEL_ID", "deepseek-flash"),
             model_base_url=env.get("MODEL_BASE_URL", "https://api.deepseek.com/anthropic"),
             model_api_key=env.get("MODEL_API_KEY") or None,
+            typesafe_api_key=env.get("TYPESAFE_API_KEY") or None,
+            typesafe_base_url=env.get("TYPESAFE_BASE_URL", "https://api.typesafe.ai"),
             leadgen_url=env.get("LEADGEN_URL", "http://leadgen:8080"),
             mailbox_url=env.get("MAILBOX_URL", "http://mailbox:8080"),
             registry_path=env.get("UWH_REGISTRY", "/app/registry/field_registry.json"),
