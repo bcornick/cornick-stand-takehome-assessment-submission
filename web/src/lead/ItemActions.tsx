@@ -18,20 +18,29 @@ type Props = { lead: LeadDetail; onChange: () => void }
 
 const REASON = { name: 'reason', label: 'Reason' }
 
+// One open item as the underwriter meets it: what it is, why it waits, and its actions.
+export function OpenItem({ lead, blocker, onChange }: Props & { blocker: Blocker }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="flex flex-wrap items-baseline gap-2">
+        <Badge variant="outline">{BLOCKER_KIND_LABELS[blocker.kind]}</Badge>
+        <span className="text-sm text-muted-foreground">
+          {`Waits on ${OWNER_LABELS[blocker.owner].toLowerCase()}`}
+        </span>
+        {blocker.kind !== 'underwriter_question' && <span>{blocker.detail.text}</span>}
+      </p>
+      <ItemActions lead={lead} blocker={blocker} onChange={onChange} />
+    </div>
+  )
+}
+
 export function Blockers({ lead, onChange }: Props) {
   if (lead.blockers.length === 0) return <p className="text-sm text-muted-foreground">Nothing is waiting.</p>
   return (
     <ul className="flex flex-col gap-4">
       {lead.blockers.map((blocker) => (
-        <li key={blocker.item_id} className="flex flex-col gap-2">
-          <p className="flex flex-wrap items-baseline gap-2">
-            <Badge variant="outline">{BLOCKER_KIND_LABELS[blocker.kind]}</Badge>
-            <span className="text-sm text-muted-foreground">
-              {`Waits on ${OWNER_LABELS[blocker.owner].toLowerCase()}`}
-            </span>
-            {blocker.kind !== 'underwriter_question' && <span>{blocker.detail.text}</span>}
-          </p>
-          <ItemActions lead={lead} blocker={blocker} onChange={onChange} />
+        <li key={blocker.item_id}>
+          <OpenItem lead={lead} blocker={blocker} onChange={onChange} />
         </li>
       ))}
     </ul>

@@ -19,6 +19,7 @@
     --color-secondary: var(--secondary);
     --color-primary-foreground: var(--primary-foreground);
     --color-primary: var(--primary);
+    --color-accent: var(--accent);
     --color-foreground: var(--foreground);
     --color-background: var(--background);
     --radius-md: calc(var(--radius) * 0.8);
@@ -28,7 +29,9 @@
 :root {
     --background: oklch(1 0 0);
     --foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
+    /* The one accent: the primary button, the selected lead, citation chips and the working indicator. */
+    --accent: #601421;
+    --primary: var(--accent);
     --primary-foreground: oklch(0.985 0 0);
     --secondary: oklch(0.97 0 0);
     --secondary-foreground: oklch(0.205 0 0);
