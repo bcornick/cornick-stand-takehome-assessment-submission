@@ -117,7 +117,7 @@ After three failed fixes for one problem, stop and write up what was tried. Do n
 
 - Check `git status` before starting. If the tree is dirty, stop and ask Brett.
 - One line of work on one branch, `submission`. Brett merges it to `main`.
-- Two agents never write to the checkout at once.
+- Two agents never write to one tree at once. Builders whose files are disjoint run at the same time, each in its own git worktree; the lead merges each as it lands and runs `make check` once per merge.
 - Commit often. Claude-authored commit subjects start with `CLAUDE-<model-name>: `; other agents use their own model name the same way. If the model name is unknown, ask before committing.
 - Never `git add -A` without a fresh `git status`. Never `git add -f` an ignored file. Never skip, evade or disable a hook.
 
@@ -132,7 +132,7 @@ After three failed fixes for one problem, stop and write up what was tried. Do n
 
 ## Review
 
-- The lead reads every diff. The `reviewer` subagent reads each milestone once, at its end, and also reports what can be removed.
+- The lead reads every diff. The `reviewer` subagent reads each milestone once, at its end, reports blockers and removals only, and skips paths no seed-42 lead reaches. A finding on such a path goes in `docs/progress.md` and is fixed in milestone 6; the lead fixes at once only what blocks or changes what a producer or underwriter sees.
 - `/cross-review` runs once, in milestone 6.
 - Reviewers read code and test output. They do not rerun the full suite.
 
