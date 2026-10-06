@@ -181,19 +181,19 @@
   },
   "input_hash": "58eedfb4d1251ac2858b75c9b5e414e61e7b5c883f885d7526df424e7c77be36",
   "model_id": "deepseek-flash",
-  "prompt_version": "1d1e49b888c22a1cb1f36f1a85ec4b5abbec90053fd4ded565b66b2f22bed09a",
+  "prompt_version": "9c0b3965ab166726225020b8a56efb4b5113f37753b69b74fc3313395d02cca5",
   "request_id": "",
   "skill": "read_reply",
   "stop_reason": "tool_use",
-  "tokens_in": 1468,
-  "tokens_out": 829,
+  "tokens_in": 1498,
+  "tokens_out": 805,
   "tool_input": {
     "candidates": [
       {
         "ask_id": "state",
         "field": "state",
         "quote": "The state is Colorado, CO.",
-        "value": "Colorado"
+        "value": "CO"
       },
       {
         "ask_id": "first_name",
@@ -270,13 +270,13 @@
       {
         "ask_id": "distance_to_fire_department",
         "field": "distance_to_fire_department",
-        "quote": "The fire station is about a mile and a half from us and they're a career department, full-time firefighters.",
+        "quote": "The fire station is about a mile and a half from us",
         "value": 1.5
       },
       {
         "ask_id": "fire_department_type",
         "field": "fire_department_type",
-        "quote": "The fire station is about a mile and a half from us and they're a career department, full-time firefighters.",
+        "quote": "they're a career department, full-time firefighters",
         "value": "Career"
       },
       {
@@ -292,6 +292,6 @@
         "value": 2
       }
     ],
-    "classification": "answers_all"
+    "classification": "answers_some"
   }
 }

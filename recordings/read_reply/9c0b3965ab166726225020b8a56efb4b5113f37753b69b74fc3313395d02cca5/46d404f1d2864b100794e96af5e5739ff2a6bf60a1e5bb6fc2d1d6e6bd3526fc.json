@@ -153,12 +153,12 @@
   },
   "input_hash": "46d404f1d2864b100794e96af5e5739ff2a6bf60a1e5bb6fc2d1d6e6bd3526fc",
   "model_id": "deepseek-flash",
-  "prompt_version": "1d1e49b888c22a1cb1f36f1a85ec4b5abbec90053fd4ded565b66b2f22bed09a",
+  "prompt_version": "9c0b3965ab166726225020b8a56efb4b5113f37753b69b74fc3313395d02cca5",
   "request_id": "",
   "skill": "read_reply",
   "stop_reason": "tool_use",
-  "tokens_in": 1238,
-  "tokens_out": 662,
+  "tokens_in": 1268,
+  "tokens_out": 663,
   "tool_input": {
     "candidates": [
       {
@@ -246,6 +246,6 @@
         "value": 5
       }
     ],
-    "classification": "answers_all"
+    "classification": "answers_some"
   }
 }

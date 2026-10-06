@@ -88,11 +88,11 @@
   },
   "input_hash": "e0b31350d8fd4739a06b6a1192d513c674956275e11e54723cb9d4c9336de656",
   "model_id": "deepseek-flash",
-  "prompt_version": "1d1e49b888c22a1cb1f36f1a85ec4b5abbec90053fd4ded565b66b2f22bed09a",
+  "prompt_version": "9c0b3965ab166726225020b8a56efb4b5113f37753b69b74fc3313395d02cca5",
   "request_id": "",
   "skill": "read_reply",
   "stop_reason": "tool_use",
-  "tokens_in": 698,
+  "tokens_in": 728,
   "tokens_out": 233,
   "tool_input": {
     "candidates": [
