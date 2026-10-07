@@ -1,6 +1,6 @@
 // ABOUTME: Tests the drill-down panel against fetch stubbed at the boundary: each kind of target opens its own view, the fact view lists every observation of its key, a neighbour link opens the next event, and Close closes.
 // ABOUTME: The lead and its events are typed objects of the generated API types, so a shape the backend does not serve fails the type check.
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { components } from '@/api/types'
@@ -164,15 +164,19 @@ describe('the fact view', () => {
 })
 
 describe('the event view', () => {
-  it('opens the next event, and offers no previous one at the start', async () => {
+  it('shows the whole timeline with the cited event expanded, and a click on another row moves the expansion', async () => {
     stubApi()
     const onOpen = vi.fn()
-    panel({ kind: 'event', lead_id: 'LEAD-1', id: 1 }, { onOpen })
-    expect(await screen.findByRole('button', { name: 'Next' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Previous' })).toBeNull()
+    panel({ kind: 'event', lead_id: 'LEAD-1', id: 2 }, { onOpen })
+    const timeline = within(await screen.findByRole('list', { name: 'Timeline' }))
+    const rows = timeline.getAllByRole('listitem')
+    expect(rows).toHaveLength(events.length)
+    expect(rows[1]).toHaveAttribute('aria-current', 'true')
+    expect(within(rows[1]).getByText('The roof is slate.')).toBeInTheDocument()
+    expect(within(rows[0]).getByText('The submission gave Roof age 12')).toBeInTheDocument()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Next' }))
-    expect(onOpen).toHaveBeenCalledWith({ kind: 'event', lead_id: 'LEAD-1', id: 2 })
+    await userEvent.click(within(rows[0]).getByRole('button'))
+    expect(onOpen).toHaveBeenCalledWith({ kind: 'event', lead_id: 'LEAD-1', id: 1 })
   })
 })
 

@@ -131,7 +131,7 @@ The panel opens on a citation chip or on a card's "details" link. One click clos
 | View | Shows |
 |---|---|
 | Fact | value, source tag, when observed, the event that recorded it, the lead's other observations of the same key as history |
-| Event | type, actor, time, payload in words, previous and next links |
+| Event | the lead's whole timeline, oldest first, with the cited event expanded in place: type, actor, time, mode, the sentence, and the field, lookup or message it carries; a click on another row moves the expansion |
 | Message | subject where present, body, delivery state |
 | Playbook page | its effect lines, its board path ids, its waits, its not-evaluated notes |
 | Full lead | Waiting on (read-only), Facts, Plan, Messages, and the lead actions Paste a reply, Resolve fact and Decline lead; the cards act from the conversation, and the timeline is the record of what the system did |

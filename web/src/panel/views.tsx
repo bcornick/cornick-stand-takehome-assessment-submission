@@ -1,8 +1,9 @@
-// ABOUTME: The views of the drill-down panel, one per thing a citation or a link opens: an event, a fact with its observations, a message, a producer's reply and a playbook page.
+// ABOUTME: The drill-down panel's views: a fact with its observations, the lead's timeline with the cited event expanded in place, a message or reply, and a playbook page.
 // ABOUTME: Each view reads the lead and its events as loaded; a target the lead does not hold shows one line saying so.
+import { useEffect, useRef } from 'react'
 import type { components } from '@/api/types'
 import { Badge } from '@/components/ui/badge'
-import { fieldLabel, formatTime, formatValue } from '@/format'
+import { fieldLabel, formatTime, formatValue, labelKeys } from '@/format'
 import { ACTOR_LABELS, DRAFT_STATE_LABELS, EVENT_LABELS, MESSAGE_KIND_LABELS, SOURCE_LABELS } from '@/labels'
 import type { PanelTarget } from '@/surface'
 import { effectLine } from './effectLine'
@@ -37,24 +38,67 @@ function openEvent({ target, onOpen }: ViewProps, event: EventRow) {
   onOpen({ kind: 'event', lead_id: target.lead_id, id: event.id })
 }
 
-export function EventView(props: ViewProps) {
-  const index = props.events.findIndex((event) => String(event.id) === String(props.target.id))
-  if (index < 0) return <NotFound />
-  const event = props.events[index]
-  const previous = props.events[index - 1]
-  const next = props.events[index + 1]
+// One event of the timeline: a row that selects it, and, when selected, its details in place.
+function TimelineEvent({ event, selected, lead, onSelect }: { event: EventRow; selected: boolean; lead: Schemas['LeadDetail']; onSelect: () => void }) {
+  const row = useRef<HTMLLIElement>(null)
+  useEffect(() => {
+    if (selected) row.current?.scrollIntoView({ block: 'center' })
+  }, [selected])
   return (
-    <div className="flex flex-col gap-2 text-sm">
-      <p className="flex flex-wrap items-center gap-2">
-        <Badge variant="secondary">{EVENT_LABELS[event.type]}</Badge>
-        <span>{`${ACTOR_LABELS[event.actor]}, ${formatTime(event.sim_ts)}`}</span>
-      </p>
-      <p>{event.summary}</p>
-      <p className="flex gap-4">
-        {previous !== undefined && <OpenLink onClick={() => openEvent(props, previous)}>Previous</OpenLink>}
-        {next !== undefined && <OpenLink onClick={() => openEvent(props, next)}>Next</OpenLink>}
-      </p>
-    </div>
+    <li ref={row} className="relative pl-5" aria-current={selected ? 'true' : undefined}>
+      <span
+        aria-hidden="true"
+        className={`absolute top-1.5 left-0 h-2.5 w-2.5 rounded-full ${selected ? 'bg-accent' : 'bg-border-strong'}`}
+      />
+      {selected ? (
+        <div className="flex flex-col gap-2 rounded-md border bg-soft p-3">
+          <p className="flex flex-wrap items-center gap-2">
+            <Badge variant="secondary">{EVENT_LABELS[event.type]}</Badge>
+            <span>{`${ACTOR_LABELS[event.actor]}, ${formatTime(event.sim_ts)}`}</span>
+            <span className="font-mono text-xs text-muted-foreground">{`#${event.id} · ${event.mode}`}</span>
+          </p>
+          <p>{labelKeys(event.summary, lead.fields)}</p>
+          {event.fact_key !== null && <p className="text-xs text-muted-foreground">{`Field: ${fieldLabel(lead.fields, event.fact_key)} (${event.fact_key})`}</p>}
+          {event.lookup !== null && (
+            <p className="text-xs text-muted-foreground">
+              {event.lookup.missing_inputs.length > 0
+                ? `Lookup ${event.lookup.status.replace('_', ' ')}; missing ${event.lookup.missing_inputs.map((key) => fieldLabel(lead.fields, key)).join(', ')}`
+                : `Lookup ${event.lookup.status.replace('_', ' ')}`}
+            </p>
+          )}
+          {event.message !== null && (
+            <div className="flex flex-col gap-1">
+              {event.message.subject !== null && <p className="font-medium">{event.message.subject}</p>}
+              <pre className="whitespace-pre-wrap break-words rounded-md bg-background p-3 font-sans">{event.message.body}</pre>
+            </div>
+          )}
+        </div>
+      ) : (
+        <button type="button" onClick={onSelect} className="flex w-full flex-col items-start gap-0.5 text-left hover:underline">
+          <span className="text-xs text-muted-foreground">{`${formatTime(event.sim_ts)} · ${EVENT_LABELS[event.type]}`}</span>
+          <span className="line-clamp-1">{labelKeys(event.summary, lead.fields)}</span>
+        </button>
+      )}
+    </li>
+  )
+}
+
+// The lead's timeline, oldest first, with the cited event expanded in place; a click on another row moves the expansion.
+export function EventView(props: ViewProps) {
+  const { events, lead } = props
+  if (!events.some((event) => String(event.id) === String(props.target.id))) return <NotFound />
+  return (
+    <ol aria-label="Timeline" className="flex flex-col gap-3 border-l border-border-strong pl-0 text-sm [&>li]:-ml-[5px]">
+      {events.map((event) => (
+        <TimelineEvent
+          key={event.id}
+          event={event}
+          selected={String(event.id) === String(props.target.id)}
+          lead={lead}
+          onSelect={() => openEvent(props, event)}
+        />
+      ))}
+    </ol>
   )
 }
 
