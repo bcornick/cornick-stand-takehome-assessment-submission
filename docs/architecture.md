@@ -404,7 +404,7 @@ One YAML file per built detail page (seven files). Each declares `applies_when`.
 |---|---|
 | `test` | Compares a field to values or bands. May cite an interpretation row. |
 | `producer_question` | A fact with no registry field, from `catalogue.yaml`. |
-| `underwriter_choice` | A judgment or an undefined term. Options are listed with no default; a reason is required. |
+| `underwriter_choice` | A judgment or an undefined term. Options are listed with no default; the option chosen is the decision, and a note is optional. |
 | `outcome` | One or more typed effects. |
 
 **Branch semantics, declared on every fan-out**
@@ -615,7 +615,7 @@ One page for an underwriter's desk, at least 1280px wide: the lead list on the l
 
 ## 12. Underwriter input
 
-- Every approval, edit, rejection and ruling is captured with the actor, the reason and the artifact hash. For a ruling the artifact hash is the lead's plan hash at that moment. Each becomes a **candidate** eval case; it joins the suite when reviewed.
+- Every approval, edit, rejection and ruling is captured with the actor, the artifact hash and a note. The structured choice (approve, reject, the option chosen) is the captured decision; the note is optional context, except for a decline: declining a lead and approving a decline notice keep a required reason, which the file carries as the underwriter's decline. For a ruling the artifact hash is the lead's plan hash at that moment. Each becomes a **candidate** eval case; it joins the suite when reviewed.
 
 ## 13. Evals
 

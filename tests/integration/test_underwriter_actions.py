@@ -162,19 +162,15 @@ def test_a_pending_value_becomes_the_fact_when_approved_and_stays_out_when_rejec
     assert fact["value"] == effective_value
 
 
-def test_a_ruling_on_lead_003_needs_a_reason_and_closes_the_choice(session: Session) -> None:
+def test_a_ruling_on_lead_003_closes_the_choice_with_or_without_a_note(session: Session) -> None:
     app = session.app
     ruling = {
         "lead_id": lead_id("003"),
         "choice_id": "I13.fire_fail",
         "option": "legacy_underwriting",
     }
-    blank = app.post(
-        "/api/commands", json={"type": "record_ruling", "payload": {**ruling, "reason": ""}}
-    )
-    assert blank.status_code == 422
 
-    accepted = command(app, "record_ruling", **ruling, reason="the checklist is satisfied")
+    accepted = command(app, "record_ruling", **ruling, reason="")
 
     assert accepted["accepted"] is True
     (card,) = [b for b in detail(app, "003")["blockers"] if b["kind"] == "underwriter_question"]

@@ -141,6 +141,9 @@ def test_choosing_to_decline_drafts_the_notice_and_approving_it_sends_it_and_end
 
     assert kinds(db, LEAD_006) == [("producer_reply", None), ("underwriter_review", "draft")]
     item_id, payload_hash = notice_item(app, LEAD_006)
+    # A decline is kept on file with its reason; without one the notice does not go.
+    unreasoned = command(app, "approve", item_id=item_id, artifact_hash=payload_hash, reason="")
+    assert unreasoned["accepted"] is False and "reason" in unreasoned["reason"]
     approved = command(
         app, "approve", item_id=item_id, artifact_hash=payload_hash, reason="the fire risk"
     )

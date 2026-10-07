@@ -1707,7 +1707,6 @@
             "type": "string"
           },
           "reason": {
-            "minLength": 1,
             "title": "Reason",
             "type": "string"
           }
@@ -1748,7 +1747,6 @@
             "type": "integer"
           },
           "reason": {
-            "minLength": 1,
             "title": "Reason",
             "type": "string"
           }

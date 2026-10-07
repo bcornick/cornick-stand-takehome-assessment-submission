@@ -255,7 +255,7 @@ class ApprovePayload(StrictModel):
 
 class RejectPayload(StrictModel):
     item_id: int
-    reason: str = Field(min_length=1)
+    reason: str  # optional context; the rejection is the decision
 
 
 class EditDraftPayload(StrictModel):
@@ -269,7 +269,7 @@ class RecordRulingPayload(StrictModel):
     lead_id: str
     choice_id: str
     option: str
-    reason: str = Field(min_length=1)  # an underwriter choice requires a reason (9.6)
+    reason: str  # optional context; the option chosen is the decision (9.6)
 
 
 class ResolveFactPayload(StrictModel):

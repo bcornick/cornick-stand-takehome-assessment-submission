@@ -549,7 +549,7 @@ def _record_ruling(
     payload: Mapping[str, JsonValue],
 ) -> _Outcome:
     lead_id, choice_id = _text(payload, "lead_id"), _text(payload, "choice_id")
-    option, reason = _text(payload, "option"), _nonempty_text(payload, "reason")
+    option, reason = _text(payload, "option"), _text(payload, "reason")
     if not _lead_exists(db, lead_id):
         raise _Refusal(f"there is no lead {lead_id}")
     if not any(
@@ -622,7 +622,9 @@ def _settle(
     """`approve` or `reject` of an item, by the A.11 table."""
     command = "approve" if approve else "reject"
     item = _open_item(db, payload)
-    reason = _text(payload, "reason") if approve else _nonempty_text(payload, "reason")
+    # The structured choice is the decision; the reason is optional context, except for a decline,
+    # which the file keeps the reason for.
+    reason = _text(payload, "reason")
     detail = item.detail
     if item.kind not in ("underwriter_review", "delivery_unknown"):
         raise _Refusal(f"item {item.id} is a {item.kind}, not an item to {command}")
@@ -639,6 +641,8 @@ def _settle(
     if detail.item_kind == "draft":
         assert detail.intent_id is not None  # a draft item names its draft
         artifact = _intent_in_state(db, detail.intent_id, "draft")
+        if approve and artifact.kind == "decline_notice" and not reason:
+            raise _Refusal("approving a decline notice needs the reason for the decline")
         _settle_draft(db, context, payload, artifact, reason, approve=approve)
     elif detail.item_kind == "delivery_unknown":
         assert detail.intent_id is not None  # a delivery_unknown item names its intent
