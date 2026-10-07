@@ -35,7 +35,9 @@ export function Conversation(props: Props) {
   const { conversation, title, headerAction, placeholder, suggestions, children } = props
   // The lead the conversation's cards sit on; the queue holds the cards of no lead.
   const leadId = conversation === QUEUE ? null : conversation
-  const { run, proposals, chat, onOpen, onSelect, onChange } = props
+  const { run, proposals, chat, panel, onOpen, onSelect, onChange } = props
+  // The column is centred; while the panel lies over the right of the page it moves left, so as much of it as possible stays in view.
+  const column = panel === null ? 'mx-auto flex w-full max-w-[720px]' : 'flex w-full max-w-[720px]'
   const replay = run.mode === 'replay'
   const turns = chat.turnsOf(conversation)
   const latest = turns.at(-1)
@@ -52,7 +54,7 @@ export function Conversation(props: Props) {
       </header>
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
         {/* The column is narrow enough to stay clear of the demo controls, in the corner, at the narrowest supported width. */}
-        <div className="mx-auto flex w-full max-w-[720px] flex-col gap-4">
+        <div className={`${column} flex-col gap-4`}>
           {children}
           <ChatTail
             turns={turns}
@@ -67,7 +69,7 @@ export function Conversation(props: Props) {
       </div>
       {/* The composer keeps the column's width, so the demo controls sit beside it and not over it. */}
       <div className="border-t px-6 py-3">
-        <div className="mx-auto flex w-full max-w-[720px] flex-col gap-2">
+        <div className={`${column} flex-col gap-2`}>
           {suggestions !== undefined && turns.length === 0 && (
             <div className="flex flex-wrap gap-2">
               {suggestions.map((prompt) => (
