@@ -18,6 +18,11 @@ function App() {
   const [panel, setPanel] = useState<PanelTarget | null>(null)
   const [refresh, setRefresh] = useState(0)
   const refetch = () => setRefresh((count) => count + 1)
+  // An open panel follows the lead the underwriter selects; the queue leaves it on the last lead.
+  const select = (next: string) => {
+    setConversation(next)
+    if (panel !== null && next !== QUEUE) setPanel({ kind: 'lead', lead_id: next })
+  }
   useEffect(() => {
     const timer = setInterval(refetch, REFRESH_MILLISECONDS)
     return () => clearInterval(timer)
@@ -35,10 +40,10 @@ function App() {
     return <p role="alert" className="p-6">{`Could not load the queue: ${surface.message}.`}</p>
   }
   const [run, rows, items, proposals] = surface.data
-  const shared = { run, proposals, chat, refresh, panel, onOpen: setPanel, onSelect: setConversation, onChange: refetch }
+  const shared = { run, proposals, chat, refresh, panel, onOpen: setPanel, onSelect: select, onChange: refetch }
   return (
     <div className="grid h-screen min-w-[1280px] grid-cols-[280px_minmax(0,1fr)]">
-      <LeadList run={run} rows={rows} selected={conversation} onSelect={setConversation} />
+      <LeadList run={run} rows={rows} selected={conversation} onSelect={select} />
       <main className="min-h-0 border-x">
         {conversation === QUEUE ? (
           <QueueConversation items={items} {...shared} />

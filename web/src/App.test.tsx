@@ -48,6 +48,7 @@ const rows: Schemas['QueueRow'][] = [
     waits_on: 'producer',
     group: 'waiting_on_data_or_producer',
   },
+  { ...row, lead_id: 'LEAD-00000042-003', label: '3 Elm Ct', primary_next_action: 'underwriter_question' },
 ]
 
 const packet: Schemas['DraftView'] = {
@@ -306,5 +307,23 @@ describe('App', () => {
 
     await userEvent.click(panel.getByRole('button', { name: 'Close' }))
     expect(screen.queryByRole('complementary', { name: 'Detail' })).toBeNull()
+  })
+
+  it('moves an open panel to the lead selected next, and leaves it there when the queue is opened', async () => {
+    stubApi(true)
+    render(<App />)
+    const leads = within(await screen.findByRole('navigation', { name: 'Leads' }))
+    await userEvent.click(await leads.findByRole('button', { name: /Lead 008/ }))
+    const conversation = within(await screen.findByRole('region', { name: 'Conversation' }))
+    await userEvent.click(await conversation.findByRole('button', { name: 'Open fact roof_year' }))
+    const panel = within(await screen.findByRole('complementary', { name: 'Detail' }))
+    await panel.findByText('Roof year')
+
+    await userEvent.click(leads.getByRole('button', { name: /Lead 003/ }))
+    expect(await panel.findByRole('heading', { name: LEAD_003 })).toBeInTheDocument()
+
+    await userEvent.click(leads.getByRole('button', { name: 'Queue' }))
+    expect(await screen.findByRole('heading', { name: 'Queue' })).toBeInTheDocument()
+    expect(panel.getByRole('heading', { name: LEAD_003 })).toBeInTheDocument()
   })
 })

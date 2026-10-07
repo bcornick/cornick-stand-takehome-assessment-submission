@@ -11,7 +11,7 @@ This is a take-home submission for an Agentic Engineer role, graded on clean cod
 | Build time target | one to two days |
 | Viewport | desktop only, at least 1280px wide |
 | Left column | 280px |
-| Right panel | as wide as its content, up to 720px, laid over the conversation |
+| Right panel | as wide as its content, up to 700px, laid over the conversation |
 | Model calls per turn | at most 8, validation retries included (`MAX_STEPS` stays 4 and `read_tool_input` retries once) |
 | Exchanges sent with each message | the last 4 of the open conversation |
 | Refetch interval | 5 seconds (`REFRESH_MILLISECONDS` in `web/src/App.tsx`) |
@@ -136,7 +136,7 @@ The panel opens on a citation chip or on a card's "details" link. One click clos
 | Playbook page | its effect lines, its board path ids, its waits, its not-evaluated notes |
 | Full lead | Waiting on (read-only), Facts, Plan, Messages, and the lead actions Paste a reply, Resolve fact and Decline lead; the cards act from the conversation, and the timeline is the record of what the system did |
 
-- "Full detail" in the conversation header opens the full lead view. The panel overlays the conversation column, which keeps its width and place underneath; it is as wide as its content, up to 720px, with a light shadow on its left edge, and nothing in it scrolls sideways: the facts table and the messages wrap. While the panel is open the conversation column moves from the centre to the left of its area, so as much of it as possible stays in view.
+- "Full detail" in the conversation header opens the full lead view. The panel overlays the conversation column, which keeps its width and place underneath; it is as wide as its content, up to 700px, with a light shadow on its left edge, and nothing in it scrolls sideways: the facts table and the messages wrap. While the panel is open the conversation column moves from the centre to the left of its area, so as much of it as possible stays in view.
 - The three forms of `web/src/lead/LeadActions.tsx` live in the full lead view. Only they act on a lead from the panel.
 - The fact view takes the event that recorded the fact from `FactView.event_id` (`observations.event_id`), and the history from the lead's `fact_observed` rows with the same `fact_key`. A pending observation becomes effective later through its approval, so the view calls them observations, not replaced values.
 
