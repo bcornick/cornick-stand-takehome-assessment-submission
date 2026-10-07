@@ -48,10 +48,10 @@
   "skill": "chat",
   "stop_reason": "tool_use",
   "tokens_in": 175,
-  "tokens_out": 166,
+  "tokens_out": 167,
   "tool_input": {
     "action": "answer",
-    "answer": "Three leads are waiting on you:\n\n- LEAD-00000042-000: a decline notice needs your review before it is sent.\n- LEAD-00000042-003: the fire simulation failed — you must decide whether to decline or continue under legacy underwriting (the legacy checklist values are shown).\n- LEAD-00000042-006: same situation — fire simulation failed, decline or continue under legacy underwriting.\n\nThe other seven leads are waiting on the producer.",
+    "answer": "Three leads are waiting on you:\n\n- LEAD-00000042-000: a decline notice needs your review before it is sent.\n- LEAD-00000042-003: the fire simulation failed — you must decide whether to decline or continue under legacy underwriting (the legacy checklist values are shown).\n- LEAD-00000042-006: same situation — fire simulation failed, decide decline or continue under legacy underwriting.\n\nThe other seven leads are waiting on the producer.",
     "citations": [
       1,
       2,
