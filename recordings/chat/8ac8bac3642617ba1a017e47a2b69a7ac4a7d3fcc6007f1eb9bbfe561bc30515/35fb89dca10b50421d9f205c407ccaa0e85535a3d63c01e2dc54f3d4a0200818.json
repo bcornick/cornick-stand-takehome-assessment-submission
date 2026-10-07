@@ -361,7 +361,7 @@
   "request_id": "",
   "skill": "chat",
   "stop_reason": "tool_use",
-  "tokens_in": 1749,
+  "tokens_in": 213,
   "tokens_out": 132,
   "tool_input": {
     "action": "propose_command",

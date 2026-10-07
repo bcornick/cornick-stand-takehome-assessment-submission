@@ -1,19 +1,20 @@
 {
   "input": {
+    "ask_count": 22,
     "recipient_kind": "producer",
     "request": "Thank you for your submission. To complete the quote we need the items below. One reply covering all of them is ideal.\n\nLocation\n1. What state is the property in?\n2. What is the property's zip code?\n\nInsured\n3. What is the applicant's last name?\n\nPrimary Coverages\n4. What Coverage E (liability) limit is requested: 100,000, 300,000 or 500,000?\n5. What Coverage F (medical payments) limit is requested: 1,000, 3,000 or 5,000?\n\nProperty\n6. What year was the home built?\n7. Does the property have a pool, and if so, is it above ground or inground?\n8. If the pool is above ground: does the above-ground pool have a pull-up locking ladder?\n9. How many acres is the lot?\n\nConstruction\n10. What type of structure is it: single family, duplex, townhouse, rowhome or other?\n11. What is the total living square footage?\n12. How many stories does the home have?\n13. In what year was the roof last replaced?\n14. What is the roof surface material?\n15. What is the primary heating system?\n\nPlumbing\n16. How old is the plumbing, in years?\n17. Is the water heater a tank or a tankless unit?\n18. If the water heater is a tank: how old is the water heater, in years?\n19. If the water heater is a tank: where is the water heater: in or above finished space, or in unfinished space?\n\nProtection\n20. What fire protective devices does the home have: none, local alarm, central alarm or direct alarm?\n21. Is the fire department career, mostly career, mostly volunteer or volunteer?\n22. How many feet is it to the nearest fire hydrant?",
     "round": 1
   },
-  "input_hash": "ccd930a4c54aecbdce19278fe856e492b618286abaf01044b8d021c7a87cce62",
+  "input_hash": "97e71362271aca944cf619b1e14b8544d8c269523423836d50c04aa0a0f07718",
   "model_id": "deepseek-flash",
-  "prompt_version": "400dd1603f15d320ecb39c2e88a4c43b779d90669810f74cbc955fbfae706318",
+  "prompt_version": "43a9b4f6400d9e89315b82ba581d383c0c803a63b200e565b17834d1291bd83c",
   "request_id": "",
   "skill": "polish_message",
   "stop_reason": "tool_use",
-  "tokens_in": 658,
-  "tokens_out": 114,
+  "tokens_in": 246,
+  "tokens_out": 96,
   "tool_input": {
-    "closing": "One reply covering all of the items is ideal. Thank you for your help with this.",
-    "opening": "Thank you for sending over your client's property submission. We're glad to have it, and a few more details will help us complete the quote. The items below are grouped by topic, and anything you can share is appreciated."
+    "closing": "One reply covering all of the items is ideal. Thank you for your help.",
+    "opening": "Thank you for sending in this submission for your client. To complete the quote we need a few details about the property, and they are listed below."
   }
 }

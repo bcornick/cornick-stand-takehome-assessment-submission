@@ -6,7 +6,7 @@
     "steps": [
       {
         "action": "lead_events",
-        "lead_id": "LEAD-00000042-008",
+        "lead_id": "008",
         "result": {
           "events": [
             {
@@ -704,17 +704,17 @@
       }
     ]
   },
-  "input_hash": "6cf9ee709e8b666c883346d0ff147cea448062f4859089fb2de933931b2bc5ba",
+  "input_hash": "1c29915fb561c3121ef1411c1d8ef46f1faa8d2b10220b10504f159e6f3f7227",
   "model_id": "deepseek-flash",
   "prompt_version": "8ac8bac3642617ba1a017e47a2b69a7ac4a7d3fcc6007f1eb9bbfe561bc30515",
   "request_id": "",
   "skill": "chat",
   "stop_reason": "tool_use",
-  "tokens_in": 4501,
-  "tokens_out": 111,
+  "tokens_in": 142,
+  "tokens_out": 110,
   "tool_input": {
     "action": "answer",
-    "answer": "The most recent record is the selection of siding_classification as B, derived by the workflow. Just before that, roof_classification was recorded and selected as Class A, also derived.",
+    "answer": "The most recent record is the selection of siding_classification as B (derived). Just before that, roof_classification was recorded and selected as Class A (derived).",
     "citations": [
       114,
       115,

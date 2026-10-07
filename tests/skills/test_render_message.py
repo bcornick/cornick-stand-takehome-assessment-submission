@@ -14,6 +14,13 @@ DOB = Ask(
     reason="The registry requires it to quote.",
     wording="What is the applicant's date of birth?",
 )
+PANEL = Ask(
+    ask_id="electrical_panel_brand",
+    kind=AskKind.field_request,
+    fields=["electrical_panel_brand"],
+    reason="The registry requires it to quote.",
+    wording="Who made the electrical panel?",
+)
 
 
 @pytest.mark.parametrize(
@@ -34,3 +41,20 @@ def test_a_request_says_you_to_the_applicant_and_keeps_the_wording_for_a_produce
     )
 
     assert line in rendered.body
+
+
+def test_one_ask_is_worded_in_the_singular_and_several_in_the_plural() -> None:
+    def body(asks: list[Ask]) -> str:
+        return run(
+            RenderMessageInput(
+                registry=load_registry(str(REGISTRY)), lead_label="14 Oak St", asks=asks
+            )
+        ).body
+
+    one = body([DOB])
+    two = body([DOB, PANEL])
+
+    assert "the item below" in one
+    assert not any(word in one for word in ("items", "details", "covering the"))
+    assert "the items below" in two
+    assert "One reply covering all of them is ideal." in two

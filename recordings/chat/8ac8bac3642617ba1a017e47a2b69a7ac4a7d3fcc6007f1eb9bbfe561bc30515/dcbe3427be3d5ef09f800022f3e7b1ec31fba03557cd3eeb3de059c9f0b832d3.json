@@ -11,7 +11,7 @@
           "replies": [],
           "requests": [
             {
-              "body": "Thank you for sending over your client's property submission. We're glad to have it, and a few more details will help us complete the quote.\n\nProperty\n1. When was the property purchased?\n\nConstruction\n2. What brand is the electrical panel?\n\nA single reply covering all of the items above is ideal. Please let us know if anything is unclear.",
+              "body": "Thank you for sending over your client's property submission. To complete the quote, we need a few details about the property and its construction.\n\nProperty\n1. When was the property purchased?\n\nConstruction\n2. What brand is the electrical panel?\n\nOne reply covering all of the items would be ideal. Thank you for your help.",
               "kind": "routine_request",
               "ref": 1,
               "subject": "Information needed for your quote: 8924 Lakeview Blvd"
@@ -21,13 +21,13 @@
       }
     ]
   },
-  "input_hash": "99206197b98fa586fc354dbd95c99020ccf06a8e669963c6e13f38ad1198b7f1",
+  "input_hash": "dcbe3427be3d5ef09f800022f3e7b1ec31fba03557cd3eeb3de059c9f0b832d3",
   "model_id": "deepseek-flash",
   "prompt_version": "8ac8bac3642617ba1a017e47a2b69a7ac4a7d3fcc6007f1eb9bbfe561bc30515",
   "request_id": "",
   "skill": "chat",
   "stop_reason": "tool_use",
-  "tokens_in": 198,
+  "tokens_in": 192,
   "tokens_out": 111,
   "tool_input": {
     "action": "answer",

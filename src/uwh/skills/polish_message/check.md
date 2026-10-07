@@ -18,6 +18,6 @@ Judge only `opening` and `closing`, sentence by sentence, against `request`. A s
 - a claim about what anyone has done or reviewed, such as that the submission has been reviewed;
 - a promise or statement about what will or will not be asked, such as that the email covers everything still outstanding.
 
-Warm wording is fine: thanks, a greeting, saying the details are needed to complete the quote, saying one reply covering everything is ideal, saying this follows up an earlier email.
+Warm wording is fine: thanks, a greeting, saying the details are needed to complete the quote, saying one reply covering everything is ideal, saying this follows up an earlier email, inviting questions about the email, such as "let us know if anything is unclear" (this is not a request).
 
 Call the tool `record_check` once with `verdict` `pass` and an empty `offending_sentence` when no sentence fails, or `verdict` `fail` and `offending_sentence` set to the first failing sentence, copied exactly.

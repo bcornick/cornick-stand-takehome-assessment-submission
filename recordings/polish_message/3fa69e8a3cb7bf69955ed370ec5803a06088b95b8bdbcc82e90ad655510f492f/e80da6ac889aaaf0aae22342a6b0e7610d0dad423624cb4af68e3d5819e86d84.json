@@ -1,0 +1,19 @@
+{
+  "input": {
+    "closing": "Thanks again for your help. A reply by email is fine.",
+    "opening": "Thank you for sending over your client's property submission. To complete the quote, we just need a detail from you.",
+    "request": "Thank you for your submission. To complete the quote we need the item below.\n\nProperty\n1. How many acres is the lot?"
+  },
+  "input_hash": "e80da6ac889aaaf0aae22342a6b0e7610d0dad423624cb4af68e3d5819e86d84",
+  "model_id": "deepseek-flash",
+  "prompt_version": "3fa69e8a3cb7bf69955ed370ec5803a06088b95b8bdbcc82e90ad655510f492f",
+  "request_id": "",
+  "skill": "polish_message",
+  "stop_reason": "tool_use",
+  "tokens_in": 275,
+  "tokens_out": 50,
+  "tool_input": {
+    "offending_sentence": "",
+    "verdict": "pass"
+  }
+}

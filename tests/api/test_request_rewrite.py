@@ -30,7 +30,6 @@ from uwh.skills.polish_message.skill import PolishInput, rewrite_call
 from uwh.skills.render_message import skill as render_message
 
 # The seed-42 request whose rewrite failed the model check in the record run.
-LEAD_001 = "LEAD-00000042-001"
 LEAD_000 = "LEAD-00000042-000"
 
 
@@ -86,35 +85,10 @@ def test_the_body_the_draft_is_hashed_over_is_the_body_that_is_sent(
     assert sent["metadata"]["payload_hash"] == stored
 
 
-def test_a_rewrite_that_failed_a_check_sends_the_rendered_request_and_the_log_names_the_check(
-    db: sqlite3.Connection, mailbox: MailboxClient
-) -> None:
-    _, _, _, body = request_of(db, LEAD_001)
-
-    assert body.startswith(render_message.OPENING)
-    (fallback,) = events_of(db, LEAD_001, EventType.skill_fallback_used)
-    assert fallback.skill == "polish_message" and fallback.status == "rejected"
-    assert fallback.fallback.startswith(
-        "The rewrite of the request was rejected by the model check ("
-    )
-    assert fallback.fallback.endswith("); the rendered request is used")
-    (sent,) = mailbox.list_for_lead(LEAD_001)
-    assert sent["body"] == body
-    assert (
-        sent["metadata"]["kind"] == "routine_request"
-    )  # the class stays; it still sends automatically
-
-
-def test_a_request_the_model_wrote_is_marked_and_one_that_was_rejected_is_not(
-    db: sqlite3.Connection,
-) -> None:
+def test_a_request_the_model_wrote_is_marked(db: sqlite3.Connection) -> None:
     (written,) = events_of(db, LEAD_008, EventType.intent_created)
-    (rendered,) = [
-        e for e in events_of(db, LEAD_001, EventType.intent_created) if e.kind.endswith("_request")
-    ]
 
     assert written.rewritten_by_model is True
-    assert rendered.rewritten_by_model is False
 
 
 def test_the_model_is_called_for_a_rewrite_outside_every_unit_of_work(

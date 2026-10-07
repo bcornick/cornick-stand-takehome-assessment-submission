@@ -195,3 +195,13 @@ def test_the_rewrite_of_lead_008_is_read_from_its_recordings() -> None:
     assert isinstance(result, Rewritten)
     assert RENDERED.question_block in result.body
     assert len(exchanges) == 2
+
+
+def test_the_rewrite_call_is_shown_the_number_of_asks() -> None:
+    assert skill.rewrite_call(INPUT).shown["ask_count"] == len(ASKS)
+
+
+def test_the_code_check_accepts_an_invitation_to_ask_questions_as_a_closing() -> None:
+    assert (
+        code_check(Pieces(opening=OPENING, closing="Let us know if anything is unclear.")) is None
+    )

@@ -11,6 +11,7 @@ OPENING = (
     "Thank you for your submission. To complete the quote we need the items below. "
     "One reply covering all of them is ideal."
 )
+OPENING_ONE_ASK = "Thank you for your submission. To complete the quote we need the item below."
 ADDITIONAL_QUESTIONS = "Additional questions"
 # 10.1: the decline notice is a fixed template; a message carries no decline reason.
 DECLINE_NOTICE = (
@@ -70,7 +71,7 @@ def run(input: RenderMessageInput) -> RenderMessageOutput:
     question_block = "\n\n".join(blocks)
     return RenderMessageOutput(
         subject=f"Information needed for your quote: {input.lead_label}",
-        body=f"{OPENING}\n\n{question_block}",
+        body=f"{OPENING if len(ordered) > 1 else OPENING_ONE_ASK}\n\n{question_block}",
         ask_ids=[ask.ask_id for ask in ordered],
         question_block=question_block,
     )

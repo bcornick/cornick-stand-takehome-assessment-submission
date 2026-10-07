@@ -11,10 +11,10 @@
   "request_id": "",
   "skill": "chat",
   "stop_reason": "tool_use",
-  "tokens_in": 1344,
-  "tokens_out": 58,
+  "tokens_in": 192,
+  "tokens_out": 51,
   "tool_input": {
     "action": "lead_events",
-    "lead_id": "LEAD-00000042-008"
+    "lead_id": "008"
   }
 }

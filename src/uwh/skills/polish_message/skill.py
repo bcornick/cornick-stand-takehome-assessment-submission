@@ -73,13 +73,14 @@ def code_check(pieces: Pieces) -> str | None:
 
 
 def rewrite_call(input: PolishInput) -> ForcedToolCall:
-    """The first call: the model is shown the rendered request, the recipient kind and the round."""
+    """The first call: the model is shown the rendered request, the recipient kind, the number of questions and the round."""
     return ForcedToolCall(
         skill="polish_message",
         prompt_file=_REWRITE_PROMPT,
         shown={
             "request": input.rendered.body,
             "recipient_kind": input.recipient_kind,
+            "ask_count": len(input.rendered.ask_ids),
             "round": input.round,
         },
         tool_name=REWRITE_TOOL,

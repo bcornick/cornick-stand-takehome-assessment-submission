@@ -1,16 +1,16 @@
 {
   "input": {
-    "closing": "One reply covering all of the items is ideal. Thank you for your help with this.",
-    "opening": "Thank you for sending over your client's property submission. We're glad to have it, and a few more details will help us complete the quote. The items below are grouped by topic, and anything you can share is appreciated.",
+    "closing": "One reply covering all of the items is ideal. Thank you for your help.",
+    "opening": "Thank you for sending in this submission for your client. To complete the quote we need a few details about the property, and they are listed below.",
     "request": "Thank you for your submission. To complete the quote we need the items below. One reply covering all of them is ideal.\n\nLocation\n1. What state is the property in?\n2. What is the property's zip code?\n\nInsured\n3. What is the applicant's last name?\n\nPrimary Coverages\n4. What Coverage E (liability) limit is requested: 100,000, 300,000 or 500,000?\n5. What Coverage F (medical payments) limit is requested: 1,000, 3,000 or 5,000?\n\nProperty\n6. What year was the home built?\n7. Does the property have a pool, and if so, is it above ground or inground?\n8. If the pool is above ground: does the above-ground pool have a pull-up locking ladder?\n9. How many acres is the lot?\n\nConstruction\n10. What type of structure is it: single family, duplex, townhouse, rowhome or other?\n11. What is the total living square footage?\n12. How many stories does the home have?\n13. In what year was the roof last replaced?\n14. What is the roof surface material?\n15. What is the primary heating system?\n\nPlumbing\n16. How old is the plumbing, in years?\n17. Is the water heater a tank or a tankless unit?\n18. If the water heater is a tank: how old is the water heater, in years?\n19. If the water heater is a tank: where is the water heater: in or above finished space, or in unfinished space?\n\nProtection\n20. What fire protective devices does the home have: none, local alarm, central alarm or direct alarm?\n21. Is the fire department career, mostly career, mostly volunteer or volunteer?\n22. How many feet is it to the nearest fire hydrant?"
   },
-  "input_hash": "5b57c7867aee15604c0a49d0f1e2e6d63deedb50e6cce292581d8d2342b4354b",
+  "input_hash": "5ee9f67c536157a1a2b79c810e12bca3d7089d07058259b57639465be58d6f8e",
   "model_id": "deepseek-flash",
-  "prompt_version": "8696555597a0b227c0a9e61b325e6f244e334bf320f7c79c336aba6c00bf6090",
+  "prompt_version": "3fa69e8a3cb7bf69955ed370ec5803a06088b95b8bdbcc82e90ad655510f492f",
   "request_id": "",
   "skill": "polish_message",
   "stop_reason": "tool_use",
-  "tokens_in": 663,
+  "tokens_in": 157,
   "tokens_out": 50,
   "tool_input": {
     "offending_sentence": "",

@@ -1,19 +1,20 @@
 {
   "input": {
+    "ask_count": 17,
     "recipient_kind": "applicant",
     "request": "Thank you for your submission. To complete the quote we need the items below. One reply covering all of them is ideal.\n\nLocation\n1. What city is the property in?\n2. What is the property's zip code?\n\nInsured\n3. Is the property owned by a trust?\n4. If the property is held in a trust: what is the name of the trust?\n5. What is your date of birth?\n\nPrimary Coverages\n6. What Coverage F (medical payments) limit is requested: 1,000, 3,000 or 5,000?\n\nProperty\n7. Are there any animals on the property?\n\nConstruction\n8. What type of foundation does the home have?\n9. If the home is on piers, stilts or pilings: does the post and pier foundation support any part of the living area, or only decking?\n10. If the home is on piers, stilts or pilings: how high is the deck above grade, in feet?\n11. How many stories does the home have?\n12. What is the roof surface material?\n13. What is the roof shape?\n14. What is the size of the electrical panel, in amps?\n\nPlumbing\n15. How old is the plumbing, in years?\n\nProtection\n16. How many miles is it to the fire department?\n\nAdditional questions\n17. The home is listed as unoccupied for 3 consecutive months. Can you confirm that?",
     "round": 1
   },
-  "input_hash": "e12483aea1ab14e8933b5e2a1d86e478b01e7a7ca885016e1cf0458fdfa88f76",
+  "input_hash": "864e08b4c3dfbe5d6c15111b55f0e2a9f4c41435779305f348d8e7f99dd48994",
   "model_id": "deepseek-flash",
-  "prompt_version": "400dd1603f15d320ecb39c2e88a4c43b779d90669810f74cbc955fbfae706318",
+  "prompt_version": "43a9b4f6400d9e89315b82ba581d383c0c803a63b200e565b17834d1291bd83c",
   "request_id": "",
   "skill": "polish_message",
   "stop_reason": "tool_use",
-  "tokens_in": 1078,
-  "tokens_out": 108,
+  "tokens_in": 154,
+  "tokens_out": 93,
   "tool_input": {
     "closing": "One reply covering all of the items is ideal. Thank you for your help.",
-    "opening": "Thank you for sending in your property insurance submission. We're glad to have it, and a few more details will help us complete the quote for you. If anything below is unclear, just let us know."
+    "opening": "Thank you for sending in your property submission. To complete the quote we need a few details from you, and they are listed below."
   }
 }

@@ -224,7 +224,7 @@
   "request_id": "",
   "skill": "chat",
   "stop_reason": "tool_use",
-  "tokens_in": 1111,
+  "tokens_in": 215,
   "tokens_out": 51,
   "tool_input": {
     "action": "playbook_path",

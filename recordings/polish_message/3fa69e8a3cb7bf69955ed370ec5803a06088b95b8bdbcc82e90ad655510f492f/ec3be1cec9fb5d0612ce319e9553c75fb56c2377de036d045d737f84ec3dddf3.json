@@ -1,0 +1,19 @@
+{
+  "input": {
+    "closing": "Thanks for your help with this. A reply by email is fine.",
+    "opening": "Thank you for your submission. This is a follow-up on our earlier email, as we still need one more detail from you to complete the quote.",
+    "request": "Thank you for your submission. To complete the quote we need the item below.\n\nAdditional questions\n1. The home is listed as unoccupied for 3 consecutive months. Can you confirm that?"
+  },
+  "input_hash": "ec3be1cec9fb5d0612ce319e9553c75fb56c2377de036d045d737f84ec3dddf3",
+  "model_id": "deepseek-flash",
+  "prompt_version": "3fa69e8a3cb7bf69955ed370ec5803a06088b95b8bdbcc82e90ad655510f492f",
+  "request_id": "",
+  "skill": "polish_message",
+  "stop_reason": "tool_use",
+  "tokens_in": 294,
+  "tokens_out": 50,
+  "tool_input": {
+    "offending_sentence": "",
+    "verdict": "pass"
+  }
+}

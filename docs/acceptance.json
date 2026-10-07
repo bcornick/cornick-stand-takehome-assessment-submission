@@ -100,8 +100,8 @@
   {
     "id": "M5-A3",
     "milestone": 5,
-    "description": "A rewrite that fails either check sends the rendered request as it is. Expect: all pass.",
-    "command": "uv run pytest -m integration tests/integration/test_polish_message.py -k rejected_rewrite",
+    "description": "A rewrite that fails either check sends the rendered request as it is; the checks are exercised with a scripted model, since every recorded rewrite passes them. Expect: all pass.",
+    "command": "uv run pytest tests/skills/test_polish_message.py -k 'failure or abstains' -q",
     "passes": true
   },
   {

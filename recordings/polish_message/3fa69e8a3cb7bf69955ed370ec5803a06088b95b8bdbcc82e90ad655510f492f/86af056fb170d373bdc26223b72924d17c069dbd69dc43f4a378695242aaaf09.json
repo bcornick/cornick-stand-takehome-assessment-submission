@@ -1,0 +1,19 @@
+{
+  "input": {
+    "closing": "One reply covering all of the items is ideal. Thank you for your help.",
+    "opening": "Thank you for sending over your client's property submission. To complete the quote, we need a few details about the risk. They are listed below.",
+    "request": "Thank you for your submission. To complete the quote we need the items below. One reply covering all of them is ideal.\n\nInsured\n1. Is the property owned by a trust?\n2. If the property is held in a trust: what is the name of the trust?\n\nPrimary Coverages\n3. What Coverage A (dwelling) amount is requested?\n\nProperty\n4. Is the home rented out, and if so, is it short-term or long-term?\n\nConstruction\n5. What is the roof shape?\n6. What brand is the electrical panel?\n\nProtection\n7. How many feet is it to the nearest fire hydrant?"
+  },
+  "input_hash": "86af056fb170d373bdc26223b72924d17c069dbd69dc43f4a378695242aaaf09",
+  "model_id": "deepseek-flash",
+  "prompt_version": "3fa69e8a3cb7bf69955ed370ec5803a06088b95b8bdbcc82e90ad655510f492f",
+  "request_id": "",
+  "skill": "polish_message",
+  "stop_reason": "tool_use",
+  "tokens_in": 783,
+  "tokens_out": 50,
+  "tool_input": {
+    "offending_sentence": "",
+    "verdict": "pass"
+  }
+}

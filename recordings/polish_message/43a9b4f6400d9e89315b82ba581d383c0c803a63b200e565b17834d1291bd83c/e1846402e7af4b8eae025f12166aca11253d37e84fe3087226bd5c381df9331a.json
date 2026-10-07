@@ -1,19 +1,20 @@
 {
   "input": {
+    "ask_count": 8,
     "recipient_kind": "producer",
     "request": "Thank you for your submission. To complete the quote we need the items below. One reply covering all of them is ideal.\n\nLocation\n1. What is the property's zip code?\n\nPrimary Coverages\n2. What Coverage E (liability) limit is requested: 100,000, 300,000 or 500,000?\n\nProperty\n3. How is the dwelling used: owner occupied single family, owner occupied multi family, secondary residence or seasonal residence?\n4. When was the property purchased?\n5. Are there any animals on the property?\n\nConstruction\n6. What is the total living square footage?\n7. What is the roof shape?\n8. What brand is the electrical panel?",
     "round": 1
   },
-  "input_hash": "43e82b2637cdbbb8829cd64156b861c8218f129d2f11d8d93db96f862d1ce1a2",
+  "input_hash": "e1846402e7af4b8eae025f12166aca11253d37e84fe3087226bd5c381df9331a",
   "model_id": "deepseek-flash",
-  "prompt_version": "400dd1603f15d320ecb39c2e88a4c43b779d90669810f74cbc955fbfae706318",
+  "prompt_version": "43a9b4f6400d9e89315b82ba581d383c0c803a63b200e565b17834d1291bd83c",
   "request_id": "",
   "skill": "polish_message",
   "stop_reason": "tool_use",
-  "tokens_in": 270,
-  "tokens_out": 102,
+  "tokens_in": 242,
+  "tokens_out": 97,
   "tool_input": {
-    "closing": "A single reply covering all of the items above is ideal. Please let us know if anything is unclear.",
-    "opening": "Thank you for sending over your client's property submission. We would like a few more details so we can complete the quote, and they are listed below."
+    "closing": "One reply covering all of the items is ideal. Thank you for your help.",
+    "opening": "Thank you for sending over your client's property submission. To complete the quote we need a few details about the location, coverages, property and construction."
   }
 }

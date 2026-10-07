@@ -1,19 +1,20 @@
 {
   "input": {
+    "ask_count": 7,
     "recipient_kind": "producer",
     "request": "Thank you for your submission. To complete the quote we need the items below. One reply covering all of them is ideal.\n\nInsured\n1. Is the property owned by a trust?\n2. If the property is held in a trust: what is the name of the trust?\n\nPrimary Coverages\n3. What Coverage A (dwelling) amount is requested?\n\nProperty\n4. Is the home rented out, and if so, is it short-term or long-term?\n\nConstruction\n5. What is the roof shape?\n6. What brand is the electrical panel?\n\nProtection\n7. How many feet is it to the nearest fire hydrant?",
     "round": 1
   },
-  "input_hash": "9a4b110b601152160f09e6b3367895ce274ad46c665f70a06cfa081bc0cee7c5",
+  "input_hash": "e22f3504e757d9fecef048cea41a85ab576eff2afd49c8f0dfb75551e323db99",
   "model_id": "deepseek-flash",
-  "prompt_version": "400dd1603f15d320ecb39c2e88a4c43b779d90669810f74cbc955fbfae706318",
+  "prompt_version": "43a9b4f6400d9e89315b82ba581d383c0c803a63b200e565b17834d1291bd83c",
   "request_id": "",
   "skill": "polish_message",
   "stop_reason": "tool_use",
-  "tokens_in": 900,
-  "tokens_out": 110,
+  "tokens_in": 232,
+  "tokens_out": 93,
   "tool_input": {
-    "closing": "A single reply covering all of the items above is ideal. Please reach out if anything needs clarification.",
-    "opening": "Thank you for sending over your client's property submission. We're glad to have it, and a few more details will help us complete the quote. The items below are the ones we still need."
+    "closing": "One reply covering all of the items is ideal. Thank you for your help.",
+    "opening": "Thank you for sending over this submission. To complete the quote, we need a few details about the property. They are listed below."
   }
 }

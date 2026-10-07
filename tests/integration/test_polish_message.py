@@ -1,4 +1,4 @@
-# ABOUTME: Integration test of the request rewrite against Stand's running leadgen and mailbox containers: after a seed-42 run, lead 008's request in the mailbox is the question block as rendered inside an opening and a closing, and lead 001's, whose recorded rewrite failed the model check, is the rendered request.
+# ABOUTME: Integration test of the request rewrite against Stand's running leadgen and mailbox containers: after a seed-42 run, lead 008's request in the mailbox is the question block as rendered inside an opening and a closing the model wrote.
 # ABOUTME: A start resets the mailbox, which the app container shares; the mailbox is read back through its own listing, as a producer's inbox. The two calls of each request are served from the committed recordings.
 from collections.abc import Iterator
 from pathlib import Path
@@ -23,7 +23,6 @@ QUESTION_BLOCK_008 = (
     "Construction\n2. What brand is the electrical panel?"
 )
 # The request of lead 001 begins with this fixed opening paragraph, then its question block.
-LEAD_001_FIRST_QUESTION = "Location\n1. What is the property address?"
 
 
 @pytest.fixture
@@ -61,9 +60,3 @@ def test_question_block_unchanged_inside_the_rewritten_request(mail: dict[str, s
     opening, closing = body.split(QUESTION_BLOCK_008)
     assert opening.strip() and closing.strip()
     assert OPENING not in body
-
-
-def test_rejected_rewrite_sends_the_rendered_request(mail: dict[str, str]) -> None:
-    body = mail["LEAD-00000042-001"]
-
-    assert body.startswith(f"{OPENING}\n\n{LEAD_001_FIRST_QUESTION}")
