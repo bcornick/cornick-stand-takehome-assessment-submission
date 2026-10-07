@@ -111,6 +111,7 @@ function renderQueue(overrides: { run?: Schemas['RunView']; chat?: Chat; onSelec
       proposals={[]}
       chat={chat}
       refresh={0}
+      panel={null}
       onOpen={() => {}}
       onSelect={overrides.onSelect ?? (() => {})}
       onChange={() => {}}

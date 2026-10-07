@@ -35,13 +35,16 @@ export function LeadConversation({ leadId, ...shared }: Props) {
       title={hasAddress ? `${leadName(leadId)} · ${lead.label}` : leadName(leadId)}
       placeholder={`Ask about ${leadName(leadId).toLowerCase()}`}
       headerAction={
-        <button
-          type="button"
-          className="text-sm underline underline-offset-2"
-          onClick={() => shared.onOpen({ kind: 'lead', lead_id: leadId })}
-        >
-          Full detail
-        </button>
+        // The link goes while the panel shows this lead's full detail, and returns when it closes.
+        shared.panel?.kind === 'lead' && shared.panel.lead_id === leadId ? null : (
+          <button
+            type="button"
+            className="text-sm underline underline-offset-2"
+            onClick={() => shared.onOpen({ kind: 'lead', lead_id: leadId })}
+          >
+            Full detail
+          </button>
+        )
       }
     >
       <div className="flex flex-col gap-1">

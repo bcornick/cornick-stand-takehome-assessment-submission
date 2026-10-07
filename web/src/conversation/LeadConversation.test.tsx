@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { components } from '@/api/types'
 import type { Chat } from '@/surface'
 import { LeadConversation, shownSteps } from './LeadConversation'
+import type { PanelTarget } from '@/surface'
 import { narrate } from './narrate'
 
 type Schemas = components['schemas']
@@ -103,7 +104,7 @@ function respond(body: unknown): Response {
   return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } })
 }
 
-function renderLead() {
+function renderLead(panel: PanelTarget | null = null) {
   vi.stubGlobal(
     'fetch',
     vi.fn(async (input: RequestInfo | URL) => {
@@ -121,6 +122,7 @@ function renderLead() {
       proposals={[]}
       chat={chat}
       refresh={0}
+      panel={panel}
       onOpen={() => {}}
       onSelect={() => {}}
       onChange={() => {}}
@@ -151,5 +153,11 @@ describe('LeadConversation', () => {
     expect(fold).not.toHaveAttribute('open')
     await userEvent.click(screen.getByText('Show the work (3 steps)'))
     expect(fold).toHaveAttribute('open')
+  })
+
+  it('hides "Full detail" while the panel shows this lead', async () => {
+    renderLead({ kind: 'lead', lead_id: lead.lead_id })
+    await screen.findByText(lead.summary)
+    expect(screen.queryByRole('button', { name: 'Full detail' })).toBeNull()
   })
 })

@@ -14,6 +14,7 @@ export type ConversationProps = {
   proposals: Schemas['ProposalView'][]
   chat: Chat
   refresh: number
+  panel: PanelTarget | null // what the drill-down panel shows, if it is open
   onOpen: (target: PanelTarget) => void
   onSelect: (conversation: string) => void
   onChange: () => void

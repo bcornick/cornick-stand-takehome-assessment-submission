@@ -35,7 +35,7 @@ function App() {
     return <p role="alert" className="p-6">{`Could not load the queue: ${surface.message}.`}</p>
   }
   const [run, rows, items, proposals] = surface.data
-  const shared = { run, proposals, chat, refresh, onOpen: setPanel, onSelect: setConversation, onChange: refetch }
+  const shared = { run, proposals, chat, refresh, panel, onOpen: setPanel, onSelect: setConversation, onChange: refetch }
   return (
     <div className="grid h-screen min-w-[1280px] grid-cols-[280px_minmax(0,1fr)_auto]">
       <LeadList run={run} rows={rows} selected={conversation} onSelect={setConversation} />
