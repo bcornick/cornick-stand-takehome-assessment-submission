@@ -1,4 +1,4 @@
-// ABOUTME: Root component of the underwriter surface: the lead list on the left, the open conversation in the centre, the drill-down panel on the right when something is opened, and the demo controls pinned bottom right.
+// ABOUTME: Root component of the underwriter surface: the lead list on the left, the open conversation in the centre, the drill-down panel laid over the right when something is opened, and the demo controls pinned bottom right.
 // ABOUTME: Refetches the run, the queue, the items and the cards after every action and on an interval; which conversation and panel are open is held in state, with no router, and the chat tails live in memory.
 import { useEffect, useState } from 'react'
 import { getItems, getLeads, getProposals, getRun } from '@/api/client'
@@ -37,7 +37,7 @@ function App() {
   const [run, rows, items, proposals] = surface.data
   const shared = { run, proposals, chat, refresh, panel, onOpen: setPanel, onSelect: setConversation, onChange: refetch }
   return (
-    <div className="grid h-screen min-w-[1280px] grid-cols-[280px_minmax(0,1fr)_auto]">
+    <div className="grid h-screen min-w-[1280px] grid-cols-[280px_minmax(0,1fr)]">
       <LeadList run={run} rows={rows} selected={conversation} onSelect={setConversation} />
       <main className="min-h-0 border-x">
         {conversation === QUEUE ? (

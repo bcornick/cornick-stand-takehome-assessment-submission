@@ -106,7 +106,7 @@ export function MessageView({ target, lead }: ViewProps) {
         <span>{`To ${draft.recipient}`}</span>
       </p>
       <p className="font-medium">{draft.subject}</p>
-      <pre className="whitespace-pre-wrap rounded-md bg-muted p-3 font-sans">{draft.body}</pre>
+      <pre className="whitespace-pre-wrap break-words rounded-md bg-muted p-3 font-sans">{draft.body}</pre>
     </div>
   )
 }
@@ -118,7 +118,7 @@ export function ReplyView({ target, events }: ViewProps) {
     <div className="flex flex-col gap-2 text-sm">
       <Heading>From the producer</Heading>
       <p className="text-muted-foreground">{formatTime(reply.sim_ts)}</p>
-      <pre className="whitespace-pre-wrap rounded-md bg-muted p-3 font-sans">{reply.message.body}</pre>
+      <pre className="whitespace-pre-wrap break-words rounded-md bg-muted p-3 font-sans">{reply.message.body}</pre>
     </div>
   )
 }

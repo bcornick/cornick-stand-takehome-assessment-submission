@@ -85,7 +85,7 @@ function Drafts({ drafts }: { drafts: LeadDetail['drafts'] }) {
             <span>{`To ${draft.recipient}`}</span>
           </p>
           <p className="text-sm font-medium">{draft.subject}</p>
-          <pre className="whitespace-pre-wrap rounded-md bg-muted p-3 font-sans text-sm">{draft.body}</pre>
+          <pre className="whitespace-pre-wrap break-words rounded-md bg-muted p-3 font-sans text-sm">{draft.body}</pre>
         </li>
       ))}
     </ul>
@@ -133,7 +133,7 @@ function PlanView({ plan }: { plan: Plan }) {
 
 function Facts({ facts, fields }: { facts: LeadDetail['facts']; fields: LeadDetail['fields'] }) {
   return (
-    <Table aria-label="Facts">
+    <Table aria-label="Facts" className="table-fixed">
       <TableHeader>
         <TableRow>
           <TableHead>Field</TableHead>
@@ -144,9 +144,9 @@ function Facts({ facts, fields }: { facts: LeadDetail['facts']; fields: LeadDeta
       <TableBody>
         {facts.map((fact) => (
           <TableRow key={fact.observation_id}>
-            <TableCell>{fieldLabel(fields, fact.key)}</TableCell>
-            <TableCell>{formatValue(fact.value)}</TableCell>
-            <TableCell className="space-x-1">
+            <TableCell className="whitespace-normal break-words">{fieldLabel(fields, fact.key)}</TableCell>
+            <TableCell className="whitespace-normal break-words">{formatValue(fact.value)}</TableCell>
+            <TableCell className="space-x-1 whitespace-normal">
               <Badge variant="secondary">{SOURCE_LABELS[fact.source]}</Badge>
               {fact.status === 'pending_review' && <Badge variant="outline">Pending review</Badge>}
               {fact.confirmed && <Badge variant="outline">Confirmed</Badge>}

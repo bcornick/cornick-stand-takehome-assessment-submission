@@ -1,5 +1,5 @@
 // ABOUTME: The drill-down panel on the right: the fact, event, message, reply, playbook page or full lead that a citation chip or a link opened.
-// ABOUTME: It loads the lead and its events once for every view and closes with one click.
+// ABOUTME: It loads the lead and its events once for every view and closes with one click; it overlays the conversation and sizes to its content, so nothing in it scrolls sideways.
 import { getLead, getLeadEvents } from '@/api/client'
 import { useRemote } from '@/api/useRemote'
 import { DetailPane } from '@/lead/DetailPane'
@@ -32,7 +32,8 @@ export function Panel({ target, refresh, onOpen, onClose, onChange }: Props) {
   return (
     <aside
       aria-label="Detail"
-      className={`${target.kind === 'lead' ? 'w-[480px]' : 'w-[360px]'} flex shrink-0 flex-col gap-4 overflow-y-auto border-l p-4`}
+      // A layer over the conversation: as wide as its content, up to most of the viewport, and never scrolling sideways.
+      className="fixed top-0 right-0 z-10 flex h-screen w-fit max-w-[60vw] min-w-[360px] flex-col gap-4 overflow-x-hidden overflow-y-auto border-l bg-background p-4 shadow-[-12px_0_32px_rgba(0,0,0,0.12)]"
     >
       <header className="flex items-center justify-between">
         <h2 className="text-base font-semibold">{TITLES[target.kind]}</h2>

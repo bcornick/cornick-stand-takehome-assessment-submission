@@ -561,3 +561,5 @@ Brett's decisions carried into milestone 1: an underwriter's value that still tr
 **Checks:** `make check` clean (782 fast Python tests, 128 web tests); `make test-slow` 32 passed; the seed-42 eval row passes every grader; the keyless fresh-clone rehearsal passes with the three example prompts.
 
 **Readings:** every recorded rewrite now passes both checks, so the three tests that pinned lead 001's rejected rewrite lost their subject and are deleted; the fallback is pinned by the scripted tests of `polish_message`, and M5-A3 names them. A recording of the chat suite or an example made before the pass was re-recorded is an orphan and was removed.
+
+**The panel as a layer (design session):** the drill-down panel overlays the conversation column, which keeps its width and place; it is as wide as its content, up to 60% of the viewport (at least 360px), with a shadow on its left edge, and nothing in it scrolls sideways: the facts table is fixed-layout with wrapping cells and the message bodies wrap. The two fixed widths (360px, 480px) are gone from the code and the specification.
