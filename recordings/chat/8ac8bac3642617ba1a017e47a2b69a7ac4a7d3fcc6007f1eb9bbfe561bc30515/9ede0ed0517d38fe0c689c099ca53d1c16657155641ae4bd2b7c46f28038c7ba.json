@@ -367,13 +367,13 @@
   "skill": "chat",
   "stop_reason": "tool_use",
   "tokens_in": 134,
-  "tokens_out": 121,
+  "tokens_out": 117,
   "tool_input": {
     "action": "propose_command",
     "command_payload": {
       "lead_id": "LEAD-00000042-008"
     },
     "command_type": "approve",
-    "rationale": "The underwriter authorises approval of this lead's quote packet and asks for it to be sent to the producer."
+    "rationale": "The underwriter authorises approving the quote packet for this lead and sending it to the producer."
   }
 }

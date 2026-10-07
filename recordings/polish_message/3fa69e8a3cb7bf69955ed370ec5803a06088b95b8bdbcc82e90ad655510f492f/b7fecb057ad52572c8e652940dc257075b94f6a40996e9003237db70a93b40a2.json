@@ -1,19 +1,19 @@
 {
   "input": {
-    "closing": "One reply covering all of the items is ideal. Thank you for your help.",
-    "opening": "Thank you for sending over your client's property submission. To complete the quote we need a few details about the risk, which are listed below.",
+    "closing": "One reply covering all of the items is ideal. Thank you for your help with this.",
+    "opening": "Thank you for sending over your client's property submission. To complete the quote, we need a few details about the location, coverages, property, and construction. If you can share these, we can move forward with the submission.",
     "request": "Thank you for your submission. To complete the quote we need the items below. One reply covering all of them is ideal.\n\nLocation\n1. What is the property's zip code?\n\nPrimary Coverages\n2. What Coverage E (liability) limit is requested: 100,000, 300,000 or 500,000?\n\nProperty\n3. How is the dwelling used: owner occupied single family, owner occupied multi family, secondary residence or seasonal residence?\n4. When was the property purchased?\n5. Are there any animals on the property?\n\nConstruction\n6. What is the total living square footage?\n7. What is the roof shape?\n8. What brand is the electrical panel?"
   },
-  "input_hash": "836cde3a10a7520d9fa6d4597983f163c8a2d81613330e90922175fbcaca4883",
+  "input_hash": "b7fecb057ad52572c8e652940dc257075b94f6a40996e9003237db70a93b40a2",
   "model_id": "deepseek-flash",
   "prompt_version": "3fa69e8a3cb7bf69955ed370ec5803a06088b95b8bdbcc82e90ad655510f492f",
   "request_id": "",
   "skill": "polish_message",
   "stop_reason": "tool_use",
-  "tokens_in": 408,
-  "tokens_out": 50,
+  "tokens_in": 300,
+  "tokens_out": 64,
   "tool_input": {
-    "offending_sentence": "",
-    "verdict": "pass"
+    "offending_sentence": "If you can share these, we can move forward with the submission.",
+    "verdict": "fail"
   }
 }

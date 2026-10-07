@@ -1,16 +1,16 @@
 {
   "input": {
-    "closing": "One reply covering all of the items is ideal. Thank you for your help.",
-    "opening": "Thank you for sending over your client's property submission. To complete the quote, we need a few details about the risk. They are listed below.",
+    "closing": "One reply covering all of the items is ideal. Thank you for your help with this.",
+    "opening": "Thank you for sending in this submission. To complete the quote, we need a few details about the property. The items are listed below.",
     "request": "Thank you for your submission. To complete the quote we need the items below. One reply covering all of them is ideal.\n\nPrimary Coverages\n1. What Coverage A (dwelling) amount is requested?\n\nProperty\n2. What is the occupancy type: primary, secondary, seasonal, tenant, or mixed (secondary or seasonal and tenant)?\n3. When was the property purchased?\n\nConstruction\n4. How many stories does the home have?\n\nProtection\n5. Is the fire department career, mostly career, mostly volunteer or volunteer?\n\nAdditional questions\n6. The number of people living in the home is listed as 0. Can you confirm that number?"
   },
-  "input_hash": "04ba1b96c6c90a91af1a9e589a35d179fc07d12ba3debc35c46f0c14bcc9a6d4",
+  "input_hash": "f7b4b9690484047622eec470f4c4423553baa061e532e52838248b8bf2b60394",
   "model_id": "deepseek-flash",
   "prompt_version": "3fa69e8a3cb7bf69955ed370ec5803a06088b95b8bdbcc82e90ad655510f492f",
   "request_id": "",
   "skill": "polish_message",
   "stop_reason": "tool_use",
-  "tokens_in": 144,
+  "tokens_in": 272,
   "tokens_out": 50,
   "tool_input": {
     "offending_sentence": "",

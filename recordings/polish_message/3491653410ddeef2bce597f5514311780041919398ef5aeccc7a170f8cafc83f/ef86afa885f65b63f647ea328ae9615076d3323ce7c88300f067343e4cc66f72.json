@@ -1,0 +1,20 @@
+{
+  "input": {
+    "ask_count": 1,
+    "recipient_kind": "producer",
+    "request": "Thank you for your submission. There is one thing we still need before we can complete the quote.\n\nProperty\n1. How many acres is the lot?",
+    "round": 1
+  },
+  "input_hash": "ef86afa885f65b63f647ea328ae9615076d3323ce7c88300f067343e4cc66f72",
+  "model_id": "deepseek-flash",
+  "prompt_version": "3491653410ddeef2bce597f5514311780041919398ef5aeccc7a170f8cafc83f",
+  "request_id": "",
+  "skill": "polish_message",
+  "stop_reason": "tool_use",
+  "tokens_in": 291,
+  "tokens_out": 84,
+  "tool_input": {
+    "closing": "Thank you for your help with this.",
+    "opening": "Thank you for sending over your client's property submission. There is just one thing we still need before we can finish the quote."
+  }
+}

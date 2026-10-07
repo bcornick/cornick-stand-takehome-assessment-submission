@@ -1,0 +1,20 @@
+{
+  "input": {
+    "ask_count": 1,
+    "recipient_kind": "applicant",
+    "request": "Thank you for your submission. There is one thing we still need before we can complete the quote.\n\nAdditional questions\n1. The home is listed as unoccupied for 3 consecutive months. Can you confirm that?",
+    "round": 2
+  },
+  "input_hash": "2cb6711ed04eec8049028f0a58e503945f71d0192689bd6198915d1803ea7ed9",
+  "model_id": "deepseek-flash",
+  "prompt_version": "3491653410ddeef2bce597f5514311780041919398ef5aeccc7a170f8cafc83f",
+  "request_id": "",
+  "skill": "polish_message",
+  "stop_reason": "tool_use",
+  "tokens_in": 303,
+  "tokens_out": 90,
+  "tool_input": {
+    "closing": "Thank you for your help with this.",
+    "opening": "Thank you for your submission. This is a follow-up on our earlier email, as there is just one thing we still need before we can finish the quote."
+  }
+}

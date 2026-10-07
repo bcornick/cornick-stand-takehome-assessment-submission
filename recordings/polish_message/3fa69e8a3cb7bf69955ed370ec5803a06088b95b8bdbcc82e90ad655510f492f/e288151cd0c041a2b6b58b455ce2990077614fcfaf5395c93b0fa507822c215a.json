@@ -1,16 +1,16 @@
 {
   "input": {
-    "closing": "One reply covering all of the items is ideal. Thank you for your help.",
-    "opening": "Thank you for sending over your client's property submission. To complete the quote, we need a few details about the property and its construction.",
+    "closing": "One reply covering the items would be ideal. Thank you for your help with this.",
+    "opening": "Thank you for sending over your client's property submission. We're glad to have it, and we just need a few details from you before we can finish the quote.",
     "request": "Thank you for your submission. To complete the quote we need the items below. One reply covering all of them is ideal.\n\nProperty\n1. When was the property purchased?\n\nConstruction\n2. What brand is the electrical panel?"
   },
-  "input_hash": "fade19688ac72e709113e73affbf68a05a1bb6e684c976e371075c247001cbce",
+  "input_hash": "e288151cd0c041a2b6b58b455ce2990077614fcfaf5395c93b0fa507822c215a",
   "model_id": "deepseek-flash",
   "prompt_version": "3fa69e8a3cb7bf69955ed370ec5803a06088b95b8bdbcc82e90ad655510f492f",
   "request_id": "",
   "skill": "polish_message",
   "stop_reason": "tool_use",
-  "tokens_in": 175,
+  "tokens_in": 182,
   "tokens_out": 50,
   "tool_input": {
     "offending_sentence": "",

@@ -11,7 +11,7 @@ OPENING = (
     "Thank you for your submission. To complete the quote we need the items below. "
     "One reply covering all of them is ideal."
 )
-OPENING_ONE_ASK = "Thank you for your submission. To complete the quote we need the item below."
+OPENING_ONE_ASK = "Thank you for your submission. There is one thing we still need before we can complete the quote."
 ADDITIONAL_QUESTIONS = "Additional questions"
 # 10.1: the decline notice is a fixed template; a message carries no decline reason.
 DECLINE_NOTICE = (

@@ -54,7 +54,7 @@ def test_one_ask_is_worded_in_the_singular_and_several_in_the_plural() -> None:
     one = body([DOB])
     two = body([DOB, PANEL])
 
-    assert "the item below" in one
+    assert "one thing we still need" in one
     assert not any(word in one for word in ("items", "details", "covering the"))
     assert "the items below" in two
     assert "One reply covering all of them is ideal." in two
