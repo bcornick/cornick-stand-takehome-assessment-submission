@@ -23,6 +23,7 @@ from uwh.rules.models import (
     RequirementEffect,
     RuleTrace,
 )
+from uwh.rules.registry import FactField
 from uwh.runtime.event_types import BlockerDetail, EventType, ReplyReceived
 from uwh.runtime.events import EventContext, append_event
 from uwh.runtime.store import open_store
@@ -57,7 +58,7 @@ def test_the_events_of_a_lead_are_that_leads_only_and_each_is_numbered(
     db: sqlite3.Connection,
 ) -> None:
     ids = [r[0] for r in db.execute("SELECT id FROM events WHERE lead_id = 'L-1'")]
-    references = References()
+    references = References({})
 
     lookup = lead_events(db, "L-1", references)
 
@@ -69,7 +70,7 @@ def test_the_events_of_a_lead_are_that_leads_only_and_each_is_numbered(
 
 
 def test_a_thing_shown_twice_keeps_its_number(db: sqlite3.Connection) -> None:
-    references = References()
+    references = References({})
 
     first = lead_events(db, "L-1", references).shown["events"]
     again = lead_events(db, "L-1", references).shown["events"]
@@ -80,16 +81,16 @@ def test_a_thing_shown_twice_keeps_its_number(db: sqlite3.Connection) -> None:
 def test_a_lead_is_found_by_the_end_of_its_id_and_an_unknown_one_is_an_error(
     db: sqlite3.Connection,
 ) -> None:
-    assert look_up(db, "lead_summary", "2", References()).shown["lead_id"] == "L-2"
-    assert "L-9" in look_up(db, "lead_events", "L-9", References()).shown["error"]
+    assert look_up(db, "lead_summary", "2", References({})).shown["lead_id"] == "L-2"
+    assert "L-9" in look_up(db, "lead_events", "L-9", References({})).shown["error"]
     # The empty name ends both ids, so it names no one lead.
-    assert "error" in look_up(db, "lead_summary", "", References()).shown
+    assert "error" in look_up(db, "lead_summary", "", References({})).shown
 
 
 def test_the_summary_holds_the_status_and_cites_an_item_by_the_event_that_opened_it(
     db: sqlite3.Connection,
 ) -> None:
-    references = References()
+    references = References({})
     (opened,) = db.execute("SELECT opened_event_id FROM blockers").fetchone()
 
     summary = lead_summary(db, "L-2", references).shown
@@ -99,7 +100,7 @@ def test_the_summary_holds_the_status_and_cites_an_item_by_the_event_that_opened
     assert item["text"] == "No contact."
     (cited,) = references.resolve([item["ref"]])
     assert (cited.lead_id, cited.kind, cited.id) == ("L-2", "event", opened)
-    assert lead_summary(db, "L-1", References()).shown["open_items"] == []
+    assert lead_summary(db, "L-1", References({})).shown["open_items"] == []
 
 
 def test_the_queue_summary_spans_every_lead_and_leaves_out_a_wait_on_the_producer(
@@ -115,7 +116,7 @@ def test_the_queue_summary_spans_every_lead_and_leaves_out_a_wait_on_the_produce
     )
     db.commit()
 
-    lookup = queue_summary(db, References())
+    lookup = queue_summary(db, References({}))
 
     (item,) = lookup.shown["open_items"]
     assert item["lead_id"] == "L-2" and item["kind"] == "underwriter_review"
@@ -145,7 +146,7 @@ def test_the_messages_are_the_sent_requests_and_the_replies_each_cited_by_its_ow
         lead_id="L-1",
     )
     (reply_event_id,) = db.execute("SELECT id FROM events WHERE type = 'reply_received'").fetchone()
-    references = References()
+    references = References({})
 
     lookup = messages(db, "L-1", references)
 
@@ -167,7 +168,7 @@ def test_the_current_draft_is_the_latest_intent_and_a_lead_without_one_has_none(
 ) -> None:
     add_intent(db, "I-1", "routine_request", "sent", 1)
     add_intent(db, "I-2", "routine_request", "draft", 2)
-    references = References()
+    references = References({})
 
     draft = current_draft(db, "L-1", references).shown["draft"]
 
@@ -178,7 +179,7 @@ def test_the_current_draft_is_the_latest_intent_and_a_lead_without_one_has_none(
     )
     (cited,) = references.resolve([draft["ref"]])
     assert (cited.kind, cited.id) == ("message", "I-2")
-    none = current_draft(db, "L-2", References())
+    none = current_draft(db, "L-2", References({}))
     assert none.shown == {"draft": None} and "no draft" in none.summary
 
 
@@ -198,7 +199,7 @@ def test_the_playbook_path_groups_the_stored_plan_by_page_and_cites_each_by_its_
         ],
     )
     db.execute("UPDATE leads SET plan_json = ? WHERE lead_id = 'L-1'", (plan.model_dump_json(),))
-    references = References()
+    references = References({})
 
     lookup = playbook_path(db, "L-1", references)
 
@@ -211,4 +212,23 @@ def test_the_playbook_path_groups_the_stored_plan_by_page_and_cites_each_by_its_
         ("L-1", "page", "plumbing"),
     ]
     assert lookup.summary == "Read the playbook path of lead 1: 2 pages"
-    assert playbook_path(db, "L-2", References()).shown == {"pages": []}
+    assert playbook_path(db, "L-2", References({})).shown == {"pages": []}
+
+
+def test_each_citation_carries_its_source_line(db: sqlite3.Connection) -> None:
+    fields = {
+        "effective_date": FactField(
+            key="effective_date", label="Effective date", kind="date", options=[]
+        )
+    }
+    references = References(fields)
+
+    assert (
+        references.number("L-1", "fact", 5, f"Fact: {references.fact_label('effective_date')}") == 1
+    )
+    assert references.number("L-1", "fact", 5, "ignored, the same thing") == 1
+    assert references.number("L-1", "page", "roof", "Playbook page: Roof") == 2
+    assert [c.text for c in references.resolve([2, 1])] == [
+        "Playbook page: Roof",
+        "Fact: Effective date",
+    ]

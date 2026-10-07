@@ -12,6 +12,7 @@ from uwh.api.leads import open_items
 from uwh.api.views import ChatExchange, Citation
 from uwh.chat.tools import References, look_up, short_name
 from uwh.rules.models import StrictModel
+from uwh.rules.registry import fact_fields
 from uwh.runtime.commands import submit_command
 from uwh.runtime.events import EventContext
 from uwh.runtime.model import (
@@ -164,7 +165,7 @@ def run_turn(
         "history": [exchange.model_dump() for exchange in history],
         "steps": [],
     }
-    references = References()
+    references = References(fact_fields(env.registry))
     exchanges: list[Exchange] = []
     answer: str | None = NO_ANSWER_IN_STEPS
     cited: list[Citation] = []

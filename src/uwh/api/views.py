@@ -423,6 +423,7 @@ class Citation(StrictModel):
     lead_id: str
     kind: CitationKind
     id: int | str
+    text: str  # the source in one line, as the answer lists it: "Fact: Roof material"
 
 
 class StepEvent(StrictModel):

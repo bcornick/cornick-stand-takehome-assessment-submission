@@ -158,7 +158,7 @@ describe('the fact view', () => {
     stubApi()
     const onOpen = vi.fn()
     panel({ kind: 'fact', lead_id: 'LEAD-1', id: 3 }, { onOpen })
-    await userEvent.click(await screen.findByRole('button', { name: 'Event #1' }))
+    await userEvent.click(await screen.findByRole('button', { name: /^Recorded / }))
     expect(onOpen).toHaveBeenCalledWith({ kind: 'event', lead_id: 'LEAD-1', id: 1 })
   })
 })

@@ -460,13 +460,18 @@
           "number": {
             "title": "Number",
             "type": "integer"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
           }
         },
         "required": [
           "number",
           "lead_id",
           "kind",
-          "id"
+          "id",
+          "text"
         ],
         "title": "Citation",
         "type": "object"

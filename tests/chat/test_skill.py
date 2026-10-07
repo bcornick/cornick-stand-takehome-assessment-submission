@@ -75,7 +75,15 @@ def test_a_read_then_an_answer_cites_what_the_lookup_showed(
     turn = run_turn(db, env, "How did L-1 arrive?", LEAD, [], lines.append)
 
     assert turn.answer == "It arrived by web." and turn.proposal_id is None
-    assert turn.citations == [Citation(number=1, lead_id=LEAD, kind="event", id=received.id)]
+    assert turn.citations == [
+        Citation(
+            number=1,
+            lead_id=LEAD,
+            kind="event",
+            id=received.id,
+            text="Event: Received the lead from web",
+        )
+    ]
     assert script.shown[0]["steps"] == []
     (step,) = script.shown[1]["steps"]
     (shown_event,) = step["result"]["events"]

@@ -1,7 +1,8 @@
 # ABOUTME: The chat assistant's lookups (section 11): named read functions over the views the pages use, each returning what the model is shown and the one line the underwriter sees for the step.
 # ABOUTME: Every result item carries a reference number of the turn; `References` maps a number to the lead, kind and immutable id it stands for, so the model cites numbers and never sees an event id.
 import sqlite3
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
+from datetime import datetime
 from dataclasses import dataclass
 from typing import Any
 
@@ -12,25 +13,34 @@ from uwh.api.run import run_summary
 from uwh.api.views import Citation, CitationKind, Item
 from uwh.rules.graphs import load_graphs
 from uwh.rules.models import ActionPlan
+from uwh.rules.registry import FactField
 from uwh.runtime.event_types import REQUEST_KINDS, EventType
 from uwh.runtime.facts import effective_facts
 from uwh.skills.steps import lead_label
 
 
 class References:
-    """The reference numbers of one chat turn, handed out in the order results show their items."""
+    """The reference numbers of one chat turn, handed out in the order results show their items,
+    each with the one line the answer lists as its source."""
 
-    def __init__(self) -> None:
+    def __init__(self, fields: Mapping[str, FactField]) -> None:
         self._citations: list[Citation] = []
+        self._fields = fields
 
-    def number(self, lead_id: str, kind: CitationKind, id: int | str) -> int:
+    def number(self, lead_id: str, kind: CitationKind, id: int | str, text: str) -> int:
         """The number that stands for the thing; the same thing shown twice keeps its number."""
         for citation in self._citations:
             if (citation.lead_id, citation.kind, citation.id) == (lead_id, kind, id):
                 return citation.number
         number = len(self._citations) + 1
-        self._citations.append(Citation(number=number, lead_id=lead_id, kind=kind, id=id))
+        self._citations.append(
+            Citation(number=number, lead_id=lead_id, kind=kind, id=id, text=text)
+        )
         return number
+
+    def fact_label(self, key: str) -> str:
+        """The registry's label for a field key, or the key itself."""
+        return self._fields[key].label if key in self._fields else key
 
     def resolve(self, numbers: Iterable[int]) -> list[Citation]:
         """What the numbers stand for, each once and in the order given; a number no result of the
@@ -43,6 +53,12 @@ class References:
 class Lookup:
     shown: dict[str, Any]  # the result the model is shown
     summary: str  # the line the underwriter sees: what was read and what it held
+
+
+def _when(iso: str) -> str:
+    """An ISO timestamp as "Jun 29, 2026, 9:00 AM", for a source line."""
+    moment = datetime.fromisoformat(iso)
+    return f"{moment:%b} {moment.day}, {moment.year}, {moment:%I:%M %p}".replace(" 0", " ")
 
 
 def short_name(lead_id: str) -> str:
@@ -79,7 +95,7 @@ def lead_events(db: sqlite3.Connection, lead_id: str, references: References) ->
     assert page is not None  # the lead was found
     events = [
         {
-            "ref": references.number(lead_id, "event", event.id),
+            "ref": references.number(lead_id, "event", event.id, f"Event: {event.summary}"),
             "type": event.type.value,
             "actor": event.actor,
             "summary": event.summary,
@@ -98,7 +114,9 @@ def _item(db: sqlite3.Connection, item: Item, references: References) -> dict[st
         "SELECT opened_event_id FROM blockers WHERE id = ?", (item.item_id,)
     ).fetchone()
     return {
-        "ref": references.number(item.lead_id, "event", opened_event_id),
+        "ref": references.number(
+            item.lead_id, "event", opened_event_id, f"Event: {item.detail.text}"
+        ),
         "lead_id": item.lead_id,
         "kind": item.kind,
         "text": item.detail.text,
@@ -117,7 +135,9 @@ def lead_summary(db: sqlite3.Connection, lead_id: str, references: References) -
         "status": status,
         "facts": [
             {
-                "ref": references.number(lead_id, "fact", fact.event_id),
+                "ref": references.number(
+                    lead_id, "fact", fact.event_id, f"Fact: {references.fact_label(fact.key)}"
+                ),
                 "key": fact.key,
                 "value": fact.value,
                 "source": fact.source,
@@ -172,7 +192,9 @@ def messages(db: sqlite3.Connection, lead_id: str, references: References) -> Lo
     cited by its event."""
     requests = [
         {
-            "ref": references.number(lead_id, "message", intent["id"]),
+            "ref": references.number(
+                lead_id, "message", intent["id"], f"Email: {intent['subject']}"
+            ),
             "kind": intent["kind"],
             "subject": intent["subject"],
             "body": intent["body"],
@@ -183,7 +205,12 @@ def messages(db: sqlite3.Connection, lead_id: str, references: References) -> Lo
     page = events_of_lead(db, lead_id)
     assert page is not None  # the lead was found
     replies = [
-        {"ref": references.number(lead_id, "reply", event.id), "body": event.message.body}
+        {
+            "ref": references.number(
+                lead_id, "reply", event.id, f"Reply received {_when(event.sim_ts)}"
+            ),
+            "body": event.message.body,
+        }
         for event in page.events
         if event.type == EventType.reply_received and event.message is not None
     ]
@@ -202,7 +229,7 @@ def current_draft(db: sqlite3.Connection, lead_id: str, references: References) 
         return Lookup({"draft": None}, f"Read the draft of {short_name(lead_id)}: no draft")
     latest = intents[-1]
     draft = {
-        "ref": references.number(lead_id, "message", latest["id"]),
+        "ref": references.number(lead_id, "message", latest["id"], f"Draft: {latest['subject']}"),
         "intent_id": latest["id"],
         "kind": latest["kind"],
         "state": latest["state"],
@@ -221,7 +248,12 @@ def playbook_path(db: sqlite3.Connection, lead_id: str, references: References) 
     pages = [] if plan is None else plan_pages(plan, load_graphs())
     shown = [
         {
-            "ref": references.number(lead_id, "page", page.key),
+            "ref": references.number(
+                lead_id,
+                "page",
+                page.key,
+                f"Playbook page: {page.key.replace('_', ' ').capitalize()}",
+            ),
             "page": page.key,
             "effects": [effect.model_dump(mode="json") for effect in page.effects],
             "declines_on_every_branch": [

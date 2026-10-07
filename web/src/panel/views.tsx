@@ -52,12 +52,11 @@ function TimelineEvent({ event, selected, lead, onSelect }: { event: EventRow; s
       />
       {selected ? (
         <div className="flex flex-col gap-2 rounded-md border bg-soft p-3">
-          <p className="flex flex-wrap items-center gap-2">
+          <p className="font-medium">{labelKeys(event.summary, lead.fields)}</p>
+          <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <Badge variant="secondary">{EVENT_LABELS[event.type]}</Badge>
             <span>{`${ACTOR_LABELS[event.actor]}, ${formatTime(event.sim_ts)}`}</span>
-            <span className="font-mono text-xs text-muted-foreground">{`#${event.id} · ${event.mode}`}</span>
           </p>
-          <p>{labelKeys(event.summary, lead.fields)}</p>
           {event.fact_key !== null && <p className="text-xs text-muted-foreground">{`Field: ${fieldLabel(lead.fields, event.fact_key)} (${event.fact_key})`}</p>}
           {event.lookup !== null && (
             <p className="text-xs text-muted-foreground">
@@ -121,7 +120,7 @@ export function FactView(props: ViewProps) {
           <Badge variant="secondary">{SOURCE_LABELS[fact.source]}</Badge>
           {source !== undefined && <span>{`Observed ${formatTime(source.sim_ts)}`}</span>}
         </p>
-        {source !== undefined && <OpenLink onClick={() => openEvent(props, source)}>{`Event #${source.id}`}</OpenLink>}
+        {source !== undefined && <OpenLink onClick={() => openEvent(props, source)}>{`Recorded ${formatTime(source.sim_ts)}`}</OpenLink>}
       </section>
       <section aria-label="Observations" className="flex flex-col gap-2">
         <Heading>Observations</Heading>

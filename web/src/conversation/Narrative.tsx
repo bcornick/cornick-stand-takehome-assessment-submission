@@ -40,19 +40,10 @@ function lookupSentence(events: Event[], lead: Lead): string {
   return `Looked up ${plural(events.length, 'provider')}: ${outcomes.join(', ')}`
 }
 
-// The facts of one message that get a chip, numbered 1, 2, 3 in the order shown.
-function chipNumbers(bullets: Bullet[]): Map<number, number> {
-  const numbers = new Map<number, number>()
-  const shown = bullets.flatMap((bullet) => (bullet.kind === 'event' ? [bullet.event] : bullet.kind === 'facts' ? bullet.events : []))
-  for (const event of shown) {
-    if (event.type === 'fact_observed') numbers.set(event.id, numbers.size + 1)
-  }
-  return numbers
-}
 
-type BulletProps = { bullet: Bullet; lead: Lead; numbers: Map<number, number>; onOpen: Open }
+type BulletProps = { bullet: Bullet; lead: Lead; onOpen: Open }
 
-function BulletRow({ bullet, lead, numbers, onOpen }: BulletProps) {
+function BulletRow({ bullet, lead, onOpen }: BulletProps) {
   if (bullet.kind === 'lookups') return <li>{lookupSentence(bullet.events, lead)}</li>
   if (bullet.kind === 'facts') {
     return (
@@ -61,7 +52,7 @@ function BulletRow({ bullet, lead, numbers, onOpen }: BulletProps) {
           <summary>{`Recorded ${bullet.events.length} facts`}</summary>
           <ul className="mt-1 flex flex-col gap-1 pl-4">
             {bullet.events.map((event) => (
-              <BulletRow key={event.id} bullet={{ kind: 'event', event }} lead={lead} numbers={numbers} onOpen={onOpen} />
+              <BulletRow key={event.id} bullet={{ kind: 'event', event }} lead={lead} onOpen={onOpen} />
             ))}
           </ul>
         </details>
@@ -69,13 +60,12 @@ function BulletRow({ bullet, lead, numbers, onOpen }: BulletProps) {
     )
   }
   const { event } = bullet
-  const number = numbers.get(event.id)
   return (
     <li className="flex items-baseline gap-2">
       <span>{labelKeys(event.summary, lead.fields)}</span>
-      {number !== undefined && (
+      {event.type === 'fact_observed' && (
         <Chip
-          label={number}
+          label="fact"
           opens={`Open fact ${event.fact_key ?? event.id}`}
           onClick={() => onOpen({ kind: 'fact', lead_id: lead.lead_id, id: event.id })}
         />
@@ -88,13 +78,12 @@ function BlockView({ block, lead, onOpen }: { block: Block } & Omit<Props, 'even
   const leadId = lead.lead_id
   switch (block.kind) {
     case 'assistant_message': {
-      const numbers = chipNumbers(block.bullets)
       return (
         <div className="flex flex-col gap-1 text-sm">
           <p className="text-xs text-gray-600">Assistant</p>
           <ul className="flex flex-col gap-1">
             {block.bullets.map((bullet) => (
-              <BulletRow key={bullet.kind === 'event' ? bullet.event.id : bullet.events[0].id} bullet={bullet} lead={lead} numbers={numbers} onOpen={onOpen} />
+              <BulletRow key={bullet.kind === 'event' ? bullet.event.id : bullet.events[0].id} bullet={bullet} lead={lead} onOpen={onOpen} />
             ))}
           </ul>
         </div>
@@ -122,7 +111,7 @@ function BlockView({ block, lead, onOpen }: { block: Block } & Omit<Props, 'even
             <span>{sent ? 'To the producer' : 'From the producer'}</span>
             <span>{formatTime(block.event.sim_ts)}</span>
             <Chip
-              label={1}
+              label={sent ? 'email' : 'reply'}
               opens={sent ? 'Open the message' : 'Open the reply'}
               onClick={() => onOpen({ kind: sent ? 'event' : 'reply', lead_id: leadId, id: block.event.id })}
             />

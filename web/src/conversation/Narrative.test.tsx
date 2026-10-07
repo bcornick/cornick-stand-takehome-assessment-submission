@@ -183,7 +183,7 @@ const notNarrated: Event['type'][] = ['model_called', 'skill_fallback_used', 're
       { ...lead, blockers: [] },
     )
     const chips = screen.getAllByRole('button').map((chip) => `${chip.getAttribute('aria-label')}=${chip.textContent}`)
-    expect(chips).toEqual(['Open fact a=1', 'Open fact b=2', 'Open the message=1', 'Open fact c=1'])
+    expect(chips).toEqual(['Open fact a=fact', 'Open fact b=fact', 'Open the message=email', 'Open fact c=fact'])
   })
 
   it('shows a run of provider lookups as one sentence with counts and labelled missing inputs', () => {

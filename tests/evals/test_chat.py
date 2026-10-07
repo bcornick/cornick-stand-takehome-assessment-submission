@@ -82,7 +82,9 @@ def test_a_question_that_caused_a_command_fails(turns: list[TurnEvidence]) -> No
             replace(
                 card,
                 expect="answer_with_event",
-                citations=[Citation(number=1, lead_id=card.case, kind="event", id=1)],
+                citations=[
+                    Citation(number=1, lead_id=card.case, kind="event", id=1, text="Event: x")
+                ],
             )
         ]
     ).failures

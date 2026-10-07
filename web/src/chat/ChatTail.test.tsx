@@ -52,8 +52,8 @@ describe('ChatTail', () => {
         type: 'answer',
         answer: 'It arrived by web.',
         citations: [
-          { number: 1, lead_id: 'LEAD-00000042-008', kind: 'event', id: 12 },
-          { number: 2, lead_id: 'LEAD-00000042-008', kind: 'fact', id: 15 },
+          { number: 1, lead_id: 'LEAD-00000042-008', kind: 'event', id: 12, text: 'Event: Received the lead from web' },
+          { number: 2, lead_id: 'LEAD-00000042-008', kind: 'fact', id: 15, text: 'Fact: Roof material' },
         ],
       },
     }
@@ -63,9 +63,16 @@ describe('ChatTail', () => {
     expect(screen.getByText('It arrived by web.')).toBeInTheDocument()
     expect(screen.getByText('What I looked at')).toBeInTheDocument()
     expect(screen.queryByText('Working…')).toBeNull()
-    await userEvent.click(screen.getByRole('button', { name: /^Open fact 15/ }))
+    const sources = within(screen.getByRole('list', { name: 'Sources' })).getAllByRole('listitem')
+    expect(sources.map((source) => source.textContent)).toEqual([
+      '1 · Event: Received the lead from web, lead 008',
+      '2 · Fact: Roof material, lead 008',
+    ])
+    await userEvent.click(screen.getByRole('button', { name: 'Open source 2' }))
+    await userEvent.click(within(sources[1]).getByRole('button'))
 
-    expect(onOpen).toHaveBeenCalledWith({ kind: 'fact', lead_id: 'LEAD-00000042-008', id: 15 })
+    expect(onOpen).toHaveBeenCalledTimes(2)
+    expect(onOpen).toHaveBeenLastCalledWith({ kind: 'fact', lead_id: 'LEAD-00000042-008', id: 15 })
   })
 
   it('shows a turn that has not closed as working, with its steps open', () => {

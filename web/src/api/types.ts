@@ -436,6 +436,8 @@ export interface components {
             lead_id: string;
             /** Number */
             number: number;
+            /** Text */
+            text: string;
         };
         /** CommandResponse */
         CommandResponse: {
