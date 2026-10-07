@@ -368,17 +368,18 @@
   "skill": "chat",
   "stop_reason": "tool_use",
   "tokens_in": 198,
-  "tokens_out": 166,
+  "tokens_out": 175,
   "tool_input": {
     "action": "answer",
-    "answer": "Lead 000 is a proposed decline because of the post-and-pier page: rule PP-1 fired and committed a decline. The other pages that ran produced no decline — roof and siding returned no action, and the occupancy, profile and replacement-cost pages are still waiting on values (months unoccupied, KYC score, coverage-to-RCE ratio). The electrical and plumbing pages were not evaluated.",
+    "answer": "The post-and-pier page declined it under rule PP-1, and that effect is committed. The other pages either took no action (roof, siding) or are still waiting on facts (occupancy waits on months unoccupied, profile on kyc score, replacement cost on coverage-to-RCE ratio); electrical and plumbing were not evaluated. The decline notice is still an open item awaiting your review before it is sent.",
     "citations": [
       35,
-      38,
-      39,
+      33,
       34,
       36,
       37,
+      38,
+      39,
       40,
       41
     ]
