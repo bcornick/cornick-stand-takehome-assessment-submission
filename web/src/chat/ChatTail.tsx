@@ -16,6 +16,11 @@ type Props = {
   onChange: () => void
 }
 
+// An answer's citations in number order, for the chips and the source lines alike.
+function sourcesOf(closing: Extract<Turn['closing'], { type: 'answer' }>) {
+  return [...closing.citations].sort((a, b) => a.number - b.number)
+}
+
 export function ChatTail({ turns, proposals, leadId, onOpen, onSelect, onChange }: Props) {
   return (
     <div className="flex flex-col gap-4">
@@ -42,7 +47,7 @@ export function ChatTail({ turns, proposals, leadId, onOpen, onSelect, onChange 
                     <AssistantLabel />
                     <p className="text-sm">{closing.answer}</p>
                     <p className="flex gap-1">
-                      {closing.citations.map((citation) => (
+                      {sourcesOf(closing).map((citation) => (
                         <Chip
                           key={citation.number}
                           label={citation.number}
@@ -53,7 +58,7 @@ export function ChatTail({ turns, proposals, leadId, onOpen, onSelect, onChange 
                     </p>
                     {closing.citations.length > 0 && (
                       <ol aria-label="Sources" className="flex flex-col gap-0.5 text-xs text-muted-foreground">
-                        {closing.citations.map((citation) => (
+                        {sourcesOf(closing).map((citation) => (
                           <li key={citation.number}>
                             <button
                               type="button"
