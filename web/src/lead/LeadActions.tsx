@@ -1,5 +1,5 @@
 // ABOUTME: The actions on a whole lead: resolve a fact of the lead's registry fields, decline the lead, and paste a producer's reply to the lead's latest sent request.
-// ABOUTME: Each form requires its reason, or the reply text, and shows the reason the command was refused.
+// ABOUTME: Resolve fact takes optional notes; Decline lead requires its reason and the reply form its text, and shows the reason the command was refused.
 import { declineLead, deliverReply, resolveFact } from '@/api/client'
 import type { components } from '@/api/types'
 import { ActionForm } from '@/components/ActionForm'
@@ -8,7 +8,7 @@ type LeadDetail = components['schemas']['LeadDetail']
 
 type Props = { lead: LeadDetail; onChange: () => void }
 
-const REASON = { name: 'reason', label: 'Reason' }
+const DECLINE_REASON = { name: 'reason', label: 'Reason for the decline, kept on file' }
 
 // The command carries the value as the field's registry type: a number for an integer or a decimal, a
 // flag for a toggle, and text for every other type, so a zip code stays "34102". Text that does not fit
@@ -56,7 +56,12 @@ export function LeadActions({ lead, onChange }: Props) {
                 })),
               },
               { name: 'value', label: 'Value' },
-              REASON,
+              {
+                name: 'reason',
+                label: 'Notes',
+                placeholder: 'Optional. Where the value came from, e.g. a call with the producer.',
+                optional: true,
+              },
             ]}
             act={({ key, value, reason }) =>
               resolveFact(
@@ -71,7 +76,7 @@ export function LeadActions({ lead, onChange }: Props) {
           <ActionForm
             label="Decline lead"
             destructive
-            fields={[REASON]}
+            fields={[DECLINE_REASON]}
             act={({ reason }) => declineLead(lead.lead_id, reason!)}
             onDone={onChange}
           />

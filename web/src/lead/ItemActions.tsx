@@ -14,6 +14,8 @@ type LeadDetail = Schemas['LeadDetail']
 type Blocker = LeadDetail['blockers'][number]
 type Draft = LeadDetail['drafts'][number]
 
+const DRAFT_REJECT_PLACEHOLDER = 'Optional. What is wrong with it; this is how the system learns.'
+
 type Props = { lead: LeadDetail; onChange: () => void }
 
 // One way to close an item. `act` resolves to the reason it was refused, or null when accepted;
@@ -24,6 +26,9 @@ type Choice = {
   act: (reason: string) => Promise<string | null>
   confirm?: string
   note?: string
+  placeholder?: string
+  // Set where the reason is required: approving a decline notice.
+  reasonLabel?: string
 }
 
 // One open item as the underwriter meets it: what it is, why it waits, and its one decision.
@@ -45,15 +50,23 @@ export function OpenItem({ lead, blocker, onChange }: Props & { blocker: Blocker
 function ItemActions({ lead, blocker, onChange }: Props & { blocker: Blocker }) {
   const { item_id: itemId } = blocker
   const { item_kind: itemKind, cause_persists: persists } = blocker.detail
-  const approveChoice = (label: string, hash?: string): Choice => ({
+  const approveChoice = (
+    label: string,
+    placeholder = 'Optional.',
+    hash?: string,
+    reasonLabel?: string,
+  ): Choice => ({
     label,
     outline: false,
     act: (reason) => approve(itemId, reason, hash),
+    placeholder,
+    reasonLabel,
   })
-  const rejectChoice = (label = 'Reject', note?: string): Choice => ({
+  const rejectChoice = (label = 'Reject', placeholder = 'Optional.', note?: string): Choice => ({
     label,
     outline: true,
     act: (reason) => reject(itemId, reason),
+    placeholder,
     note,
   })
 
@@ -67,16 +80,25 @@ function ItemActions({ lead, blocker, onChange }: Props & { blocker: Blocker }) 
       draft.kind === 'decline_notice'
         ? rejectChoice(
             'Withdraw decline and send the asks',
+            DRAFT_REJECT_PLACEHOLDER,
             'Withdrawing the decline suppresses it for this lead and sends the requests for the facts still missing.',
           )
-        : rejectChoice()
+        : rejectChoice('Reject', DRAFT_REJECT_PLACEHOLDER)
+    const approveDraft =
+      draft.kind === 'decline_notice'
+        ? approveChoice('Approve', undefined, draft.payload_hash, 'Reason for the decline, kept on file')
+        : approveChoice(
+            'Approve',
+            'Optional. Anything the file should carry about this quote.',
+            draft.payload_hash,
+          )
     return (
       <>
         <DraftPreview draft={draft} onChange={onChange} />
         <Decision
           // A new hash is a new draft, which the reason given for the old one does not cover.
           key={draft.payload_hash}
-          choices={[approveChoice('Approve', draft.payload_hash), rejectDraft]}
+          choices={[approveDraft, rejectDraft]}
           onChange={onChange}
         />
       </>
@@ -92,7 +114,10 @@ function ItemActions({ lead, blocker, onChange }: Props & { blocker: Blocker }) 
             {`${fieldLabel(lead.fields, pending.key)}: proposed ${formatValue(pending.value)}, current ${formatValue(current?.value)}`}
           </p>
         )}
-        <Decision choices={[approveChoice('Approve'), rejectChoice()]} onChange={onChange} />
+        <Decision
+          choices={[approveChoice('Approve', 'Optional. Why the reply’s value wins.'), rejectChoice()]}
+          onChange={onChange}
+        />
       </>
     )
   }
@@ -107,8 +132,8 @@ function ItemActions({ lead, blocker, onChange }: Props & { blocker: Blocker }) 
   )
 }
 
-// The choices as buttons, none chosen. Choosing one opens the single reason field; the confirm
-// stays disabled until the reason has text, so nothing is submitted without one.
+// The choices as buttons, none chosen. Choosing one opens the single notes field; the confirm is
+// enabled with it empty, except where the choice names a required reason.
 function Decision({ choices, onChange }: { choices: Choice[]; onChange: () => void }) {
   const [chosen, setChosen] = useState<Choice | null>(null)
   const [reason, setReason] = useState('')
@@ -143,16 +168,17 @@ function Decision({ choices, onChange }: { choices: Choice[]; onChange: () => vo
         <form aria-label="Confirm the choice" onSubmit={submit} className="flex flex-col gap-2">
           {chosen.note !== undefined && <p className="text-sm text-muted-foreground">{chosen.note}</p>}
           <label className="flex flex-col gap-1 text-sm">
-            Reason
+            {chosen.reasonLabel ?? 'Notes'}
             <input
               type="text"
               className="rounded-md border px-2 py-1 text-sm"
+              placeholder={chosen.placeholder}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
             />
           </label>
           <span className="flex flex-wrap items-center gap-2">
-            <button type="submit" disabled={busy || reason.trim() === ''} className="button-primary">
+            <button type="submit" disabled={busy || (chosen.reasonLabel !== undefined && reason.trim() === '')} className="button-primary">
               {chosen.confirm ?? chosen.label}
             </button>
             <button type="button" onClick={close} className="button-outline">
@@ -187,9 +213,8 @@ function DraftPreview({ draft, onChange }: { draft: Draft; onChange: () => void 
             fields={[
               { name: 'subject', label: 'Subject', initial: draft.subject },
               { name: 'body', label: 'Body', initial: draft.body, multiline: true },
-              { name: 'reason', label: 'Reason' },
             ]}
-            act={({ subject, body, reason }) => editDraft(draft.intent_id, subject!, body!, reason!)}
+            act={({ subject, body }) => editDraft(draft.intent_id, subject!, body!, '')}
             onDone={() => {
               setEditing(false)
               onChange()
@@ -235,6 +260,7 @@ function QuestionCard({ lead, blocker, onChange }: Props & { blocker: Blocker })
               return {
                 label: words.charAt(0).toUpperCase() + words.slice(1),
                 confirm: `Choose ${words}`,
+                placeholder: 'Optional. What tipped the choice, e.g. 14 ft to the neighbour.',
                 outline: true,
                 act: (reason) => recordRuling(lead.lead_id, choice.choice_id, option, reason),
               }

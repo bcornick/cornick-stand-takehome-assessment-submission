@@ -171,14 +171,14 @@ function item(blockerView: Schemas['BlockerView'], detail: Schemas['LeadDetail']
   render(<OpenItem lead={detail} blocker={blockerView} onChange={() => {}} />)
 }
 
-// The reason form that opens under the buttons once a choice is made.
+// The notes form that opens under the buttons once a choice is made.
 function reasonForm() {
   return within(screen.getByRole('form', { name: 'Confirm the choice' }))
 }
 
-async function choose(name: string, reason: string, confirm = name) {
+async function choose(name: string, note: string, confirm = name) {
   await userEvent.click(screen.getByRole('button', { name }))
-  await userEvent.type(reasonForm().getByLabelText('Reason'), reason)
+  if (note !== '') await userEvent.type(reasonForm().getByLabelText('Notes'), note)
   await userEvent.click(reasonForm().getByRole('button', { name: confirm }))
 }
 
@@ -187,18 +187,18 @@ afterEach(() => {
 })
 
 describe('a draft card', () => {
-  it('shows one reason field only after Approve is chosen, then approves against the hash shown', async () => {
+  it('shows one notes field only after Approve is chosen, then approves against the hash shown with no note', async () => {
     const posted = stubApi()
     item(packetItem)
     expect(screen.getByRole('button', { name: 'Approve' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Reject' })).toBeEnabled()
-    expect(screen.queryByLabelText('Reason')).toBeNull()
+    expect(screen.queryByLabelText('Notes')).toBeNull()
 
     await userEvent.click(screen.getByRole('button', { name: 'Approve' }))
-    expect(screen.getAllByLabelText('Reason')).toHaveLength(1)
-    expect(reasonForm().getByRole('button', { name: 'Approve' })).toBeDisabled()
+    expect(screen.getAllByLabelText('Notes')).toHaveLength(1)
+    expect(screen.getByPlaceholderText('Optional. Anything the file should carry about this quote.')).toBeInTheDocument()
+    expect(reasonForm().getByRole('button', { name: 'Approve' })).toBeEnabled()
 
-    await userEvent.type(reasonForm().getByLabelText('Reason'), 'matches the plan')
     await userEvent.click(reasonForm().getByRole('button', { name: 'Approve' }))
 
     expect(posted).toEqual([
@@ -206,19 +206,19 @@ describe('a draft card', () => {
         path: '/api/commands',
         body: {
           type: 'approve',
-          payload: { item_id: 17, artifact_hash: packet.payload_hash, reason: 'matches the plan' },
+          payload: { item_id: 17, artifact_hash: packet.payload_hash, reason: '' },
         },
       },
     ])
   })
 
-  it('rejects a draft only with a reason', async () => {
+  it('rejects a draft with the note typed', async () => {
     const posted = stubApi()
     item(packetItem)
     await userEvent.click(screen.getByRole('button', { name: 'Reject' }))
-    expect(reasonForm().getByRole('button', { name: 'Reject' })).toBeDisabled()
+    expect(reasonForm().getByRole('button', { name: 'Reject' })).toBeEnabled()
 
-    await userEvent.type(reasonForm().getByLabelText('Reason'), 'the roof is wrong')
+    await userEvent.type(reasonForm().getByLabelText('Notes'), 'the roof is wrong')
     await userEvent.click(reasonForm().getByRole('button', { name: 'Reject' }))
 
     expect(posted[0]).toEqual({
@@ -227,13 +227,13 @@ describe('a draft card', () => {
     })
   })
 
-  it('hides the reason field again on Cancel', async () => {
+  it('hides the notes field again on Cancel', async () => {
     const posted = stubApi()
     item(packetItem)
     await userEvent.click(screen.getByRole('button', { name: 'Reject' }))
     await userEvent.click(reasonForm().getByRole('button', { name: 'Cancel' }))
 
-    expect(screen.queryByLabelText('Reason')).toBeNull()
+    expect(screen.queryByLabelText('Notes')).toBeNull()
     expect(posted).toEqual([])
   })
 
@@ -249,13 +249,32 @@ describe('a draft card', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Withdraw decline and send the asks' }))
     expect(screen.getByText(/sends the requests for the facts still missing/)).toBeInTheDocument()
-    await userEvent.type(reasonForm().getByLabelText('Reason'), 'the roof is fine')
+    await userEvent.type(reasonForm().getByLabelText('Notes'), 'the roof is fine')
     await userEvent.click(reasonForm().getByRole('button', { name: 'Withdraw decline and send the asks' }))
 
     expect(posted[0].body).toEqual({ type: 'reject', payload: { item_id: 30, reason: 'the roof is fine' } })
   })
 
-  it('folds the subject and body in a preview, and Edit inside it posts the new text with a reason', async () => {
+  it('approves a decline notice only with the reason for the decline', async () => {
+    const posted = stubApi()
+    item(
+      blocker(30, 'underwriter_review', { item_kind: 'draft', intent_id: decline.intent_id, text: 'Review the notice.' }),
+      { ...lead, drafts: [decline] },
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Approve' }))
+    expect(screen.queryByLabelText('Notes')).toBeNull()
+    expect(reasonForm().getByRole('button', { name: 'Approve' })).toBeDisabled()
+
+    await userEvent.type(reasonForm().getByLabelText('Reason for the decline, kept on file'), 'outside appetite')
+    await userEvent.click(reasonForm().getByRole('button', { name: 'Approve' }))
+
+    expect(posted[0].body).toEqual({
+      type: 'approve',
+      payload: { item_id: 30, artifact_hash: decline.payload_hash, reason: 'outside appetite' },
+    })
+  })
+
+  it('folds the subject and body in a preview, and Edit inside it posts the new text with no reason', async () => {
     const posted = stubApi()
     item(packetItem)
     const preview = screen.getByText('Preview the packet').closest('details')!
@@ -265,11 +284,10 @@ describe('a draft card', () => {
 
     await userEvent.click(within(preview).getByRole('button', { name: 'Edit' }))
     const edit = within(screen.getByRole('form', { name: 'Edit' }))
-    expect(edit.getByRole('button', { name: 'Edit' })).toBeDisabled()
+    expect(edit.queryByLabelText('Reason')).toBeNull()
     for (const [label, text] of [
       ['Subject', 'Your quote, checked'],
       ['Body', 'Checked.'],
-      ['Reason', 'too stiff'],
     ]) {
       await userEvent.clear(edit.getByLabelText(label))
       await userEvent.type(edit.getByLabelText(label), text)
@@ -285,7 +303,7 @@ describe('a draft card', () => {
             intent_id: packet.intent_id,
             subject: 'Your quote, checked',
             body: 'Checked.',
-            reason: 'too stiff',
+            reason: '',
           },
         },
       },
@@ -297,7 +315,7 @@ describe('the other items of a lead', () => {
   it.each([
     ['Approve', { type: 'approve', payload: { item_id: 18, artifact_hash: null, reason: 'clear' } }],
     ['Reject', { type: 'reject', payload: { item_id: 18, reason: 'clear' } }],
-  ])('%s a pending value with a reason, shown by the field’s label', async (name, body) => {
+  ])('%s a pending value with a note, shown by the field’s label', async (name, body) => {
     const posted = stubApi()
     item(pendingItem)
     expect(screen.getByText('Months unoccupied: proposed 5, current 0')).toBeInTheDocument()
@@ -330,7 +348,7 @@ describe('the other items of a lead', () => {
   it('shows the refusal reason the command returns', async () => {
     stubApi({ accepted: false, event_id: null, reason: 'the cause persists' })
     item(pendingItem)
-    await choose('Approve', 'clear')
+    await choose('Approve', '')
 
     expect(await screen.findByRole('alert')).toHaveTextContent('the cause persists')
   })
@@ -348,14 +366,12 @@ describe('the question card', () => {
     for (const button of buttons) expect(button).toBeEnabled()
   })
 
-  it('posts the ruling only after an option is chosen and a reason is given', async () => {
+  it('posts the ruling after an option is chosen, with no note', async () => {
     const posted = stubApi()
     item(questionItem)
     await userEvent.click(screen.getByRole('button', { name: 'Legacy underwriting' }))
-    expect(reasonForm().getByRole('button', { name: 'Choose legacy underwriting' })).toBeDisabled()
     expect(posted).toEqual([])
-
-    await userEvent.type(reasonForm().getByLabelText('Reason'), 'the checklist is met')
+    expect(screen.getByPlaceholderText('Optional. What tipped the choice, e.g. 14 ft to the neighbour.')).toBeInTheDocument()
     await userEvent.click(reasonForm().getByRole('button', { name: 'Choose legacy underwriting' }))
 
     expect(posted).toEqual([
@@ -367,11 +383,11 @@ describe('the question card', () => {
             lead_id: 'LEAD-1',
             choice_id: 'I13.fire_fail',
             option: 'legacy_underwriting',
-            reason: 'the checklist is met',
+            reason: '',
           },
         },
       },
     ])
-    await waitFor(() => expect(screen.queryByLabelText('Reason')).toBeNull())
+    await waitFor(() => expect(screen.queryByLabelText('Notes')).toBeNull())
   })
 })

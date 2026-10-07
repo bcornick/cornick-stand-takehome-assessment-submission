@@ -134,7 +134,6 @@ describe('the actions on the lead', () => {
 
     await userEvent.selectOptions(scope.getByLabelText('Field'), 'coverage_a')
     await fill(scope, 'Value', '500000')
-    await fill(scope, 'Reason', 'by phone')
     await userEvent.click(scope.getByRole('button', { name: 'Resolve fact' }))
 
     expect(posted).toEqual([
@@ -142,7 +141,7 @@ describe('the actions on the lead', () => {
         path: '/api/commands',
         body: {
           type: 'resolve_fact',
-          payload: { lead_id: 'LEAD-1', key: 'coverage_a', value: 500000, reason: 'by phone' },
+          payload: { lead_id: 'LEAD-1', key: 'coverage_a', value: 500000, reason: '' },
         },
       },
     ])
@@ -155,15 +154,14 @@ describe('the actions on the lead', () => {
 
     await userEvent.selectOptions(scope.getByLabelText('Field'), 'zip_code')
     await fill(scope, 'Value', '34102')
-    await fill(scope, 'Reason', 'by phone')
     await userEvent.click(scope.getByRole('button', { name: 'Resolve fact' }))
     await userEvent.selectOptions(scope.getByLabelText('Field'), 'fire_alarm')
     await fill(scope, 'Value', 'Yes')
-    await fill(scope, 'Reason', 'by phone')
+    await fill(scope, 'Notes', 'by phone')
     await userEvent.click(scope.getByRole('button', { name: 'Resolve fact' }))
 
     expect(posted.map((call) => (call.body as { payload: { key: string; value: unknown } }).payload)).toEqual([
-      { lead_id: 'LEAD-1', key: 'zip_code', value: '34102', reason: 'by phone' },
+      { lead_id: 'LEAD-1', key: 'zip_code', value: '34102', reason: '' },
       { lead_id: 'LEAD-1', key: 'fire_alarm', value: true, reason: 'by phone' },
     ])
   })
@@ -172,7 +170,8 @@ describe('the actions on the lead', () => {
     const posted = stubApi()
     pane()
     const scope = within(screen.getByRole('form', { name: 'Decline lead' }))
-    await fill(scope, 'Reason', 'outside appetite')
+    expect(scope.getByRole('button', { name: 'Decline lead' })).toBeDisabled()
+    await fill(scope, 'Reason for the decline, kept on file', 'outside appetite')
     await userEvent.click(scope.getByRole('button', { name: 'Decline lead' }))
 
     expect(posted[0]).toEqual({
