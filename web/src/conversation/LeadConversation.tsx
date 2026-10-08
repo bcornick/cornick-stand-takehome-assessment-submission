@@ -65,7 +65,7 @@ export function LeadConversation({ leadId, ...shared }: Props) {
       {lead.blockers.length > 0 && (
         <ul className="flex flex-col gap-3">
           {lead.blockers.filter((blocker) => blocker.owner === 'underwriter').map((blocker) => (
-            <li key={blocker.item_id} className="rounded-md border bg-background p-3">
+            <li key={blocker.item_id} className="rounded-md border border-l-[3px] border-l-accent bg-background p-3">
               <OpenItem lead={lead} blocker={blocker} onChange={shared.onChange} />
             </li>
           ))}

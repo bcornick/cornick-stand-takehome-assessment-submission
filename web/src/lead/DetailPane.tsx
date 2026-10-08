@@ -99,7 +99,9 @@ function Blockers({ blockers }: { blockers: LeadDetail['blockers'] }) {
       {blockers.map((blocker) => (
         <li key={blocker.item_id} className="flex flex-wrap items-baseline gap-2">
           <Badge variant="outline">{BLOCKER_KIND_LABELS[blocker.kind]}</Badge>
-          <span className="text-muted-foreground">{`Waits on ${OWNER_LABELS[blocker.owner].toLowerCase()}`}</span>
+          <Badge variant={blocker.owner === 'underwriter' ? 'needs' : 'waiting'}>
+            {`Waits on ${OWNER_LABELS[blocker.owner].toLowerCase()}`}
+          </Badge>
           <span>{blocker.detail.text}</span>
         </li>
       ))}

@@ -37,9 +37,9 @@ export function OpenItem({ lead, blocker, onChange }: Props & { blocker: Blocker
     <div className="flex flex-col gap-2">
       <p className="flex flex-wrap items-baseline gap-2">
         <Badge variant="outline">{BLOCKER_KIND_LABELS[blocker.kind]}</Badge>
-        <span className="text-sm text-muted-foreground">
+        <Badge variant={blocker.owner === 'underwriter' ? 'needs' : 'waiting'}>
           {`Waits on ${OWNER_LABELS[blocker.owner].toLowerCase()}`}
-        </span>
+        </Badge>
         {blocker.kind !== 'underwriter_question' && <span>{blocker.detail.text}</span>}
       </p>
       <ItemActions lead={lead} blocker={blocker} onChange={onChange} />

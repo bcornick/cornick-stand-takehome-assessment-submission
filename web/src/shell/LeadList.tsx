@@ -27,12 +27,15 @@ type RowProps = {
 }
 
 // What differs between leads: who the lead waits on, or that it is finished.
-function chipLabel(row: Schemas['QueueRow']): string | null {
-  if (row.status === 'quote_sent') return 'Quote sent'
-  if (row.status === 'declined') return 'Declined'
-  if (row.waits_on === 'underwriter') return 'Needs your decision'
-  if (row.waits_on === 'producer') return 'Waiting on producer'
-  if (row.waits_on === 'data_team') return 'Waiting on data'
+type State = 'needs' | 'waiting' | 'done'
+
+// What differs between leads, as the chip says it and the state that colours it.
+function chip(row: Schemas['QueueRow']): { label: string; state: State } | null {
+  if (row.status === 'quote_sent') return { label: 'Quote sent', state: 'done' }
+  if (row.status === 'declined') return { label: 'Declined', state: 'done' }
+  if (row.waits_on === 'underwriter') return { label: 'Needs your decision', state: 'needs' }
+  if (row.waits_on === 'producer') return { label: 'Waiting on producer', state: 'waiting' }
+  if (row.waits_on === 'data_team') return { label: 'Waiting on data', state: 'waiting' }
   return null
 }
 
@@ -43,7 +46,7 @@ function queueTime(businessDays: number): string {
 }
 
 function LeadRow({ row, isSelected, onSelect }: RowProps) {
-  const chip = chipLabel(row)
+  const state = chip(row)
   return (
     <button
       type="button"
@@ -53,7 +56,7 @@ function LeadRow({ row, isSelected, onSelect }: RowProps) {
     >
       <span className="flex items-center justify-between gap-2">
         <span className="font-medium">{leadName(row.lead_id)}</span>
-        {chip !== null && <Badge variant="secondary">{chip}</Badge>}
+        {state !== null && <Badge variant={state.state}>{state.label}</Badge>}
       </span>
       <span className="block truncate">{row.label === row.lead_id ? 'no address' : row.label}</span>
       <span className="block text-xs text-muted-foreground">
@@ -89,8 +92,11 @@ export function LeadList({ run, rows, selected, onSelect }: Props) {
           if (inGroup.length === 0) return null
           return (
             <section key={group} aria-label={GROUP_LABELS[group]}>
-              <h2 className="px-4 pb-1 pt-4 text-xs font-medium uppercase text-muted-foreground">
+              <h2
+                className={`flex items-center gap-2 px-4 pb-1 pt-4 text-xs font-medium uppercase ${group === 'blocked_on_underwriter' ? 'text-accent' : 'text-muted-foreground'}`}
+              >
                 {GROUP_LABELS[group]}
+                {group === 'blocked_on_underwriter' && <Badge variant="needs">{`Needs you · ${inGroup.length}`}</Badge>}
               </h2>
               {inGroup.map((row) => (
                 <LeadRow

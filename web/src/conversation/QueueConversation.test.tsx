@@ -142,7 +142,9 @@ describe('QueueConversation', () => {
     renderQueue()
 
     expect(screen.getByText('Assistant')).toBeInTheDocument()
-    expect(screen.getByText('1 lead needs you. 1 is waiting on producers.')).toBeInTheDocument()
+    // The count of leads that need the underwriter is its own element, in the accent.
+    expect(screen.getByText('1', { selector: 'span' })).toBeInTheDocument()
+    expect(screen.getByText((_, node) => node?.tagName === 'P' && node.textContent === '1 lead needs you. 1 is waiting on producers.')).toBeInTheDocument()
     expect(screen.queryByText(/follow-ups sent/)).toBeNull()
   })
 

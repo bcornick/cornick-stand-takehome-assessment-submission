@@ -28,7 +28,11 @@ export function QueueConversation({ items, ...shared }: Props) {
         <>
           <div className="flex flex-col gap-1">
             <AssistantLabel />
-            <p className="text-sm">{greeting(run.summary)}</p>
+            <p className="text-sm">
+              {/* The greeting opens with the count of leads that need the underwriter; it alone is in the accent. */}
+              <span className="font-semibold text-accent">{greeting(run.summary).split(' ')[0]}</span>
+              {greeting(run.summary).slice(greeting(run.summary).indexOf(' '))}
+            </p>
           </div>
           {items.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nothing is waiting on you.</p>
@@ -59,7 +63,7 @@ function ItemCard({ item, refresh, onSelect, onChange }: CardProps) {
   const blocker = lead.state === 'ready' ? lead.data.blockers.find((b) => b.item_id === item.item_id) : undefined
   if (lead.state === 'ready' && blocker === undefined) return null
   return (
-    <div className="flex flex-col gap-2 rounded-md border bg-background p-3">
+    <div className="flex flex-col gap-2 rounded-md border border-l-[3px] border-l-accent bg-background p-3">
       <button
         type="button"
         className="self-start text-sm font-medium underline-offset-2 hover:underline"
