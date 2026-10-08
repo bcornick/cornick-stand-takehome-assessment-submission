@@ -5,7 +5,7 @@ import type { components } from '@/api/types'
 import { ActionForm } from '@/components/ActionForm'
 import { Badge } from '@/components/ui/badge'
 import { useAction } from '@/components/useAction'
-import { fieldLabel, formatValue } from '@/format'
+import { fieldLabel, formatFieldValue } from '@/format'
 import { BLOCKER_KIND_LABELS } from '@/labels'
 import { useState } from 'react'
 
@@ -124,7 +124,7 @@ function ItemActions({ lead, blocker, onChange }: Props & { blocker: Blocker }) 
       <>
         {pending !== null && (
           <p className="text-sm">
-            {`${fieldLabel(lead.fields, pending.key)}: proposed ${formatValue(pending.value)}, current ${formatValue(current?.value)}`}
+            {`${fieldLabel(lead.fields, pending.key)}: proposed ${formatFieldValue(lead.fields, pending.key, pending.value)}, current ${formatFieldValue(lead.fields, pending.key, current?.value)}`}
           </p>
         )}
         <Decision
@@ -277,7 +277,7 @@ function QuestionCard({ lead, blocker, onChange }: Props & { blocker: Blocker })
               const reading = lead.readings[choice.choice_id]?.[key]
               return (
                 <li key={key}>
-                  {`${fieldLabel(lead.fields, key)}: ${formatValue(facts.get(key))}`}
+                  {`${fieldLabel(lead.fields, key)}: ${formatFieldValue(lead.fields, key, facts.get(key))}`}
                   {reading !== undefined && (
                     <span className={reading.problem ? 'text-accent' : undefined}>{` · ${reading.text}`}</span>
                   )}

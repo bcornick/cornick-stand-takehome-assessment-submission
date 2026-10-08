@@ -231,3 +231,17 @@ def test_a_lead_with_animals_carries_the_note_that_animals_are_not_evaluated(
     plan = plan_of(first_pass, f"LEAD-00000042-{number}")
 
     assert "animals" in [n.ref for n in plan.not_evaluated]
+
+
+def test_lead_003s_detail_lists_the_field_it_asked_for_as_missing_and_sections_every_field(
+    first_pass: sqlite3.Connection,
+) -> None:
+    detail = lead_detail(first_pass, "LEAD-00000042-003", load_registry(str(REGISTRY)))
+
+    assert detail is not None
+    sections = {field.key: field.section for field in detail.fields}
+    assert "insured_dob" in detail.missing_fields
+    assert not set(detail.missing_fields) & {fact.key for fact in detail.facts}
+    assert sections["insured_dob"] == "Insured"
+    assert sections["q:contact_email"] == "Contact"
+    assert all(sections[key] for key in detail.missing_fields)

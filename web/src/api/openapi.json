@@ -1020,11 +1020,16 @@
             },
             "title": "Options",
             "type": "array"
+          },
+          "section": {
+            "title": "Section",
+            "type": "string"
           }
         },
         "required": [
           "key",
           "label",
+          "section",
           "kind",
           "options"
         ],
@@ -1203,6 +1208,13 @@
             "title": "Lead Id",
             "type": "string"
           },
+          "missing_fields": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing Fields",
+            "type": "array"
+          },
           "pages": {
             "items": {
               "$ref": "#/components/schemas/PlanPage"
@@ -1262,7 +1274,8 @@
           "blockers",
           "drafts",
           "readings",
-          "fields"
+          "fields",
+          "missing_fields"
         ],
         "title": "LeadDetail",
         "type": "object"

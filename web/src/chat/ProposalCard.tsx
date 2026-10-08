@@ -3,7 +3,7 @@
 import { applyProposal, dismissProposal } from '@/api/client'
 import type { components } from '@/api/types'
 import { ActionButton } from '@/components/ActionButton'
-import { formatValue } from '@/format'
+import { formatValue, shortLeadId } from '@/format'
 
 type Proposal = components['schemas']['ProposalView']
 
@@ -13,11 +13,11 @@ type Props = { proposal: Proposal; onDone: () => void }
 function inWords(type: string, payload: Record<string, unknown>): string {
   switch (type) {
     case 'decline_lead':
-      return `Decline lead ${payload.lead_id}`
+      return `Decline lead ${shortLeadId(String(payload.lead_id))}`
     case 'resolve_fact':
-      return `Set ${payload.key} to ${formatValue(payload.value)} on lead ${payload.lead_id}`
+      return `Set ${payload.key} to ${formatValue(payload.value)} on lead ${shortLeadId(String(payload.lead_id))}`
     case 'record_ruling':
-      return `Choose ${String(payload.option).replace(/_/g, ' ')} for ${payload.choice_id} on lead ${payload.lead_id}`
+      return `Choose ${String(payload.option).replace(/_/g, ' ')} for ${payload.choice_id} on lead ${shortLeadId(String(payload.lead_id))}`
     case 'edit_draft':
       return `Edit the draft ${payload.intent_id}`
     default:

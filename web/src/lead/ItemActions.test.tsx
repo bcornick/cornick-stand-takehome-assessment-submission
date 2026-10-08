@@ -149,10 +149,11 @@ const lead: Schemas['LeadDetail'] = {
     },
   },
   fields: [
-    { key: 'months_unoccupied', label: 'Months unoccupied', kind: 'number', options: [] },
-    { key: 'roof_age', label: 'Roof age', kind: 'number', options: [] },
-    { key: 'wall_type', label: 'Wall type', kind: 'text', options: [] },
+    { key: 'months_unoccupied', label: 'Months unoccupied', section: 'Property', kind: 'number', options: [] },
+    { key: 'roof_age', label: 'Roof age', section: 'Construction', kind: 'number', options: [] },
+    { key: 'wall_type', label: 'Wall type', section: 'Construction', kind: 'text', options: [] },
   ],
+  missing_fields: [],
   drafts: [packet],
 }
 
@@ -385,7 +386,7 @@ describe('the question card', () => {
     const card = screen.getByRole('region', { name: 'I13.fire_fail' })
     expect(screen.getAllByText('The fire simulation failed: decline, or continue?')).toHaveLength(1)
     expect(within(card).getByText('Roof age: 12')).toBeInTheDocument()
-    expect(within(card).getByText('Wall type: —')).toBeInTheDocument()
+    expect(within(card).getByText('Wall type: Not provided')).toBeInTheDocument()
     const buttons = within(card).getAllByRole('button')
     expect(buttons.map((b) => b.textContent)).toEqual(['Decline', 'Legacy underwriting'])
     for (const button of buttons) expect(button).toBeEnabled()

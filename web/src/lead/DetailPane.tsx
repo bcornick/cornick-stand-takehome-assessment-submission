@@ -1,5 +1,6 @@
 // ABOUTME: The full lead view of the drill-down panel: what the lead waits on, its facts with source tags, plan and messages, and the actions on the whole lead.
 // ABOUTME: Shows one LeadDetail; the plan is the internal view, so rule ids appear here and never in a message.
+import { Fragment } from 'react'
 import type { components } from '@/api/types'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -10,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { fieldLabel, formatValue } from '@/format'
+import { fieldLabel, formatFieldValue, shortLeadId } from '@/format'
 import {
   BLOCKER_KIND_LABELS,
   DRAFT_STATE_LABELS,
@@ -32,7 +33,7 @@ export function DetailPane({ lead, onChange }: Props) {
   return (
     <article className="flex flex-col gap-6">
       <header className="flex flex-col gap-1">
-        <h2 className="font-mono text-xl font-semibold">{lead.lead_id}</h2>
+        <h2 className="font-mono text-xl font-semibold">{shortLeadId(lead.lead_id)}</h2>
         <p className="flex flex-wrap items-center gap-2 text-sm">
           <Badge variant="secondary">{STATUS_LABELS[lead.status]}</Badge>
           <span>{lead.label}</span>
@@ -42,7 +43,7 @@ export function DetailPane({ lead, onChange }: Props) {
         <Blockers blockers={lead.blockers} />
       </Section>
       <Section title="Facts">
-        <Facts facts={lead.facts} fields={lead.fields} />
+        <Facts facts={lead.facts} fields={lead.fields} missing={lead.missing_fields} />
       </Section>
       <Section title="Plan">
         {lead.plan === null ? <Empty>Not triaged yet.</Empty> : <PlanView plan={lead.plan} />}
@@ -133,29 +134,70 @@ function PlanView({ plan }: { plan: Plan }) {
   )
 }
 
-function Facts({ facts, fields }: { facts: LeadDetail['facts']; fields: LeadDetail['fields'] }) {
+// The facts grouped under the registry's sections, sections and rows in registry order.
+function factsBySection(facts: LeadDetail['facts'], fields: LeadDetail['fields']) {
+  const sections = new Map<string, LeadDetail['facts']>()
+  for (const field of fields) {
+    const inField = facts.filter((fact) => fact.key === field.key)
+    if (inField.length > 0) sections.set(field.section, [...(sections.get(field.section) ?? []), ...inField])
+  }
+  return sections
+}
+
+function Facts({
+  facts,
+  fields,
+  missing,
+}: {
+  facts: LeadDetail['facts']
+  fields: LeadDetail['fields']
+  missing: LeadDetail['missing_fields']
+}) {
   return (
-    <Table aria-label="Facts" className="table-fixed">
-      <TableHeader>
-        <TableRow>
-          <TableHead>Field</TableHead>
-          <TableHead>Value</TableHead>
-          <TableHead>Source</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {facts.map((fact) => (
-          <TableRow key={fact.observation_id}>
-            <TableCell className="whitespace-normal break-words">{fieldLabel(fields, fact.key)}</TableCell>
-            <TableCell className="whitespace-normal break-words">{formatValue(fact.value)}</TableCell>
-            <TableCell className="space-x-1 whitespace-normal">
-              <Badge variant="secondary">{SOURCE_LABELS[fact.source]}</Badge>
-              {fact.status === 'pending_review' && <Badge variant="outline">Pending review</Badge>}
-              {fact.confirmed && <Badge variant="outline">Confirmed</Badge>}
-            </TableCell>
+    <>
+      {missing.length > 0 && (
+        <div className="flex flex-col gap-1 text-sm">
+          <h4 className="font-medium">Missing</h4>
+          <ul aria-label="Missing" className="list-disc pl-5">
+            {missing.map((key) => (
+              <li key={key}>{fieldLabel(fields, key)}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <Table aria-label="Facts" className="table-fixed">
+        <TableHeader>
+          <TableRow>
+            <TableHead>Field</TableHead>
+            <TableHead>Value</TableHead>
+            <TableHead>Source</TableHead>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {[...factsBySection(facts, fields)].map(([section, inSection]) => (
+            <Fragment key={section}>
+              <TableRow>
+                <TableCell colSpan={3} className="bg-muted font-medium">
+                  {section}
+                </TableCell>
+              </TableRow>
+              {inSection.map((fact) => (
+                <TableRow key={fact.observation_id}>
+                  <TableCell className="whitespace-normal break-words">{fieldLabel(fields, fact.key)}</TableCell>
+                  <TableCell className="whitespace-normal break-words">
+                    {formatFieldValue(fields, fact.key, fact.value)}
+                  </TableCell>
+                  <TableCell className="space-x-1 whitespace-normal">
+                    {fact.source !== 'submitted' && <Badge variant="secondary">{SOURCE_LABELS[fact.source]}</Badge>}
+                    {fact.status === 'pending_review' && <Badge variant="outline">Pending review</Badge>}
+                    {fact.confirmed && <Badge variant="outline">Confirmed</Badge>}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </Fragment>
+          ))}
+        </TableBody>
+      </Table>
+    </>
   )
 }

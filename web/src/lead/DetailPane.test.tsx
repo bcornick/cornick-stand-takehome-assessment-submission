@@ -57,10 +57,11 @@ const lead: Schemas['LeadDetail'] = {
   blockers: [packetBlocker],
   readings: {},
   fields: [
-    { key: 'coverage_a', label: 'Coverage A', kind: 'integer', options: [] },
-    { key: 'zip_code', label: 'Zip code', kind: 'text', options: [] },
-    { key: 'fire_alarm', label: 'Fire alarm', kind: 'toggle', options: [] },
+    { key: 'coverage_a', label: 'Coverage A', section: 'Primary Coverages', kind: 'integer', options: [] },
+    { key: 'zip_code', label: 'Zip code', section: 'Location', kind: 'text', options: [] },
+    { key: 'fire_alarm', label: 'Fire alarm', section: 'Protection', kind: 'toggle', options: [] },
   ],
+  missing_fields: [],
   drafts: [sentRequest, packet],
 }
 
@@ -104,22 +105,70 @@ describe('what the lead waits on', () => {
   })
 })
 
+describe('the header', () => {
+  it('names the lead without the run’s seed', () => {
+    pane({ ...lead, lead_id: 'LEAD-00000042-003' })
+    expect(screen.getByRole('heading', { level: 2, name: 'LEAD-003' })).toBeInTheDocument()
+  })
+})
+
+function fact(key: string, value: unknown, source: Schemas['FactView']['source'] = 'submitted'): Schemas['FactView'] {
+  return {
+    key,
+    value: value as Schemas['FactView']['value'],
+    source,
+    status: 'accepted',
+    confirmed: false,
+    evidence: {},
+    observation_id: 1,
+    event_id: 1,
+  }
+}
+
 describe('the facts', () => {
   it('names a fact by its field label', () => {
-    const fact = {
-      key: 'coverage_a',
-      value: 500000,
-      source: 'submitted' as const,
-      status: 'accepted' as const,
-      confirmed: false,
-      evidence: {},
-      observation_id: 1,
-      event_id: 1,
-    }
-    pane({ ...lead, facts: [fact] })
+    pane({ ...lead, facts: [fact('coverage_a', 500000)] })
     const table = within(screen.getByRole('table', { name: 'Facts' }))
     expect(table.getByText('Coverage A')).toBeInTheDocument()
     expect(table.queryByText('coverage_a')).toBeNull()
+  })
+
+  it('groups the facts under the registry’s sections, each in registry order, with a flag in words', () => {
+    pane({ ...lead, facts: [fact('fire_alarm', true), fact('zip_code', '34102'), fact('coverage_a', 500000)] })
+    const table = within(screen.getByRole('table', { name: 'Facts' }))
+    expect(table.getAllByRole('row').map((row) => row.textContent)).toEqual([
+      'FieldValueSource',
+      'Primary Coverages',
+      'Coverage A500000',
+      'Location',
+      'Zip code34102',
+      'Protection',
+      'Fire alarmYes',
+    ])
+  })
+
+  it('shows a source badge only where the source is not Submitted', () => {
+    pane({ ...lead, facts: [fact('coverage_a', 500000), fact('zip_code', '34102', 'fetched')] })
+    const table = within(screen.getByRole('table', { name: 'Facts' }))
+    expect(table.getByText('Fetched')).toBeInTheDocument()
+    expect(table.queryByText('Submitted')).toBeNull()
+  })
+
+  it('reads a date field as a date', () => {
+    const fields = [{ key: 'roof_year', label: 'Roof year', section: 'Construction', kind: 'date', options: [] }]
+    pane({ ...lead, fields, facts: [fact('roof_year', '2008-07-15')] })
+    expect(within(screen.getByRole('table', { name: 'Facts' })).getByText('Jul 15, 2008')).toBeInTheDocument()
+  })
+
+  it('lists the fields the lead is missing by label above the facts', () => {
+    pane({ ...lead, facts: [fact('coverage_a', 500000)], missing_fields: ['zip_code', 'fire_alarm'] })
+    const missing = within(screen.getByRole('list', { name: 'Missing' }))
+    expect(missing.getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Zip code', 'Fire alarm'])
+  })
+
+  it('lists no missing fields when none are missing', () => {
+    pane({ ...lead, facts: [fact('coverage_a', 500000)] })
+    expect(screen.queryByRole('list', { name: 'Missing' })).toBeNull()
   })
 })
 

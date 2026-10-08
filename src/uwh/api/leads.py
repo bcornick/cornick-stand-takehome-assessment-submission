@@ -25,18 +25,20 @@ from uwh.api.views import (
     QueueRow,
 )
 from uwh.rules.graphs import load_graphs
-from uwh.rules.models import ActionPlan, StrictModel
+from uwh.rules.models import ActionPlan, FieldTriage, Resolution, StrictModel, ValueStatus
 from uwh.rules.registry import Registry, fact_fields
 from uwh.runtime.clock import age_business_days
 from uwh.runtime.event_types import (
     ApprovalRecorded,
     BlockerClosed,
     BlockerOpened,
+    EventType,
     FactObserved,
     MessageSent,
     ProviderCalled,
     ReplyReceived,
     RulingRecorded,
+    TriageCompleted,
 )
 from uwh.runtime.events import StoredEvent, read_events
 from uwh.runtime.facts import effective_facts
@@ -136,6 +138,24 @@ def _blocker_view(db: sqlite3.Connection, blocker: Blocker) -> BlockerView:
     )
 
 
+def _missing_fields(db: sqlite3.Connection, lead_id: str) -> list[str]:
+    """The fields the lead's latest triage found missing and not set aside (not required or deferred),
+    in registry order; empty before the lead is triaged."""
+    row = db.execute(
+        "SELECT payload_json FROM events WHERE lead_id = ? AND type = ? ORDER BY id DESC LIMIT 1",
+        (lead_id, EventType.triage_completed.value),
+    ).fetchone()
+    if row is None:
+        return []
+    triage = TriageCompleted.model_validate_json(row[0]).fields
+    return [
+        name
+        for name, result in ((name, FieldTriage.model_validate(t)) for name, t in triage.items())
+        if result.value_status == ValueStatus.missing
+        and result.resolution not in (Resolution.not_required, Resolution.defer)
+    ]
+
+
 def lead_detail(db: sqlite3.Connection, lead_id: str, registry: Registry) -> LeadDetail | None:
     """The lead's detail, or None when there is no such lead."""
     lead = db.execute(
@@ -185,6 +205,7 @@ def lead_detail(db: sqlite3.Connection, lead_id: str, registry: Registry) -> Lea
             for d in drafts
         ],
         fields=list(fact_fields(registry).values()),
+        missing_fields=_missing_fields(db, lead_id),
     )
 
 

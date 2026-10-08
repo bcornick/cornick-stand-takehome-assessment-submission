@@ -654,6 +654,8 @@ export interface components {
             label: string;
             /** Options */
             options: string[];
+            /** Section */
+            section: string;
         };
         /**
          * FactView
@@ -730,6 +732,8 @@ export interface components {
             label: string;
             /** Lead Id */
             lead_id: string;
+            /** Missing Fields */
+            missing_fields: string[];
             /** Pages */
             pages: components["schemas"]["PlanPage"][];
             plan: components["schemas"]["ActionPlan"] | null;

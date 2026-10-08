@@ -78,7 +78,8 @@ const lead: Schemas['LeadDetail'] = {
   plan: null,
   blockers: [],
   readings: {},
-  fields: [{ key: 'roof_age', label: 'Roof age', kind: 'integer', options: [] }],
+  fields: [{ key: 'roof_age', label: 'Roof age', section: 'Construction', kind: 'integer', options: [] }],
+  missing_fields: [],
   drafts: [draft],
 }
 

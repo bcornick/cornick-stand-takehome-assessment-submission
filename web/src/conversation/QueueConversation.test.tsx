@@ -75,6 +75,7 @@ const lead: Schemas['LeadDetail'] = {
   ],
   readings: {},
   fields: [],
+  missing_fields: [],
   drafts: [packet],
 }
 

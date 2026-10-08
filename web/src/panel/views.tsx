@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react'
 import type { components } from '@/api/types'
 import { Badge } from '@/components/ui/badge'
-import { fieldLabel, formatTime, formatValue, labelKeys } from '@/format'
+import { fieldLabel, formatFieldValue, formatTime, labelKeys } from '@/format'
 import { ACTOR_LABELS, DRAFT_STATE_LABELS, EVENT_LABELS, MESSAGE_KIND_LABELS, SOURCE_LABELS } from '@/labels'
 import type { PanelTarget } from '@/surface'
 import { effectLine } from './effectLine'
@@ -116,7 +116,7 @@ export function FactView(props: ViewProps) {
         <p>
           {fieldLabel(lead.fields, key)} <span className="font-mono text-xs text-muted-foreground">{key}</span>
         </p>
-        <p>{formatValue(fact.value)}</p>
+        <p>{formatFieldValue(lead.fields, key, fact.value)}</p>
         <p className="flex flex-wrap items-center gap-2">
           <Badge variant="secondary">{SOURCE_LABELS[fact.source]}</Badge>
           {source !== undefined && <span>{`Observed ${formatTime(source.sim_ts)}`}</span>}

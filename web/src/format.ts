@@ -1,14 +1,12 @@
-// ABOUTME: Formats what the API returns for display: a value of any shape, a timestamp or date in the reader's local time, a lead's short name, a field's registry label in place of its key, and the queue greeting.
+// ABOUTME: Formats what the API returns for display: a value of any shape, a timestamp or date in the reader's local time, a lead's short name and id, a field's registry label in place of its key, and the queue greeting.
 // ABOUTME: Values arrive as JSON of any shape, so the formatter takes unknown.
 import type { components } from '@/api/types'
 
-export const MISSING = '—'
-
+// A value in plain words: a flag as Yes or No, a missing value as "Not provided".
 export function formatValue(value: unknown): string {
-  if (value === null || value === undefined) return MISSING
-  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-    return String(value)
-  }
+  if (value === null || value === undefined) return 'Not provided'
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No'
+  if (typeof value === 'string' || typeof value === 'number') return String(value)
   return JSON.stringify(value)
 }
 
@@ -22,6 +20,11 @@ export function leadName(leadId: string): string {
   return `Lead ${leadId.slice(leadId.lastIndexOf('-') + 1)}`
 }
 
+// A lead id as shown to the underwriter: LEAD-003 for LEAD-00000042-003, without the run's seed.
+export function shortLeadId(leadId: string): string {
+  return leadId.replace(/^LEAD-\d+-/, 'LEAD-')
+}
+
 // An ISO date or timestamp as a short date, for example "Jul 21".
 export function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
@@ -32,6 +35,15 @@ type Field = components['schemas']['FactField']
 // The registry's label for a field key, or the key itself for one the registry does not list.
 export function fieldLabel(fields: Field[], key: string): string {
   return fields.find((field) => field.key === key)?.label ?? key
+}
+
+// A field's value as its registry kind reads best: a date field's ISO date as "Jul 15, 2008", any other value as formatValue.
+export function formatFieldValue(fields: Field[], key: string, value: unknown): string {
+  const kind = fields.find((field) => field.key === key)?.kind
+  if (kind === 'date' && typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) {
+    return new Date(value).toLocaleDateString('en-US', { dateStyle: 'medium', timeZone: 'UTC' })
+  }
+  return formatValue(value)
 }
 
 // A sentence with every field key it names replaced by the field's registry label; longer keys go first so a key does not match inside another.

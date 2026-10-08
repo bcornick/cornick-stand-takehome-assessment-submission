@@ -188,6 +188,9 @@ class LeadDetail(StrictModel):
     fields: list[
         FactField
     ]  # the keys `resolve_fact` accepts, with the label and type each is offered by
+    missing_fields: list[
+        str
+    ]  # the registry fields the current triage found missing and still needs
 
 
 # ---- events (A.1) --------------------------------------------------------------------------------

@@ -75,6 +75,7 @@ const lead: Schemas['LeadDetail'] = {
   blockers: [draftItem],
   readings: {},
   fields: [],
+  missing_fields: [],
   drafts: [packet],
 }
 

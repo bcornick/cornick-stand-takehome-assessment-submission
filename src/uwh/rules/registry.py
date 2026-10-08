@@ -48,6 +48,7 @@ class FactField(StrictModel):
 
     key: str
     label: str
+    section: str  # the registry's section; "Questions" for a catalogue question, "Contact" for the contact email
     kind: str
     options: list[str]
 
@@ -56,16 +57,26 @@ def fact_fields(registry: Registry) -> dict[str, FactField]:
     """The keys `resolve_fact` accepts: every registry field in registry order, then each catalogue
     question as `q:<catalogue id>` (a document request is not a question), then the contact email."""
     fields = {
-        name: FactField(key=name, label=field.label, kind=field.kind, options=field.options)
+        name: FactField(
+            key=name,
+            label=field.label,
+            section=field.section,
+            kind=field.kind,
+            options=field.options,
+        )
         for name, field in registry.items()
     }
     for catalogue_id, question in read_yaml("catalogue.yaml")["questions"].items():
         if question["answer_type"] != "document":
             key = f"q:{catalogue_id}"
             fields[key] = FactField(
-                key=key, label=question["wording"], kind=question["answer_type"], options=[]
+                key=key,
+                label=question["wording"],
+                section="Questions",
+                kind=question["answer_type"],
+                options=[],
             )
     fields[CONTACT_EMAIL_KEY] = FactField(
-        key=CONTACT_EMAIL_KEY, label="Contact email", kind="email", options=[]
+        key=CONTACT_EMAIL_KEY, label="Contact email", section="Contact", kind="email", options=[]
     )
     return fields

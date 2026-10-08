@@ -114,7 +114,8 @@ const lead: Schemas['LeadDetail'] = {
   plan,
   blockers: [],
   readings: {},
-  fields: [{ key: 'roof_year', label: 'Roof year', kind: 'integer', options: [] }],
+  fields: [{ key: 'roof_year', label: 'Roof year', section: 'Construction', kind: 'integer', options: [] }],
+  missing_fields: [],
   drafts: [],
 }
 
@@ -321,10 +322,10 @@ describe('App', () => {
     await panel.findByText('Roof year')
 
     await userEvent.click(leads.getByRole('button', { name: /Lead 003/ }))
-    expect(await panel.findByRole('heading', { name: LEAD_003 })).toBeInTheDocument()
+    expect(await panel.findByRole('heading', { name: 'LEAD-003' })).toBeInTheDocument()
 
     await userEvent.click(leads.getByRole('button', { name: 'Queue' }))
     expect(await screen.findByRole('heading', { name: 'Queue' })).toBeInTheDocument()
-    expect(panel.getByRole('heading', { name: LEAD_003 })).toBeInTheDocument()
+    expect(panel.getByRole('heading', { name: 'LEAD-003' })).toBeInTheDocument()
   })
 })

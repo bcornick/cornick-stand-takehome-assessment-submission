@@ -219,7 +219,7 @@ def test_the_playbook_path_groups_the_stored_plan_by_page_and_cites_each_by_its_
 def test_each_citation_carries_its_source_line(db: sqlite3.Connection) -> None:
     fields = {
         "effective_date": FactField(
-            key="effective_date", label="Effective date", kind="date", options=[]
+            key="effective_date", label="Effective date", section="Account", kind="date", options=[]
         )
     }
     references = References(fields)
@@ -238,7 +238,9 @@ def test_each_citation_carries_its_source_line(db: sqlite3.Connection) -> None:
 def test_the_queue_facts_are_one_row_per_lead_with_what_it_waits_on_and_a_lead_citation(
     db: sqlite3.Connection,
 ) -> None:
-    references = References({"city": FactField(key="city", label="City", kind="text", options=[])})
+    references = References(
+        {"city": FactField(key="city", label="City", section="Location", kind="text", options=[])}
+    )
 
     lookup = queue_facts(db, [], references)
 
