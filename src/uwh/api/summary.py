@@ -99,6 +99,7 @@ def _draft_sentence(
     plan: ActionPlan | None,
     facts: Mapping[str, JsonValue],
     fields: dict[str, FactField],
+    first: bool,
 ) -> str:
     row = db.execute(
         "SELECT kind FROM intents WHERE id = ?", (blocker.detail.intent_id,)
@@ -107,7 +108,11 @@ def _draft_sentence(
         return "The quote packet is ready. I need you to send it to the producer."
     if row is not None and row[0] in REQUEST_KINDS:
         # The item's text says why the request waits: the underwriter's open choice, or its class.
-        return f"I drafted a request to the producer. {_sentence(blocker.detail.text)}"
+        drafted = "I drafted" if first else "I also drafted"
+        return (
+            f"{drafted} a request to the producer for the missing information. "
+            f"{_sentence(blocker.detail.text)}"
+        )
     return (
         f"I propose to decline this lead: {_decline_reason(db, blocker.lead_id, plan, facts, fields)}. "
         "I need you to send the decline notice, or withdraw the decline."
@@ -120,13 +125,15 @@ def _underwriter_sentence(
     plan: ActionPlan | None,
     facts: Mapping[str, JsonValue],
     fields: dict[str, FactField],
+    first: bool,
 ) -> str:
+    """The sentence of one item asked of the underwriter; `first` is whether it opens the line."""
     if blocker.kind == "underwriter_question":
         return _choice_sentence(blocker, plan, facts)
     if blocker.kind == "delivery_unknown":
         return "The mailbox did not confirm a message. I need you to check it before anything else goes."
     if blocker.detail.item_kind == "draft":
-        return _draft_sentence(db, blocker, plan, facts, fields)
+        return _draft_sentence(db, blocker, plan, facts, fields, first)
     if blocker.detail.item_kind == "observation":
         return _observation_sentence(db, blocker, facts, fields)
     return f"I need you to review this: {_sentence(blocker.detail.text)}"
@@ -161,7 +168,10 @@ def summary_line(
             return f"Quote packet sent on {when}."
         return f"Declined on {when}: {_decline_reason(db, lead_id, plan, facts, fields)}."
     asked_of_underwriter = [b for b in blockers if b.owner == "underwriter"]
-    sentences = [_underwriter_sentence(db, b, plan, facts, fields) for b in asked_of_underwriter]
+    sentences = [
+        _underwriter_sentence(db, b, plan, facts, fields, first=index == 0)
+        for index, b in enumerate(asked_of_underwriter)
+    ]
     for blocker in blockers:
         if blocker.owner == "underwriter":
             continue

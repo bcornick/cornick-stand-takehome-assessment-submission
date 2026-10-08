@@ -422,8 +422,7 @@ def _prepare_ask_producer(
 
 
 HELD_FOR_A_CHOICE = (
-    "Not sent yet, in case you decline this lead. "
-    "Send it to the producer, or decline at the choice above."
+    "Not sent yet, in case you decline this lead. Send it to the producer, or decline this lead."
 )
 
 

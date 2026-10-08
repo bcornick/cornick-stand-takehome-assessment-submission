@@ -65,7 +65,14 @@ HELD_REQUEST = item(
     "underwriter",
     item_kind="draft",
     intent_id="I-r",
-    text="Not sent yet, in case you decline this lead. Send it to the producer, or decline at the choice above.",
+    text="Not sent yet, in case you decline this lead. Send it to the producer, or decline this lead.",
+)
+SENSITIVE_REQUEST = item(
+    "underwriter_review",
+    "underwriter",
+    item_kind="draft",
+    intent_id="I-s",
+    text="Review this sensitive request before it is sent.",
 )
 OBSERVATION = item("underwriter_review", "underwriter", item_kind="observation", observation_id=3)
 WAIT_REPLY = item("producer_reply", "producer", intent_id="I-L-1")
@@ -102,10 +109,17 @@ CASES = [
         "a request draft says it was drafted and why it waits",
         "This lead failed the fire simulation at 0.79. "
         "I need you to choose between a decline and legacy underwriting. "
-        "I drafted a request to the producer. Not sent yet, in case you decline this lead. Send it to the producer, or decline at the choice above.",
+        "I also drafted a request to the producer for the missing information. Not sent yet, in case you decline this lead. Send it to the producer, or decline this lead.",
         [FIRE, HELD_REQUEST],
         ActionPlan(open_choices=[FIRE_CHOICE]),
         intents={"I-r": "routine_request"},
+    ),
+    Case(
+        "a request draft on its own needs no also",
+        "I drafted a request to the producer for the missing information. "
+        "Review this sensitive request before it is sent.",
+        [SENSITIVE_REQUEST],
+        intents={"I-s": "sensitive_request"},
     ),
     Case(
         "pending observation names the field and both values",

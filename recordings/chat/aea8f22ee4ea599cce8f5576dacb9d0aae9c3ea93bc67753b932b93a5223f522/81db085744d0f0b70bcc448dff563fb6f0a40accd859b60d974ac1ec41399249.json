@@ -26,7 +26,7 @@
               "kind": "underwriter_review",
               "lead_id": "LEAD-00000042-003",
               "ref": 3,
-              "text": "Not sent yet, in case you decline this lead. Send it to the producer, or decline at the choice above."
+              "text": "Not sent yet, in case you decline this lead. Send it to the producer, or decline this lead."
             },
             {
               "kind": "underwriter_question",
@@ -38,7 +38,7 @@
               "kind": "underwriter_review",
               "lead_id": "LEAD-00000042-006",
               "ref": 5,
-              "text": "Not sent yet, in case you decline this lead. Send it to the producer, or decline at the choice above."
+              "text": "Not sent yet, in case you decline this lead. Send it to the producer, or decline this lead."
             }
           ],
           "summary": {
@@ -54,13 +54,13 @@
       }
     ]
   },
-  "input_hash": "14f86ba4c3e62adccb9530327eba158e4502eb930b9cd5d5c5180378f3eb7af9",
+  "input_hash": "81db085744d0f0b70bcc448dff563fb6f0a40accd859b60d974ac1ec41399249",
   "model_id": "deepseek-flash",
   "prompt_version": "aea8f22ee4ea599cce8f5576dacb9d0aae9c3ea93bc67753b932b93a5223f522",
   "request_id": "",
   "skill": "chat",
   "stop_reason": "tool_use",
-  "tokens_in": 360,
+  "tokens_in": 356,
   "tokens_out": 57,
   "tool_input": {
     "action": "queue_facts",
