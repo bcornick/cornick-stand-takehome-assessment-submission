@@ -41,7 +41,7 @@ class Coverage(StrictModel):
 
 
 class BuildQuotePacketInput(StrictModel):
-    lead_label: str  # the property address, or the lead id when there is none
+    lead_label: str  # the property address, or the short lead id (LEAD-001) when there is none
     plan: ActionPlan
     coverages: dict[str, Coverage]  # the submitted coverages by field name, in the order shown
 

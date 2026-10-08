@@ -28,11 +28,11 @@
   "request_id": "",
   "skill": "chat",
   "stop_reason": "tool_use",
-  "tokens_in": 267,
+  "tokens_in": 139,
   "tokens_out": 121,
   "tool_input": {
     "action": "answer",
-    "answer": "We sent one routine request to the producer on lead 008, titled \"Information needed for your quote: 8924 Lakeview Blvd\". It asked for two things:\n\n- When the property was purchased.\n- The brand of the electrical panel.\n\nNo reply has come back yet.",
+    "answer": "We sent one routine request to the producer on lead 008, titled \"Information needed for your quote: 8924 Lakeview Blvd\". It asks for two things:\n\n- When the property was purchased.\n- The brand of the electrical panel.\n\nNo reply has come back yet.",
     "citations": [
       1
     ]

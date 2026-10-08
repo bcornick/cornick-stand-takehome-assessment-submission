@@ -12,8 +12,8 @@
   "request_id": "",
   "skill": "chat",
   "stop_reason": "tool_use",
-  "tokens_in": 267,
-  "tokens_out": 136,
+  "tokens_in": 139,
+  "tokens_out": 133,
   "tool_input": {
     "action": "propose_command",
     "command_payload": {
@@ -21,6 +21,6 @@
       "reason": "Building is a vacant warehouse and outside our appetite."
     },
     "command_type": "decline_lead",
-    "rationale": "The underwriter instructed to decline this lead because the building is a vacant warehouse, which is outside the appetite."
+    "rationale": "The underwriter instructed to decline this lead because the building is a vacant warehouse outside the appetite."
   }
 }

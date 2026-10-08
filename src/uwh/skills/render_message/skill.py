@@ -28,7 +28,7 @@ def _addressed_to_applicant(wording: str) -> str:
 class RenderMessageInput(StrictModel):
     kind: Literal["request", "decline_notice"] = "request"
     registry: Registry
-    lead_label: str  # the property address, or the lead id when there is none
+    lead_label: str  # the property address, or the short lead id (LEAD-001) when there is none
     asks: list[Ask]  # the asks of a request; a decline notice has none
     to_applicant: bool = (
         False  # the applicant is the recipient (a `direct_web` lead): wording says "you"

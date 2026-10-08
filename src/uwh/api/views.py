@@ -78,7 +78,7 @@ class QueueRow(StrictModel):
     `GET /api/run`'s `summary`, not part of this response."""
 
     lead_id: str
-    label: str  # the property address, or the lead id when there is none
+    label: str  # the property address, or the short lead id (LEAD-001) when there is none
     status: Status
     primary_next_action: (
         BlockerKind | None

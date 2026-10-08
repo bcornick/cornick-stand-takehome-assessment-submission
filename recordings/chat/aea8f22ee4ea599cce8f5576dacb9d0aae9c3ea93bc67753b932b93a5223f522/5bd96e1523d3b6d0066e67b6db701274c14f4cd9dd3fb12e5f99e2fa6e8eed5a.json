@@ -14,7 +14,7 @@
               "facts": {
                 "state": null
               },
-              "label": "LEAD-00000042-000",
+              "label": "LEAD-000",
               "lead_id": "LEAD-00000042-000",
               "ref": 1,
               "status": "received",
@@ -24,7 +24,7 @@
               "facts": {
                 "state": "CA"
               },
-              "label": "LEAD-00000042-001",
+              "label": "LEAD-001",
               "lead_id": "LEAD-00000042-001",
               "ref": 2,
               "status": "received",
@@ -115,24 +115,23 @@
       }
     ]
   },
-  "input_hash": "9fa0bdb466b30bb43a2111b0ce1036424a43a6312b2c3f5cf757a3072f8f2efd",
+  "input_hash": "5bd96e1523d3b6d0066e67b6db701274c14f4cd9dd3fb12e5f99e2fa6e8eed5a",
   "model_id": "deepseek-flash",
   "prompt_version": "aea8f22ee4ea599cce8f5576dacb9d0aae9c3ea93bc67753b932b93a5223f522",
   "request_id": "",
   "skill": "chat",
   "stop_reason": "tool_use",
-  "tokens_in": 677,
-  "tokens_out": 168,
+  "tokens_in": 669,
+  "tokens_out": 148,
   "tool_input": {
     "action": "answer",
-    "answer": "Three leads are in Florida:\n\n- 3948 Old Mill Rd (LEAD-00000042-004)\n- 4452 Meadowlark Ln (LEAD-00000042-007)\n- 903 Lakeview Blvd (LEAD-00000042-009)\n\nThree more leads have no state recorded: LEAD-00000042-000, 3567 Lakeview Blvd and 3730 Hillside Ct.",
+    "answer": "Three leads are in Florida:\n\n- 3948 Old Mill Rd (LEAD-004)\n- 4452 Meadowlark Ln (LEAD-007)\n- 903 Lakeview Blvd (LEAD-009)\n\nTwo leads have no state recorded (LEAD-000 and 3567 Lakeview Blvd), so they cannot be placed.",
     "citations": [
       5,
       8,
       10,
       1,
-      6,
-      7
+      6
     ]
   }
 }

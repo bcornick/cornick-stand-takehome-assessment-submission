@@ -48,7 +48,7 @@
   "request_id": "",
   "skill": "chat",
   "stop_reason": "tool_use",
-  "tokens_in": 372,
+  "tokens_in": 244,
   "tokens_out": 57,
   "tool_input": {
     "action": "queue_facts",

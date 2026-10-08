@@ -48,7 +48,7 @@ const rows: Schemas['QueueRow'][] = [
   {
     ...row,
     lead_id: 'LEAD-00000042-001',
-    label: 'LEAD-00000042-001',
+    label: 'LEAD-001',
     primary_next_action: 'producer_reply',
     waits_on: 'producer',
     decision: null,
@@ -124,7 +124,7 @@ describe('LeadList', () => {
     expect(screen.queryByText(/follow-ups sent/)).toBeNull()
   })
 
-  it('says "no address" for a lead whose label is its id', () => {
+  it('says "no address" for a lead whose label is its short id', () => {
     render(<LeadList run={run} rows={rows} selected={QUEUE} onSelect={() => undefined} />)
     expect(screen.getByRole('button', { name: /Lead 001/ })).toHaveTextContent('no address')
     expect(screen.getByRole('button', { name: 'Queue' })).toHaveAttribute('aria-current', 'true')

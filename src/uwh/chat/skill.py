@@ -27,6 +27,7 @@ from uwh.runtime.recordings import Exchange
 from uwh.runtime.runs import RunEnvironment, command_context
 from uwh.runtime.workflow import unit_of_work
 from uwh.skills.manifest import load_manifest
+from uwh.skills.steps import without_seed
 
 TOOL_NAME = "chat_step"
 _PROMPT_FILE = Path(__file__).with_name("prompt.md")
@@ -258,4 +259,5 @@ def run_turn(
     finally:
         with unit_of_work(db):
             append_model_calls(db, _context(db, env), lead_id, exchanges)
-    return TurnResult(answer, cited, proposal_id)
+    # The model reads lead ids in full; the underwriter reads them without the run's seed.
+    return TurnResult(None if answer is None else without_seed(answer), cited, proposal_id)

@@ -355,48 +355,24 @@
         }
       },
       {
-        "action": "queue_summary",
-        "lead_id": null,
-        "result": {
-          "open_items": [],
-          "summary": {
-            "declines_approved": 0,
-            "delivery_unknown": 0,
-            "follow_ups_sent": 0,
-            "quotes_sent": 0,
-            "waiting_on_data": 0,
-            "waiting_on_producer": 0,
-            "waiting_on_underwriter": 0
-          }
-        }
-      },
-      {
         "action": "current_draft",
         "lead_id": "008",
         "result": {
           "draft": null
         }
-      },
-      {
-        "action": "messages",
-        "lead_id": "008",
-        "result": {
-          "replies": [],
-          "requests": []
-        }
       }
     ]
   },
-  "input_hash": "f248e07d3e3a85621a1675c258d8d72f7713ea57ba2bf82790ca75da41b11d62",
+  "input_hash": "0a8def617624580adf83ac1b2312464c14ee80eb7deb8ac381eba70ef4f1f7a1",
   "model_id": "deepseek-flash",
   "prompt_version": "aea8f22ee4ea599cce8f5576dacb9d0aae9c3ea93bc67753b932b93a5223f522",
   "request_id": "",
   "skill": "chat",
   "stop_reason": "tool_use",
-  "tokens_in": 162,
-  "tokens_out": 51,
+  "tokens_in": 171,
+  "tokens_out": 49,
   "tool_input": {
-    "action": "playbook_path",
+    "action": "messages",
     "lead_id": "008"
   }
 }

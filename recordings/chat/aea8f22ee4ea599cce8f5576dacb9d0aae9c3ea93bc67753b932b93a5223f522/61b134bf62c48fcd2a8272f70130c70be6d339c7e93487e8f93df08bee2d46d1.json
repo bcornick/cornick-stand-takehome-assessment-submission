@@ -50,7 +50,7 @@
                 "status": null,
                 "waiting_on": null
               },
-              "label": "LEAD-00000042-000",
+              "label": "LEAD-000",
               "lead_id": "LEAD-00000042-000",
               "ref": 4,
               "status": "in_progress",
@@ -64,7 +64,7 @@
                 "status": null,
                 "waiting_on": null
               },
-              "label": "LEAD-00000042-001",
+              "label": "LEAD-001",
               "lead_id": "LEAD-00000042-001",
               "ref": 5,
               "status": "in_progress",
@@ -190,17 +190,17 @@
       }
     ]
   },
-  "input_hash": "728ea22e28acb9975a8cdc559918da8c833ad4e2d72debce1f2a7d5697799534",
+  "input_hash": "61b134bf62c48fcd2a8272f70130c70be6d339c7e93487e8f93df08bee2d46d1",
   "model_id": "deepseek-flash",
   "prompt_version": "aea8f22ee4ea599cce8f5576dacb9d0aae9c3ea93bc67753b932b93a5223f522",
   "request_id": "",
   "skill": "chat",
   "stop_reason": "tool_use",
-  "tokens_in": 887,
-  "tokens_out": 190,
+  "tokens_in": 879,
+  "tokens_out": 208,
   "tool_input": {
     "action": "answer",
-    "answer": "Three leads are waiting on you:\n\n- LEAD-00000042-000: a decline notice needs your review before it is sent.\n- 9273 Hillside Ct (LEAD-00000042-003): the fire simulation failed — decide whether to decline or continue under legacy underwriting; the legacy checklist values are shown.\n- 3730 Hillside Ct (LEAD-00000042-006): same question — the fire simulation failed, decline or continue under legacy underwriting.\n\nThe other seven leads are waiting on producer replies.",
+    "answer": "Three leads are waiting on you:\n\n- LEAD-000 (LEAD-00000042-000): a decline notice is drafted and needs your review before it is sent.\n- 9273 Hillside Ct (LEAD-00000042-003): the fire simulation failed, so you must decide whether to decline or continue under legacy underwriting; the legacy checklist values are shown.\n- 3730 Hillside Ct (LEAD-00000042-006): same question — the fire simulation failed, decline or continue under legacy underwriting.\n\nThe other seven leads are waiting on producer replies, and none are waiting on data.",
     "citations": [
       1,
       2,

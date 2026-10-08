@@ -247,3 +247,15 @@ def test_lead_003s_detail_lists_the_field_it_asked_for_as_missing_and_sections_e
     assert sections["insured_dob"] == "Insured"
     assert sections["q:contact_email"] == "Contact"
     assert all(sections[key] for key in missing)
+
+
+def test_a_lead_with_no_address_is_named_without_the_runs_seed(
+    first_pass: sqlite3.Connection,
+) -> None:
+    detail = lead_detail(first_pass, "LEAD-00000042-000", load_registry(str(REGISTRY)))
+
+    assert detail is not None
+    assert detail.label == "LEAD-000"
+    (notice,) = [draft for draft in detail.drafts if draft.kind == "decline_notice"]
+    assert notice.subject == "Regarding your submission: LEAD-000"
+    assert not any("00000042" in draft.subject + draft.body for draft in detail.drafts)

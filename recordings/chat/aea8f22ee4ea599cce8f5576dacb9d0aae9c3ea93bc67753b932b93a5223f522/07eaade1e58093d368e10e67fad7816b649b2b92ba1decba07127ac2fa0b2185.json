@@ -203,7 +203,7 @@
               "value": "Tankless"
             }
           ],
-          "label": "LEAD-00000042-000",
+          "label": "LEAD-000",
           "lead_id": "LEAD-00000042-000",
           "open_choices": [],
           "open_items": [
@@ -216,162 +216,19 @@
           ],
           "status": "in_progress"
         }
-      },
-      {
-        "action": "playbook_path",
-        "lead_id": "000",
-        "result": {
-          "pages": [
-            {
-              "declines_on_every_branch": [],
-              "effects": [],
-              "not_evaluated": [],
-              "page": "occupancy",
-              "ref": 34,
-              "waits_on": [
-                "months_unoccupied"
-              ]
-            },
-            {
-              "declines_on_every_branch": [],
-              "effects": [
-                {
-                  "committed": true,
-                  "effect": {
-                    "rule": "PP-1",
-                    "type": "decline"
-                  },
-                  "trace": {
-                    "alternatives": [],
-                    "board_path": [
-                      "07:ROOT",
-                      "07:LIVING",
-                      "07:D1"
-                    ],
-                    "choice_ids": []
-                  }
-                }
-              ],
-              "not_evaluated": [],
-              "page": "post_and_pier",
-              "ref": 35,
-              "waits_on": []
-            },
-            {
-              "declines_on_every_branch": [],
-              "effects": [],
-              "not_evaluated": [],
-              "page": "profile",
-              "ref": 36,
-              "waits_on": [
-                "kyc_score"
-              ]
-            },
-            {
-              "declines_on_every_branch": [],
-              "effects": [],
-              "not_evaluated": [],
-              "page": "replacement_cost",
-              "ref": 37,
-              "waits_on": [
-                "coverage_to_rce_ratio"
-              ]
-            },
-            {
-              "declines_on_every_branch": [],
-              "effects": [
-                {
-                  "committed": true,
-                  "effect": {
-                    "rule": "RF-1",
-                    "type": "no_action"
-                  },
-                  "trace": {
-                    "alternatives": [],
-                    "board_path": [
-                      "05:ROOT",
-                      "05:CA",
-                      "05:OK_A"
-                    ],
-                    "choice_ids": []
-                  }
-                }
-              ],
-              "not_evaluated": [],
-              "page": "roof",
-              "ref": 38,
-              "waits_on": [
-                "roof_age_years"
-              ]
-            },
-            {
-              "declines_on_every_branch": [],
-              "effects": [
-                {
-                  "committed": true,
-                  "effect": {
-                    "rule": "SD-1",
-                    "type": "no_action"
-                  },
-                  "trace": {
-                    "alternatives": [],
-                    "board_path": [
-                      "06:ROOT",
-                      "06:NC",
-                      "06:NC_OK"
-                    ],
-                    "choice_ids": []
-                  }
-                }
-              ],
-              "not_evaluated": [],
-              "page": "siding",
-              "ref": 39,
-              "waits_on": []
-            },
-            {
-              "declines_on_every_branch": [],
-              "effects": [],
-              "not_evaluated": [
-                {
-                  "producer_text": "Electrical systems were not reviewed for this quote.",
-                  "ref": "electrical",
-                  "text": "The Electrical page is not evaluated."
-                }
-              ],
-              "page": "electrical",
-              "ref": 40,
-              "waits_on": []
-            },
-            {
-              "declines_on_every_branch": [],
-              "effects": [],
-              "not_evaluated": [
-                {
-                  "producer_text": "Plumbing was not reviewed for this quote.",
-                  "ref": "plumbing",
-                  "text": "The Plumbing page is not evaluated."
-                }
-              ],
-              "page": "plumbing",
-              "ref": 41,
-              "waits_on": []
-            }
-          ]
-        }
       }
     ]
   },
-  "input_hash": "e6752030d3d78e4b21af3b7af44c6415d4b26c8982a503b67eff6df9136e26a2",
+  "input_hash": "07eaade1e58093d368e10e67fad7816b649b2b92ba1decba07127ac2fa0b2185",
   "model_id": "deepseek-flash",
   "prompt_version": "aea8f22ee4ea599cce8f5576dacb9d0aae9c3ea93bc67753b932b93a5223f522",
   "request_id": "",
   "skill": "chat",
   "stop_reason": "tool_use",
-  "tokens_in": 651,
+  "tokens_in": 1176,
   "tokens_out": 51,
   "tool_input": {
-    "action": "lead_events",
+    "action": "playbook_path",
     "lead_id": "000"
   }
 }

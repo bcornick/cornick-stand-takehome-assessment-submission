@@ -1,6 +1,7 @@
 # ABOUTME: The workflow steps of a lead's pass: each reads the lead's facts from the ledger, runs a skill on them and writes what the skill decided as events, observations, the plan and the draft.
 # ABOUTME: The order is `WORKFLOW_STEP_ORDER`; the registry, providers and ledger rules a step needs arrive in `build_steps`, which is why the steps are built when the app starts.
 import json
+import re
 import sqlite3
 from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
@@ -61,10 +62,21 @@ from uwh.skills.vertical import MAX_REQUEST_ROUNDS, WORKFLOW_STEP_ORDER
 _SKILLS_ROOT = Path(uwh.skills.__file__).parent
 
 
+# A lead id carries the run's seed (LEAD-00000042-008), which no reader needs.
+_SEEDED_LEAD_ID = re.compile(r"\bLEAD-\d+-(\d+)\b")
+
+
+def without_seed(text: str) -> str:
+    """The text with every lead id named without the run's seed: LEAD-008 for LEAD-00000042-008."""
+    return _SEEDED_LEAD_ID.sub(r"LEAD-\1", text)
+
+
 def lead_label(db: sqlite3.Connection, lead_id: str) -> str:
-    """The property address, or the lead id when the lead has none."""
+    """The property address, or the lead id without the run's seed when the lead has none."""
     address = effective_facts(db, lead_id).get("street_address")
-    return address.value if address is not None and isinstance(address.value, str) else lead_id
+    if address is not None and isinstance(address.value, str):
+        return address.value
+    return without_seed(lead_id)
 
 
 def _usable_values(db: sqlite3.Connection, lead_id: str) -> dict[str, JsonValue]:

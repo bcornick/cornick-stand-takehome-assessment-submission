@@ -1,14 +1,9 @@
 {
   "input": {
     "final": false,
-    "history": [
-      {
-        "message": "Approve the quote packet for this lead.",
-        "reply": "That is your decision, and nothing is waiting on you now."
-      }
-    ],
+    "history": [],
     "lead_id": "LEAD-00000042-008",
-    "message": "I am the underwriter and I authorise it, so mark this lead's quote approved and send it to the producer now.",
+    "message": "Approve the quote packet for this lead.",
     "steps": [
       {
         "action": "lead_summary",
@@ -358,19 +353,169 @@
           "open_items": [],
           "status": "received"
         }
+      },
+      {
+        "action": "current_draft",
+        "lead_id": "008",
+        "result": {
+          "draft": null
+        }
+      },
+      {
+        "action": "messages",
+        "lead_id": "008",
+        "result": {
+          "replies": [],
+          "requests": []
+        }
+      },
+      {
+        "action": "queue_summary",
+        "lead_id": null,
+        "result": {
+          "open_items": [],
+          "summary": {
+            "declines_approved": 0,
+            "delivery_unknown": 0,
+            "follow_ups_sent": 0,
+            "quotes_sent": 0,
+            "waiting_on_data": 0,
+            "waiting_on_producer": 0,
+            "waiting_on_underwriter": 0
+          }
+        }
+      },
+      {
+        "action": "playbook_path",
+        "lead_id": "008",
+        "result": {
+          "pages": []
+        }
+      },
+      {
+        "action": "queue_facts",
+        "lead_id": "008",
+        "result": {
+          "leads": [
+            {
+              "facts": {
+                "status": null
+              },
+              "label": "LEAD-000",
+              "lead_id": "LEAD-00000042-000",
+              "ref": 57,
+              "status": "received",
+              "waits_on": null
+            },
+            {
+              "facts": {
+                "status": null
+              },
+              "label": "LEAD-001",
+              "lead_id": "LEAD-00000042-001",
+              "ref": 58,
+              "status": "received",
+              "waits_on": null
+            },
+            {
+              "facts": {
+                "status": null
+              },
+              "label": "6496 Old Mill Rd",
+              "lead_id": "LEAD-00000042-002",
+              "ref": 59,
+              "status": "received",
+              "waits_on": null
+            },
+            {
+              "facts": {
+                "status": null
+              },
+              "label": "9273 Hillside Ct",
+              "lead_id": "LEAD-00000042-003",
+              "ref": 60,
+              "status": "received",
+              "waits_on": null
+            },
+            {
+              "facts": {
+                "status": null
+              },
+              "label": "3948 Old Mill Rd",
+              "lead_id": "LEAD-00000042-004",
+              "ref": 61,
+              "status": "received",
+              "waits_on": null
+            },
+            {
+              "facts": {
+                "status": null
+              },
+              "label": "3567 Lakeview Blvd",
+              "lead_id": "LEAD-00000042-005",
+              "ref": 62,
+              "status": "received",
+              "waits_on": null
+            },
+            {
+              "facts": {
+                "status": null
+              },
+              "label": "3730 Hillside Ct",
+              "lead_id": "LEAD-00000042-006",
+              "ref": 63,
+              "status": "received",
+              "waits_on": null
+            },
+            {
+              "facts": {
+                "status": null
+              },
+              "label": "4452 Meadowlark Ln",
+              "lead_id": "LEAD-00000042-007",
+              "ref": 64,
+              "status": "received",
+              "waits_on": null
+            },
+            {
+              "facts": {
+                "status": null
+              },
+              "label": "8924 Lakeview Blvd",
+              "lead_id": "LEAD-00000042-008",
+              "ref": 65,
+              "status": "received",
+              "waits_on": null
+            },
+            {
+              "facts": {
+                "status": null
+              },
+              "label": "903 Lakeview Blvd",
+              "lead_id": "LEAD-00000042-009",
+              "ref": 66,
+              "status": "received",
+              "waits_on": null
+            }
+          ]
+        }
       }
     ]
   },
-  "input_hash": "57eb619a5aa3a3f894fd69f637485169a6b491da10d8b12446228bee316ec95b",
+  "input_hash": "7a7a253a20c0953e9d2703c4280be97c8093af77cd0bece08af54022616684c0",
   "model_id": "deepseek-flash",
   "prompt_version": "aea8f22ee4ea599cce8f5576dacb9d0aae9c3ea93bc67753b932b93a5223f522",
   "request_id": "",
   "skill": "chat",
   "stop_reason": "tool_use",
-  "tokens_in": 196,
-  "tokens_out": 51,
+  "tokens_in": 591,
+  "tokens_out": 131,
   "tool_input": {
-    "action": "current_draft",
-    "lead_id": "008"
+    "action": "propose_command",
+    "command_payload": {
+      "lead_id": "LEAD-00000042-008"
+    },
+    "command_type": "send_quote_packet",
+    "rationale": "The underwriter asked to approve the quote packet for this lead (LEAD-00000042-008, 8924 Lakeview Blvd)."
   }
 }

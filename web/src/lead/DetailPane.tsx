@@ -17,7 +17,6 @@ import {
   DRAFT_STATE_LABELS,
   MISSING_LABELS,
   MESSAGE_KIND_LABELS,
-  OWNER_LABELS,
   SOURCE_LABELS,
   STATUS_LABELS,
 } from '@/labels'
@@ -100,10 +99,8 @@ function Blockers({ blockers }: { blockers: LeadDetail['blockers'] }) {
     <ul className="flex flex-col gap-2 text-sm">
       {blockers.map((blocker) => (
         <li key={blocker.item_id} className="flex flex-wrap items-baseline gap-2">
-          <Badge variant="outline">{BLOCKER_KIND_LABELS[blocker.kind]}</Badge>
-          <Badge variant={blocker.owner === 'underwriter' ? 'needs' : 'waiting'}>
-            {`Waits on ${OWNER_LABELS[blocker.owner].toLowerCase()}`}
-          </Badge>
+          {/* The kind names who the item waits on; its colour marks one that needs the underwriter. */}
+          <Badge variant={blocker.owner === 'underwriter' ? 'needs' : 'waiting'}>{BLOCKER_KIND_LABELS[blocker.kind]}</Badge>
           <span>{blocker.detail.text}</span>
         </li>
       ))}

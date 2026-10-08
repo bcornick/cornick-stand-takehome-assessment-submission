@@ -1,11 +1,10 @@
-// ABOUTME: Human-readable labels for the API's value sets: statuses, blocker kinds, missing-field resolutions, owners, sources, groups, message kinds, effects, event types and actors.
+// ABOUTME: Human-readable labels for the API's value sets: statuses, blocker kinds, missing-field resolutions, sources, groups, message kinds, effects, event types and actors.
 // ABOUTME: One mapping module, so no screen carries its own string literals for these.
 import type { components } from '@/api/types'
 
 type Schemas = components['schemas']
 type Status = Schemas['QueueRow']['status']
 type BlockerKind = Schemas['BlockerView']['kind']
-type Owner = Schemas['BlockerView']['owner']
 type Source = Schemas['FactView']['source']
 type Group = Schemas['QueueRow']['group']
 type MessageKind = Schemas['DraftView']['kind']
@@ -43,12 +42,6 @@ export const MISSING_LABELS: Record<Resolution, string> = {
   none: 'Not yet resolved',
   not_required: 'Not required',
   defer: 'Deferred',
-}
-
-export const OWNER_LABELS: Record<Owner, string> = {
-  underwriter: 'Underwriter',
-  producer: 'Producer',
-  data_team: 'Data team',
 }
 
 export const SOURCE_LABELS: Record<Source, string> = {

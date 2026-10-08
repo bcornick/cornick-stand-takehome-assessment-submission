@@ -2,7 +2,7 @@
 // ABOUTME: Rows keep the order the API returns.
 import type { components } from '@/api/types'
 import { Badge } from '@/components/ui/badge'
-import { formatDate, leadName } from '@/format'
+import { formatDate, leadName, shortLeadId } from '@/format'
 import { GROUP_LABELS, GROUP_ORDER } from '@/labels'
 import { QUEUE } from '@/surface'
 
@@ -68,7 +68,7 @@ function LeadRow({ row, isSelected, onSelect }: RowProps) {
         <span className="font-medium">{leadName(row.lead_id)}</span>
         {state !== null && <Badge variant={state.state}>{state.label}</Badge>}
       </span>
-      <span className="block truncate">{row.label === row.lead_id ? 'no address' : row.label}</span>
+      <span className="block truncate">{row.label === shortLeadId(row.lead_id) ? 'no address' : row.label}</span>
       <span className="block text-xs text-muted-foreground">
         {row.effective_date === null ? 'No effective date' : `Effective ${formatDate(row.effective_date)}`}
         {` · ${waitingTime(row)}`}

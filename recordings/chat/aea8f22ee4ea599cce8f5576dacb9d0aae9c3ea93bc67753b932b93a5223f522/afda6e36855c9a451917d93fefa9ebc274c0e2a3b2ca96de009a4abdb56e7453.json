@@ -355,6 +355,21 @@
         }
       },
       {
+        "action": "current_draft",
+        "lead_id": "008",
+        "result": {
+          "draft": null
+        }
+      },
+      {
+        "action": "messages",
+        "lead_id": "008",
+        "result": {
+          "replies": [],
+          "requests": []
+        }
+      },
+      {
         "action": "queue_summary",
         "lead_id": null,
         "result": {
@@ -371,21 +386,6 @@
         }
       },
       {
-        "action": "current_draft",
-        "lead_id": "008",
-        "result": {
-          "draft": null
-        }
-      },
-      {
-        "action": "messages",
-        "lead_id": "008",
-        "result": {
-          "replies": [],
-          "requests": []
-        }
-      },
-      {
         "action": "playbook_path",
         "lead_id": "008",
         "result": {
@@ -394,20 +394,19 @@
       }
     ]
   },
-  "input_hash": "a4c33abf661a266d636b8c028732f830057f2e8d0747aa047141eddc5083163c",
+  "input_hash": "afda6e36855c9a451917d93fefa9ebc274c0e2a3b2ca96de009a4abdb56e7453",
   "model_id": "deepseek-flash",
   "prompt_version": "aea8f22ee4ea599cce8f5576dacb9d0aae9c3ea93bc67753b932b93a5223f522",
   "request_id": "",
   "skill": "chat",
   "stop_reason": "tool_use",
   "tokens_in": 185,
-  "tokens_out": 131,
+  "tokens_out": 69,
   "tool_input": {
-    "action": "propose_command",
-    "command_payload": {
-      "lead_id": "LEAD-00000042-008"
-    },
-    "command_type": "send_quote_packet",
-    "rationale": "The underwriter asked to approve the quote packet for this lead. The lead has no open items or open choices, so the packet can be sent."
+    "action": "queue_facts",
+    "keys": [
+      "status"
+    ],
+    "lead_id": "008"
   }
 }

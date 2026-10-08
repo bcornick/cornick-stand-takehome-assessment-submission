@@ -107,6 +107,12 @@ describe('what the lead waits on', () => {
     expect(waiting.getByText('The packet is ready.')).toBeInTheDocument()
     expect(waiting.queryByRole('form')).toBeNull()
   })
+
+  it('tags each item once, by its kind, which already names who it waits on', () => {
+    pane()
+    const waiting = within(screen.getByRole('region', { name: 'Waiting on' }))
+    expect(waiting.queryByText(/^Waits on/)).toBeNull()
+  })
 })
 
 describe('the header', () => {

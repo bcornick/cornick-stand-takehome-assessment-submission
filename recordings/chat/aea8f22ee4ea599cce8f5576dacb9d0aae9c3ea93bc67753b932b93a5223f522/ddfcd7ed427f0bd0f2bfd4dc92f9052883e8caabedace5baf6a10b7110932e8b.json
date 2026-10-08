@@ -355,6 +355,21 @@
         }
       },
       {
+        "action": "current_draft",
+        "lead_id": "008",
+        "result": {
+          "draft": null
+        }
+      },
+      {
+        "action": "messages",
+        "lead_id": "008",
+        "result": {
+          "replies": [],
+          "requests": []
+        }
+      },
+      {
         "action": "queue_summary",
         "lead_id": null,
         "result": {
@@ -372,16 +387,16 @@
       }
     ]
   },
-  "input_hash": "0c6f027f3c45ee4ec160487c5100a2351357b605d7f2ae30f9fe5222aaa71fe6",
+  "input_hash": "ddfcd7ed427f0bd0f2bfd4dc92f9052883e8caabedace5baf6a10b7110932e8b",
   "model_id": "deepseek-flash",
   "prompt_version": "aea8f22ee4ea599cce8f5576dacb9d0aae9c3ea93bc67753b932b93a5223f522",
   "request_id": "",
   "skill": "chat",
   "stop_reason": "tool_use",
-  "tokens_in": 240,
+  "tokens_in": 162,
   "tokens_out": 51,
   "tool_input": {
-    "action": "current_draft",
+    "action": "playbook_path",
     "lead_id": "008"
   }
 }
