@@ -29,7 +29,7 @@ EXEMPT_FILES = {
     "web/pnpm-lock.yaml",
     "web/src/api/types.ts",
     "evals/results.jsonl",
-    "docs/progress.md",
+    "docs/build_logs/progress.md",
 }
 # Text written in an applicant's, producer's or underwriter's voice, where everyday words are legitimate.
 QUOTED_VOICE = re.compile(

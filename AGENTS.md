@@ -6,11 +6,11 @@ A take-home submission for Stand Insurance: a small skill-and-eval harness whose
 
 ## Authority
 
-- `docs/plan.md` gives the scope, the cut list and the milestones. Work one milestone at a time, in order. Where the architecture describes something the plan lists as cut, the plan wins.
+- `docs/build_logs/plan.md` gives the scope, the cut list and the milestones. Work one milestone at a time, in order. Where the architecture describes something the plan lists as cut, the plan wins.
 - `docs/architecture.md` describes the design of what is built.
-- Where the architecture is silent or disagrees with itself, take the simplest reading that keeps a lead moving safely, record it in one line in `docs/progress.md`, and carry on. Stop for Brett only when the choice changes what an underwriter or a producer sees, or spends money.
-- `docs/acceptance.json` holds at most three checks per milestone, each a command that proves a "done when" line. Set `passes` to true only after running the command and seeing the stated result.
-- `docs/progress.md` is the log. Read the latest entry before starting. Add an entry when a milestone ends.
+- Where the architecture is silent or disagrees with itself, take the simplest reading that keeps a lead moving safely, record it in one line in `docs/build_logs/progress.md`, and carry on. Stop for Brett only when the choice changes what an underwriter or a producer sees, or spends money.
+- `docs/build_logs/acceptance.json` holds at most three checks per milestone, each a command that proves a "done when" line. Set `passes` to true only after running the command and seeing the stated result.
+- `docs/build_logs/progress.md` is the log. Read the latest entry before starting. Add an entry when a milestone ends.
 
 ## Hard boundaries
 
@@ -29,7 +29,7 @@ A take-home submission for Stand Insurance: a small skill-and-eval harness whose
 - No flattery and no agreement for its own sake. Call out bad ideas, mistakes and unreasonable expectations, with the technical reason. If it is a gut feeling, say so.
 - When you do not know, say so at once. When there are several reasonable readings of a request, name them; do not pick one silently.
 - Do not fold when challenged unless given new evidence or a better argument.
-- A decision that changes what an underwriter or a producer sees, or spends money, is discussed before implementation. Other decisions are made, logged in one line in `docs/progress.md`, and built.
+- A decision that changes what an underwriter or a producer sees, or spends money, is discussed before implementation. Other decisions are made, logged in one line in `docs/build_logs/progress.md`, and built.
 
 ## Epistemic discipline
 
@@ -111,7 +111,7 @@ After three failed fixes for one problem, stop and write up what was tried. Do n
 
 **Every code file starts with two comment lines beginning `ABOUTME: `** that say what the file does.
 
-**No temporal or historical language in any artifact:** code, comments, docs, test names, YAML, commit-independent notes. Describe what is. If an assessment proves wrong, rewrite the entry; do not annotate its history. History lives in git. `scripts/check_discipline.py` enforces a word list; the rule is wider than the list. Three places exist to record events in order and are outside this rule: `evals/results.jsonl`, `docs/progress.md` entries, and commit messages.
+**No temporal or historical language in any artifact:** code, comments, docs, test names, YAML, commit-independent notes. Describe what is. If an assessment proves wrong, rewrite the entry; do not annotate its history. History lives in git. `scripts/check_discipline.py` enforces a word list; the rule is wider than the list. Three places exist to record events in order and are outside this rule: `evals/results.jsonl`, `docs/build_logs/progress.md` entries, and commit messages.
 
 ## Version control
 
@@ -126,13 +126,13 @@ After three failed fixes for one problem, stop and write up what was tried. Do n
 `scratchpads/` is untracked working memory. Write notes to `scratchpads/dev/YYYY-MM-DD/<task>.md`.
 
 - Capture gotchas, surprises and hard-won knowledge that would be costly to re-learn.
-- After a context reset, re-read the relevant scratchpad and the latest `docs/progress.md` entry before anything else.
+- After a context reset, re-read the relevant scratchpad and the latest `docs/build_logs/progress.md` entry before anything else.
 - Tag entries `[event/provenance]`. Events: `decision`, `experiment`, `dead-end`, `pivot`, `claim`, `heuristic`. Provenance: `user`, `ai-suggested`, `ai-executed`, `user-revised`. Example: `[dead-end/ai-executed] Included Stand's compose file; its host ports cannot be overridden.`
-- Scratchpads may use temporal language. Nothing that must outlive the session stays only there: decisions go to `docs/progress.md`, and architecture questions go to Brett.
+- Scratchpads may use temporal language. Nothing that must outlive the session stays only there: decisions go to `docs/build_logs/progress.md`, and architecture questions go to Brett.
 
 ## Review
 
-- The lead reads every diff. The `reviewer` subagent reads each milestone once, at its end, reports blockers and removals only, and skips paths no seed-42 lead reaches. A finding on such a path goes in `docs/progress.md` and is fixed in milestone 6; the lead fixes at once only what blocks or changes what a producer or underwriter sees.
+- The lead reads every diff. The `reviewer` subagent reads each milestone once, at its end, reports blockers and removals only, and skips paths no seed-42 lead reaches. A finding on such a path goes in `docs/build_logs/progress.md` and is fixed in milestone 6; the lead fixes at once only what blocks or changes what a producer or underwriter sees.
 - `/cross-review` runs once, in milestone 6.
 - Reviewers read code and test output. They do not rerun the full suite.
 

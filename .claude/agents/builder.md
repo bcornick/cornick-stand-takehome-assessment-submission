@@ -9,7 +9,7 @@ You implement exactly one task, or one small group of tasks, handed to you by th
 
 Rules:
 
-- Read `AGENTS.md` first and follow it. `docs/plan.md` sets the scope and `docs/architecture.md` describes the design.
+- Read `AGENTS.md` first and follow it. `docs/build_logs/plan.md` sets the scope and `docs/architecture.md` describes the design.
 - Work test-first: write the failing test the task names, run it and see it fail for the right reason, then write the smallest change that passes.
 - Work only in the directory you were started in. When the lead runs builders in parallel, that directory is your own git worktree: commit there, on its branch, and never write to another checkout.
 - Touch only the files the task assigns. Do not open `evals/labels/` or any skill's `cases/` folder unless the task tells you to.

@@ -202,7 +202,7 @@ Each item is named in the README under "Cut and why" or "Known limits".
 ## Documentation changes
 
 - **`docs/architecture.md` section 11.** Rewritten to describe this surface. "No numeric confidence is displayed" is replaced by "A confidence is shown only with its threshold."
-- **The server-sent-events cut.** Removed from `docs/plan.md` "What is cut", from the README "Cut and why", and from `docs/architecture.md` section 4.1, which lists it too.
+- **The server-sent-events cut.** Removed from `docs/build_logs/plan.md` "What is cut", from the README "Cut and why", and from `docs/architecture.md` section 4.1, which lists it too.
 - **`docs/architecture.md` A.5.** The `POST /api/chat` row says the turn answers as a server-sent-events stream.
 - **README walkthrough.** Rewritten for the demo panel and the conversation: "Load today's leads", lead 008's conversation, "Deliver the producers' replies", and the inline "Send quote".
 - **README replay sentences.** The run-modes sentence and the known limit about the chat in replay say the composer is disabled in replay, with "Questions need live mode", unless the example prompts pass the replay attempt.
@@ -243,13 +243,13 @@ Done when: lead 008 runs from "Load today's leads" to an approved packet entirel
 
 ## Build rules
 
-These are the rules of "How the work runs" in `docs/plan.md`.
+These are the rules of "How the work runs" in `docs/build_logs/plan.md`.
 
 - **One line of work.** One branch, one milestone at a time, in the order above. A milestone is done when its "Done when" holds on the running system.
 - **Vertical first.** Inside a milestone, get the thinnest path working end to end, then widen it. Do not build a layer ahead of the lead that needs it.
 - **Tests.** Write a test first for behaviour with a consequence: the behaviour pinned above. Table-driven tests are preferred. Do not write tests that only assert a model, enum, table or config file rejects malformed input, that a document says what the code says, or that a constant has its value. Integration tests run against the real containers.
 - **Review.** The lead reads every diff. The `reviewer` subagent reads each milestone once, at its end, and also reports what can be removed.
-- **Contradictions.** Where this document is silent or disagrees with the code, the lead takes the simplest reading that keeps a lead moving safely and records it in one line in `docs/progress.md`. The lead stops for Brett only when the choice changes what an underwriter or a producer sees, or spends money.
+- **Contradictions.** Where this document is silent or disagrees with the code, the lead takes the simplest reading that keeps a lead moving safely and records it in one line in `docs/build_logs/progress.md`. The lead stops for Brett only when the choice changes what an underwriter or a producer sees, or spends money.
 - **Clean code.** No dead code, no unused field, setting or parameter, and no abstraction with one user. Code for a cut item is deleted, with its tests.
-- **Acceptance.** `docs/acceptance.json` holds at most three checks per milestone, each a command that proves a "Done when" line, keyed `C1-A1` and `C2-A1` onward so they do not collide with the plan's `M1` to `M6`. The lead writes them at the start of the milestone.
-- **Budget.** Live calls happen only where a milestone names them: the chat re-record in milestone 1 and the replay attempt in milestone 2. None runs in an uncapped loop. Each record run's token count goes in `docs/progress.md`.
+- **Acceptance.** `docs/build_logs/acceptance.json` holds at most three checks per milestone, each a command that proves a "Done when" line, keyed `C1-A1` and `C2-A1` onward so they do not collide with the plan's `M1` to `M6`. The lead writes them at the start of the milestone.
+- **Budget.** Live calls happen only where a milestone names them: the chat re-record in milestone 1 and the replay attempt in milestone 2. None runs in an uncapped loop. Each record run's token count goes in `docs/build_logs/progress.md`.

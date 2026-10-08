@@ -7,7 +7,7 @@ tools: Read, Glob, Grep, Bash
 
 You review; you do not edit. Use Bash only to read: `git diff`, `git log`, `cat`, `grep`, and a single focused test to confirm a finding. Never run the full suite. Never run a command that changes state.
 
-Read `docs/plan.md` and the architecture sections the milestone touches before the diff.
+Read `docs/build_logs/plan.md` and the architecture sections the milestone touches before the diff.
 
 Report findings in priority order, each with file and line and a concrete fix:
 
@@ -17,6 +17,6 @@ Report findings in priority order, each with file and line and a concrete fix:
 4. Side effects that bypass the command layer; any path that could send twice.
 5. Reads of the generator's debug key outside `tools/` and `evals/`.
 6. Temporal language, missing `ABOUTME:` headers, names that describe implementation.
-7. Scope beyond the milestone, anything `docs/plan.md` lists as cut, and anything that can be removed.
+7. Scope beyond the milestone, anything `docs/build_logs/plan.md` lists as cut, and anything that can be removed.
 
 End with what you checked and what you did not.

@@ -1,10 +1,10 @@
 # Underwriting triage on a skill-and-eval harness
 
-Brett Cornick's submission for the Stand Insurance take-home (`docs/brief/agentic_uw_takehome.md`). The app takes the ten seed-42 leads that Stand's generator posts and drives each to a sent quote packet, one sent request to the producer, or a wait on the underwriter with a stated reason. Every send of a quote packet or decline notice waits for an underwriter's approval. `docs/architecture.md` is the design authority; `docs/plan.md` is the scope. `DEMO_GUIDE.md` walks through the demo step by step.
+Brett Cornick's submission for the Stand Insurance take-home (`docs/brief/agentic_uw_takehome.md`). The app takes the ten seed-42 leads that Stand's generator posts and drives each to a sent quote packet, one sent request to the producer, or a wait on the underwriter with a stated reason. Every send of a quote packet or decline notice waits for an underwriter's approval. `docs/architecture.md` is the design authority; `docs/build_logs/plan.md` is the scope. `DEMO_GUIDE.md` walks through the demo step by step.
 
 ## Run it
 
-Prerequisites: Docker with Compose 2.20 or later, and `uv`. The frontend builds inside the image. `make check` also needs Node 22 and pnpm (`corepack enable`); the acceptance commands in `docs/acceptance.json` use `jq`.
+Prerequisites: Docker with Compose 2.20 or later, and `uv`. The frontend builds inside the image. `make check` also needs Node 22 and pnpm (`corepack enable`); the acceptance commands in `docs/build_logs/acceptance.json` use `jq`.
 
 ```
 cp .env.example .env
@@ -116,7 +116,7 @@ Stand's mailbox <-- send path <-- command layer <-- underwriter UI, chat, workfl
 
 `docs/architecture.md` section 17 lists the other alternatives considered.
 
-For the rest (rules core, the interpretation table, ledger rules, message classes, appendices) see `docs/architecture.md`; the reviewer's counterweight is `docs/critique.md`, dispositioned in its section 16.
+For the rest (rules core, the interpretation table, ledger rules, message classes, appendices) see `docs/architecture.md`; the reviewer's counterweight is `docs/build_logs/critique.md`, dispositioned in its section 16.
 
 ## The eval loop
 
@@ -156,7 +156,7 @@ The runner also grades reply facts and chat, and four critical errors fail a run
 4. The assistant. Chat threads live in the browser; keep them on the server so a reload and a second reviewer see them. Give the assistant a dry-run lookup, so a card can say what its command would change before the underwriter applies it.
 5. Token counts. `tokens_in` on an event is the provider's `input_tokens` alone; DeepSeek reports cached input separately, so the stored input counts undercount what a call read (lead 008's reading shows 135 input tokens for a prompt longer than that). Count cached input too and compare the totals with the provider's billing page.
 
-Live-call totals are recorded per milestone in `docs/progress.md`; the project used about 50,000 reported input tokens and 13,000 output tokens on `deepseek-flash`, and 4,771 input and 468 output on Jev, with the undercount above.
+Live-call totals are recorded per milestone in `docs/build_logs/progress.md`; the project used about 50,000 reported input tokens and 13,000 output tokens on `deepseek-flash`, and 4,771 input and 468 output on Jev, with the undercount above.
 
 ## Skills
 
@@ -197,7 +197,7 @@ The brief sets a 5 to 6 hour box and grades what is cut. A lead that would have 
 
 ## Known limits
 
-What is left as it is in this proof of concept, from the reviews and from `docs/progress.md`.
+What is left as it is in this proof of concept, from the reviews and from `docs/build_logs/progress.md`.
 
 - A post in flight when a run is replaced may still reach the mailbox; every commit checks its run id, so the work writes nothing else.
 - A stale browser tab after a new run is refused on an item it does not know.
@@ -229,5 +229,5 @@ AI coding agents (Claude Code) wrote the code, under the working rules in `AGENT
 - `recordings/`: committed model exchanges; `fixtures/replies/`: producer replies for the fixture control.
 - `tests/`: fast, slow and integration tests; `tools/` and `scripts/`: the fresh-clone rehearsal, type generation and the discipline check.
 - `DEMO_GUIDE.md`: the demo, step by step.
-- `docs/`: `architecture.md`, `plan.md`, `critique.md`, `progress.md`, `acceptance.json`; `docs/brief/` and `docs/playbook/` are Stand's source material.
+- `docs/`: `architecture.md`; `docs/build_logs/` holds the plan, the critique, the chat-surface design, the progress log and the acceptance checks; `docs/brief/` and `docs/playbook/` are Stand's source material.
 - `sim-harness/`: Stand's leadgen and mailbox, unmodified.

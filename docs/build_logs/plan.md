@@ -10,7 +10,7 @@ This is a take-home submission, reviewed in 45 minutes, for a brief that sets a 
 - Request emails rendered in code, the send path with intent states and startup reconcile, and one open request per lead.
 - Reply handling: the reply endpoint, the paste box, the fixture-reply control, and `read_reply` on DeepSeek.
 - Quote packet and decline notice, each sent only on the underwriter's approval.
-- The underwriter surface (`docs/chat-surface.md`): the lead list, each lead's conversation with its cards (approve, edit, reject, underwriter choices), the drill-down panel, the demo controls, and the chat.
+- The underwriter surface (`docs/build_logs/chat-surface.md`): the lead list, each lead's conversation with its cards (approve, edit, reject, underwriter choices), the drill-down panel, the demo controls, and the chat.
 - Evals through `make eval`: the seed-42 suite with its graders and Stand's answer key, the reply suite, three controls (do nothing, email everything, send twice), the results log, and one recorded improvement cycle on reply reading.
 - Record and replay modes, so the demo runs from recordings.
 - The Jev adapter in front of reply classification.
@@ -34,10 +34,10 @@ Each item is listed in the README under "Cut and why". A lead that would have re
 - **Vertical first.** Inside a milestone, get the thinnest path working end to end, then widen it. Do not build a layer ahead of the lead that needs it.
 - **Tests.** Write a test first for behaviour with a consequence: a playbook outcome, a fact rule, a send-safety property, a reply reading, a command's effect, a grader. Table-driven tests are preferred. Do not write tests that only assert a model, enum, table or config file rejects malformed input, that a document says what the code says, or that a constant has its value. Integration tests run against the real containers.
 - **Review.** The lead reads every diff. The `reviewer` subagent reads the milestone once, at its end, and also reports what can be removed. `/cross-review` runs once, in milestone 6.
-- **Contradictions.** Where the architecture is silent or disagrees with itself, the lead takes the simplest reading that keeps a lead moving safely, records it in one line in `docs/progress.md`, and carries on. The lead stops for Brett only when the choice changes what an underwriter or a producer sees, or spends money.
+- **Contradictions.** Where the architecture is silent or disagrees with itself, the lead takes the simplest reading that keeps a lead moving safely, records it in one line in `docs/build_logs/progress.md`, and carries on. The lead stops for Brett only when the choice changes what an underwriter or a producer sees, or spends money.
 - **Clean code.** No dead code, no unused field, setting or parameter, and no abstraction with one user. Code for a cut item is deleted, with its tests.
-- **Acceptance.** `docs/acceptance.json` holds at most three checks per milestone, each a command that proves a "done when" line. The lead writes them at the start of the milestone.
-- **Budget.** DeepSeek and TypeSafe each hold $5. Live calls happen only where a milestone names them, never in an uncapped loop. Each record run's token count goes in `docs/progress.md`.
+- **Acceptance.** `docs/build_logs/acceptance.json` holds at most three checks per milestone, each a command that proves a "done when" line. The lead writes them at the start of the milestone.
+- **Budget.** DeepSeek and TypeSafe each hold $5. Live calls happen only where a milestone names them, never in an uncapped loop. Each record run's token count goes in `docs/build_logs/progress.md`.
 
 ## Milestones
 
@@ -47,7 +47,7 @@ Each item is listed in the README under "Cut and why". A lead that would have re
 - Delete from `docs/architecture.md` every section, table row, event, route, command, setting and contract that exists only for a cut item, and state the cut list in §4. Update `AGENTS.md` and the `stage` skill to the rules above.
 - Delete the code, fixtures and data for cut items, with their tests. Delete the tests the test rule excludes.
 - Mark the interpretation rows of the seven built pages, and the rows that apply to every page, `reviewed_by: Brett`. Brett has reviewed them and accepts each as written, with one change: I18 puts a non-Class A roof at exactly 0.50 in the stricter band.
-- Replace `docs/acceptance.json` with the checks for milestone 1.
+- Replace `docs/build_logs/acceptance.json` with the checks for milestone 1.
 
 Done when: `make check` passes; the report to Brett gives the count of tests and of lines under `src/` and `tests/` before and after; nothing under `src/` is unread by the remaining milestones.
 

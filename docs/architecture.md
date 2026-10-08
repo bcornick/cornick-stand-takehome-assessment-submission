@@ -1,6 +1,6 @@
 # Architecture: underwriting triage on a skill-and-eval harness
 
-This document is the single authority for the build. Where another file disagrees with it, this document wins. Findings from `docs/critique.md` are dispositioned in section 16.
+This document is the single authority for the build. Where another file disagrees with it, this document wins. Findings from `docs/build_logs/critique.md` are dispositioned in section 16.
 
 ## 1. Objective
 
@@ -73,7 +73,7 @@ Each fact was checked against the code.
 
 ### 4.1 Cut line
 
-The brief sets a 5 to 6 hour box and says the choice of what to cut is evaluated. One scope is built: the list under "What is built" in `docs/plan.md`. The README lists each item below under "Cut and why".
+The brief sets a 5 to 6 hour box and says the choice of what to cut is evaluated. One scope is built: the list under "What is built" in `docs/build_logs/plan.md`. The README lists each item below under "Cut and why".
 
 Not built:
 
@@ -602,7 +602,7 @@ The packet is built in code: coverages as submitted, coverage adjustments shown 
 
 ## 11. Underwriter surface
 
-One page for an underwriter's desk, at least 1280px wide: the lead list on the left, the open conversation in the centre, a drill-down panel on the right when something is opened, and the demo controls pinned bottom right. `docs/chat-surface.md` is its specification.
+One page for an underwriter's desk, at least 1280px wide: the lead list on the left, the open conversation in the centre, a drill-down panel on the right when something is opened, and the demo controls pinned bottom right. `docs/build_logs/chat-surface.md` is its specification.
 
 - **Lead list.** The one-sentence run summary heads it, with separate counts for quotes sent, follow-ups sent, declines approved, waiting on the underwriter, waiting on the producer, waiting on data, delivery unknown. "Follow-ups sent" counts every request sent to a producer, in any round; the brief calls the first request a follow-up. The four waiting counts count each lead once, by its primary next action: an underwriter review or question, a producer reply, a data blocker, or an unknown delivery. A "Queue" entry opens the queue conversation. Below it, one row per lead: its short name, address, status chip, primary next action, effective date and age against a two-business-day service level (Stand's distributor page promises estimates "inside two business days"; labelled as an assumed service level). Order: waiting on the underwriter, then waiting on the producer or data, then finished; within a group, earliest effective date first, then lead id.
 - **Conversation.** A lead's conversation is its event log, oldest first, written by code: `event_summary` gives each event one sentence that names the fact, the result and what follows. Consecutive workflow events form one assistant message with a bullet per event. A message the system sent and a reply it read are bubbles. An item the underwriter acts on is a card at the event that opened it: a review (approve, edit, reject), a question (equal buttons, no default, required reason; all open choices on one lead share one card with the relevant values shown), a pending value, an unknown delivery. A resolved card stays in place as one read-only line. What the system did automatically is read from the same timeline; there is no separate notify item. Every bullet, bubble and card opens its evidence in the panel.
@@ -718,7 +718,7 @@ A reference run passes everything. Each broken variant must be failed by its nam
 
 ## 16. Resolved issues
 
-Dispositions of `docs/critique.md` findings.
+Dispositions of `docs/build_logs/critique.md` findings.
 
 | Finding | Disposition | Where |
 |---|---|---|

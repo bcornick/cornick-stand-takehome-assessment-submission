@@ -1,17 +1,17 @@
 ---
 name: stage
-description: Execute one milestone of docs/plan.md from start to hand-back. Use when asked to build or continue a milestone.
+description: Execute one milestone of docs/build_logs/plan.md from start to hand-back. Use when asked to build or continue a milestone.
 ---
 
 # Milestone
 
-1. Read the latest entry in `docs/progress.md`, then `docs/plan.md` in full, then the architecture sections the milestone touches.
+1. Read the latest entry in `docs/build_logs/progress.md`, then `docs/build_logs/plan.md` in full, then the architecture sections the milestone touches.
 2. Check `git status`. If the tree is dirty, stop and ask Brett. Work on the `submission` branch.
-3. Write the milestone's checks into `docs/acceptance.json`: at most three, each a command that proves a "done when" line.
+3. Write the milestone's checks into `docs/build_logs/acceptance.json`: at most three, each a command that proves a "done when" line.
 4. Get the thinnest path working end to end, then widen it. Write a test first for behaviour with a consequence; `AGENTS.md` says which tests are not written. Run `make check` before each commit.
-5. Where the architecture is silent or disagrees with itself, take the simplest reading that keeps a lead moving safely and record it in one line in `docs/progress.md`. Stop for Brett only when the choice changes what an underwriter or a producer sees, or spends money.
+5. Where the architecture is silent or disagrees with itself, take the simplest reading that keeps a lead moving safely and record it in one line in `docs/build_logs/progress.md`. Stop for Brett only when the choice changes what an underwriter or a producer sees, or spends money.
 6. When the "done when" lines hold on the running system: run the `verify` skill, have the `reviewer` subagent read the milestone once for blockers and removals, skipping paths no seed-42 lead reaches. Fix at once what blocks or changes what a producer or underwriter sees; log the rest for milestone 6. `/cross-review` runs once, in milestone 6.
-7. Append to `docs/progress.md`:
+7. Append to `docs/build_logs/progress.md`:
 
 ```
 ## Milestone N: <name> (<commit>)

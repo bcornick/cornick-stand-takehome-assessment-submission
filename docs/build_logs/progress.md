@@ -105,7 +105,7 @@ Two edits in that commit go beyond Brett's wording and are for him to confirm at
 - A.9 says the quote is not empty. An empty string occurs in every body, so without this an empty quote would always be "found".
 - §14 said Stage 1 checks "the forced-`tool_choice` restriction against the SDK documentation", a sentence left from the Claude design. It says what stage 1 does under the DeepSeek design.
 
-No acceptance check mentions offsets, thinking or the temperature route, so `docs/acceptance.json` is unchanged.
+No acceptance check mentions offsets, thinking or the temperature route, so `docs/build_logs/acceptance.json` is unchanged.
 
 Jev: Brett added `TYPESAFE_API_KEY` to `.env` with $5 of credit, for stage 12 only. No Jev call is made before the Jev adapter task. Nothing in `src/` reads the variable; if its presence changes behaviour or a skill status before stage 12, work stops and Brett is told.
 
@@ -346,7 +346,7 @@ Unread items now read: `vertical.TRANSITIONS`, `TERMINAL_STATUSES` and `BLOCKER_
 
 ## Replan: one branch, seven milestones (submission, 3db8b9a)
 
-Brett replaced the staged plan with `docs/plan.md` from branch `replan` (1625f9a): the build had reached about 14,600 lines of tests with no lead processed end to end. Stages 3 and 4 are merged into the one branch `submission`; every other worktree and branch is removed. The entries above this one describe the staged plan and its open rulings; rulings that concern cut items need no answer.
+Brett replaced the staged plan with `docs/build_logs/plan.md` from branch `replan` (1625f9a): the build had reached about 14,600 lines of tests with no lead processed end to end. Stages 3 and 4 are merged into the one branch `submission`; every other worktree and branch is removed. The entries above this one describe the staged plan and its open rulings; rulings that concern cut items need no answer.
 
 Brett's decisions carried into milestone 1: an underwriter's value that still trips a validator opens no conflict and sends no confirmation; a draft built at an older lead revision is never sent and re-evaluation replaces it; a lead with an open `delivery_unknown` item sends nothing automatically; item ids never repeat across runs if that is a small change, with no run id on commands. The lead's own: `read_reply` calls the model outside the database transaction, then one short transaction records and re-evaluates; a failed first pass leaves each unfinished lead with a `data` blocker and its reason; `start_run` is refused while an intent is `dispatching`; a waited start reports the run it started. Brett reviewed the interpretation rows; he signs the ten seed-42 labels in milestone 2; I52's `p_f` dependency goes to him only if a seed-42 lead is held by it.
 
@@ -358,7 +358,7 @@ Brett's decisions carried into milestone 1: an underwriter's value that still tr
 - Code: Python lines under `src/`: 5,712 before, 5,380 after. Removed: the `settings` table, emergency stop, `change_setting`, the rule-change flow, demotion, held drafts, the `off` level and locked classes, the MCP actor, the settings, skills and event-stream routes, `run_is_settled`, `tools/standin_api.py`, the seed 11 and 15 world fixtures, `MailboxClient.get`, `RevisionChange`, `binding_changes`. `CommandEnvironment` is `RunEnvironment` in `runs.py`.
 - Data: 23 interpretation rows of the five cut pages deleted; 34 remain, each `reviewed_by: Brett`, I18 at the stricter band; `lenient` and `question_for_stand` removed. The catalogue holds `willing_to_mitigate` and `rce_documentation`.
 - Architecture: 1,054 lines before, 987 after; §4.1 states the cut line; tiers, cut pages, MCP, SSE, settings, the stop, rule changes, the sweep, extra controls and packet cases are out; the appendix agrees with the tables, events, routes and commands in code.
-- `docs/acceptance.json` holds the three milestone 1 checks.
+- `docs/build_logs/acceptance.json` holds the three milestone 1 checks.
 
 **Not done / carried:** nothing under `src/` reads yet: the skill contracts, the view models and stubbed routes, `Settings.model_id`, `model_base_url`, `registry_path`, `git_commit`, `CONFIRMATION_ONLY_CLASS`, the `identity_score_*` review causes, several event types (`triage_completed`, `plan_built`, `provider_called`, `reply_received`, `reply_read`, `model_called`, `skill_fallback_used`, `proposal_created`, `replay_miss`). Each is read by a milestone the plan names; whatever is unread when that milestone ends is deleted then. The architecture keeps old "stage N" references in a few sections and skill-status text in §8; the milestone 6 removal pass takes them. The lead-detail display fixtures under `tests/fixtures/ui/lead/` list twelve pages; they go when the queue page reads live data.
 
@@ -466,7 +466,7 @@ Brett's decisions carried into milestone 1: an underwriter's value that still tr
 
 ## Chat surface 1: Server (219da4b)
 
-**Done:** the server half of `docs/chat-surface.md`. C1-A1 (the pinned server tests: 82 pass), C1-A2 (the chat suite from its recordings, `make check` clean) and C1-A3 (lead 008's events read as sentences through the running app's events endpoint) pass, run by the lead.
+**Done:** the server half of `docs/build_logs/chat-surface.md`. C1-A1 (the pinned server tests: 82 pass), C1-A2 (the chat suite from its recordings, `make check` clean) and C1-A3 (lead 008's events read as sentences through the running app's events endpoint) pass, run by the lead.
 - `event_summary` writes narrative sentences ("Triaged the fields: 14 missing", "Fetched the replacement cost: 928992", "Jev classified this reply (0.83, at or above the 0.70 threshold). ..."); nothing cuts them.
 - `EventRow` carries `item_id`, `fact_key` and `message`; `FactView` carries `event_id`; `ProposalView` carries `lead_id`.
 - Six lookups in `src/uwh/chat/tools.py` (lead events, lead summary, messages, playbook path, current draft, queue summary) with turn-local reference numbers; an answer's citations are resolved by the server and a number no lookup showed is dropped. `plan_pages` groups a stored plan by page.
@@ -494,7 +494,7 @@ Brett's decisions carried into milestone 1: an underwriter's value that still tr
 
 ## Chat surface 2: Client (06a5c06)
 
-**Done:** the client half of `docs/chat-surface.md`. C2-A1 (the page test: lead 008 from "Load today's leads" to an approved packet inside its conversation, the cards of leads 000 and 003 in the queue conversation, a chip opening the panel), C2-A2 (`make check`) and C2-A3 (the fresh-clone rehearsal) pass, run by the lead. The lead also walked lead 008's path in a real browser against the running app in replay: load, the timeline, the delivered reply, Approve on the inline card, "Quote sent"; an example question answered with chips, and a chip opened the playbook page in the panel.
+**Done:** the client half of `docs/build_logs/chat-surface.md`. C2-A1 (the page test: lead 008 from "Load today's leads" to an approved packet inside its conversation, the cards of leads 000 and 003 in the queue conversation, a chip opening the panel), C2-A2 (`make check`) and C2-A3 (the fresh-clone rehearsal) pass, run by the lead. The lead also walked lead 008's path in a real browser against the running app in replay: load, the timeline, the delivered reply, Approve on the inline card, "Quote sent"; an example question answered with chips, and a chip opened the playbook page in the panel.
 - Shell: the lead list (summary sentence, "Queue", three groups), the conversation, the drill-down panel and the demo controls in one grid; polling every five seconds that leaves a turn alone.
 - Narrative (`web/src/conversation/`): assistant messages with a chip per bullet, bubbles for sent messages and replies, cards at the event that opened them, resolved cards as one line.
 - Chat tail (`web/src/chat/`): turns by run and conversation in memory, the last four exchanges as history, live steps, numbered chips, cards on the lead they target, "Proposed on lead B", the composer.
@@ -633,3 +633,5 @@ Brett's decisions carried into milestone 1: an underwriter's value that still tr
 **Checks:** `make eval` at db1c78f in replay: seed42, replies and chat pass with no critical errors; the three controls are each caught; Stand's key 190 agree, 0 disagree.
 
 **Live calls:** none.
+
+**Build logs (Brett):** the plan, the critique, the chat-surface design, this log and the acceptance checks live under `docs/build_logs/`; every reference names the new path.
