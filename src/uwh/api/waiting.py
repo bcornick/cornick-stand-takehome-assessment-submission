@@ -1,8 +1,10 @@
-# ABOUTME: What a lead is waiting for, as the queue row and the lead's drafts state it: the decision an underwriter blocker asks for, and when each message went out.
+# ABOUTME: What a lead is waiting for, as the queue row and the lead's drafts state it: the decision an underwriter blocker asks for, when each message went out and what a request asks.
 # ABOUTME: Both are read from stored state: the blocker and its draft, and the `message_sent` events.
 import sqlite3
 from datetime import datetime
 
+from uwh.rules.confirmations import reported_fields
+from uwh.rules.registry import FactField
 from uwh.runtime.event_types import REQUEST_KINDS, EventType, MessageSent, ReviewCause
 from uwh.runtime.events import read_events
 from uwh.runtime.waits import Blocker
@@ -75,3 +77,14 @@ def open_request(db: sqlite3.Connection, lead_id: str) -> tuple[int, datetime | 
     if row is None:
         return None
     return row[1], sent_times(db, lead_id).get(row[0])
+
+
+def ask_label(ask_id: str, fields: dict[str, FactField]) -> str:
+    """An ask as the underwriter reads it: the field's label, a catalogue question's wording, or
+    "Confirm" with the labels of the fields a confirmation reports."""
+    for key in (ask_id, f"q:{ask_id}"):
+        if key in fields:
+            return fields[key].label
+    labels = [fields[name].label for name in reported_fields(ask_id)]
+    listed = labels[0] if len(labels) == 1 else f"{', '.join(labels[:-1])} and {labels[-1]}"
+    return f"Confirm {listed}"

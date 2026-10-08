@@ -8,7 +8,7 @@ import pytest
 
 from tests.api.helpers import REGISTRY, restore_first_pass
 from uwh.api.leads import lead_detail
-from uwh.rules.models import ActionPlan
+from uwh.rules.models import ActionPlan, Resolution
 from uwh.rules.registry import load_registry
 from uwh.runtime.event_types import EventType, PlanBuilt, TriageCompleted
 from uwh.runtime.events import read_events
@@ -240,8 +240,10 @@ def test_lead_003s_detail_lists_the_field_it_asked_for_as_missing_and_sections_e
 
     assert detail is not None
     sections = {field.key: field.section for field in detail.fields}
-    assert "insured_dob" in detail.missing_fields
-    assert not set(detail.missing_fields) & {fact.key for fact in detail.facts}
+    missing = {field.key: field.resolution for field in detail.missing_fields}
+    assert missing["insured_dob"] == Resolution.ask
+    assert Resolution.fetch in missing.values()
+    assert not set(missing) & {fact.key for fact in detail.facts}
     assert sections["insured_dob"] == "Insured"
     assert sections["q:contact_email"] == "Contact"
-    assert all(sections[key] for key in detail.missing_fields)
+    assert all(sections[key] for key in missing)

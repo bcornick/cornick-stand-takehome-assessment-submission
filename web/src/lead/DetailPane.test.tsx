@@ -17,7 +17,7 @@ const sentRequest: Schemas['DraftView'] = {
   body: 'Please send the roof material.',
   state: 'sent',
   round: 1,
-  ask_ids: [],
+  asks: [],
   sent_at: null,
 }
 const packet: Schemas['DraftView'] = {
@@ -29,7 +29,7 @@ const packet: Schemas['DraftView'] = {
   body: 'Coverage A: $500,000',
   state: 'draft',
   round: 2,
-  ask_ids: [],
+  asks: [],
   sent_at: null,
 }
 
@@ -164,15 +164,23 @@ describe('the facts', () => {
     expect(within(screen.getByRole('table', { name: 'Facts' })).getByText('Jul 15, 2008')).toBeInTheDocument()
   })
 
-  it('lists the fields the lead is missing by label above the facts', () => {
-    pane({ ...lead, facts: [fact('coverage_a', 500000)], missing_fields: ['zip_code', 'fire_alarm'] })
-    const missing = within(screen.getByRole('list', { name: 'Missing' }))
-    expect(missing.getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Zip code', 'Fire alarm'])
+  it('lists the fields the lead is missing by label above the facts, grouped by how each is resolved', () => {
+    const missing_fields = [
+      { key: 'zip_code', resolution: 'ask' as const },
+      { key: 'fire_alarm', resolution: 'fetch' as const },
+      { key: 'coverage_a', resolution: 'ask_follow_on' as const },
+    ]
+    pane({ ...lead, facts: [], missing_fields })
+    const missing = within(screen.getByRole('region', { name: 'Missing' }))
+    const asked = within(missing.getByRole('list', { name: 'Asked of the producer' }))
+    expect(asked.getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Zip code', 'Coverage A'])
+    const looked = within(missing.getByRole('list', { name: 'Looked up by the system' }))
+    expect(looked.getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Fire alarm'])
   })
 
   it('lists no missing fields when none are missing', () => {
     pane({ ...lead, facts: [fact('coverage_a', 500000)] })
-    expect(screen.queryByRole('list', { name: 'Missing' })).toBeNull()
+    expect(screen.queryByRole('region', { name: 'Missing' })).toBeNull()
   })
 })
 

@@ -8,6 +8,7 @@ from uwh.rules.models import (
     ActionPlan,
     NotEvaluatedNote,
     PlannedEffect,
+    Resolution,
     RuleTrace,
     StrictModel,
 )
@@ -153,7 +154,7 @@ class DraftView(StrictModel):
     body: str
     state: IntentState
     round: int
-    ask_ids: list[str]  # the fields and questions the message asks; empty for a packet or a notice
+    asks: list[str]  # what the message asks, as read; empty for a packet or a notice
     sent_at: str | None  # the simulated time the message went out
 
 
@@ -175,6 +176,13 @@ class ChoiceReading(StrictModel):
     problem: bool
 
 
+class MissingField(StrictModel):
+    """A field the lead's current triage found missing, with how the triage resolves it."""
+
+    key: str
+    resolution: Resolution
+
+
 class LeadDetail(StrictModel):
     """`GET /api/leads/{id}`. The rule traces are the plan's (`effects[].trace`,
     `declines_on_every_branch`); its open choices and `not_evaluated` notes are the plan's too."""
@@ -193,9 +201,7 @@ class LeadDetail(StrictModel):
     fields: list[
         FactField
     ]  # the keys `resolve_fact` accepts, with the label and type each is offered by
-    missing_fields: list[
-        str
-    ]  # the registry fields the current triage found missing and still needs
+    missing_fields: list[MissingField]  # what the current triage found missing and still needs
 
 
 # ---- events (A.1) --------------------------------------------------------------------------------

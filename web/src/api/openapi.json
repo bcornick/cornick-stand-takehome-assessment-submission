@@ -683,11 +683,11 @@
         "additionalProperties": false,
         "description": "One of the lead's intents (A.1). A reply is accepted only for one in state `sent`.",
         "properties": {
-          "ask_ids": {
+          "asks": {
             "items": {
               "type": "string"
             },
-            "title": "Ask Ids",
+            "title": "Asks",
             "type": "array"
           },
           "body": {
@@ -756,7 +756,7 @@
           "body",
           "state",
           "round",
-          "ask_ids",
+          "asks",
           "sent_at"
         ],
         "title": "DraftView",
@@ -1230,7 +1230,7 @@
           },
           "missing_fields": {
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/MissingField"
             },
             "title": "Missing Fields",
             "type": "array"
@@ -1349,6 +1349,25 @@
           "missing_inputs"
         ],
         "title": "LookupView",
+        "type": "object"
+      },
+      "MissingField": {
+        "additionalProperties": false,
+        "description": "A field the lead's current triage found missing, with how the triage resolves it.",
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "resolution": {
+            "$ref": "#/components/schemas/Resolution"
+          }
+        },
+        "required": [
+          "key",
+          "resolution"
+        ],
+        "title": "MissingField",
         "type": "object"
       },
       "NoActionEffect": {
@@ -1969,6 +1988,22 @@
         ],
         "title": "RequirementEffect",
         "type": "object"
+      },
+      "Resolution": {
+        "enum": [
+          "none",
+          "derive",
+          "fetch",
+          "assume",
+          "ask",
+          "ask_follow_on",
+          "defer",
+          "verify",
+          "not_required",
+          "blocked"
+        ],
+        "title": "Resolution",
+        "type": "string"
       },
       "ResolveFactCommand": {
         "additionalProperties": false,

@@ -36,7 +36,7 @@ const packet: Schemas['DraftView'] = {
   body: 'Thank you for your submission.',
   state: 'draft',
   round: 2,
-  ask_ids: [],
+  asks: [],
   sent_at: null,
 }
 

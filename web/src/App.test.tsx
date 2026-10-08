@@ -63,7 +63,7 @@ const packet: Schemas['DraftView'] = {
   body: 'Thank you for your submission.\n\nCoverages as submitted\n- Coverage A (Dwelling): $875,000',
   state: 'draft',
   round: 2,
-  ask_ids: [],
+  asks: [],
   sent_at: null,
 }
 

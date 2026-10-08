@@ -41,7 +41,7 @@ const draft: Schemas['DraftView'] = {
   body: 'Please send the roof material.',
   state: 'sent',
   round: 1,
-  ask_ids: [],
+  asks: [],
   sent_at: null,
 }
 

@@ -36,7 +36,7 @@ const packet: Schemas['DraftView'] = {
   body: 'Coverage A: $500,000',
   state: 'draft',
   round: 2,
-  ask_ids: [],
+  asks: [],
   sent_at: null,
 }
 

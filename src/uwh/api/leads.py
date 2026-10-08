@@ -11,8 +11,9 @@ from uwh.api.pages import plan_pages
 from uwh.api.readings import choice_readings
 from uwh.api.runtime import RuntimeDependency
 from uwh.api.summary import ask_count, summary_line
-from uwh.api.waiting import decision_phrase, open_request, sent_times
+from uwh.api.waiting import ask_label, decision_phrase, open_request, sent_times
 from uwh.api.views import (
+    MissingField,
     BlockerView,
     DraftView,
     EventMessage,
@@ -145,7 +146,7 @@ def _blocker_view(db: sqlite3.Connection, blocker: Blocker) -> BlockerView:
     )
 
 
-def _missing_fields(db: sqlite3.Connection, lead_id: str) -> list[str]:
+def _missing_fields(db: sqlite3.Connection, lead_id: str) -> list[MissingField]:
     """The fields the lead's latest triage found missing and not set aside (not required or deferred),
     in registry order; empty before the lead is triaged."""
     row = db.execute(
@@ -156,7 +157,7 @@ def _missing_fields(db: sqlite3.Connection, lead_id: str) -> list[str]:
         return []
     triage = TriageCompleted.model_validate_json(row[0]).fields
     return [
-        name
+        MissingField(key=name, resolution=result.resolution)
         for name, result in ((name, FieldTriage.model_validate(t)) for name, t in triage.items())
         if result.value_status == ValueStatus.missing
         and result.resolution not in (Resolution.not_required, Resolution.defer)
@@ -182,11 +183,12 @@ def lead_detail(db: sqlite3.Connection, lead_id: str, registry: Registry) -> Lea
     ).fetchall()
     graphs = load_graphs()
     sent = sent_times(db, lead_id)
+    fields = fact_fields(registry)
     return LeadDetail(
         lead_id=lead_id,
         label=lead_label(db, lead_id),
         status=status,
-        summary=summary_line(db, lead_id, status, plan, blockers, fact_fields(registry)),
+        summary=summary_line(db, lead_id, status, plan, blockers, fields),
         revision=revision,
         facts=[FactView(**vars(fact)) for fact in facts.values()],
         plan=plan,
@@ -210,12 +212,12 @@ def lead_detail(db: sqlite3.Connection, lead_id: str, registry: Registry) -> Lea
                 body=d[5],
                 state=d[6],
                 round=d[7],
-                ask_ids=json.loads(d[8]),
+                asks=[ask_label(ask_id, fields) for ask_id in json.loads(d[8])],
                 sent_at=sent[d[0]].isoformat() if d[0] in sent else None,
             )
             for d in drafts
         ],
-        fields=list(fact_fields(registry).values()),
+        fields=list(fields.values()),
         missing_fields=_missing_fields(db, lead_id),
     )
 

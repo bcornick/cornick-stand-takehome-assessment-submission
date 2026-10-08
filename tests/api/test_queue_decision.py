@@ -8,7 +8,8 @@ import pytest
 
 from tests.api.helpers import REGISTRY
 from uwh.api.leads import lead_detail, queue_rows
-from uwh.rules.registry import load_registry
+from uwh.api.waiting import ask_label
+from uwh.rules.registry import fact_fields, load_registry
 from uwh.runtime.event_types import (
     BlockerDetail,
     BlockerKind,
@@ -151,4 +152,23 @@ def test_a_row_waiting_on_the_producer_carries_the_round_and_time_of_its_open_re
     assert (row.decision, row.request_round) == (None, 2)
     assert row.asked_at is not None and row.asked_at.startswith("2026-06-29T09:30")
     assert second.sent_at == row.asked_at
-    assert second.ask_ids == ["coverage_a", "q:contact_email"]
+    assert second.asks == ["Coverage A (Dwelling)", "Contact email"]
+
+
+@pytest.mark.parametrize(
+    ("ask_id", "label"),
+    [
+        ("year_built", "Year Built"),
+        ("willing_to_mitigate", "Would the applicant be willing to mitigate greater distance?"),
+        ("months_unoccupied_in_primary_home", "Confirm Consecutive Months Unoccupied"),
+        (
+            "dwelling_use_conflict",
+            "Confirm Dwelling Use, Occupancy Type and Rental Exposure",
+        ),
+    ],
+    ids=["field", "catalogue question", "confirmation", "combined confirmation"],
+)
+def test_an_ask_reads_as_the_field_or_question_it_puts_to_the_producer(
+    ask_id: str, label: str
+) -> None:
+    assert ask_label(ask_id, fact_fields(load_registry(str(REGISTRY)))) == label

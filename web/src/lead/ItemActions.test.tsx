@@ -17,7 +17,7 @@ const packet: Schemas['DraftView'] = {
   body: 'Coverage A: $500,000',
   state: 'draft',
   round: 2,
-  ask_ids: [],
+  asks: [],
   sent_at: null,
 }
 const decline: Schemas['DraftView'] = {
@@ -147,7 +147,7 @@ const lead: Schemas['LeadDetail'] = {
   readings: {
     'I13.fire_fail': {
       roof_age: { text: 'Fails: above 0.50', problem: true },
-      wall_type: { text: 'Not provided', problem: false },
+      wall_type: { text: 'Passes', problem: false },
     },
   },
   fields: [
@@ -400,7 +400,7 @@ describe('the question card', () => {
     item(questionItem)
     const card = within(screen.getByRole('region', { name: 'I13.fire_fail' }))
     expect(card.getByText('· Fails: above 0.50')).toHaveClass('text-accent')
-    expect(card.getByText('· Not provided')).not.toHaveClass('text-accent')
+    expect(card.getByText('· Passes')).not.toHaveClass('text-accent')
   })
 
   it('posts the ruling after an option is chosen, with no note', async () => {

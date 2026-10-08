@@ -133,7 +133,7 @@ const requestOut: Schemas['LeadDetail'] = {
       body: 'b',
       state: 'closed_unsent',
       round: 1,
-      ask_ids: ['year_built'],
+      asks: ['Year built'],
       sent_at: '2026-06-27T09:00:00.000000Z',
     },
     {
@@ -145,7 +145,7 @@ const requestOut: Schemas['LeadDetail'] = {
       body: 'b',
       state: 'sent',
       round: 2,
-      ask_ids: ['coverage_a', 'q:contact_email'],
+      asks: ['Dwelling coverage', 'Contact email'],
       sent_at: '2026-06-28T08:00:00.000000Z',
     },
   ],

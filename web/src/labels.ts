@@ -1,4 +1,4 @@
-// ABOUTME: Human-readable labels for the API's value sets: statuses, blocker kinds, owners, sources, groups, message kinds, effects, event types and actors.
+// ABOUTME: Human-readable labels for the API's value sets: statuses, blocker kinds, missing-field resolutions, owners, sources, groups, message kinds, effects, event types and actors.
 // ABOUTME: One mapping module, so no screen carries its own string literals for these.
 import type { components } from '@/api/types'
 
@@ -13,6 +13,7 @@ type DraftState = Schemas['DraftView']['state']
 type EffectType = Schemas['PlannedEffect']['effect']['type']
 type EventType = Schemas['EventRow']['type']
 type Actor = Schemas['EventRow']['actor']
+type Resolution = Schemas['MissingField']['resolution']
 
 export const STATUS_LABELS: Record<Status, string> = {
   received: 'Received',
@@ -28,6 +29,20 @@ export const BLOCKER_KIND_LABELS: Record<BlockerKind, string> = {
   underwriter_review: 'Underwriter review',
   data: 'Data',
   producer_reply: 'Producer reply',
+}
+
+// The heading a missing field is listed under in the full lead view, by how the triage resolves it.
+export const MISSING_LABELS: Record<Resolution, string> = {
+  ask: 'Asked of the producer',
+  ask_follow_on: 'Asked of the producer',
+  fetch: 'Looked up by the system',
+  derive: 'Looked up by the system',
+  blocked: 'Waiting on other fields',
+  assume: 'Assumed',
+  verify: 'To verify',
+  none: 'Not yet resolved',
+  not_required: 'Not required',
+  defer: 'Deferred',
 }
 
 export const OWNER_LABELS: Record<Owner, string> = {

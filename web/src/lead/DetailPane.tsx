@@ -15,6 +15,7 @@ import { fieldLabel, formatFieldValue, shortLeadId } from '@/format'
 import {
   BLOCKER_KIND_LABELS,
   DRAFT_STATE_LABELS,
+  MISSING_LABELS,
   MESSAGE_KIND_LABELS,
   OWNER_LABELS,
   SOURCE_LABELS,
@@ -144,6 +145,16 @@ function factsBySection(facts: LeadDetail['facts'], fields: LeadDetail['fields']
   return sections
 }
 
+// The missing fields under the heading of how each is resolved, headings in the order first met.
+function missingByHeading(missing: LeadDetail['missing_fields']) {
+  const headings = new Map<string, string[]>()
+  for (const { key, resolution } of missing) {
+    const heading = MISSING_LABELS[resolution]
+    headings.set(heading, [...(headings.get(heading) ?? []), key])
+  }
+  return headings
+}
+
 function Facts({
   facts,
   fields,
@@ -156,14 +167,19 @@ function Facts({
   return (
     <>
       {missing.length > 0 && (
-        <div className="flex flex-col gap-1 text-sm">
+        <section aria-label="Missing" className="flex flex-col gap-2 text-sm">
           <h4 className="font-medium">Missing</h4>
-          <ul aria-label="Missing" className="list-disc pl-5">
-            {missing.map((key) => (
-              <li key={key}>{fieldLabel(fields, key)}</li>
-            ))}
-          </ul>
-        </div>
+          {[...missingByHeading(missing)].map(([heading, keys]) => (
+            <div key={heading} className="flex flex-col gap-1">
+              <h5 className="text-muted-foreground">{heading}</h5>
+              <ul aria-label={heading} className="list-disc pl-5">
+                {keys.map((key) => (
+                  <li key={key}>{fieldLabel(fields, key)}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </section>
       )}
       <Table aria-label="Facts" className="table-fixed">
         <TableHeader>

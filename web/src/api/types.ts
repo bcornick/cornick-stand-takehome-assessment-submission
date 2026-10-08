@@ -522,8 +522,8 @@ export interface components {
          * @description One of the lead's intents (A.1). A reply is accepted only for one in state `sent`.
          */
         DraftView: {
-            /** Ask Ids */
-            ask_ids: string[];
+            /** Asks */
+            asks: string[];
             /** Body */
             body: string;
             /** Intent Id */
@@ -737,7 +737,7 @@ export interface components {
             /** Lead Id */
             lead_id: string;
             /** Missing Fields */
-            missing_fields: string[];
+            missing_fields: components["schemas"]["MissingField"][];
             /** Pages */
             pages: components["schemas"]["PlanPage"][];
             plan: components["schemas"]["ActionPlan"] | null;
@@ -776,6 +776,15 @@ export interface components {
              * @enum {string}
              */
             status: "found" | "not_found" | "blocked" | "unavailable";
+        };
+        /**
+         * MissingField
+         * @description A field the lead's current triage found missing, with how the triage resolves it.
+         */
+        MissingField: {
+            /** Key */
+            key: string;
+            resolution: components["schemas"]["Resolution"];
         };
         /** NoActionEffect */
         NoActionEffect: {
@@ -991,6 +1000,11 @@ export interface components {
              */
             type: "requirement";
         };
+        /**
+         * Resolution
+         * @enum {string}
+         */
+        Resolution: "none" | "derive" | "fetch" | "assume" | "ask" | "ask_follow_on" | "defer" | "verify" | "not_required" | "blocked";
         /** ResolveFactCommand */
         ResolveFactCommand: {
             payload: components["schemas"]["ResolveFactPayload"];

@@ -15,7 +15,6 @@ from uwh.rules.graphs import (
 )
 from uwh.rules.models import DeclineEffect, OpenChoice
 
-NOT_PROVIDED = ChoiceReading(text="Not provided", problem=False)
 # Interpretation row I16 is where the board sets no threshold.
 _NO_THRESHOLD = "I16"
 
@@ -75,7 +74,7 @@ def choice_readings(
     choice: OpenChoice, graphs: Sequence[Graph], facts: Mapping[str, JsonValue]
 ) -> dict[str, ChoiceReading]:
     """The reading of each value the choice shows, keyed by field; a value the graph reads
-    nothing from has no entry. A missing value reads as not provided."""
+    nothing from, or that is missing, has no entry."""
     graph = next(
         g
         for g in graphs
@@ -84,7 +83,7 @@ def choice_readings(
     readings: dict[str, ChoiceReading] = {}
     for key in choice.show:
         value = facts.get(key)
-        reading = NOT_PROVIDED if value is None else _reading(graph, key, value)
+        reading = None if value is None else _reading(graph, key, value)
         if reading is not None:
             readings[key] = reading
     return readings

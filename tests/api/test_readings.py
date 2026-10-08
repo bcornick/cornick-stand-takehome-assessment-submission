@@ -29,11 +29,9 @@ MITIGATE = "Passes only if the client will mitigate"
     ("key", "value", "text", "problem"),
     [
         ("p_f", 0.79, "Fails: above 0.50", True),
-        ("p_f", None, "Not provided", False),
         ("road_access", "Limited / Dead-end / No Turnaround", "Declines", True),
         ("road_access", "Multiple Access Points", "Passes", False),
         ("road_access", "Single Access Point", "Your call: the playbook does not settle it", False),
-        ("road_access", None, "Not provided", False),
         ("vegetation_clearance", "Too Close", MITIGATE, False),
         ("vegetation_clearance", "Adequate", "Passes", False),
         ("vegetation_clearance", "Marginal", "Your call: the playbook does not settle it", False),
@@ -46,6 +44,11 @@ MITIGATE = "Passes only if the client will mitigate"
 def test_a_shown_value_reads_as_the_legacy_branch_treats_it(
     key: str, value: object, text: str, problem: bool
 ) -> None:
-    facts = {} if value is None else {key: value}
-    readings = choice_readings(FAIL, load_graphs(), facts)  # type: ignore[arg-type]
+    readings = choice_readings(FAIL, load_graphs(), {key: value})  # type: ignore[dict-item]
     assert readings[key] == ChoiceReading(text=text, problem=problem)
+
+
+def test_a_missing_value_carries_no_reading_since_the_value_already_says_not_provided() -> None:
+    readings = choice_readings(FAIL, load_graphs(), {"slope_angle_deg": 30})
+
+    assert set(readings) == {"slope_angle_deg"}

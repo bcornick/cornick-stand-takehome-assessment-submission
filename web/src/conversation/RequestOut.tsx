@@ -1,7 +1,7 @@
-// ABOUTME: The card under a waiting lead's summary: the request to the producer that is out, its round, when it went out in simulated time and how long ago, the fields it asks for, and a link to the message.
+// ABOUTME: The card under a waiting lead's summary: the request to the producer that is out, its round, when it went out in simulated time and how long ago, what it asks, and a link to the message.
 // ABOUTME: It reads the lead's drafts, so a lead with no request out shows nothing.
 import type { components } from '@/api/types'
-import { fieldLabel, formatTime } from '@/format'
+import { formatTime } from '@/format'
 import type { PanelTarget } from '@/surface'
 
 type Schemas = components['schemas']
@@ -33,7 +33,7 @@ export function RequestOut({ lead, simNow, onOpen }: Props) {
         {request.sent_at !== null && ` · sent ${formatTime(request.sent_at)}`}
         {request.sent_at !== null && simNow !== null && ` (${ago(request.sent_at, simNow)})`}
       </p>
-      <p className="text-muted-foreground">{`Asks for ${request.ask_ids.map((key) => fieldLabel(lead.fields, key)).join(', ')}`}</p>
+      <p className="text-muted-foreground">{`Asks for ${request.asks.join(', ')}`}</p>
       <button
         type="button"
         className="button-outline self-start"
