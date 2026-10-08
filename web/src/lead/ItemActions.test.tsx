@@ -281,7 +281,8 @@ describe('a draft card', () => {
       }),
       { ...lead, drafts: [request] },
     )
-    expect(screen.getByText('Preview the request')).toBeInTheDocument()
+    expect(screen.getByText('Preview or edit the request')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reject' })).toBeNull()
     expect(screen.getByText('Not sent yet, in case you decline this lead. Send it to the producer, or decline this lead.')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Send request' }))
     await userEvent.click(reasonForm().getByRole('button', { name: 'Send request' }))
@@ -290,6 +291,20 @@ describe('a draft card', () => {
       type: 'approve',
       payload: { item_id: 31, artifact_hash: request.payload_hash, reason: '' },
     })
+  })
+
+  it('discards a request, saying nothing is sent, with an optional note', async () => {
+    const request: Schemas['DraftView'] = { ...packet, intent_id: 'intent-request', kind: 'routine_request' }
+    const posted = stubApi()
+    item(
+      blocker(31, 'underwriter_review', { item_kind: 'draft', intent_id: request.intent_id, text: 'Not sent yet.' }),
+      { ...lead, drafts: [request] },
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Discard request' }))
+    expect(screen.getByText(/Nothing is sent to the producer/)).toBeInTheDocument()
+    await userEvent.click(reasonForm().getByRole('button', { name: 'Discard request' }))
+
+    expect(posted[0].body).toEqual({ type: 'reject', payload: { item_id: 31, reason: '' } })
   })
 
   it('says why the lead is declined on the decline notice card', () => {

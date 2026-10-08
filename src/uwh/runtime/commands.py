@@ -11,6 +11,7 @@ from pydantic import JsonValue
 from uwh.rules.models import ActionPlan, FieldTriage
 from uwh.rules.registry import CONTACT_EMAIL_KEY, fact_fields
 from uwh.runtime.event_types import (
+    REQUEST_KINDS,
     Actor,
     ApprovalDecision,
     ApprovalRecorded,
@@ -46,6 +47,7 @@ from uwh.runtime.rulings import (
 )
 from uwh.runtime.send import (
     Intent,
+    close_draft,
     close_unsent,
     dispatch_ready,
     edit_draft,
@@ -688,8 +690,9 @@ def _settle_draft(
     approve: bool,
 ) -> None:
     """`approve` needs the payload hash of the draft the underwriter was shown (7.4). `reject` returns
-    the draft to editing: it stays a draft with its item open and loses any approval; the rejection
-    of a decline notice is a ruling and the notice is replaced by the re-evaluation."""
+    a quote packet to editing: it stays a draft with its item open and loses any approval. Rejecting a
+    request discards it, unsent; the rejection of a decline notice is a ruling and the notice is
+    replaced by the re-evaluation."""
     if approve:
         if payload.get("artifact_hash") != intent.payload_hash:
             raise _Refusal(
@@ -697,6 +700,18 @@ def _settle_draft(
             )
     elif intent.kind == "decline_notice":
         _reject_decline(db, context, intent.lead_id, reason)
+    elif intent.kind in REQUEST_KINDS:
+        # Rejecting a request discards it: nothing goes to the producer, and the workflow drafts no
+        # other until the lead changes. A lead left with nothing to decide would stall, so it keeps it.
+        if not any(
+            b.owner == "underwriter" and b.detail.intent_id != intent.id
+            for b in open_blockers(db, intent.lead_id)
+        ):
+            raise _Refusal(
+                "discarding this request would leave the lead with nothing to do: edit it, or "
+                "decline the lead"
+            )
+        close_draft(db, context, intent.id)
     else:
         void_approvals(db, intent.id)
 

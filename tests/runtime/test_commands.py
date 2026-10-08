@@ -494,10 +494,10 @@ def test_approving_a_quote_packet_sends_it_and_the_lead_becomes_quote_sent(
     assert db.execute("SELECT status FROM leads").fetchone() == ("quote_sent",)
 
 
-def test_rejecting_a_draft_returns_it_to_draft_voids_its_approval_and_sends_nothing(
+def test_rejecting_a_quote_packet_returns_it_to_draft_voids_its_approval_and_sends_nothing(
     db: sqlite3.Connection, env: RunEnvironment, mailbox: MailboxClient
 ) -> None:
-    intent_id = make_draft(db)
+    intent_id = make_draft(db, "quote_packet")
     item_id = item_of(db, intent_id)
     db.execute(
         "INSERT INTO approvals (lead_id, item_kind, intent_id, lead_revision, plan_hash,"

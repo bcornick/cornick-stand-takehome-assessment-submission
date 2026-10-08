@@ -152,10 +152,31 @@ def replace_stale_drafts(db: sqlite3.Connection, context: EventContext, lead_id:
         "SELECT id FROM intents WHERE lead_id = ? AND state = 'draft' AND lead_revision != ?",
         (lead_id, revision),
     ).fetchall():
-        item = _draft_item(db, intent_in_state(db, intent_id, "draft"))
-        if item is not None:
-            close_blocker(db, context, item.id)
-        db.execute("UPDATE intents SET state = 'closed_unsent' WHERE id = ?", (intent_id,))
+        close_draft(db, context, intent_id)
+
+
+def close_draft(db: sqlite3.Connection, context: EventContext, intent_id: str) -> None:
+    """Close the draft as not sent, with the item that held it. The caller commits."""
+    item = _draft_item(db, intent_in_state(db, intent_id, "draft"))
+    if item is not None:
+        close_blocker(db, context, item.id)
+    db.execute("UPDATE intents SET state = 'closed_unsent' WHERE id = ?", (intent_id,))
+
+
+def request_discarded(db: sqlite3.Connection, lead_id: str) -> bool:
+    """Whether the underwriter discarded a request of the lead at its current revision: no request
+    is drafted again until the lead changes."""
+    revision, _ = lead_revision_and_plan_hash(db, lead_id)
+    placeholders = ", ".join("?" for _ in REQUEST_KINDS)
+    return (
+        db.execute(
+            "SELECT 1 FROM approvals a JOIN intents i ON i.id = a.intent_id"
+            f" WHERE i.lead_id = ? AND i.kind IN ({placeholders}) AND i.state = 'closed_unsent'"
+            " AND i.lead_revision = ? AND a.decision = 'rejected'",
+            (lead_id, *REQUEST_KINDS, revision),
+        ).fetchone()
+        is not None
+    )
 
 
 def _open_draft_item(

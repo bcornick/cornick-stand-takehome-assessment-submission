@@ -26,8 +26,8 @@ const SEND_LABELS: Record<Draft['kind'], string> = {
 const PREVIEW_LABELS: Record<Draft['kind'], string> = {
   decline_notice: 'Preview the notice',
   quote_packet: 'Preview the packet',
-  routine_request: 'Preview the request',
-  sensitive_request: 'Preview the request',
+  routine_request: 'Preview or edit the request',
+  sensitive_request: 'Preview or edit the request',
 }
 
 const DRAFT_REJECT_PLACEHOLDER = 'Optional. What is wrong with it; this is how the system learns.'
@@ -101,7 +101,13 @@ function ItemActions({ lead, blocker, onChange }: Props & { blocker: Blocker }) 
             DRAFT_REJECT_PLACEHOLDER,
             'Withdrawing the decline suppresses it for this lead and sends the requests for the facts still missing.',
           )
-        : rejectChoice('Reject', DRAFT_REJECT_PLACEHOLDER)
+        : draft.kind === 'quote_packet'
+          ? rejectChoice('Reject', DRAFT_REJECT_PLACEHOLDER)
+          : rejectChoice(
+              'Discard request',
+              'Optional. Why it should not go.',
+              'Nothing is sent to the producer. A request is drafted again when the lead changes, for example after a ruling.',
+            )
     const approveDraft =
       draft.kind === 'decline_notice'
         ? lead.decline_reason_on_file

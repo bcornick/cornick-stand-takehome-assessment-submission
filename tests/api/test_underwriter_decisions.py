@@ -325,3 +325,42 @@ def test_the_underwriters_own_decline_waits_as_a_notice_and_rejecting_it_withdra
 
     assert rulings_in_force(db, LEAD_009).decline_reason is None
     assert kinds(db, LEAD_009) == [("producer_reply", None)]
+
+
+def test_discarding_a_held_request_sends_nothing_and_drafts_none_until_the_lead_changes(
+    app: TestClient, db: sqlite3.Connection, mailbox: MailboxClient
+) -> None:
+    _, item = held_request(app, LEAD_006)
+
+    discarded = command(app, "reject", item_id=item["item_id"], reason="declining on the fire risk")
+
+    assert discarded["accepted"] is True
+    detail = app.get(f"/api/leads/{LEAD_006}").json()
+    assert [d["state"] for d in detail["drafts"] if d["kind"] == "routine_request"] == [
+        "closed_unsent"
+    ]
+    assert kinds(db, LEAD_006) == [("underwriter_question", None)]
+    assert mailbox.list_for_lead(LEAD_006) == []
+    # A ruling changes the lead, so the request is drafted again and held for the choice now open.
+    rule_fire(app, LEAD_006, "legacy_underwriting")
+    held_request(app, LEAD_006)
+
+
+def test_a_request_that_is_the_leads_only_item_cannot_be_discarded(
+    app: TestClient, db: sqlite3.Connection
+) -> None:
+    rule_fire(app, LEAD_003, "legacy_underwriting")
+    command(
+        app,
+        "record_ruling",
+        lead_id=LEAD_003,
+        choice_id="I16.distance",
+        option="adequate",
+        reason="14 feet is adequate here",
+    )
+    _, item = held_request(app, LEAD_003)
+
+    refused = command(app, "reject", item_id=item["item_id"], reason="")
+
+    assert refused["accepted"] is False and "nothing to do" in refused["reason"]
+    assert kinds(db, LEAD_003) == [("underwriter_review", "draft")]

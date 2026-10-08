@@ -47,7 +47,7 @@ from uwh.runtime.modes import RecordingMiss
 from uwh.runtime.policy import manifest_refusal
 from uwh.runtime.rulings import rulings_in_force
 from uwh.runtime.recordings import Exchange
-from uwh.runtime.send import create_draft, replace_stale_drafts, rounds_used
+from uwh.runtime.send import create_draft, replace_stale_drafts, request_discarded, rounds_used
 from uwh.runtime.waits import Blocker, close_blocker, open_blocker, open_blockers
 from uwh.runtime.workflow import Step, StepRun, stored_plan, unit_of_work
 from uwh.skills.build_quote_packet import skill as build_quote_packet
@@ -369,7 +369,7 @@ class _RequestDue:
     """Whether a lead with no proposed decline is due a request: `ask`, or why not (`nothing_to_ask`,
     `in_flight`, `round_limit`), with the planned asks."""
 
-    state: Literal["ask", "nothing_to_ask", "in_flight", "round_limit"]
+    state: Literal["ask", "nothing_to_ask", "in_flight", "discarded", "round_limit"]
     planned: plan_asks.PlanAsksOutput
 
 
@@ -381,6 +381,8 @@ def _request_due(
         return _RequestDue("nothing_to_ask", planned)
     if _request_in_flight(db, lead_id):
         return _RequestDue("in_flight", planned)
+    if request_discarded(db, lead_id):
+        return _RequestDue("discarded", planned)
     if rounds_used(db, lead_id) >= MAX_REQUEST_ROUNDS:
         return _RequestDue("round_limit", planned)
     return _RequestDue("ask", planned)
@@ -451,7 +453,7 @@ def _ask_producer_step(
         if limit_review is not None:
             close_blocker(db, context, limit_review.id)
         return
-    if due.state == "in_flight":
+    if due.state in ("in_flight", "discarded"):
         return
     if due.state == "round_limit":
         if limit_review is None:
