@@ -140,16 +140,16 @@ def test_one_open_request_fails_a_duplicate_message_and_a_second_unanswered_requ
     ev.mail[LEAD_008].append(deepcopy(request_of(ev)))
     (blocker,) = ev.db.execute(
         "SELECT kind, owner, detail_json FROM blockers WHERE lead_id = ? AND kind = 'producer_reply'",
-        (LEAD_003,),
+        (LEAD_008,),
     ).fetchall()
     ev.db.execute(
         "INSERT INTO blockers (lead_id, kind, owner, detail_json) VALUES (?, ?, ?, ?)",
-        (LEAD_003, *blocker),
+        (LEAD_008, *blocker),
     )
 
     failures = delivery.one_open_request(ev, {}).failures
     assert f"{LEAD_008}: 2 request messages for one round or run" in failures
-    assert f"{LEAD_003} has 2 unanswered requests" in failures
+    assert f"{LEAD_008} has 2 unanswered requests" in failures
 
 
 # ---- Asks, both directions ---------------------------------------------------------------------
@@ -167,6 +167,32 @@ def test_asks_pass_the_labelled_asks_and_fail_one_missing_and_one_extra(
         f"{LEAD_008}: ask coverage_a is missing",
         f"{LEAD_008}: ask electrical_panel_brand is extra",
     ]
+
+
+def test_a_held_request_is_graded_on_its_draft_and_fails_once_it_is_sent(
+    run_state: RunState,
+) -> None:
+    ev = run_state.settled.evidence()
+    (draft_asks,) = ev.db.execute(
+        "SELECT ask_ids_json FROM intents WHERE lead_id = ? AND kind = 'routine_request'"
+        " AND state = 'draft'",
+        (LEAD_003,),
+    ).fetchone()
+    asks = json.loads(draft_asks)
+    held = {
+        "kind": "routine_request",
+        "held": True,
+        "asks": [a for a in asks if a != "months_unoccupied_in_primary_home"],
+        "confirmations": ["months_unoccupied_in_primary_home"],
+        "catalogue_questions": [],
+    }
+    assert delivery.asks(ev, {LEAD_003: {"request": held}}).failures == []
+
+    ev.mail[LEAD_003] = [deepcopy(request_of(ev))]
+    ev.mail[LEAD_003][0]["metadata"]["intent_id"] = "a-sent-request"
+
+    failures = delivery.asks(ev, {LEAD_003: {"request": held}}).failures
+    assert f"{LEAD_003}: a request was sent while it should be held" in failures
 
 
 def test_asks_expect_no_request_where_the_label_has_none_and_count_only_new_messages(

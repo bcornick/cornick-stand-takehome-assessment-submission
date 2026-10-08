@@ -23,16 +23,28 @@
               "text": "The fire simulation failed: decline, or continue under legacy underwriting? The legacy checklist values are shown."
             },
             {
+              "kind": "underwriter_review",
+              "lead_id": "LEAD-00000042-003",
+              "ref": 3,
+              "text": "This request waits for your decision on the open choice, so a lead you decline is not asked. Send it now, or decide the choice first."
+            },
+            {
               "kind": "underwriter_question",
               "lead_id": "LEAD-00000042-006",
-              "ref": 3,
+              "ref": 4,
               "text": "The fire simulation failed: decline, or continue under legacy underwriting? The legacy checklist values are shown."
+            },
+            {
+              "kind": "underwriter_review",
+              "lead_id": "LEAD-00000042-006",
+              "ref": 5,
+              "text": "This request waits for your decision on the open choice, so a lead you decline is not asked. Send it now, or decide the choice first."
             }
           ],
           "summary": {
             "declines_approved": 0,
             "delivery_unknown": 0,
-            "follow_ups_sent": 9,
+            "follow_ups_sent": 7,
             "quotes_sent": 0,
             "waiting_on_data": 0,
             "waiting_on_producer": 7,
@@ -52,7 +64,7 @@
               },
               "label": "LEAD-000",
               "lead_id": "LEAD-00000042-000",
-              "ref": 4,
+              "ref": 6,
               "status": "in_progress",
               "waits_on": {
                 "kind": "underwriter_review",
@@ -66,7 +78,7 @@
               },
               "label": "LEAD-001",
               "lead_id": "LEAD-00000042-001",
-              "ref": 5,
+              "ref": 7,
               "status": "in_progress",
               "waits_on": {
                 "kind": "producer_reply",
@@ -80,7 +92,7 @@
               },
               "label": "6496 Old Mill Rd",
               "lead_id": "LEAD-00000042-002",
-              "ref": 6,
+              "ref": 8,
               "status": "in_progress",
               "waits_on": {
                 "kind": "producer_reply",
@@ -94,7 +106,7 @@
               },
               "label": "9273 Hillside Ct",
               "lead_id": "LEAD-00000042-003",
-              "ref": 7,
+              "ref": 9,
               "status": "in_progress",
               "waits_on": {
                 "kind": "underwriter_question",
@@ -108,7 +120,7 @@
               },
               "label": "3948 Old Mill Rd",
               "lead_id": "LEAD-00000042-004",
-              "ref": 8,
+              "ref": 10,
               "status": "in_progress",
               "waits_on": {
                 "kind": "producer_reply",
@@ -122,7 +134,7 @@
               },
               "label": "3567 Lakeview Blvd",
               "lead_id": "LEAD-00000042-005",
-              "ref": 9,
+              "ref": 11,
               "status": "in_progress",
               "waits_on": {
                 "kind": "producer_reply",
@@ -136,7 +148,7 @@
               },
               "label": "3730 Hillside Ct",
               "lead_id": "LEAD-00000042-006",
-              "ref": 10,
+              "ref": 12,
               "status": "in_progress",
               "waits_on": {
                 "kind": "underwriter_question",
@@ -150,7 +162,7 @@
               },
               "label": "4452 Meadowlark Ln",
               "lead_id": "LEAD-00000042-007",
-              "ref": 11,
+              "ref": 13,
               "status": "in_progress",
               "waits_on": {
                 "kind": "producer_reply",
@@ -164,7 +176,7 @@
               },
               "label": "8924 Lakeview Blvd",
               "lead_id": "LEAD-00000042-008",
-              "ref": 12,
+              "ref": 14,
               "status": "in_progress",
               "waits_on": {
                 "kind": "producer_reply",
@@ -178,7 +190,7 @@
               },
               "label": "903 Lakeview Blvd",
               "lead_id": "LEAD-00000042-009",
-              "ref": 13,
+              "ref": 15,
               "status": "in_progress",
               "waits_on": {
                 "kind": "producer_reply",
@@ -190,24 +202,26 @@
       }
     ]
   },
-  "input_hash": "61b134bf62c48fcd2a8272f70130c70be6d339c7e93487e8f93df08bee2d46d1",
+  "input_hash": "538ca88e310bc4c7873382425d5fc87dd5bcb759c6dea400091d34eee8864937",
   "model_id": "deepseek-flash",
   "prompt_version": "aea8f22ee4ea599cce8f5576dacb9d0aae9c3ea93bc67753b932b93a5223f522",
   "request_id": "",
   "skill": "chat",
   "stop_reason": "tool_use",
-  "tokens_in": 239,
-  "tokens_out": 205,
+  "tokens_in": 879,
+  "tokens_out": 242,
   "tool_input": {
     "action": "answer",
-    "answer": "Three leads are waiting on you:\n\n- LEAD-000 (LEAD-00000042-000): a decline notice is drafted and needs your review before it is sent.\n- 9273 Hillside Ct (LEAD-00000042-003): the fire simulation failed, so you must decide whether to decline or continue under legacy underwriting. The legacy checklist values are shown.\n- 3730 Hillside Ct (LEAD-00000042-006): same question — the fire simulation failed, decline or continue under legacy underwriting.\n\nThe other seven leads are waiting on producer replies, not on you.",
+    "answer": "Three leads are waiting on you:\n\n- LEAD-000 (LEAD-00000042-000): a decline notice is waiting for your review before it is sent.\n- 9273 Hillside Ct (LEAD-00000042-003): the fire simulation failed, so you must decide whether to decline or continue under legacy underwriting (the legacy checklist values are shown). A request on this lead is also held until that choice is made — send it now or decide the choice first.\n- 3730 Hillside Ct (LEAD-00000042-006): same situation — the fire simulation failed, so decide decline or legacy underwriting, and a held request waits on that choice.\n\nThe other seven leads are waiting on producer replies, not on you.",
     "citations": [
       1,
       2,
       3,
       4,
-      7,
-      10
+      5,
+      6,
+      9,
+      12
     ]
   }
 }

@@ -96,14 +96,22 @@ def test_lead_008s_detail_groups_its_plan_by_page(first_pass: sqlite3.Connection
 
 
 def test_the_request_to_a_web_applicant_speaks_to_them_and_one_to_a_broker_does_not(
-    first_pass: sqlite3.Connection, mailbox: MailboxClient
+    first_pass: sqlite3.Connection,
 ) -> None:
-    (web,) = mailbox.list_for_lead("LEAD-00000042-003")
-    (broker,) = mailbox.list_for_lead("LEAD-00000042-006")
+    def held_body(lead_id: str) -> str:
+        # Both requests are held for the fire simulation choice, so they are read as drafted.
+        (body,) = first_pass.execute(
+            "SELECT body FROM intents WHERE lead_id = ? AND kind = 'routine_request'"
+            " AND state = 'draft'",
+            (lead_id,),
+        ).fetchone()
+        return str(body)
 
-    assert "What is your date of birth?" in web["body"]
-    assert "applicant" not in web["body"]
-    assert "What is the applicant's last name?" in broker["body"]
+    web, broker = held_body("LEAD-00000042-003"), held_body("LEAD-00000042-006")
+
+    assert "What is your date of birth?" in web
+    assert "applicant" not in web
+    assert "What is the applicant's last name?" in broker
 
 
 def test_the_latest_triage_of_a_lead_is_the_one_taken_after_its_lookups(

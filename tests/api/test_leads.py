@@ -200,7 +200,9 @@ def test_the_items_are_the_open_reviews_and_questions_of_every_lead_and_no_produ
         assert [(i["lead_id"][-3:], i["kind"], i["detail"]["item_kind"]) for i in items] == [
             ("000", "underwriter_review", "draft"),
             ("003", "underwriter_question", None),
+            ("003", "underwriter_review", "draft"),
             ("006", "underwriter_question", None),
+            ("006", "underwriter_review", "draft"),
         ]
         for item in items:
             blockers = app.get(f"/api/leads/{item['lead_id']}").json()["blockers"]

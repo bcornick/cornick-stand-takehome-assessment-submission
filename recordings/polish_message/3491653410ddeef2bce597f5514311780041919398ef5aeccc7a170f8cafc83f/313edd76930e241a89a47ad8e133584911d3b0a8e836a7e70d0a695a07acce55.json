@@ -1,0 +1,20 @@
+{
+  "input": {
+    "ask_count": 23,
+    "recipient_kind": "producer",
+    "request": "Thank you for your submission. To complete the quote we need the items below. One reply covering all of them is ideal.\n\nLocation\n1. What state is the property in?\n2. What is the property's zip code?\n\nInsured\n3. What is the applicant's last name?\n\nPrimary Coverages\n4. What Coverage E (liability) limit is requested: 100,000, 300,000 or 500,000?\n5. What Coverage F (medical payments) limit is requested: 1,000, 3,000 or 5,000?\n\nProperty\n6. What year was the home built?\n7. Does the property have a pool, and if so, is it above ground or inground?\n8. If the pool is above ground: does the above-ground pool have a pull-up locking ladder?\n9. How many acres is the lot?\n\nConstruction\n10. What type of structure is it: single family, duplex, townhouse, rowhome or other?\n11. What is the total living square footage?\n12. How many stories does the home have?\n13. In what year was the roof last replaced?\n14. What is the roof surface material?\n15. What is the primary heating system?\n\nPlumbing\n16. How old is the plumbing, in years?\n17. Is the water heater a tank or a tankless unit?\n18. If the water heater is a tank: how old is the water heater, in years?\n19. If the water heater is a tank: where is the water heater: in or above finished space, or in unfinished space?\n\nProtection\n20. What fire protective devices does the home have: none, local alarm, central alarm or direct alarm?\n21. Is the fire department career, mostly career, mostly volunteer or volunteer?\n22. How many feet is it to the nearest fire hydrant?\n\nAdditional questions\n23. Would the applicant be willing to mitigate greater distance?",
+    "round": 1
+  },
+  "input_hash": "313edd76930e241a89a47ad8e133584911d3b0a8e836a7e70d0a695a07acce55",
+  "model_id": "deepseek-flash",
+  "prompt_version": "3491653410ddeef2bce597f5514311780041919398ef5aeccc7a170f8cafc83f",
+  "request_id": "",
+  "skill": "polish_message",
+  "stop_reason": "tool_use",
+  "tokens_in": 177,
+  "tokens_out": 109,
+  "tool_input": {
+    "closing": "One reply covering all of the items is ideal. Thank you for your help with this.",
+    "opening": "Thank you for sending in this submission. To complete the quote, we need a few details about the property and the applicant. If you can gather them from your client, that would be a great help."
+  }
+}

@@ -1,8 +1,9 @@
 # ABOUTME: Expected first-pass result, the one underwriter choice and both rulings for seed-42 lead 003.
 # ABOUTME: Section 5 row: "Fire probability 0.79; wood shake siding; primary home unoccupied 3 months | One underwriter
-# ABOUTME: card (failed fire simulation). A routine request with the registry asks and the occupancy confirmation sends
-# ABOUTME: automatically. Mitigation questions are held until the choice is made. The Occupancy page is undecided while
-# ABOUTME: the conflict is open. The Siding requirement (wood shake, fire probability above 0.50) is committed. The four
+# ABOUTME: card (failed fire simulation). A routine request with the registry asks and the occupancy confirmation is
+# ABOUTME: drafted and held for the underwriter while the choice could decline the lead: the underwriter sends it, or
+# ABOUTME: declines and it is withdrawn. Mitigation questions are held until the choice is made. The Occupancy page is
+# ABOUTME: undecided while the conflict is open. The Siding requirement (wood shake, fire probability above 0.50) is committed. The four
 # ABOUTME: protection-class questions are blocked, not asked."
 #
 # p_f 0.79 is on the lead (an archetype value, never replaced), so Fire Simulation applies and the root reaches Fail.
@@ -18,6 +19,7 @@ first_pass:
   outcome: underwriter_card
   request:
     kind: routine_request
+    held: true                     # drafted; waits for the underwriter while I13.fire_fail could decline the lead
     asks:
       - city
       - zip
@@ -85,7 +87,7 @@ first_pass:
       from: "06:HI_R"
 
 # The ruling `decline` makes the Fire Simulation root a decline; the plan becomes a proposed decline and the
-# underwriter gets the decline notice to approve. The sent request is history.
+# underwriter gets the decline notice to approve. The held request is withdrawn: the producer is never asked.
 underwriter_actions:
   - action: record_ruling
     choice_id: I13.fire_fail
@@ -94,7 +96,7 @@ underwriter_actions:
 after_actions:
   status: in_progress
   outcome: proposed_decline
-  request: null                    # no second message; the round-1 request stays the only request
+  request: null                    # nothing goes to the producer but the notice, once approved
   underwriter_items: [decline_notice]
   pages:
     fire_simulation:
@@ -117,7 +119,8 @@ alternatives:
     # Map risk -> Assess Vegetation: Too Close is Heavy (I15) -> willingness to mitigate, a catalogue question now
     # collected, since every branch above it is settled. 7a Compliant: false -> the same question.
     # Min Distance: 14 ft has no threshold (I16), so the I16.distance choice opens, shown with the value.
-    # The catalogue question cannot be sent while round 1 is open (one open request per lead, section 10.1).
+    # The held request is drafted again with the catalogue question, which makes it sensitive; it still waits,
+    # since I16.distance could decline the lead.
     underwriter_actions:
       - action: record_ruling
         choice_id: I13.fire_fail
@@ -126,9 +129,9 @@ alternatives:
     after_actions:
       status: in_progress
       outcome: underwriter_card
-      request: null                # no second message until the producer replies
+      request: null                # nothing is sent: the request is held for I16.distance
       underwriter_items: [I16.distance]
-      held_catalogue_questions: [willing_to_mitigate]   # joins the next request, which is then sensitive
+      held_catalogue_questions: [willing_to_mitigate]   # joins the held request, which is then sensitive
       pages:
         fire_simulation:
           applies: yes

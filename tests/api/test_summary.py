@@ -60,6 +60,13 @@ class Case:
 FIRE = item("underwriter_question", "underwriter", choice_ids=["I13.fire_fail"], text="choose")
 PACKET_REVIEW = item("underwriter_review", "underwriter", item_kind="draft", intent_id="I-q")
 NOTICE_REVIEW = item("underwriter_review", "underwriter", item_kind="draft", intent_id="I-d")
+HELD_REQUEST = item(
+    "underwriter_review",
+    "underwriter",
+    item_kind="draft",
+    intent_id="I-r",
+    text="This request waits for your decision on the open choice.",
+)
 OBSERVATION = item("underwriter_review", "underwriter", item_kind="observation", observation_id=3)
 WAIT_REPLY = item("producer_reply", "producer", intent_id="I-L-1")
 CASES = [
@@ -90,6 +97,15 @@ CASES = [
         [NOTICE_REVIEW],
         ActionPlan(underwriter_decline="the roof is beyond repair", proposed_decline=True),
         intents={"I-d": "decline_notice"},
+    ),
+    Case(
+        "a request draft says it was drafted and why it waits",
+        "This lead failed the fire simulation at 0.79. "
+        "I need you to choose between a decline and legacy underwriting. "
+        "I drafted a request to the producer. This request waits for your decision on the open choice.",
+        [FIRE, HELD_REQUEST],
+        ActionPlan(open_choices=[FIRE_CHOICE]),
+        intents={"I-r": "routine_request"},
     ),
     Case(
         "pending observation names the field and both values",

@@ -8,6 +8,7 @@ from evals.graders.evidence import (
     delivered_asks,
     duplicate_sends,
     field_asks,
+    held_requests,
     lead_ids,
     messages,
     plan_of,
@@ -123,21 +124,30 @@ def _differences(what: str, lead_id: str, expected: set[str], found: set[str]) -
 
 def asks(ev: Evidence, expected: Expectations) -> Result:
     """The asks delivered since the last phase equal the labelled ones: field asks, confirmations and
-    catalogue questions, none missing and none extra. A label whose `request` is null expects no request."""
+    catalogue questions, none missing and none extra. A label whose `request` is null expects no request;
+    one whose `request` is `held` expects those asks in a request held for the underwriter, and none sent."""
     confirmations, catalogue = ask_classes()
     failures: list[str] = []
     for lead_id, expectation in expected.items():
         if "request" not in expectation:
             continue
         request = expectation["request"] or {}
-        got = delivered_asks(ev, lead_id, new_only=True)
+        sent = messages(ev, lead_id, REQUEST_KINDS, new_only=True)
+        if request.get("held"):
+            held = held_requests(ev, lead_id)
+            got = {ask for _, ask_ids in held for ask in ask_ids}
+            kinds = {kind for kind, _ in held}
+            if sent:
+                failures.append(f"{lead_id}: a request was sent while it should be held")
+        else:
+            got = delivered_asks(ev, lead_id, new_only=True)
+            kinds = {m["metadata"]["kind"] for m in sent}
         for what, wanted, found in (
             ("ask", request.get("asks", []), field_asks(got)),
             ("confirmation", request.get("confirmations", []), got & confirmations),
             ("catalogue question", request.get("catalogue_questions", []), got & catalogue),
         ):
             failures += _differences(what, lead_id, set(wanted), found)
-        kinds = {m["metadata"]["kind"] for m in messages(ev, lead_id, REQUEST_KINDS, new_only=True)}
         if request and kinds != {request["kind"]}:
             failures.append(f"{lead_id}: request kinds {sorted(kinds)}, expected {request['kind']}")
     return Result(failures)

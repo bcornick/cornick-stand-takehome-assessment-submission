@@ -1,7 +1,8 @@
 # ABOUTME: Expected first-pass result, the one underwriter choice and both rulings for seed-42 lead 006.
 # ABOUTME: Section 5 row: "Fire probability 0.89; wood shake siding; roof material missing | One underwriter card
-# ABOUTME: (failed fire simulation). A routine request with the registry asks, including roof material, sends
-# ABOUTME: automatically. Pool values already on the lead are not asked again. The Siding requirement is committed.
+# ABOUTME: (failed fire simulation). A routine request with the registry asks, including roof material, is drafted and
+# ABOUTME: held for the underwriter while the choice could decline the lead: the underwriter sends it, or declines and it
+# ABOUTME: is withdrawn. Pool values already on the lead are not asked again. The Siding requirement is committed.
 # ABOUTME: The four protection-class questions are blocked, not asked."
 #
 # p_f 0.89 is on the lead: Fire Simulation applies, the root reaches Fail and the I13.fire_fail choice is open.
@@ -16,6 +17,7 @@ first_pass:
   outcome: underwriter_card
   request:
     kind: routine_request
+    held: true                     # drafted; waits for the underwriter while I13.fire_fail could decline the lead
     asks:
       - state
       - zip
@@ -96,7 +98,7 @@ underwriter_actions:
 after_actions:
   status: in_progress
   outcome: proposed_decline
-  request: null                    # the round-1 request stays the only request
+  request: null                    # the held request is withdrawn; nothing goes to the producer but the notice
   underwriter_items: [decline_notice]
   pages:
     fire_simulation:
@@ -116,7 +118,8 @@ alternatives:
   legacy_underwriting:
     # Map risk -> Ingress/Egress rests on road_access, blocked on state and zip: undecided. Assess Vegetation: Too
     # Close is Heavy (I15) -> willingness to mitigate, collected. 7a Compliant false -> the same question.
-    # Min Distance 14 ft -> I16.distance opens with the value. The question waits for the reply to round 1.
+    # Min Distance 14 ft -> I16.distance opens with the value. The held request is drafted again with the question,
+    # which makes it sensitive, and still waits, since I16.distance could decline the lead.
     underwriter_actions:
       - action: record_ruling
         choice_id: I13.fire_fail

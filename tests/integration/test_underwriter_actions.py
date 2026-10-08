@@ -47,7 +47,21 @@ def session(host_urls: dict[str, str], tmp_path: Path) -> Iterator[Session]:
 
 @pytest.fixture
 def answered(session: Session) -> Session:
-    """The same run after the fixture replies have been delivered."""
+    """The same run after the underwriter sends lead 003's held request and the fixture replies have
+    been delivered."""
+    lead = detail(session.app, "003")
+    (held,) = [
+        d for d in lead["drafts"] if d["kind"] == "routine_request" and d["state"] == "draft"
+    ]
+    (item,) = [b for b in lead["blockers"] if b["detail"]["intent_id"] == held["intent_id"]]
+    sent = command(
+        session.app,
+        "approve",
+        item_id=item["item_id"],
+        artifact_hash=held["payload_hash"],
+        reason="",
+    )
+    assert sent["accepted"] is True
     assert session.app.post("/api/replies/fixtures").status_code == 200
     return session
 

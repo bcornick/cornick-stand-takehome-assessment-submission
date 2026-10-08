@@ -24,7 +24,7 @@ Each item is listed in the README under "Cut and why". A lead that would have re
 - The MCP transport. The chat calls the same functions directly.
 - The 50-seed sweep.
 - The rule-change flow and the model-driven triage comparison.
-- The settings screens, the skills screen and the emergency stop. Autonomy levels are constants in code: a routine request sends automatically and every other message waits for approval.
+- The settings screens, the skills screen and the emergency stop. Autonomy levels are constants in code: a routine request sends automatically, unless an open underwriter choice could still decline the lead, and every other message waits for approval.
 - Controls and graders beyond those named under "What is built".
 - The constructed packet cases and the outcome-case sample; cases are a table per page.
 

@@ -5,7 +5,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from uwh.rules.graphs import Graph, check_rows_are_applied, load_graphs
+from uwh.rules.graphs import Graph, check_rows_are_applied, choice_can_decline, load_graphs
 
 
 def graph_testing(*bands: dict[str, Any], field: str = "p_f") -> dict[str, Any]:
@@ -75,3 +75,46 @@ def test_an_interpretation_row_that_nothing_applies_is_refused() -> None:
 
     with pytest.raises(ValueError, match=r"\['I92'\]"):
         check_rows_are_applied([graph], rows)
+
+
+@pytest.mark.parametrize(
+    "choice_id",
+    [
+        "I07.two_months",
+        "I09.rental_exception",
+        "I13.fire_fail",
+        "I14.road_access",
+        "I15.vegetation",
+        "I16.distance",
+        "I16.slope",
+    ],
+)
+def test_every_shipped_choice_has_a_branch_that_declines(choice_id: str) -> None:
+    assert choice_can_decline(load_graphs(), choice_id)
+
+
+def test_a_choice_whose_branches_only_adjust_the_quote_cannot_decline() -> None:
+    surcharge = [{"type": "surcharge", "rule": "X-1", "percent": 10}]
+    graph = Graph.model_validate(
+        {
+            "id": "demo",
+            "page": "docs/playbook/demo.md",
+            "applies_when": {"always": True},
+            "root": "months",
+            "nodes": {
+                "months": {
+                    "kind": "underwriter_choice",
+                    "choice": "I07.two_months",
+                    "interpretation": "I07",
+                    "board_path": [],
+                    "prompt": "Under or over 60 days?",
+                    "show": ["months_unoccupied"],
+                    "options": {"under_60_days": "under", "over_60_days": "over"},
+                },
+                "under": {"kind": "outcome", "board_path": ["X:U"], "effects": surcharge},
+                "over": {"kind": "outcome", "board_path": ["X:O"], "effects": surcharge},
+            },
+        }
+    )
+
+    assert not choice_can_decline([graph], "I07.two_months")

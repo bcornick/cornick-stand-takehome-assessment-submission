@@ -862,24 +862,21 @@
   "request_id": "",
   "skill": "chat",
   "stop_reason": "tool_use",
-  "tokens_in": 267,
-  "tokens_out": 274,
+  "tokens_in": 139,
+  "tokens_out": 218,
   "tool_input": {
     "action": "answer",
-    "answer": "Lead 000 is a proposed decline because of the post-and-pier page: the plan committed a decline under rule PP-1, on the branch 07:ROOT → 07:LIVING → 07:D1. The lead's foundation is recorded as Piers, and post_pier_supports_living_area is yes, which is what that page keys on.\n\nThe decline notice has been drafted to owner@example.com with the subject \"Regarding your submission: LEAD-000\", and it is sitting on an underwriter review item: \"Review this decline notice before it is sent.\"\n\nOther pages did not drive it: roof and siding both came back no_action, and the occupancy, profile and replacement_cost pages are still waiting on months_unoccupied, kyc_score and coverage_to_rce_ratio respectively. The electrical and plumbing pages were not evaluated.",
+    "answer": "Lead 000 is a proposed decline because of the post-and-pier page: rule PP-1 fired and committed a decline. The lead's foundation is Piers and the post-pier supports the living area, which is the branch that declines.\n\nThe other pages did not drive it: roof and siding came back no action, and occupancy, profile, replacement cost, electrical and plumbing were not decided (occupancy waits on months unoccupied, profile on the identity score, replacement cost on the coverage-to-RC ratio, and electrical and plumbing are not evaluated).\n\nThe decline notice is drafted and sitting with you for review before it goes out.",
     "citations": [
       35,
-      10,
-      23,
-      121,
-      33,
       38,
       39,
       34,
       36,
       37,
       40,
-      41
+      41,
+      33
     ]
   }
 }

@@ -23,8 +23,9 @@ def _deliver(runtime: Runtime, db: sqlite3.Connection, reply: ReplyRequest) -> R
     )
 
 
-def _fixture_reply(runtime: Runtime, db: sqlite3.Connection, fixture: Path) -> ReplyResponse:
-    """Deliver the fixture, named for its lead, to the lead's latest sent request."""
+def _fixture_reply(runtime: Runtime, db: sqlite3.Connection, fixture: Path) -> ReplyResponse | None:
+    """Deliver the fixture, named for its lead, to the lead's latest sent request; None for a lead
+    with no request out, such as one whose request is held for the underwriter's choice."""
     lead_id = fixture.stem
     placeholders = ", ".join("?" for _ in REQUEST_KINDS)
     row = db.execute(
@@ -33,12 +34,7 @@ def _fixture_reply(runtime: Runtime, db: sqlite3.Connection, fixture: Path) -> R
         (lead_id, *REQUEST_KINDS),
     ).fetchone()
     if row is None:
-        return ReplyResponse(
-            accepted=False,
-            event_id=None,
-            reason=f"lead {lead_id} has no sent request in this run",
-            lead_id=lead_id,
-        )
+        return None
     body = fixture.read_text(encoding="utf-8")
     if len(body) > MAX_BODY_CHARACTERS:
         return ReplyResponse(
@@ -61,6 +57,5 @@ def deliver_reply(reply: ReplyRequest, runtime: RuntimeDependency) -> ReplyRespo
 def deliver_fixture_replies(runtime: RuntimeDependency) -> FixtureRepliesResponse:
     fixtures = sorted(Path(runtime.settings.fixture_replies_dir).glob("*.txt"))
     with runtime.database() as db:
-        return FixtureRepliesResponse(
-            replies=[_fixture_reply(runtime, db, fixture) for fixture in fixtures]
-        )
+        delivered = [_fixture_reply(runtime, db, fixture) for fixture in fixtures]
+        return FixtureRepliesResponse(replies=[reply for reply in delivered if reply is not None])

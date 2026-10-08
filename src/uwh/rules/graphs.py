@@ -300,6 +300,29 @@ def _derived_input(name: str, facts: Mapping[str, JsonValue]) -> JsonValue:
             raise ValueError(f"the derived input operation {operation} is unknown")
 
 
+def choice_can_decline(graphs: Sequence[Graph], choice_id: str) -> bool:
+    """Whether some branch below the choice reaches an outcome holding a decline."""
+    for graph in graphs:
+        waiting = [
+            name
+            for name, node in graph.nodes.items()
+            if isinstance(node, Choice) and node.choice == choice_id
+        ]
+        seen: set[str] = set()
+        while waiting:
+            name = waiting.pop()
+            if name in seen:
+                continue
+            seen.add(name)
+            node = graph.nodes[name]
+            if isinstance(node, Outcome) and any(
+                isinstance(e, DeclineEffect) for e in node.effects
+            ):
+                return True
+            waiting.extend(_targets(node))
+    return False
+
+
 def input_value(field: str, facts: Mapping[str, JsonValue]) -> JsonValue:
     """The value a test reads: a derived input of `derivations.yaml`, or the fact."""
     if field in read_yaml("derivations.yaml")["derived_inputs"]:

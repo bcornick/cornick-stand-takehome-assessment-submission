@@ -21,7 +21,8 @@ ROOT = Path(__file__).resolve().parents[2]
 
 REPLY_WAIT = ("producer_reply", None, None)
 QUESTION = ("underwriter_question", None, None)
-DECLINE_NOTICE_DRAFT = ("underwriter_review", "draft", None)
+# A draft held for the underwriter: a decline notice, or a request held while a choice could decline.
+DRAFT_REVIEW = ("underwriter_review", "draft", None)
 
 
 class FirstPass(NamedTuple):
@@ -34,15 +35,16 @@ class FirstPass(NamedTuple):
 # The first-pass row of 5 for each lead.
 FIRST_PASS = {
     # A proposed decline: the notice waits and nothing is asked.
-    "000": FirstPass([DECLINE_NOTICE_DRAFT], {}, set(), set()),
+    "000": FirstPass([DRAFT_REVIEW], {}, set(), set()),
     # No street address: a routine request that includes it.
     "001": FirstPass([REPLY_WAIT], {"routine_request": 1}, {"street_address"}, set()),
     # KYC 8 and 9: the request for the missing fields.
     "002": FirstPass([REPLY_WAIT], {"routine_request": 1}, {"coverage_a", "is_rental"}, set()),
-    # The failed fire simulation is one card; the registry asks and the occupancy confirmation go out.
+    # The failed fire simulation is one card; the request with the registry asks and the occupancy
+    # confirmation is drafted and held for it, so nothing goes out.
     "003": FirstPass(
-        [QUESTION, REPLY_WAIT],
-        {"routine_request": 1},
+        [QUESTION, DRAFT_REVIEW],
+        {},
         {"roof_material", "months_unoccupied_in_primary_home"},
         {"willing_to_mitigate", "fire_dept_response_time", "alternative_water_source"},
     ),
@@ -61,8 +63,8 @@ FIRST_PASS = {
         {"pool_has_diving_board_or_slide"},
     ),
     "006": FirstPass(
-        [QUESTION, REPLY_WAIT],
-        {"routine_request": 1},
+        [QUESTION, DRAFT_REVIEW],
+        {},
         {"roof_material"},
         {"willing_to_mitigate", "pool_security", "pool_has_diving_board_or_slide"},
     ),

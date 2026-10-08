@@ -74,7 +74,61 @@ def test_the_card_asks_the_choice_in_plain_words(app: TestClient, db: sqlite3.Co
     )
 
 
-def test_answering_legacy_underwriting_replaces_the_card_and_asks_the_mitigation_question_later(
+def held_request(app: TestClient, lead_id: str) -> tuple[dict[str, Any], dict[str, Any]]:
+    """The lead's request draft and the item that holds it for the underwriter."""
+    detail = app.get(f"/api/leads/{lead_id}").json()
+    (draft,) = [
+        d
+        for d in detail["drafts"]
+        if d["kind"] in ("routine_request", "sensitive_request") and d["state"] == "draft"
+    ]
+    (item,) = [b for b in detail["blockers"] if b["detail"]["intent_id"] == draft["intent_id"]]
+    return draft, item
+
+
+@pytest.mark.parametrize("lead_id", [LEAD_003, LEAD_006])
+def test_a_request_waits_for_the_underwriter_while_a_choice_could_decline_the_lead(
+    app: TestClient, mailbox: MailboxClient, lead_id: str
+) -> None:
+    draft, item = held_request(app, lead_id)
+
+    assert item["kind"] == "underwriter_review" and "decision" in item["detail"]["text"]
+    assert draft["asks"] != []
+    assert mailbox.list_for_lead(lead_id) == []
+
+
+def test_the_underwriter_can_send_the_held_request_before_deciding(
+    app: TestClient, db: sqlite3.Connection, mailbox: MailboxClient
+) -> None:
+    draft, item = held_request(app, LEAD_006)
+
+    sent = command(
+        app,
+        "approve",
+        item_id=item["item_id"],
+        artifact_hash=draft["payload_hash"],
+        reason="",
+    )
+
+    assert sent["accepted"] is True
+    assert [m["metadata"]["kind"] for m in mailbox.list_for_lead(LEAD_006)] == ["routine_request"]
+    assert kinds(db, LEAD_006) == [("producer_reply", None), ("underwriter_question", None)]
+
+
+def test_declining_at_the_choice_withdraws_the_held_request(
+    app: TestClient, db: sqlite3.Connection, mailbox: MailboxClient
+) -> None:
+    rule_fire(app, LEAD_006, "decline")
+
+    detail = app.get(f"/api/leads/{LEAD_006}").json()
+    assert [d["state"] for d in detail["drafts"] if d["kind"] == "routine_request"] == [
+        "closed_unsent"
+    ]
+    assert kinds(db, LEAD_006) == [("underwriter_review", "draft")]
+    assert mailbox.list_for_lead(LEAD_006) == []
+
+
+def test_answering_legacy_underwriting_replaces_the_card_and_still_holds_the_request(
     app: TestClient, db: sqlite3.Connection, mailbox: MailboxClient
 ) -> None:
     assert rule_fire(app, LEAD_003, "legacy_underwriting")["accepted"] is True
@@ -83,8 +137,10 @@ def test_answering_legacy_underwriting_replaces_the_card_and_asks_the_mitigation
     assert card.detail.choice_ids == ["I16.distance"]
     plan = app.get(f"/api/leads/{LEAD_003}").json()["plan"]
     assert plan["catalogue_questions"] == ["willing_to_mitigate"]
-    # The first request still waits for its reply, so the question goes in the next one.
-    assert len(mailbox.list_for_lead(LEAD_003)) == 1
+    # The distance choice could still decline the lead, so the request, now with the question, waits.
+    draft, _ = held_request(app, LEAD_003)
+    assert "Would the applicant be willing to mitigate greater distance?" in draft["asks"]
+    assert mailbox.list_for_lead(LEAD_003) == []
     assert rulings_in_force(db, LEAD_003).choices == {"I13.fire_fail": "legacy_underwriting"}
 
 
@@ -103,7 +159,9 @@ def test_answering_every_choice_of_a_card_closes_it(
     )
 
     assert answered["accepted"] is True
-    assert [kind for kind, _ in kinds(db, LEAD_003)] == ["producer_reply"]
+    # With no choice left that could decline the lead, only the request remains: its mitigation
+    # question makes it a sensitive request, which waits for the underwriter's approval.
+    assert kinds(db, LEAD_003) == [("underwriter_review", "draft")]
 
 
 def test_a_closed_question_card_is_matched_to_its_ruling_through_the_choice_ids_of_the_event_rows(
@@ -117,8 +175,9 @@ def test_a_closed_question_card_is_matched_to_its_ruling_through_the_choice_ids_
     ruling = next(r for r in rows if r["type"] == "ruling_recorded")
     assert card["item_id"] is not None and card["choice_ids"] == ["I13.fire_fail"]
     assert ruling["choice_ids"] == ["I13.fire_fail"] and ruling["actor"] == "underwriter"
-    # The wait on the producer that follows is no item of the underwriter's.
-    assert [r["item_id"] for r in rows if r["type"] == "blocker_opened"].count(None) >= 1
+    # The request held for the underwriter's decision is an item of the underwriter's too.
+    held = [r for r in rows if r["type"] == "blocker_opened" and "decision" in r["summary"]]
+    assert held and all(r["item_id"] is not None for r in held)
 
 
 def test_a_ruling_on_a_choice_that_is_not_open_is_refused(app: TestClient) -> None:
@@ -139,7 +198,7 @@ def test_choosing_to_decline_drafts_the_notice_and_approving_it_sends_it_and_end
 ) -> None:
     rule_fire(app, LEAD_006, "decline")
 
-    assert kinds(db, LEAD_006) == [("producer_reply", None), ("underwriter_review", "draft")]
+    assert kinds(db, LEAD_006) == [("underwriter_review", "draft")]
     item_id, payload_hash = notice_item(app, LEAD_006)
     # The choice gave the decline its reason, so the notice goes without another one.
     approved = command(app, "approve", item_id=item_id, artifact_hash=payload_hash, reason="")
@@ -148,11 +207,9 @@ def test_choosing_to_decline_drafts_the_notice_and_approving_it_sends_it_and_end
     assert db.execute("SELECT reason FROM approvals WHERE intent_id IS NOT NULL").fetchall()[
         -1
     ] == ("the underwriter decided",)
-    assert sorted(m["metadata"]["kind"] for m in mailbox.list_for_lead(LEAD_006)) == [
-        "decline_notice",
-        "routine_request",
-    ]
-    assert open_blockers(db, LEAD_006) == []  # the notice closes the open request
+    # The producer was never asked: the decline withdrew the held request.
+    assert [m["metadata"]["kind"] for m in mailbox.list_for_lead(LEAD_006)] == ["decline_notice"]
+    assert open_blockers(db, LEAD_006) == []
     assert db.execute("SELECT status FROM leads WHERE lead_id = ?", (LEAD_006,)).fetchone() == (
         "declined",
     )
@@ -188,8 +245,9 @@ def test_rejecting_a_decline_that_followed_a_choice_reopens_the_choice(
     command(app, "reject", item_id=item_id, reason="the broker has new information")
 
     assert rulings_in_force(db, LEAD_006).choices == {}
-    assert kinds(db, LEAD_006) == [("producer_reply", None), ("underwriter_question", None)]
-    assert len(mailbox.list_for_lead(LEAD_006)) == 1
+    # The choice is open again, so the request is drafted again and held for it.
+    assert kinds(db, LEAD_006) == [("underwriter_question", None), ("underwriter_review", "draft")]
+    assert mailbox.list_for_lead(LEAD_006) == []
 
 
 def test_rejecting_a_decline_under_legacy_underwriting_reopens_only_the_choice_that_led_to_it(

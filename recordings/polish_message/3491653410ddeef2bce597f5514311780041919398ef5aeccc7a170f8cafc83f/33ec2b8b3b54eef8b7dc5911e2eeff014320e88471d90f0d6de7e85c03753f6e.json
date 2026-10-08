@@ -1,0 +1,20 @@
+{
+  "input": {
+    "ask_count": 18,
+    "recipient_kind": "applicant",
+    "request": "Thank you for your submission. To complete the quote we need the items below. One reply covering all of them is ideal.\n\nLocation\n1. What city is the property in?\n2. What is the property's zip code?\n\nInsured\n3. Is the property owned by a trust?\n4. If the property is held in a trust: what is the name of the trust?\n5. What is your date of birth?\n\nPrimary Coverages\n6. What Coverage F (medical payments) limit is requested: 1,000, 3,000 or 5,000?\n\nProperty\n7. Are there any animals on the property?\n\nConstruction\n8. What type of foundation does the home have?\n9. If the home is on piers, stilts or pilings: does the post and pier foundation support any part of the living area, or only decking?\n10. If the home is on piers, stilts or pilings: how high is the deck above grade, in feet?\n11. How many stories does the home have?\n12. What is the roof surface material?\n13. What is the roof shape?\n14. What is the size of the electrical panel, in amps?\n\nPlumbing\n15. How old is the plumbing, in years?\n\nProtection\n16. How many miles is it to the fire department?\n\nAdditional questions\n17. The home is listed as unoccupied for 3 consecutive months. Can you confirm that?\n18. Would you be willing to mitigate greater distance?",
+    "round": 1
+  },
+  "input_hash": "33ec2b8b3b54eef8b7dc5911e2eeff014320e88471d90f0d6de7e85c03753f6e",
+  "model_id": "deepseek-flash",
+  "prompt_version": "3491653410ddeef2bce597f5514311780041919398ef5aeccc7a170f8cafc83f",
+  "request_id": "",
+  "skill": "polish_message",
+  "stop_reason": "tool_use",
+  "tokens_in": 208,
+  "tokens_out": 107,
+  "tool_input": {
+    "closing": "One reply covering all of the items is ideal. Thank you for your help with this.",
+    "opening": "Thank you for sending in your property insurance submission. To complete the quote, we need a few details from you. The items are listed below, and you can simply answer them in one reply."
+  }
+}

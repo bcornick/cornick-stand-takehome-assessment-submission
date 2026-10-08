@@ -436,3 +436,18 @@ def test_jevs_call_is_a_model_called_event_under_its_own_model_id_with_its_usage
         assert set(by_model) == {"jev-1.13.0", "deepseek-flash"}
         assert (by_model["jev-1.13.0"].tokens_in, by_model["jev-1.13.0"].tokens_out) == (1, 1)
         db.close()
+
+
+def test_a_fixture_reply_to_a_lead_whose_request_is_held_is_skipped_not_refused(
+    settings: Settings, leadgen: LeadgenClient, mailbox: MailboxClient, tmp_path: Path
+) -> None:
+    fixtures = tmp_path / "fixtures"
+    fixtures.mkdir()
+    (fixtures / f"{LEAD_008}.txt").write_text(FIXTURE_BODY, encoding="utf-8")
+    (fixtures / "LEAD-00000042-003.txt").write_text("The city is Boulder.", encoding="utf-8")
+    with first_pass(replace(settings, fixture_replies_dir=str(fixtures)), leadgen, mailbox) as app:
+        response = app.post("/api/replies/fixtures")
+
+        assert [(r["lead_id"], r["accepted"]) for r in response.json()["replies"]] == [
+            (LEAD_008, True)
+        ]

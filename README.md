@@ -17,10 +17,10 @@ To see the demo:
 
 1. In **Demo controls**, bottom right, click **Load today's leads**. The app posts the ten leads and settles them; the lead list on the left fills.
 2. Open lead 008. Its conversation is what the system did, oldest first: the fields it triaged, the values it fetched, the plan it built and the request it sent to the producer. Each line carries a chip that opens its evidence in the panel on the right; **Full detail** opens the lead's facts with their sources, its plan and its messages.
-3. Click **Deliver the producers' replies**. Every stored producer reply is delivered and read; lead 008's conversation gains the reply, what was read from it, and a quote packet as a card.
+3. Click **Deliver the producers' replies**. Every stored reply whose lead has a request out is delivered and read; lead 008's conversation gains the reply, what was read from it, and a quote packet as a card.
 4. **Send quote** on the packet's card. The mailbox then holds one request and one packet for it.
 
-Leads 000, 003 and 006 need the underwriter on the first pass, and the **Queue** conversation lists their cards: 000 is a proposed decline that waits for approval, and 003 and 006 each show one question card.
+Leads 000, 003 and 006 need the underwriter on the first pass, and the **Queue** conversation lists their cards: 000 is a proposed decline that waits for approval, and 003 and 006 each show the failed fire simulation's choice beside their request to the producer, which is drafted and held until the underwriter sends it or declines: the producer is not asked about a lead that may be declined. Send lead 003's request before delivering the replies to see its reply read.
 
 Below a conversation's timeline the underwriter can type a question or an instruction. An answer lists what it rests on under **Related artifacts**, each line opening it in the panel; an instruction becomes a card that the underwriter applies or dismisses. In replay, try one of the three example questions in the **Queue** conversation before delivering the replies; typing needs `RUN_MODE=live` and a key.
 

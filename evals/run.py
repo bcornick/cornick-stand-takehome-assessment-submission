@@ -147,6 +147,18 @@ def _draft_item(db: sqlite3.Connection, lead_id: str, kind: str) -> tuple[int, s
     return None
 
 
+def _send_held_request(runtime: Runtime, db: sqlite3.Connection, lead_id: str) -> None:
+    """Send the lead's request held for an open choice, as the underwriter does with Send request,
+    so a reply can answer it; a lead with no held request is left as it is."""
+    found = _draft_item(db, lead_id, "routine_request")
+    if found is not None:
+        item_id, _, payload_hash = found
+        result, _ = runtime.submit_as_underwriter(
+            db, "approve", {"item_id": item_id, "artifact_hash": payload_hash, "reason": ""}
+        )
+        assert result.accepted, result.reason
+
+
 def _deliver(
     runtime: Runtime, db: sqlite3.Connection, lead_id: str, round_: int, body: str
 ) -> CommandResult | None:
@@ -461,8 +473,9 @@ def evaluate_seed42(
 def read_replies(
     runtime: Runtime, db: sqlite3.Connection, cases: Sequence[ReplyCase]
 ) -> tuple[Evidence, list[str]]:
-    """Run seed 42's first pass, deliver each case's reply to its lead's first request and return the
-    evidence after, with a message for each delivery that was not accepted."""
+    """Run seed 42's first pass, deliver each case's reply to its lead's first request, sending a request
+    held for an open choice first, and return the evidence after, with a message for each delivery that
+    was not accepted."""
     result, first_pass = runtime.submit_as_underwriter(db, "start_run", {"seed": SEED})
     assert result.accepted and first_pass is not None, result.reason
     first_pass.future.result()
@@ -471,6 +484,7 @@ def read_replies(
     )
     refused: list[str] = []
     for case in cases:
+        _send_held_request(runtime, db, case.lead)
         delivery = _deliver(runtime, db, case.lead, 1, case.body)
         if delivery is None:
             refused.append(f"{case.lead}: no sent first request")

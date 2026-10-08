@@ -395,7 +395,8 @@ class ReplyResponse(CommandResponse):
 
 
 class FixtureRepliesResponse(StrictModel):
-    replies: list[ReplyResponse]  # one per stored fixture reply, after all are processed
+    # one per stored fixture reply whose lead has a request out, after all are processed
+    replies: list[ReplyResponse]
 
 
 # ---- read views (A.5, A.11, sections 8, 11) -------------------------------------------------------------

@@ -23,16 +23,28 @@
               "text": "The fire simulation failed: decline, or continue under legacy underwriting? The legacy checklist values are shown."
             },
             {
+              "kind": "underwriter_review",
+              "lead_id": "LEAD-00000042-003",
+              "ref": 3,
+              "text": "This request waits for your decision on the open choice, so a lead you decline is not asked. Send it now, or decide the choice first."
+            },
+            {
               "kind": "underwriter_question",
               "lead_id": "LEAD-00000042-006",
-              "ref": 3,
+              "ref": 4,
               "text": "The fire simulation failed: decline, or continue under legacy underwriting? The legacy checklist values are shown."
+            },
+            {
+              "kind": "underwriter_review",
+              "lead_id": "LEAD-00000042-006",
+              "ref": 5,
+              "text": "This request waits for your decision on the open choice, so a lead you decline is not asked. Send it now, or decide the choice first."
             }
           ],
           "summary": {
             "declines_approved": 0,
             "delivery_unknown": 0,
-            "follow_ups_sent": 9,
+            "follow_ups_sent": 7,
             "quotes_sent": 0,
             "waiting_on_data": 0,
             "waiting_on_producer": 7,
@@ -42,13 +54,13 @@
       }
     ]
   },
-  "input_hash": "9228b05ca5dcb07db936cce9c6c748899b03a4e4f61d5b24bcc693db99c95208",
+  "input_hash": "17a293bab6f3c36e09cb7fb0d44f39266946b358198437a42b0dc96c17ec09bd",
   "model_id": "deepseek-flash",
   "prompt_version": "aea8f22ee4ea599cce8f5576dacb9d0aae9c3ea93bc67753b932b93a5223f522",
   "request_id": "",
   "skill": "chat",
   "stop_reason": "tool_use",
-  "tokens_in": 244,
+  "tokens_in": 500,
   "tokens_out": 57,
   "tool_input": {
     "action": "queue_facts",

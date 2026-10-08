@@ -105,6 +105,9 @@ def _draft_sentence(
     ).fetchone()
     if row is not None and row[0] == "quote_packet":
         return "The quote packet is ready. I need you to send it to the producer."
+    if row is not None and row[0] in REQUEST_KINDS:
+        # The item's text says why the request waits: the underwriter's open choice, or its class.
+        return f"I drafted a request to the producer. {_sentence(blocker.detail.text)}"
     return (
         f"I propose to decline this lead: {_decline_reason(db, blocker.lead_id, plan, facts, fields)}. "
         "I need you to send the decline notice, or withdraw the decline."

@@ -14,6 +14,7 @@ from uwh.rules.data_files import read_yaml
 from uwh.rules.models import ActionPlan
 from uwh.rules.registry import Registry
 from uwh.runtime.event_types import REQUEST_KINDS
+from uwh.runtime.waits import open_blockers
 from uwh.runtime.workflow import stored_plan
 
 # The label of one lead for a phase: its `first_pass` or its `after_actions`.
@@ -65,6 +66,20 @@ def messages(
         if m["metadata"]["kind"] in kinds
         and not (new_only and m["metadata"]["intent_id"] in ev.earlier)
     ]
+
+
+def held_requests(ev: Evidence, lead_id: str) -> list[tuple[str, set[str]]]:
+    """The kind and ask ids of each request draft the lead holds for the underwriter's review."""
+    held: list[tuple[str, set[str]]] = []
+    for blocker in open_blockers(ev.db, lead_id):
+        if blocker.detail.item_kind != "draft" or blocker.detail.intent_id is None:
+            continue
+        kind, ask_ids_json = ev.db.execute(
+            "SELECT kind, ask_ids_json FROM intents WHERE id = ?", (blocker.detail.intent_id,)
+        ).fetchone()
+        if kind in REQUEST_KINDS:
+            held.append((kind, set(json.loads(ask_ids_json))))
+    return held
 
 
 def delivered_asks(ev: Evidence, lead_id: str, *, new_only: bool = False) -> set[str]:

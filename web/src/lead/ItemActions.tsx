@@ -22,6 +22,14 @@ const SEND_LABELS: Record<Draft['kind'], string> = {
   sensitive_request: 'Send request',
 }
 
+// The fold that holds a draft's text, named for what the draft is.
+const PREVIEW_LABELS: Record<Draft['kind'], string> = {
+  decline_notice: 'Preview the notice',
+  quote_packet: 'Preview the packet',
+  routine_request: 'Preview the request',
+  sensitive_request: 'Preview the request',
+}
+
 const DRAFT_REJECT_PLACEHOLDER = 'Optional. What is wrong with it; this is how the system learns.'
 // A decline keeps its reason on file, asked once: where the underwriter decides to decline.
 const DECLINE_REASON = 'Reason for the decline, kept on file'
@@ -235,7 +243,7 @@ function DraftPreview({ draft, onChange }: { draft: Draft; onChange: () => void 
   return (
     <details className="rounded-md border p-3 text-sm">
       <summary className="cursor-pointer">
-        {draft.kind === 'decline_notice' ? 'Preview the notice' : 'Preview the packet'}
+        {PREVIEW_LABELS[draft.kind]}
       </summary>
       <div className="mt-2 flex flex-col gap-2">
         {editing ? (

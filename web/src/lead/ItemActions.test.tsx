@@ -270,6 +270,28 @@ describe('a draft card', () => {
     expect(posted[0].body).toEqual({ type: 'reject', payload: { item_id: 30, reason: 'the roof is fine' } })
   })
 
+  it('names a request’s preview and sends it with Send request', async () => {
+    const request: Schemas['DraftView'] = { ...packet, intent_id: 'intent-request', kind: 'routine_request' }
+    const posted = stubApi()
+    item(
+      blocker(31, 'underwriter_review', {
+        item_kind: 'draft',
+        intent_id: request.intent_id,
+        text: 'This request waits for your decision on the open choice.',
+      }),
+      { ...lead, drafts: [request] },
+    )
+    expect(screen.getByText('Preview the request')).toBeInTheDocument()
+    expect(screen.getByText('This request waits for your decision on the open choice.')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Send request' }))
+    await userEvent.click(reasonForm().getByRole('button', { name: 'Send request' }))
+
+    expect(posted[0].body).toEqual({
+      type: 'approve',
+      payload: { item_id: 31, artifact_hash: request.payload_hash, reason: '' },
+    })
+  })
+
   it('says why the lead is declined on the decline notice card', () => {
     item(
       blocker(30, 'underwriter_review', { item_kind: 'draft', intent_id: decline.intent_id, text: 'Review the notice.' }),

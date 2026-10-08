@@ -16,6 +16,7 @@ from pydantic import JsonValue
 import uwh.skills
 from uwh.providers.stand_in import StandInProviders
 from uwh.rules.data_files import read_yaml
+from uwh.rules.graphs import choice_can_decline, load_graphs
 from uwh.rules.models import ActionPlan, Ask, FieldTriage
 from uwh.rules.registry import Registry
 from uwh.runtime.event_types import (
@@ -420,6 +421,12 @@ def _prepare_ask_producer(
     return partial(_ask_producer_step, registry, polished)
 
 
+HELD_FOR_A_CHOICE = (
+    "This request waits for your decision on the open choice, so a lead you decline is not asked. "
+    "Send it now, or decide the choice first."
+)
+
+
 def _ask_producer_step(
     registry: Registry,
     polished: _Polished | None,
@@ -467,6 +474,11 @@ def _ask_producer_step(
         return
     facts = {key: fact.value for key, fact in effective_facts(db, lead_id).items()}
     rendered = _render_request(registry, db, lead_id, due.planned)
+    # A choice that could still decline the lead holds a request that would otherwise send itself,
+    # so the producer is not asked about a lead the underwriter may decline.
+    held = due.planned.message_class == "routine_request" and any(
+        choice_can_decline(load_graphs(), choice.choice_id) for choice in plan.open_choices
+    )
     rewrite = (
         polished.rewrite if polished is not None and polished.request == rendered.body else None
     )
@@ -481,6 +493,7 @@ def _ask_producer_step(
         rendered.body if rewrite is None else rewrite,
         rendered.ask_ids,
         rewritten_by_model=rewrite is not None,
+        held_for=HELD_FOR_A_CHOICE if held else None,
     )
 
 
