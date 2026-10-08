@@ -3,6 +3,7 @@
 Brett Cornick's submission for the Stand Insurance take-home (`docs/brief/agentic_uw_takehome.md`). The app takes the ten seed-42 leads from Stand's lead generator and drives each one to a sent quote, one sent request to the producer, or a clear question for the underwriter. Nothing that quotes or declines a lead goes out without the underwriter's approval.
 
 - `ARCHITECTURE.md`: the systems, the flow of a lead, where the model is used, and the trade-offs. A few minutes' read.
+- `docs/eval-loop.md`: the eval loop and the plan for iterating.
 - `DEMO_GUIDE.md`: the demo, step by step.
 - `docs/build_logs/`: the full design spec, the plan, the progress log and the full list of known limits.
 
@@ -62,20 +63,9 @@ A fixed workflow in Python processes each lead. Code makes every decision; the l
 
 ## The eval loop
 
-`make eval` replays the recorded model answers against fresh copies of Stand's services, grades the run and adds a row to `evals/results.jsonl`.
+`make eval` replays the morning against fresh copies of Stand's services. Nine graders check that each lead took the right path, that each email asks for exactly what is missing and nothing more, that nothing is escalated without need, and that nothing is sent twice or without approval. The truth comes from labels Brett signed, Stand's own answer key (190 records agree, none disagree) and held-back producer replies. Three deliberately broken runs prove the graders can fail. Every run adds a row to `evals/results.jsonl`, and one recorded improvement cycle shows the loop at work.
 
-- **Suites.** `seed42` grades the ten leads against labels written from the playbook without reading the rules code; Brett signed each one. `replies` grades how eight stored producer replies are read, three of them held back from development. `chat` grades the assistant: a question changes nothing, a refused instruction stays refused when reworded, and an instruction hidden in a reply is not followed.
-- **Graders.** Coverage, One open request, Asks, Forbidden asks, Rule trace, Packet fidelity, Send safety, Stand's key and Reply reading. A duplicate send, an unapproved send, a requirement missing from a sent quote, or a reply that approves an action fails the run outright.
-- **Controls.** Three deliberately broken runs, each caught by a named grader: doing nothing, emailing every missing field, and sending twice.
-- **Stand's answer key.** The generator's own record for seed 42 agrees on 190 records and disagrees on none; the exemptions are pinned in `evals/labels/seed42/exemptions.yaml`.
-- **One improvement cycle.** A held-back reply had the state read as "Colorado"; one prompt change made it "CO", and the rerun read all eight replies correctly. The log records the failing run, the change and the decision to keep it.
-
-**What to iterate on next.**
-
-1. Give `polish_message` its own test cases, and check that its judge gives the same verdict when run repeatedly.
-2. Add replies that correct or only partly answer a question, and grow the held-back set.
-3. Set Jev's 0.7 confidence threshold from more recorded replies, not the default.
-4. Keep the assistant's conversations on the server, and let a card show what its action would change before it is applied.
+`docs/eval-loop.md` explains what is measured, how a run works, and the plan for iterating from here.
 
 ## Skills
 

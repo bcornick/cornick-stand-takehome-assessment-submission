@@ -641,3 +641,5 @@ Brett's decisions carried into milestone 1: an underwriter's value that still tr
 **A short README (Brett):** the README keeps only what a reviewer needs to start the app and what the brief asks that `ARCHITECTURE.md` does not answer (the five decisions, the eval loop and what to iterate on, the skills and hit list, the cut list, the main known limits), at about 1,750 words; the full list of known limits is `docs/build_logs/known-limits.md`.
 
 **Live by default (Brett):** `.env.example` and `compose.yaml` default to `RUN_MODE=live`, as the settings already did; a reviewer without a key sets `RUN_MODE=replay`, which the README and the demo guide say. The fresh-clone rehearsal writes `RUN_MODE=replay` into its `.env`, since it rehearses the keyless replay demo; `make eval` runs in replay as it did.
+
+**The eval loop page (Brett):** `docs/eval-loop.md` answers the brief's eval deliverable: what each grader measures against the brief's questions, the sources of truth, how a run works, the controls, the one improvement cycle, the iteration plan and the known gaps. The README's eval section is a summary that points to it.
