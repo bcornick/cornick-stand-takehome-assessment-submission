@@ -24,6 +24,7 @@ const badgeVariants = cva(
         needs: "border-accent bg-accent/10 text-accent",
         waiting: "bg-muted text-primary-hover",
         done: "bg-done/10 text-done",
+        declined: "bg-declined/10 text-declined",
       },
     },
     defaultVariants: {

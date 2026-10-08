@@ -23,6 +23,7 @@
     --color-border-strong: var(--border-strong);
     --color-soft: var(--soft);
     --color-done: var(--done);
+    --color-declined: var(--declined);
     --color-inverse: var(--inverse);
     --color-accent: var(--accent);
     --color-foreground: var(--foreground);
@@ -43,8 +44,9 @@
     /* The beige and the black of standinsurance.com: the conversation's ground and the demo controls. */
     --soft: #f3f1e6;
     --inverse: #06080b;
-    /* A colour means one thing: the accent is what needs the underwriter, --done is what is finished, grey is a wait. */
+    /* A colour means one thing: the accent is what needs the underwriter, --done is a quote sent, --declined a lead declined, grey is a wait. */
     --done: #335c3e;
+    --declined: #3f4f6f;
     --primary-foreground: oklch(0.985 0 0);
     --secondary: oklch(0.97 0 0);
     --secondary-foreground: oklch(0.205 0 0);

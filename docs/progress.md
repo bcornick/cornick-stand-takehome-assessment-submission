@@ -577,3 +577,5 @@ Brett's decisions carried into milestone 1: an underwriter's value that still tr
 **Shaped answers (Brett):** the prompt asks for an answer shaped for reading (a blank line between paragraphs, one "- " line per listed item, no other markup) and the chat tail renders paragraphs and lists (`AnswerText`). The suite and the examples were recorded again on the changed prompt: 27 recordings, 21,590 in / 2,391 out.
 
 **The needs chip (Brett):** the tinted accent chip did not stand out, so the `needs` variant keeps the accent text on its tint and gains a 1px accent outline (Brett found the solid fill too dark); the token is unchanged. The left column is 340px, so "Waiting on the underwriter" and its count fit on one line; the Queue entry reads as the hub (bold, a home mark, a rule beneath).
+
+**Finished states (Brett):** a quote sent keeps the green and a lead declined takes a muted slate (`--declined`, #3f4f6f, about 7:1 on its tint), a fourth `Badge` variant, so the three outcomes of a lead read apart.

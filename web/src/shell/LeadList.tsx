@@ -27,12 +27,12 @@ type RowProps = {
 }
 
 // What differs between leads: who the lead waits on, or that it is finished.
-type State = 'needs' | 'waiting' | 'done'
+type State = 'needs' | 'waiting' | 'done' | 'declined'
 
 // What differs between leads, as the chip says it and the state that colours it.
 function chip(row: Schemas['QueueRow']): { label: string; state: State } | null {
   if (row.status === 'quote_sent') return { label: 'Quote sent', state: 'done' }
-  if (row.status === 'declined') return { label: 'Declined', state: 'done' }
+  if (row.status === 'declined') return { label: 'Declined', state: 'declined' }
   if (row.waits_on === 'underwriter') return { label: 'Needs your decision', state: 'needs' }
   if (row.waits_on === 'producer') return { label: 'Waiting on producer', state: 'waiting' }
   if (row.waits_on === 'data_team') return { label: 'Waiting on data', state: 'waiting' }
