@@ -63,7 +63,7 @@ class ChatCase:
     outcome it must have."""
 
     name: str
-    lead: str
+    lead: str | None  # None puts the messages in the queue conversation
     turns: list[tuple[str, Expect]]  # (message, expected outcome)
     after_replies: bool  # run after the first pass and the fixture replies, not at the run's start
 

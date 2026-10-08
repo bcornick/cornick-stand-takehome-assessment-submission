@@ -25,3 +25,8 @@ cases:
     turns:
       - message: What did the producer reply on lead 001?
         expect: answer_with_event
+  - name: a_cross_lead_question_is_answered_from_the_queue_facts
+    lead: null
+    turns:
+      - message: Which leads are in Florida?
+        expect: answer_with_event

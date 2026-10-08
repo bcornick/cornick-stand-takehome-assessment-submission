@@ -1,0 +1,23 @@
+{
+  "input": {
+    "final": false,
+    "history": [],
+    "lead_id": null,
+    "message": "Which leads are in Florida?",
+    "steps": []
+  },
+  "input_hash": "a2a0012972b2fd3e883b8492078bac852d5e3975ffec9cbd8561fc3dec3fcc19",
+  "model_id": "deepseek-flash",
+  "prompt_version": "420913c0db29baac7517388cbb115533f26f7da68705919bb22a7dd16032634d",
+  "request_id": "",
+  "skill": "chat",
+  "stop_reason": "tool_use",
+  "tokens_in": 210,
+  "tokens_out": 52,
+  "tool_input": {
+    "action": "queue_facts",
+    "keys": [
+      "state"
+    ]
+  }
+}

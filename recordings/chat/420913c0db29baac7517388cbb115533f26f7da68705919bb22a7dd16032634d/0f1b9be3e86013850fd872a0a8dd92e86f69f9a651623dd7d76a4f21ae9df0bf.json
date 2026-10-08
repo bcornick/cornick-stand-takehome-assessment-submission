@@ -1,5 +1,6 @@
 {
   "input": {
+    "final": false,
     "history": [],
     "lead_id": null,
     "message": "Why is lead 000 a proposed decline?",
@@ -215,172 +216,19 @@
           ],
           "status": "in_progress"
         }
-      },
-      {
-        "action": "playbook_path",
-        "lead_id": "000",
-        "result": {
-          "pages": [
-            {
-              "declines_on_every_branch": [],
-              "effects": [],
-              "not_evaluated": [],
-              "page": "occupancy",
-              "ref": 34,
-              "waits_on": [
-                "months_unoccupied"
-              ]
-            },
-            {
-              "declines_on_every_branch": [],
-              "effects": [
-                {
-                  "committed": true,
-                  "effect": {
-                    "rule": "PP-1",
-                    "type": "decline"
-                  },
-                  "trace": {
-                    "alternatives": [],
-                    "board_path": [
-                      "07:ROOT",
-                      "07:LIVING",
-                      "07:D1"
-                    ],
-                    "choice_ids": []
-                  }
-                }
-              ],
-              "not_evaluated": [],
-              "page": "post_and_pier",
-              "ref": 35,
-              "waits_on": []
-            },
-            {
-              "declines_on_every_branch": [],
-              "effects": [],
-              "not_evaluated": [],
-              "page": "profile",
-              "ref": 36,
-              "waits_on": [
-                "kyc_score"
-              ]
-            },
-            {
-              "declines_on_every_branch": [],
-              "effects": [],
-              "not_evaluated": [],
-              "page": "replacement_cost",
-              "ref": 37,
-              "waits_on": [
-                "coverage_to_rce_ratio"
-              ]
-            },
-            {
-              "declines_on_every_branch": [],
-              "effects": [
-                {
-                  "committed": true,
-                  "effect": {
-                    "rule": "RF-1",
-                    "type": "no_action"
-                  },
-                  "trace": {
-                    "alternatives": [],
-                    "board_path": [
-                      "05:ROOT",
-                      "05:CA",
-                      "05:OK_A"
-                    ],
-                    "choice_ids": []
-                  }
-                }
-              ],
-              "not_evaluated": [],
-              "page": "roof",
-              "ref": 38,
-              "waits_on": [
-                "roof_age_years"
-              ]
-            },
-            {
-              "declines_on_every_branch": [],
-              "effects": [
-                {
-                  "committed": true,
-                  "effect": {
-                    "rule": "SD-1",
-                    "type": "no_action"
-                  },
-                  "trace": {
-                    "alternatives": [],
-                    "board_path": [
-                      "06:ROOT",
-                      "06:NC",
-                      "06:NC_OK"
-                    ],
-                    "choice_ids": []
-                  }
-                }
-              ],
-              "not_evaluated": [],
-              "page": "siding",
-              "ref": 39,
-              "waits_on": []
-            },
-            {
-              "declines_on_every_branch": [],
-              "effects": [],
-              "not_evaluated": [
-                {
-                  "producer_text": "Electrical systems were not reviewed for this quote.",
-                  "ref": "electrical",
-                  "text": "The Electrical page is not evaluated."
-                }
-              ],
-              "page": "electrical",
-              "ref": 40,
-              "waits_on": []
-            },
-            {
-              "declines_on_every_branch": [],
-              "effects": [],
-              "not_evaluated": [
-                {
-                  "producer_text": "Plumbing was not reviewed for this quote.",
-                  "ref": "plumbing",
-                  "text": "The Plumbing page is not evaluated."
-                }
-              ],
-              "page": "plumbing",
-              "ref": 41,
-              "waits_on": []
-            }
-          ]
-        }
       }
     ]
   },
-  "input_hash": "87d79baf73fa2d3ae44d1e1e5de97d59bcefa719b271cb7eb624254c76ed37bb",
+  "input_hash": "0f1b9be3e86013850fd872a0a8dd92e86f69f9a651623dd7d76a4f21ae9df0bf",
   "model_id": "deepseek-flash",
-  "prompt_version": "8ac8bac3642617ba1a017e47a2b69a7ac4a7d3fcc6007f1eb9bbfe561bc30515",
+  "prompt_version": "420913c0db29baac7517388cbb115533f26f7da68705919bb22a7dd16032634d",
   "request_id": "",
   "skill": "chat",
   "stop_reason": "tool_use",
-  "tokens_in": 198,
-  "tokens_out": 166,
+  "tokens_in": 1141,
+  "tokens_out": 51,
   "tool_input": {
-    "action": "answer",
-    "answer": "Lead 000 is a proposed decline because of the post-and-pier page: rule PP-1 fired and committed a decline. The other pages that ran produced no decline — roof and siding returned no action, and the occupancy, profile and replacement-cost pages are still waiting on values (months unoccupied, KYC score, coverage-to-RCE ratio). The electrical and plumbing pages were not evaluated.",
-    "citations": [
-      35,
-      38,
-      39,
-      34,
-      36,
-      37,
-      40,
-      41
-    ]
+    "action": "playbook_path",
+    "lead_id": "000"
   }
 }

@@ -411,7 +411,7 @@ class ChatRequest(StrictModel):
     history: list[ChatExchange] = Field(default=[], max_length=MAX_CHAT_HISTORY)
 
 
-CitationKind = Literal["event", "fact", "message", "reply", "page"]
+CitationKind = Literal["event", "fact", "message", "reply", "page", "lead"]
 
 
 class Citation(StrictModel):

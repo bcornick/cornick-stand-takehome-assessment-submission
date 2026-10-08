@@ -1,0 +1,878 @@
+{
+  "input": {
+    "final": false,
+    "history": [],
+    "lead_id": null,
+    "message": "Why is lead 000 a proposed decline?",
+    "steps": [
+      {
+        "action": "lead_summary",
+        "lead_id": "000",
+        "result": {
+          "facts": [
+            {
+              "key": "acreage",
+              "ref": 1,
+              "source": "submitted",
+              "value": 0.32
+            },
+            {
+              "key": "broker_tier",
+              "ref": 2,
+              "source": "fetched",
+              "value": "Tier 1"
+            },
+            {
+              "key": "coverage_a",
+              "ref": 3,
+              "source": "submitted",
+              "value": 1075000
+            },
+            {
+              "key": "coverage_e",
+              "ref": 4,
+              "source": "submitted",
+              "value": "100000"
+            },
+            {
+              "key": "coverage_f",
+              "ref": 5,
+              "source": "submitted",
+              "value": "1000"
+            },
+            {
+              "key": "dist_to_nearest_fire_hydrant",
+              "ref": 6,
+              "source": "submitted",
+              "value": 130
+            },
+            {
+              "key": "dwelling_type",
+              "ref": 7,
+              "source": "submitted",
+              "value": "Owner Occupied Single Family Residence"
+            },
+            {
+              "key": "dwelling_use_type",
+              "ref": 8,
+              "source": "submitted",
+              "value": "Primary"
+            },
+            {
+              "key": "effective_date",
+              "ref": 9,
+              "source": "submitted",
+              "value": "2026-07-23"
+            },
+            {
+              "key": "foundation_type",
+              "ref": 10,
+              "source": "submitted",
+              "value": "Piers"
+            },
+            {
+              "key": "has_knob_and_tube_wiring",
+              "ref": 11,
+              "source": "submitted",
+              "value": false
+            },
+            {
+              "key": "has_primary_policy_with_stand",
+              "ref": 12,
+              "source": "fetched",
+              "value": false
+            },
+            {
+              "key": "heating_source",
+              "ref": 13,
+              "source": "submitted",
+              "value": "Central Gas"
+            },
+            {
+              "key": "is_gated_community",
+              "ref": 14,
+              "source": "submitted",
+              "value": false
+            },
+            {
+              "key": "is_rental",
+              "ref": 15,
+              "source": "submitted",
+              "value": "No"
+            },
+            {
+              "key": "listed_for_sale",
+              "ref": 16,
+              "source": "submitted",
+              "value": false
+            },
+            {
+              "key": "months_unoccupied",
+              "ref": 17,
+              "source": "submitted",
+              "value": 8
+            },
+            {
+              "key": "occupation",
+              "ref": 18,
+              "source": "submitted",
+              "value": "Teacher"
+            },
+            {
+              "key": "owner_email",
+              "ref": 19,
+              "source": "submitted",
+              "value": "owner@example.com"
+            },
+            {
+              "key": "owner_phone_number",
+              "ref": 20,
+              "source": "submitted",
+              "value": "+1-555-0128"
+            },
+            {
+              "key": "p_f",
+              "ref": 21,
+              "source": "submitted",
+              "value": 0.13
+            },
+            {
+              "key": "plumbing_age_years",
+              "ref": 22,
+              "source": "submitted",
+              "value": 20
+            },
+            {
+              "key": "post_pier_supports_living_area",
+              "ref": 23,
+              "source": "submitted",
+              "value": true
+            },
+            {
+              "key": "residence_held_in_trust",
+              "ref": 24,
+              "source": "submitted",
+              "value": false
+            },
+            {
+              "key": "roof_classification",
+              "ref": 25,
+              "source": "derived",
+              "value": "Class A"
+            },
+            {
+              "key": "roof_material",
+              "ref": 26,
+              "source": "submitted",
+              "value": "Architecture Shingles"
+            },
+            {
+              "key": "siding_classification",
+              "ref": 27,
+              "source": "derived",
+              "value": "B"
+            },
+            {
+              "key": "siding_material",
+              "ref": 28,
+              "source": "submitted",
+              "value": "Stucco"
+            },
+            {
+              "key": "slope_angle_deg",
+              "ref": 29,
+              "source": "submitted",
+              "value": 10.1
+            },
+            {
+              "key": "square_feet",
+              "ref": 30,
+              "source": "submitted",
+              "value": 3900
+            },
+            {
+              "key": "structure_type",
+              "ref": 31,
+              "source": "submitted",
+              "value": "Single Family"
+            },
+            {
+              "key": "water_heater_type",
+              "ref": 32,
+              "source": "submitted",
+              "value": "Tankless"
+            }
+          ],
+          "label": "LEAD-00000042-000",
+          "lead_id": "LEAD-00000042-000",
+          "open_choices": [],
+          "open_items": [
+            {
+              "kind": "underwriter_review",
+              "lead_id": "LEAD-00000042-000",
+              "ref": 33,
+              "text": "Review this decline notice before it is sent."
+            }
+          ],
+          "status": "in_progress"
+        }
+      },
+      {
+        "action": "playbook_path",
+        "lead_id": "000",
+        "result": {
+          "pages": [
+            {
+              "declines_on_every_branch": [],
+              "effects": [],
+              "not_evaluated": [],
+              "page": "occupancy",
+              "ref": 34,
+              "waits_on": [
+                "months_unoccupied"
+              ]
+            },
+            {
+              "declines_on_every_branch": [],
+              "effects": [
+                {
+                  "committed": true,
+                  "effect": {
+                    "rule": "PP-1",
+                    "type": "decline"
+                  },
+                  "trace": {
+                    "alternatives": [],
+                    "board_path": [
+                      "07:ROOT",
+                      "07:LIVING",
+                      "07:D1"
+                    ],
+                    "choice_ids": []
+                  }
+                }
+              ],
+              "not_evaluated": [],
+              "page": "post_and_pier",
+              "ref": 35,
+              "waits_on": []
+            },
+            {
+              "declines_on_every_branch": [],
+              "effects": [],
+              "not_evaluated": [],
+              "page": "profile",
+              "ref": 36,
+              "waits_on": [
+                "kyc_score"
+              ]
+            },
+            {
+              "declines_on_every_branch": [],
+              "effects": [],
+              "not_evaluated": [],
+              "page": "replacement_cost",
+              "ref": 37,
+              "waits_on": [
+                "coverage_to_rce_ratio"
+              ]
+            },
+            {
+              "declines_on_every_branch": [],
+              "effects": [
+                {
+                  "committed": true,
+                  "effect": {
+                    "rule": "RF-1",
+                    "type": "no_action"
+                  },
+                  "trace": {
+                    "alternatives": [],
+                    "board_path": [
+                      "05:ROOT",
+                      "05:CA",
+                      "05:OK_A"
+                    ],
+                    "choice_ids": []
+                  }
+                }
+              ],
+              "not_evaluated": [],
+              "page": "roof",
+              "ref": 38,
+              "waits_on": [
+                "roof_age_years"
+              ]
+            },
+            {
+              "declines_on_every_branch": [],
+              "effects": [
+                {
+                  "committed": true,
+                  "effect": {
+                    "rule": "SD-1",
+                    "type": "no_action"
+                  },
+                  "trace": {
+                    "alternatives": [],
+                    "board_path": [
+                      "06:ROOT",
+                      "06:NC",
+                      "06:NC_OK"
+                    ],
+                    "choice_ids": []
+                  }
+                }
+              ],
+              "not_evaluated": [],
+              "page": "siding",
+              "ref": 39,
+              "waits_on": []
+            },
+            {
+              "declines_on_every_branch": [],
+              "effects": [],
+              "not_evaluated": [
+                {
+                  "producer_text": "Electrical systems were not reviewed for this quote.",
+                  "ref": "electrical",
+                  "text": "The Electrical page is not evaluated."
+                }
+              ],
+              "page": "electrical",
+              "ref": 40,
+              "waits_on": []
+            },
+            {
+              "declines_on_every_branch": [],
+              "effects": [],
+              "not_evaluated": [
+                {
+                  "producer_text": "Plumbing was not reviewed for this quote.",
+                  "ref": "plumbing",
+                  "text": "The Plumbing page is not evaluated."
+                }
+              ],
+              "page": "plumbing",
+              "ref": 41,
+              "waits_on": []
+            }
+          ]
+        }
+      },
+      {
+        "action": "lead_events",
+        "lead_id": "000",
+        "result": {
+          "events": [
+            {
+              "actor": "workflow",
+              "ref": 42,
+              "summary": "Received the lead from direct_web",
+              "type": "lead_received"
+            },
+            {
+              "actor": "workflow",
+              "ref": 43,
+              "summary": "Recorded listed_for_sale as no (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 44,
+              "summary": "Using no for listed_for_sale (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 45,
+              "summary": "Recorded residence_held_in_trust as no (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 46,
+              "summary": "Using no for residence_held_in_trust (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 47,
+              "summary": "Recorded owner_email as owner@example.com (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 48,
+              "summary": "Using owner@example.com for owner_email (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 49,
+              "summary": "Recorded owner_phone_number as +1-555-0128 (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 50,
+              "summary": "Using +1-555-0128 for owner_phone_number (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 51,
+              "summary": "Recorded occupation as Teacher (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 52,
+              "summary": "Using Teacher for occupation (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 53,
+              "summary": "Recorded effective_date as 2026-07-23 (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 54,
+              "summary": "Using 2026-07-23 for effective_date (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 55,
+              "summary": "Recorded coverage_a as 1075000 (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 56,
+              "summary": "Using 1075000 for coverage_a (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 57,
+              "summary": "Recorded coverage_e as 100000 (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 58,
+              "summary": "Using 100000 for coverage_e (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 59,
+              "summary": "Recorded coverage_f as 1000 (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 60,
+              "summary": "Using 1000 for coverage_f (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 61,
+              "summary": "Recorded dwelling_type as Owner Occupied Single Family Residence (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 62,
+              "summary": "Using Owner Occupied Single Family Residence for dwelling_type (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 63,
+              "summary": "Recorded dwelling_use_type as Primary (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 64,
+              "summary": "Using Primary for dwelling_use_type (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 65,
+              "summary": "Recorded is_rental as No (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 66,
+              "summary": "Using No for is_rental (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 67,
+              "summary": "Recorded months_unoccupied as 8 (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 68,
+              "summary": "Using 8 for months_unoccupied (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 69,
+              "summary": "Recorded is_gated_community as no (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 70,
+              "summary": "Using no for is_gated_community (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 71,
+              "summary": "Recorded acreage as 0.32 (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 72,
+              "summary": "Using 0.32 for acreage (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 73,
+              "summary": "Recorded structure_type as Single Family (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 74,
+              "summary": "Using Single Family for structure_type (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 75,
+              "summary": "Recorded siding_material as Stucco (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 76,
+              "summary": "Using Stucco for siding_material (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 77,
+              "summary": "Recorded foundation_type as Piers (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 78,
+              "summary": "Using Piers for foundation_type (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 79,
+              "summary": "Recorded post_pier_supports_living_area as yes (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 80,
+              "summary": "Using yes for post_pier_supports_living_area (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 81,
+              "summary": "Recorded square_feet as 3900 (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 82,
+              "summary": "Using 3900 for square_feet (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 83,
+              "summary": "Recorded roof_material as Architecture Shingles (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 84,
+              "summary": "Using Architecture Shingles for roof_material (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 85,
+              "summary": "Recorded heating_source as Central Gas (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 86,
+              "summary": "Using Central Gas for heating_source (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 87,
+              "summary": "Recorded has_knob_and_tube_wiring as no (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 88,
+              "summary": "Using no for has_knob_and_tube_wiring (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 89,
+              "summary": "Recorded plumbing_age_years as 20 (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 90,
+              "summary": "Using 20 for plumbing_age_years (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 91,
+              "summary": "Recorded water_heater_type as Tankless (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 92,
+              "summary": "Using Tankless for water_heater_type (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 93,
+              "summary": "Recorded dist_to_nearest_fire_hydrant as 130 (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 94,
+              "summary": "Using 130 for dist_to_nearest_fire_hydrant (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 95,
+              "summary": "Recorded slope_angle_deg as 10.1 (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 96,
+              "summary": "Using 10.1 for slope_angle_deg (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 97,
+              "summary": "Recorded p_f as 0.13 (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 98,
+              "summary": "Using 0.13 for p_f (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 99,
+              "summary": "Recorded siding_classification as B (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 100,
+              "summary": "Using B for siding_classification (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 101,
+              "summary": "Recorded roof_classification as Class A (derived)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 102,
+              "summary": "Using Class A for roof_classification (derived)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 103,
+              "summary": "Recorded siding_classification as B (derived)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 104,
+              "summary": "Using B for siding_classification (derived)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 105,
+              "summary": "The values given for months_unoccupied, dwelling_use_type, dwelling_type disagree",
+              "type": "conflict_opened"
+            },
+            {
+              "actor": "workflow",
+              "ref": 106,
+              "summary": "Triaged the fields: 43 missing, 3 conflicting",
+              "type": "triage_completed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 107,
+              "summary": "Fetched the broker tier: Tier 1",
+              "type": "provider_called"
+            },
+            {
+              "actor": "workflow",
+              "ref": 108,
+              "summary": "Fetched whether the insured has a primary policy with Stand: no",
+              "type": "provider_called"
+            },
+            {
+              "actor": "workflow",
+              "ref": 109,
+              "summary": "Could not fetch the identity screen score: it needs first_name, last_name, insured_dob",
+              "type": "provider_called"
+            },
+            {
+              "actor": "workflow",
+              "ref": 110,
+              "summary": "Could not fetch the replacement cost: it needs street_address, city, state, zip",
+              "type": "provider_called"
+            },
+            {
+              "actor": "workflow",
+              "ref": 111,
+              "summary": "Could not fetch the road access: it needs street_address, city, state, zip",
+              "type": "provider_called"
+            },
+            {
+              "actor": "workflow",
+              "ref": 112,
+              "summary": "Could not fetch the protection class: it needs street_address, city, state, zip",
+              "type": "provider_called"
+            },
+            {
+              "actor": "workflow",
+              "ref": 113,
+              "summary": "Could not fetch the distance to the nearest neighbor: it needs street_address, city, state, zip",
+              "type": "provider_called"
+            },
+            {
+              "actor": "workflow",
+              "ref": 114,
+              "summary": "Could not fetch the vegetation clearance: it needs street_address, city, state, zip",
+              "type": "provider_called"
+            },
+            {
+              "actor": "workflow",
+              "ref": 115,
+              "summary": "Recorded broker_tier as Tier 1 (fetched)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 116,
+              "summary": "Using Tier 1 for broker_tier (fetched)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 117,
+              "summary": "Recorded has_primary_policy_with_stand as no (fetched)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 118,
+              "summary": "Using no for has_primary_policy_with_stand (fetched)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 119,
+              "summary": "Triaged the fields: 41 missing, 3 conflicting",
+              "type": "triage_completed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 120,
+              "summary": "Built the action plan",
+              "type": "plan_built"
+            },
+            {
+              "actor": "workflow",
+              "ref": 121,
+              "summary": "Drafted a decline notice to owner@example.com with the subject Regarding your submission: LEAD-00000042-000",
+              "type": "intent_created"
+            },
+            {
+              "actor": "workflow",
+              "ref": 33,
+              "summary": "Waiting on the underwriter. Review this decline notice before it is sent.",
+              "type": "blocker_opened"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "input_hash": "91a9e4d48926011b4371b234c075e4091b7fb5605c5fd3f1346fa0b2ec93167c",
+  "model_id": "deepseek-flash",
+  "prompt_version": "420913c0db29baac7517388cbb115533f26f7da68705919bb22a7dd16032634d",
+  "request_id": "",
+  "skill": "chat",
+  "stop_reason": "tool_use",
+  "tokens_in": 3300,
+  "tokens_out": 136,
+  "tool_input": {
+    "action": "answer",
+    "answer": "The playbook's post-and-pier page committed a decline under rule PP-1. The lead's foundation is Piers and the post-pier supports the living area, which is the condition that page declines on. That decline is what produced the drafted decline notice now waiting on your review.",
+    "citations": [
+      35,
+      10,
+      23,
+      121,
+      33
+    ]
+  }
+}

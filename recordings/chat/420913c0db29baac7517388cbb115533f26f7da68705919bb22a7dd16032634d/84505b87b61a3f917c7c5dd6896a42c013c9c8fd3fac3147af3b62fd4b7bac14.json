@@ -1,5 +1,6 @@
 {
   "input": {
+    "final": false,
     "history": [],
     "lead_id": null,
     "message": "What did we ask the producer on lead 008?",
@@ -21,17 +22,17 @@
       }
     ]
   },
-  "input_hash": "3c951a39f2f47de93a31367ff512912c1b4b06a6466a21616862a189166b1479",
+  "input_hash": "84505b87b61a3f917c7c5dd6896a42c013c9c8fd3fac3147af3b62fd4b7bac14",
   "model_id": "deepseek-flash",
-  "prompt_version": "8ac8bac3642617ba1a017e47a2b69a7ac4a7d3fcc6007f1eb9bbfe561bc30515",
+  "prompt_version": "420913c0db29baac7517388cbb115533f26f7da68705919bb22a7dd16032634d",
   "request_id": "",
   "skill": "chat",
   "stop_reason": "tool_use",
-  "tokens_in": 198,
-  "tokens_out": 111,
+  "tokens_in": 228,
+  "tokens_out": 113,
   "tool_input": {
     "action": "answer",
-    "answer": "We sent one routine request, \"Information needed for your quote: 8924 Lakeview Blvd\". It asked two things: when the property was purchased, and what brand the electrical panel is. No reply has come back yet.",
+    "answer": "We sent one routine request, \"Information needed for your quote: 8924 Lakeview Blvd\". It asked the producer two things: when the property was purchased, and what brand the electrical panel is. No reply has come back yet.",
     "citations": [
       1
     ]

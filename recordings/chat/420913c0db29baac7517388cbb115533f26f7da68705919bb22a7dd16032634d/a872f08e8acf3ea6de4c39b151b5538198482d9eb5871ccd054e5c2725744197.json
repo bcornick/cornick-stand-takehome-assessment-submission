@@ -1,17 +1,18 @@
 {
   "input": {
+    "final": false,
     "history": [],
     "lead_id": null,
     "message": "Why is lead 000 a proposed decline?",
     "steps": []
   },
-  "input_hash": "f7dc8a97140d8c0b35883f5cc97793cf27494bd860e20719828a2cc00eb33892",
+  "input_hash": "a872f08e8acf3ea6de4c39b151b5538198482d9eb5871ccd054e5c2725744197",
   "model_id": "deepseek-flash",
-  "prompt_version": "8ac8bac3642617ba1a017e47a2b69a7ac4a7d3fcc6007f1eb9bbfe561bc30515",
+  "prompt_version": "420913c0db29baac7517388cbb115533f26f7da68705919bb22a7dd16032634d",
   "request_id": "",
   "skill": "chat",
   "stop_reason": "tool_use",
-  "tokens_in": 184,
+  "tokens_in": 213,
   "tokens_out": 51,
   "tool_input": {
     "action": "lead_summary",

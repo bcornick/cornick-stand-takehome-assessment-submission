@@ -14,7 +14,7 @@ from tests.chat.helpers import Script
 from uwh.api import runtime
 from uwh.api.app import create_app
 from uwh.chat.examples import EXAMPLE_PROMPTS
-from uwh.chat.skill import forced_call
+from uwh.chat.skill import ChatStep, forced_call
 from uwh.runtime.event_types import EventType
 from uwh.runtime.events import read_events
 from uwh.runtime.leadgen_client import LeadgenClient
@@ -119,7 +119,9 @@ def test_replay_answers_an_example_prompt_from_its_recording_and_any_other_turn_
 ) -> None:
     example = EXAMPLE_PROMPTS[0]
     settings = replay_settings(tmp_path, 7, UWH_RECORDINGS=str(tmp_path / "recordings"))
-    call = forced_call({"message": example, "lead_id": None, "history": [], "steps": []})
+    call = forced_call(
+        {"message": example, "lead_id": None, "history": [], "steps": [], "final": False}, ChatStep
+    )
     key = call.recording_key
     write_recording(
         Path(settings.recordings_dir),

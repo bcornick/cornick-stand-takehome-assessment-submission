@@ -34,8 +34,9 @@ _PROMPT_FILE = Path(__file__).with_name("prompt.md")
 # Who the chat's commands and events are written as: the actor its manifest declares.
 _ACTOR = load_manifest(Path(__file__).parent).actor
 
-# The steps one turn may take: a few reads and the answer, or one proposal. The cap is fixed.
-MAX_STEPS = 4
+# The steps one turn may take: some reads and the answer, or one proposal. The last allowed step
+# can only answer or propose. The cap is fixed.
+MAX_STEPS = 8
 
 # What the assistant says to a directive that belongs to another control of the page.
 _ELSEWHERE = {
@@ -44,12 +45,57 @@ _ELSEWHERE = {
 }
 
 # What the assistant says when a turn ends without an answer of the model's own.
-NO_ANSWER_IN_STEPS = "I could not finish looking that up. Ask again with a narrower question."
+NO_ANSWER_BEFORE_READING = (
+    "I ran out of steps before reading anything. Ask about one lead or one field."
+)
 UNREADABLE_STEP = "I could not read the assistant's reply. Ask again."
+
+# What a lookup that has already run this turn shows in place of its result.
+_REPEATED = {
+    "repeated": True,
+    "note": "You already have this result above. Answer from what you have.",
+}
+
+
+def _no_answer_after_reading(lead_names: list[str]) -> str:
+    """What the assistant says when the final call gave no answer: the leads it did read."""
+    if not lead_names:
+        return NO_ANSWER_BEFORE_READING
+    if len(lead_names) == 1:
+        named = f"lead {lead_names[0]}"
+    else:
+        named = f"leads {', '.join(lead_names[:-1])} and {lead_names[-1]}"
+    return f"I read {named} and ran out of steps. Ask about fewer leads or one field."
+
+
+class _Reply(StrictModel):
+    """The fields of a step that answers or proposes."""
+
+    answer: str | None = None
+    citations: list[int] = []  # reference numbers from this turn's lookup results
+    command_type: str | None = None
+    command_payload: dict[str, str | int | float | bool] | None = None
+    rationale: str | None = None
+
+    def _require(
+        self, action: str, needed_by_action: dict[str, tuple[str, ...]], otherwise: tuple[str, ...]
+    ) -> Self:
+        missing = [
+            name for name in needed_by_action.get(action, otherwise) if getattr(self, name) is None
+        ]
+        if missing:
+            raise ValueError(f"{action} needs {', '.join(missing)}")
+        return self
+
+
+_REPLY_NEEDS = {
+    "answer": ("answer",),
+    "propose_command": ("command_type", "command_payload", "rationale"),
+}
 
 
 # The tool input of a chat step. `action` picks what the step does; the other fields belong to one action each.
-class ChatStep(StrictModel):
+class ChatStep(_Reply):
     action: Literal[
         "lead_events",
         "lead_summary",
@@ -57,29 +103,26 @@ class ChatStep(StrictModel):
         "playbook_path",
         "current_draft",
         "queue_summary",
+        "queue_facts",
         "answer",
         "propose_command",
     ]
     lead_id: str | None = None
-    answer: str | None = None
-    citations: list[int] = []  # reference numbers from this turn's lookup results
-    command_type: str | None = None
-    command_payload: dict[str, str | int | float | bool] | None = None
-    rationale: str | None = None
+    keys: list[str] = []  # the fact keys `queue_facts` shows; empty for the address fields
 
     @model_validator(mode="after")
     def _has_what_its_action_needs(self) -> Self:
-        needed: dict[str, tuple[str, ...]] = {
-            "queue_summary": (),
-            "answer": ("answer",),
-            "propose_command": ("command_type", "command_payload", "rationale"),
-        }
-        missing = [
-            name for name in needed.get(self.action, ("lead_id",)) if getattr(self, name) is None
-        ]
-        if missing:
-            raise ValueError(f"{self.action} needs {', '.join(missing)}")
-        return self
+        needed = {**_REPLY_NEEDS, "queue_summary": (), "queue_facts": ()}
+        return self._require(self.action, needed, ("lead_id",))
+
+
+# The tool input of the last allowed step: the model may only answer, in part if it must, or propose.
+class FinalStep(_Reply):
+    action: Literal["answer", "propose_command"]
+
+    @model_validator(mode="after")
+    def _has_what_its_action_needs(self) -> Self:
+        return self._require(self.action, _REPLY_NEEDS, ())
 
 
 @dataclass(frozen=True)
@@ -91,16 +134,16 @@ class TurnResult:
     proposal_id: int | None
 
 
-def forced_call(shown: dict[str, Any]) -> ForcedToolCall:
+def forced_call(shown: dict[str, Any], step_schema: type[ChatStep | FinalStep]) -> ForcedToolCall:
     """The call: the model is shown the message, the open lead, the conversation's last exchanges
-    and what this turn has done so far."""
+    and what this turn has done so far, and must reply with a `step_schema`."""
     return ForcedToolCall(
         skill="chat",
         prompt_file=_PROMPT_FILE,
         shown=shown,
         tool_name=TOOL_NAME,
         tool_description="Look something up, answer the underwriter, or propose a command.",
-        tool_schema=ChatStep.model_json_schema(),
+        tool_schema=step_schema.model_json_schema(),
     )
 
 
@@ -164,15 +207,21 @@ def run_turn(
         "lead_id": lead_id,
         "history": [exchange.model_dump() for exchange in history],
         "steps": [],
+        "final": False,
     }
     references = References(fact_fields(env.registry))
     exchanges: list[Exchange] = []
-    answer: str | None = NO_ANSWER_IN_STEPS
+    answer: str | None = None
+    read: list[str] = []  # the leads whose lookups ran, as the model named them
+    seen: set[tuple[str, str | None, tuple[str, ...]]] = set()
     cited: list[Citation] = []
     proposal_id = None
     try:
-        for _ in range(MAX_STEPS):
-            step, made = read_tool_input(env.model, forced_call(shown), ChatStep)
+        for number in range(1, MAX_STEPS + 1):
+            shown["final"] = number == MAX_STEPS
+            step, made = read_tool_input(
+                env.model, forced_call(shown, FinalStep if shown["final"] else ChatStep), ChatStep
+            )
             exchanges += made
             if step is None:
                 answer = UNREADABLE_STEP
@@ -183,12 +232,25 @@ def run_turn(
             if step.action == "propose_command":
                 answer, proposal_id = _propose(db, env, step, lead_id)
                 break
-            lookup = look_up(db, step.action, step.lead_id, references)
-            on_step(lookup.summary)
+            if shown["final"]:
+                break
+            asked = (step.action, step.lead_id, tuple(step.keys))
+            if asked in seen:
+                result = _REPEATED
+            else:
+                seen.add(asked)
+                lookup = look_up(db, step.action, step.lead_id, step.keys, references)
+                on_step(lookup.summary)
+                result = lookup.shown
+                if step.lead_id is not None and "error" not in result:
+                    name = step.lead_id.rsplit("-", 1)[-1]
+                    read += [] if name in read else [name]
             shown["steps"] = [
                 *shown["steps"],
-                {"action": step.action, "lead_id": step.lead_id, "result": lookup.shown},
+                {"action": step.action, "lead_id": step.lead_id, "result": result},
             ]
+        if answer is None and proposal_id is None:
+            answer = _no_answer_after_reading(read)
     except RecordingMiss as miss:
         with unit_of_work(db):
             append_replay_miss(db, _context(db, env), None, miss)

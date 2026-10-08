@@ -48,7 +48,7 @@ def test_the_chat_suite_passes_its_cases_and_its_row_holds_the_grader_and_the_ca
 
     assert row["status"] == "scored" and row["suite"] == "chat"
     assert row["scores"]["Chat"]["passed"] is True, row["scores"]["Chat"]["failures"]
-    assert row["skill_results"]["chat"] == {"cases_passed": 4, "cases_total": 4, "passed": True}
+    assert row["skill_results"]["chat"] == {"cases_passed": 5, "cases_total": 5, "passed": True}
     assert row["tokens"]["in"] > 0 and row["tokens"]["out"] > 0
     assert row["cost_usd"] == 0.0
     assert row["skill_digests"]["chat"] == chat_digest(Path(uwh.__file__).parent, settings.model_id)
@@ -62,6 +62,7 @@ def test_every_turn_of_the_cases_has_the_outcome_its_case_expects(
         "proposal_card",
         "refused",
         "refused",
+        "answer_with_event",
         "answer_with_event",
     ]
     assert chat(turns).failures == []

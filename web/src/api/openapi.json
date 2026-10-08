@@ -448,7 +448,8 @@
               "fact",
               "message",
               "reply",
-              "page"
+              "page",
+              "lead"
             ],
             "title": "Kind",
             "type": "string"

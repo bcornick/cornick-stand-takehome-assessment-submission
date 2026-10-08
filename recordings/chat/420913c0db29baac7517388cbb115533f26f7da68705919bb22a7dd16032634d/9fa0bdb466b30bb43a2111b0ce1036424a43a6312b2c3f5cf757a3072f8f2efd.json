@@ -1,0 +1,135 @@
+{
+  "input": {
+    "final": false,
+    "history": [],
+    "lead_id": null,
+    "message": "Which leads are in Florida?",
+    "steps": [
+      {
+        "action": "queue_facts",
+        "lead_id": null,
+        "result": {
+          "leads": [
+            {
+              "facts": {
+                "state": null
+              },
+              "label": "LEAD-00000042-000",
+              "lead_id": "LEAD-00000042-000",
+              "ref": 1,
+              "status": "received",
+              "waits_on": null
+            },
+            {
+              "facts": {
+                "state": "CA"
+              },
+              "label": "LEAD-00000042-001",
+              "lead_id": "LEAD-00000042-001",
+              "ref": 2,
+              "status": "received",
+              "waits_on": null
+            },
+            {
+              "facts": {
+                "state": "OR"
+              },
+              "label": "6496 Old Mill Rd",
+              "lead_id": "LEAD-00000042-002",
+              "ref": 3,
+              "status": "received",
+              "waits_on": null
+            },
+            {
+              "facts": {
+                "state": "CO"
+              },
+              "label": "9273 Hillside Ct",
+              "lead_id": "LEAD-00000042-003",
+              "ref": 4,
+              "status": "received",
+              "waits_on": null
+            },
+            {
+              "facts": {
+                "state": "FL"
+              },
+              "label": "3948 Old Mill Rd",
+              "lead_id": "LEAD-00000042-004",
+              "ref": 5,
+              "status": "received",
+              "waits_on": null
+            },
+            {
+              "facts": {
+                "state": null
+              },
+              "label": "3567 Lakeview Blvd",
+              "lead_id": "LEAD-00000042-005",
+              "ref": 6,
+              "status": "received",
+              "waits_on": null
+            },
+            {
+              "facts": {
+                "state": null
+              },
+              "label": "3730 Hillside Ct",
+              "lead_id": "LEAD-00000042-006",
+              "ref": 7,
+              "status": "received",
+              "waits_on": null
+            },
+            {
+              "facts": {
+                "state": "FL"
+              },
+              "label": "4452 Meadowlark Ln",
+              "lead_id": "LEAD-00000042-007",
+              "ref": 8,
+              "status": "received",
+              "waits_on": null
+            },
+            {
+              "facts": {
+                "state": "CA"
+              },
+              "label": "8924 Lakeview Blvd",
+              "lead_id": "LEAD-00000042-008",
+              "ref": 9,
+              "status": "received",
+              "waits_on": null
+            },
+            {
+              "facts": {
+                "state": "FL"
+              },
+              "label": "903 Lakeview Blvd",
+              "lead_id": "LEAD-00000042-009",
+              "ref": 10,
+              "status": "received",
+              "waits_on": null
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "input_hash": "9fa0bdb466b30bb43a2111b0ce1036424a43a6312b2c3f5cf757a3072f8f2efd",
+  "model_id": "deepseek-flash",
+  "prompt_version": "420913c0db29baac7517388cbb115533f26f7da68705919bb22a7dd16032634d",
+  "request_id": "",
+  "skill": "chat",
+  "stop_reason": "tool_use",
+  "tokens_in": 638,
+  "tokens_out": 100,
+  "tool_input": {
+    "action": "answer",
+    "answer": "Three leads are in Florida: 3948 Old Mill Rd, 4452 Meadowlark Ln, and 903 Lakeview Blvd.",
+    "citations": [
+      5,
+      8,
+      10
+    ]
+  }
+}

@@ -12,7 +12,16 @@ import pytest
 from tests.chat.helpers import Script
 from tests.runtime.helpers import RULESET, RUN_START, command_environment, events_of, insert_run
 from uwh.api.views import ChatExchange, Citation
-from uwh.chat.skill import MAX_STEPS, NO_ANSWER_IN_STEPS, UNREADABLE_STEP, TurnResult, run_turn
+from uwh.chat.skill import (
+    MAX_STEPS,
+    NO_ANSWER_BEFORE_READING,
+    ChatStep,
+    FinalStep,
+    UNREADABLE_STEP,
+    TurnResult,
+    forced_call,
+    run_turn,
+)
 from uwh.runtime.event_types import BlockerDetail, EventType
 from uwh.runtime.events import EventContext, read_events
 from uwh.runtime.leadgen_client import LeadgenClient
@@ -112,16 +121,74 @@ def test_a_question_writes_only_the_model_calls(
     assert {e.actor for e in written} == {"assistant"} and {e.lead_id for e in written} == {LEAD}
 
 
-def test_a_turn_stops_at_the_cap_and_makes_no_further_call(
+def test_a_turn_that_still_gives_no_answer_on_the_final_call_reports_the_leads_it_read(
     db: sqlite3.Connection, scripted: Callable[..., tuple[RunEnvironment, Script]]
 ) -> None:
     env, script = scripted(*[READ_EVENTS] * (MAX_STEPS + 3))
 
     turn = turn_on(db, env, "q")
 
-    assert turn.answer == NO_ANSWER_IN_STEPS
+    assert turn.answer == "I read lead 1 and ran out of steps. Ask about fewer leads or one field."
     assert len(script.shown) == MAX_STEPS
     assert len(script.tool_inputs) == 3
+
+
+def test_a_turn_that_read_nothing_says_so_when_it_runs_out_of_steps(
+    db: sqlite3.Connection, scripted: Callable[..., tuple[RunEnvironment, Script]]
+) -> None:
+    env, _ = scripted(*[{"action": "queue_summary"}] * MAX_STEPS)
+
+    assert turn_on(db, env, "q").answer == NO_ANSWER_BEFORE_READING
+
+
+def test_the_last_allowed_step_is_shown_as_final_and_cannot_look_anything_up(
+    db: sqlite3.Connection, scripted: Callable[..., tuple[RunEnvironment, Script]]
+) -> None:
+    env, script = scripted(
+        *[READ_EVENTS] * (MAX_STEPS - 1),
+        {"action": "answer", "answer": "Partly: it arrived by web.", "citations": [1]},
+    )
+
+    turn = turn_on(db, env, "q")
+
+    assert [shown["final"] for shown in script.shown] == [False] * (MAX_STEPS - 1) + [True]
+    assert turn.answer == "Partly: it arrived by web." and [c.number for c in turn.citations] == [1]
+    last = forced_call({"final": True}, FinalStep).tool_schema
+    assert last["properties"]["action"]["enum"] == ["answer", "propose_command"]
+    open_call = forced_call({"final": False}, ChatStep).tool_schema
+    assert "lead_events" in open_call["properties"]["action"]["enum"]
+
+
+def test_a_repeated_lookup_runs_once_and_the_model_is_told_so(
+    db: sqlite3.Connection, scripted: Callable[..., tuple[RunEnvironment, Script]]
+) -> None:
+    env, script = scripted(READ_EVENTS, READ_EVENTS, {"action": "answer", "answer": "x"})
+    lines: list[str] = []
+
+    run_turn(db, env, "q", LEAD, [], lines.append)
+
+    assert lines == ["Read the events of lead 1: 1 event"]
+    first, second = script.shown[2]["steps"]
+    assert "events" in first["result"]
+    assert second["result"] == {
+        "repeated": True,
+        "note": "You already have this result above. Answer from what you have.",
+    }
+
+
+def test_a_question_about_several_leads_yields_no_command(
+    db: sqlite3.Connection, scripted: Callable[..., tuple[RunEnvironment, Script]]
+) -> None:
+    env, script = scripted(
+        {"action": "queue_facts", "keys": ["state"]},
+        {"action": "answer", "answer": "None.", "citations": [1]},
+    )
+
+    turn = run_turn(db, env, "Which leads are in Florida?", None, [], lambda _line: None)
+
+    assert turn.proposal_id is None and open_proposals(db) == []
+    (row,) = script.shown[1]["steps"][0]["result"]["leads"]
+    assert row["lead_id"] == LEAD and list(row["facts"]) == ["state"]
 
 
 def test_a_proposal_stores_a_card_and_the_answer_points_to_it(
@@ -228,5 +295,6 @@ def test_the_model_is_shown_the_message_the_lead_the_history_and_nothing_else(
             "lead_id": None,
             "history": [{"message": "Is it vacant?", "reply": "The records do not say."}],
             "steps": [],
+            "final": False,
         }
     ]

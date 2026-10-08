@@ -1,17 +1,18 @@
 {
   "input": {
+    "final": false,
     "history": [],
     "lead_id": "LEAD-00000042-001",
     "message": "What did the producer reply on lead 001?",
     "steps": []
   },
-  "input_hash": "2bb9321e8c661b065c7ff909a16f116fb6f4ab9b540e6a7715fbd06521a362d0",
+  "input_hash": "c3f76e55a14d3a0f9988fec81886b3381c2c941437a9df6e59f9f17273eab998",
   "model_id": "deepseek-flash",
-  "prompt_version": "8ac8bac3642617ba1a017e47a2b69a7ac4a7d3fcc6007f1eb9bbfe561bc30515",
+  "prompt_version": "420913c0db29baac7517388cbb115533f26f7da68705919bb22a7dd16032634d",
   "request_id": "",
   "skill": "chat",
   "stop_reason": "tool_use",
-  "tokens_in": 193,
+  "tokens_in": 222,
   "tokens_out": 49,
   "tool_input": {
     "action": "messages",

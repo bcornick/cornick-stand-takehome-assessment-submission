@@ -14,6 +14,7 @@ from uwh.chat.tools import (
     look_up,
     messages,
     playbook_path,
+    queue_facts,
     queue_summary,
 )
 from uwh.rules.models import (
@@ -81,10 +82,10 @@ def test_a_thing_shown_twice_keeps_its_number(db: sqlite3.Connection) -> None:
 def test_a_lead_is_found_by_the_end_of_its_id_and_an_unknown_one_is_an_error(
     db: sqlite3.Connection,
 ) -> None:
-    assert look_up(db, "lead_summary", "2", References({})).shown["lead_id"] == "L-2"
-    assert "L-9" in look_up(db, "lead_events", "L-9", References({})).shown["error"]
+    assert look_up(db, "lead_summary", "2", [], References({})).shown["lead_id"] == "L-2"
+    assert "L-9" in look_up(db, "lead_events", "L-9", [], References({})).shown["error"]
     # The empty name ends both ids, so it names no one lead.
-    assert "error" in look_up(db, "lead_summary", "", References({})).shown
+    assert "error" in look_up(db, "lead_summary", "", [], References({})).shown
 
 
 def test_the_summary_holds_the_status_and_cites_an_item_by_the_event_that_opened_it(
@@ -232,3 +233,29 @@ def test_each_citation_carries_its_source_line(db: sqlite3.Connection) -> None:
         "Playbook page: Roof",
         "Fact: Effective date",
     ]
+
+
+def test_the_queue_facts_are_one_row_per_lead_with_what_it_waits_on_and_a_lead_citation(
+    db: sqlite3.Connection,
+) -> None:
+    references = References({"city": FactField(key="city", label="City", kind="text", options=[])})
+
+    lookup = queue_facts(db, [], references)
+
+    waiting, free = sorted(lookup.shown["leads"], key=lambda row: row["lead_id"], reverse=True)
+    assert waiting["lead_id"] == "L-2" and waiting["status"] == "received"
+    assert waiting["waits_on"] == {"kind": "underwriter_review", "owner": "underwriter"}
+    assert free["waits_on"] is None
+    assert list(free["facts"]) == ["street_address", "city", "state", "zip", "county"]
+    assert [c.kind for c in references.resolve(row["ref"] for row in lookup.shown["leads"])] == [
+        "lead",
+        "lead",
+    ]
+    assert lookup.summary == "Read 2 leads: street_address, City, state, zip, county"
+
+
+def test_the_queue_facts_hold_the_fields_asked_for(db: sqlite3.Connection) -> None:
+    lookup = queue_facts(db, ["county"], References({}))
+
+    assert all(list(row["facts"]) == ["county"] for row in lookup.shown["leads"])
+    assert lookup.summary == "Read 2 leads: county"

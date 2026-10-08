@@ -16,6 +16,7 @@ from uwh.rules.models import ActionPlan
 from uwh.rules.registry import FactField
 from uwh.runtime.event_types import REQUEST_KINDS, EventType
 from uwh.runtime.facts import effective_facts
+from uwh.runtime.waits import primary_next_action
 from uwh.skills.steps import lead_label
 
 
@@ -174,6 +175,37 @@ def queue_summary(db: sqlite3.Connection, references: References) -> Lookup:
     )
 
 
+# The fields `queue_facts` shows when the step names none.
+_ADDRESS_KEYS = ["street_address", "city", "state", "zip", "county"]
+
+
+def queue_facts(db: sqlite3.Connection, keys: list[str], references: References) -> Lookup:
+    """One row per lead of the run: its status, what it waits on and the values of the fields asked
+    for (the address fields when none are), each lead cited as a whole."""
+    asked = keys or _ADDRESS_KEYS
+    rows = []
+    for lead_id, status in db.execute(
+        "SELECT lead_id, status FROM leads ORDER BY rowid"
+    ).fetchall():
+        facts = effective_facts(db, lead_id)
+        waiting = primary_next_action(db, lead_id)
+        label = lead_label(db, lead_id)
+        rows.append(
+            {
+                "ref": references.number(lead_id, "lead", lead_id, f"Lead: {label}"),
+                "lead_id": lead_id,
+                "label": label,
+                "status": status,
+                "waits_on": None
+                if waiting is None
+                else {"kind": waiting.kind, "owner": waiting.owner},
+                "facts": {key: facts[key].value if key in facts else None for key in asked},
+            }
+        )
+    fields = ", ".join(references.fact_label(key) for key in asked)
+    return Lookup({"leads": rows}, f"Read {_count(len(rows), 'lead', 'leads')}: {fields}")
+
+
 def _intents(db: sqlite3.Connection, lead_id: str) -> list[dict[str, Any]]:
     """The lead's intents in the order of the detail's drafts: round, then insertion."""
     rows = db.execute(
@@ -281,11 +313,17 @@ LEAD_LOOKUPS: dict[str, Callable[[sqlite3.Connection, str, References], Lookup]]
 
 
 def look_up(
-    db: sqlite3.Connection, action: str, named_lead: str | None, references: References
+    db: sqlite3.Connection,
+    action: str,
+    named_lead: str | None,
+    keys: list[str],
+    references: References,
 ) -> Lookup:
     """Answer a lookup step. A lead that cannot be found is an error result, shown to the model."""
     if action == "queue_summary":
         return queue_summary(db, references)
+    if action == "queue_facts":
+        return queue_facts(db, keys, references)
     lead_id = None if named_lead is None else find_lead(db, named_lead)
     if lead_id is None:
         return Lookup({"error": f"there is no lead {named_lead}"}, f"Found no lead {named_lead}")

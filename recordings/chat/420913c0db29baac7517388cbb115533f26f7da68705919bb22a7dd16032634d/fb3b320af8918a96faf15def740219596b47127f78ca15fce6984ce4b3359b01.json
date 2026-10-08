@@ -1,0 +1,720 @@
+{
+  "input": {
+    "final": false,
+    "history": [],
+    "lead_id": "LEAD-00000042-008",
+    "message": "What was most recently recorded for this lead?",
+    "steps": [
+      {
+        "action": "lead_events",
+        "lead_id": "LEAD-00000042-008",
+        "result": {
+          "events": [
+            {
+              "actor": "workflow",
+              "ref": 1,
+              "summary": "Received the lead from broker_email",
+              "type": "lead_received"
+            },
+            {
+              "actor": "workflow",
+              "ref": 2,
+              "summary": "Recorded street_address as 8924 Lakeview Blvd (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 3,
+              "summary": "Using 8924 Lakeview Blvd for street_address (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 4,
+              "summary": "Recorded city as Santa Rosa (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 5,
+              "summary": "Using Santa Rosa for city (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 6,
+              "summary": "Recorded county as Sonoma (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 7,
+              "summary": "Using Sonoma for county (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 8,
+              "summary": "Recorded state as CA (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 9,
+              "summary": "Using CA for state (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 10,
+              "summary": "Recorded zip as 95404 (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 11,
+              "summary": "Using 95404 for zip (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 12,
+              "summary": "Recorded broker_tier as Tier 2 (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 13,
+              "summary": "Using Tier 2 for broker_tier (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 14,
+              "summary": "Recorded has_primary_policy_with_stand as no (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 15,
+              "summary": "Using no for has_primary_policy_with_stand (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 16,
+              "summary": "Recorded listed_for_sale as no (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 17,
+              "summary": "Using no for listed_for_sale (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 18,
+              "summary": "Recorded first_name as Lena (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 19,
+              "summary": "Using Lena for first_name (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 20,
+              "summary": "Recorded last_name as Ahn (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 21,
+              "summary": "Using Ahn for last_name (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 22,
+              "summary": "Recorded residence_held_in_trust as no (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 23,
+              "summary": "Using no for residence_held_in_trust (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 24,
+              "summary": "Recorded owner_email as owner@example.com (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 25,
+              "summary": "Using owner@example.com for owner_email (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 26,
+              "summary": "Recorded owner_phone_number as +1-555-0158 (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 27,
+              "summary": "Using +1-555-0158 for owner_phone_number (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 28,
+              "summary": "Recorded insured_dob as 1975-04-17 (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 29,
+              "summary": "Using 1975-04-17 for insured_dob (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 30,
+              "summary": "Recorded number_of_residents as 4 (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 31,
+              "summary": "Using 4 for number_of_residents (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 32,
+              "summary": "Recorded kyc_score as 2 (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 33,
+              "summary": "Using 2 for kyc_score (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 34,
+              "summary": "Recorded effective_date as 2026-08-01 (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 35,
+              "summary": "Using 2026-08-01 for effective_date (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 36,
+              "summary": "Recorded coverage_a as 875000 (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 37,
+              "summary": "Using 875000 for coverage_a (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 38,
+              "summary": "Recorded coverage_e as 100000 (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 39,
+              "summary": "Using 100000 for coverage_e (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 40,
+              "summary": "Recorded coverage_f as 3000 (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 41,
+              "summary": "Using 3000 for coverage_f (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 42,
+              "summary": "Recorded dwelling_type as Owner Occupied Single Family Residence (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 43,
+              "summary": "Using Owner Occupied Single Family Residence for dwelling_type (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 44,
+              "summary": "Recorded dwelling_use_type as Primary (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 45,
+              "summary": "Using Primary for dwelling_use_type (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 46,
+              "summary": "Recorded is_rental as No (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 47,
+              "summary": "Using No for is_rental (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 48,
+              "summary": "Recorded months_unoccupied as 0 (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 49,
+              "summary": "Using 0 for months_unoccupied (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 50,
+              "summary": "Recorded year_built as 1993 (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 51,
+              "summary": "Using 1993 for year_built (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 52,
+              "summary": "Recorded pool_type as None (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 53,
+              "summary": "Using None for pool_type (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 54,
+              "summary": "Recorded pool_security as None (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 55,
+              "summary": "Using None for pool_security (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 56,
+              "summary": "Recorded pool_has_diving_board_or_slide as no (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 57,
+              "summary": "Using no for pool_has_diving_board_or_slide (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 58,
+              "summary": "Recorded is_gated_community as no (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 59,
+              "summary": "Using no for is_gated_community (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 60,
+              "summary": "Recorded acreage as 2.47 (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 61,
+              "summary": "Using 2.47 for acreage (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 62,
+              "summary": "Recorded has_animals as no (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 63,
+              "summary": "Using no for has_animals (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 64,
+              "summary": "Recorded structure_type as Single Family (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 65,
+              "summary": "Using Single Family for structure_type (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 66,
+              "summary": "Recorded construction_type as Frame (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 67,
+              "summary": "Using Frame for construction_type (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 68,
+              "summary": "Recorded siding_material as Stucco (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 69,
+              "summary": "Using Stucco for siding_material (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 70,
+              "summary": "Recorded foundation_type as Slab (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 71,
+              "summary": "Using Slab for foundation_type (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 72,
+              "summary": "Recorded square_feet as 3200 (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 73,
+              "summary": "Using 3200 for square_feet (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 74,
+              "summary": "Recorded num_stories as 1 (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 75,
+              "summary": "Using 1 for num_stories (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 76,
+              "summary": "Recorded roof_replacement_year as 2017 (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 77,
+              "summary": "Using 2017 for roof_replacement_year (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 78,
+              "summary": "Recorded roof_material as Standing Seam Metal (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 79,
+              "summary": "Using Standing Seam Metal for roof_material (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 80,
+              "summary": "Recorded roof_shape as Gable (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 81,
+              "summary": "Using Gable for roof_shape (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 82,
+              "summary": "Recorded heating_source as Central Gas (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 83,
+              "summary": "Using Central Gas for heating_source (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 84,
+              "summary": "Recorded has_knob_and_tube_wiring as no (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 85,
+              "summary": "Using no for has_knob_and_tube_wiring (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 86,
+              "summary": "Recorded electrical_panel_size_amps as 200 (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 87,
+              "summary": "Using 200 for electrical_panel_size_amps (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 88,
+              "summary": "Recorded plumbing_age_years as 6 (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 89,
+              "summary": "Using 6 for plumbing_age_years (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 90,
+              "summary": "Recorded water_heater_type as Tankless (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 91,
+              "summary": "Using Tankless for water_heater_type (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 92,
+              "summary": "Recorded fire_alarm as Central Alarm (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 93,
+              "summary": "Using Central Alarm for fire_alarm (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 94,
+              "summary": "Recorded distance_to_fire_department as 0.9 (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 95,
+              "summary": "Using 0.9 for distance_to_fire_department (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 96,
+              "summary": "Recorded fire_department_type as Mostly Career (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 97,
+              "summary": "Using Mostly Career for fire_department_type (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 98,
+              "summary": "Recorded dist_to_nearest_fire_hydrant as 65 (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 99,
+              "summary": "Using 65 for dist_to_nearest_fire_hydrant (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 100,
+              "summary": "Recorded road_access as Multiple Access Points (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 101,
+              "summary": "Using Multiple Access Points for road_access (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 102,
+              "summary": "Recorded protection_class as 5 (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 103,
+              "summary": "Using 5 for protection_class (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 104,
+              "summary": "Recorded is_7a_compliant as yes (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 105,
+              "summary": "Using yes for is_7a_compliant (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 106,
+              "summary": "Recorded roof_classification as Class A (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 107,
+              "summary": "Using Class A for roof_classification (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 108,
+              "summary": "Recorded p_f as 0.14 (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 109,
+              "summary": "Using 0.14 for p_f (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 110,
+              "summary": "Recorded vegetation_clearance as Adequate (submitted)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 111,
+              "summary": "Using Adequate for vegetation_clearance (submitted)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 112,
+              "summary": "Recorded roof_classification as Class A (derived)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 113,
+              "summary": "Using Class A for roof_classification (derived)",
+              "type": "fact_selected"
+            },
+            {
+              "actor": "workflow",
+              "ref": 114,
+              "summary": "Recorded siding_classification as B (derived)",
+              "type": "fact_observed"
+            },
+            {
+              "actor": "workflow",
+              "ref": 115,
+              "summary": "Using B for siding_classification (derived)",
+              "type": "fact_selected"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "input_hash": "fb3b320af8918a96faf15def740219596b47127f78ca15fce6984ce4b3359b01",
+  "model_id": "deepseek-flash",
+  "prompt_version": "420913c0db29baac7517388cbb115533f26f7da68705919bb22a7dd16032634d",
+  "request_id": "",
+  "skill": "chat",
+  "stop_reason": "tool_use",
+  "tokens_in": 4531,
+  "tokens_out": 58,
+  "tool_input": {
+    "action": "lead_events",
+    "lead_id": "LEAD-00000042-008"
+  }
+}

@@ -12,7 +12,7 @@ This is a take-home submission for an Agentic Engineer role, graded on clean cod
 | Viewport | desktop only, at least 1280px wide |
 | Left column | 280px |
 | Right panel | as wide as its content, up to 700px, laid over the conversation |
-| Model calls per turn | at most 8, validation retries included (`MAX_STEPS` stays 4 and `read_tool_input` retries once) |
+| Model calls per turn | at most 16, validation retries included (`MAX_STEPS` is 8 and `read_tool_input` retries once) |
 | Exchanges sent with each message | the last 4 of the open conversation |
 | Refetch interval | 5 seconds (`REFRESH_MILLISECONDS` in `web/src/App.tsx`) |
 | Accent token | #601421 |
@@ -102,9 +102,10 @@ Named read functions in `src/uwh/chat/tools.py`, each over the views the pages u
 | Playbook path | the plan's effects, waits and not-evaluated notes grouped by page | the lead plus the page key (`Graph.id`) |
 | Current draft | the text of the lead's latest draft | its intent id |
 | Queue summary | the run summary and the open items of every lead | an item: the event that opened it |
+| Queue facts | one row per lead of the run: status, what it waits on, and the registry fields named in `keys` (the address fields when none are) | the lead (kind `lead`) |
 
 - **Reference numbers.** Every result item carries a turn-local reference number. The server keeps the map from number to lead id, kind and immutable id for the turn. The model sees numbers, never event ids.
-- **Citing.** `ChatStep` names the six lookups, `answer` and `propose_command`; an answer cites reference numbers. The server keeps only citations that appeared in this turn's results and returns them resolved. This replaces the `shown_ids` check in `run_turn`.
+- **Citing.** `ChatStep` names the seven lookups, `answer` and `propose_command`; an answer cites reference numbers. A question about several leads starts with the queue facts, so a cross-lead answer can cite each lead. On a turn's last allowed step the model is shown `final: true` and a tool that offers only `answer` and `propose_command`, so it answers from what it has, partially if it must; only a final call that still gives no answer reaches `NO_ANSWER_IN_STEPS`, which names the leads that were read. A lookup repeated with the same arguments in one turn is not run again: the step is recorded as repeated and the model is told to answer. The server keeps only citations that appeared in this turn's results and returns them resolved. This replaces the `shown_ids` check in `run_turn`.
 - **Schema.** The chat response schema changes, so `web/src/api/openapi.json` and `web/src/api/types.ts` are regenerated. The route declares its event models in its OpenAPI response, so `tools/export_openapi.py` carries them.
 - **Chips.** A citation renders as a numbered chip, and under the answer one source line per citation in number order ("1 · Fact: Roof material, lead 008", "2 · Email: Information needed for your quote, lead 008", "4 · Playbook page: Fire simulation, lead 003"), from `Citation.text`, which the lookup writes when it numbers the item. The chip and its line open the same panel view. The panel shows no database id: an event is headed by its sentence and its time, and a fact's source link reads "Recorded <time>".
 - **Pages.** The stored plan holds no per-page record, so the playbook lookup and the page view group what the plan already holds by page key, which is `Graph.id`. An effect's page is the page number at the start of its `trace.board_path` (`04:ROOT`), mapped to the graph whose `page` path carries that number; a decline on every branch has an empty `board_path` and is grouped by its first branch's `board_path` in `trace.alternatives`; `undecided` names its graph; a `not_evaluated` note names a built page or a page with no graph (`plumbing`, `electrical`), and the latter is a page of its own with the note as its only content. Nothing re-walks a graph on read and the rules core does not change. A page view shows its effect lines (`effectLine` in `web/src/lead/DetailPane.tsx`), the board path ids, its waits and its notes; the facts a page read are not shown.

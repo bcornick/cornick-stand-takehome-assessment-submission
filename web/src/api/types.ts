@@ -431,7 +431,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "event" | "fact" | "message" | "reply" | "page";
+            kind: "event" | "fact" | "message" | "reply" | "page" | "lead";
             /** Lead Id */
             lead_id: string;
             /** Number */
