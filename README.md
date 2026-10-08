@@ -46,16 +46,35 @@ Ports: the app is on 8000, Stand's lead generator on 8081 and the mailbox on 802
 
 **4. What the underwriter sees.** A lead list with a short tag on each row saying what is waiting and on whom. Each lead opens as a conversation: the first line says what the underwriter needs to do and why, then what the system did as plain sentences, with a card wherever the underwriter decides. Any line opens its evidence (the fact and its source, the playbook page, the email) in a side panel. An assistant answers questions from the record and turns instructions into cards; it cannot approve or send anything.
 
-**5. Integrations.**
+**5. Integrations.** What is connected, what is stubbed, and what I would wire in next.
 
 | Service | What it gives | Status |
 |---|---|---|
 | Stand's lead generator and mailbox | the queue, email out, replies tracked | connected |
 | DeepSeek (`deepseek-flash`) | reads replies, softens request wording, answers the assistant's questions | connected |
 | Jev (TypeSafe) | a first reading of each reply, with a confidence | connected, optional |
-| Replacement cost, Verisk PPC, identity screen, Stand's fire model and geospatial data, Stand's policy systems | replacement cost, protection class, KYC score, fire probability, slope, neighbour distance, vegetation, road access, broker tier | stand-ins |
+| Replacement cost (such as Verisk 360Value), Verisk PPC, an identity screen, Stand's fire model and geospatial data, Stand's policy systems | replacement cost, protection class, KYC score, fire probability, slope, neighbour distance, vegetation, road access, broker tier | stubbed |
 
-A stand-in answers from data captured for seed 42 and checks the inputs a real lookup would need: with no street address, the address lookups report blocked. Replacing the stand-ins with real services comes first on the hit list, because looked-up values spare the producer the most questions. A real inbox, in place of the paste box and the stored replies, comes next.
+A stub answers from data captured for seed 42, and checks the inputs a real lookup would need: with no street address, the address lookups report blocked. Wiring these to the real services comes first.
+
+**Next: data that removes questions to the producer.** On the first pass, the nine requests ask the producer 95 questions. About half (47) are facts about the property that a data service could answer instead:
+
+| Data | Questions it could answer (times asked) | Example sources |
+|---|---|---|
+| Property records | stories (5), square feet (3), purchase date (3), lot size (2), structure type (2), year built (1) | ATTOM, Cotality (CoreLogic), county assessor data |
+| Aerial imagery | roof shape (4), roof material (3), pool type (2), deck (1) | Moody's CAPE Analytics, EagleView, Nearmap |
+| Fire protection | distance to a hydrant (4), fire department type (3), distance to the fire station (2) | Verisk PPC, hydrant and station locations from municipal GIS or OpenStreetMap |
+| Address validation | zip (3), state (2), city (1); a complete address also unblocks the other lookups | Smarty, Google Address Validation |
+| Building permits | water heater age (3), plumbing age (2), roof replacement year (1) | BuildZoom, Shovels (partial: only permitted work is recorded) |
+
+Wiring one in means a change to field triage: today it asks the producer for every field the producer may edit, and would instead look the field up first and ask only when the lookup finds nothing. A looked-up value carries its source, as fetched values do today, and the producer can still correct it. What only the client knows is still asked: coverage amounts, trusts, animals, residents, dates of birth.
+
+Two more would make the underwriter's day easier without removing questions:
+
+- **Loss history** (LexisNexis C.L.U.E. Property): prior claims on the property, a standard underwriting check the playbook does not yet use.
+- **A real inbox** (the producer's email through Gmail or Microsoft 365), so replies arrive on their own instead of through the paste box.
+
+Most of these services are sold under contract with no public sandbox, so none is wired in for the proof of concept.
 
 ## Architecture
 
