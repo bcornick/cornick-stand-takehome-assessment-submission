@@ -15,7 +15,7 @@ type Props = {
 }
 
 const TITLES: Record<PanelTarget['kind'], string> = {
-  event: 'Event',
+  event: 'Event timeline',
   fact: 'Fact',
   message: 'Message',
   reply: 'Reply',
