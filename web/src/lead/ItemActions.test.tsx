@@ -202,7 +202,8 @@ describe('a draft card', () => {
     const posted = stubApi()
     item(packetItem)
     expect(screen.getByRole('button', { name: 'Send quote' })).toBeEnabled()
-    expect(screen.getByRole('button', { name: 'Reject' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Decline lead' })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: 'Reject' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Approve' })).toBeNull()
     expect(screen.queryByLabelText('Notes')).toBeNull()
 
@@ -224,30 +225,33 @@ describe('a draft card', () => {
     ])
   })
 
-  it('rejects a draft with the note typed', async () => {
+  it('declines the lead from its quote with the reason for the decline, which withdraws the quote', async () => {
     const posted = stubApi()
     item(packetItem)
-    await userEvent.click(screen.getByRole('button', { name: 'Reject' }))
-    expect(reasonForm().getByRole('button', { name: 'Reject' })).toBeEnabled()
+    await userEvent.click(screen.getByRole('button', { name: 'Decline lead' }))
+    expect(screen.getByText(/The quote is withdrawn/)).toBeInTheDocument()
+    const confirm = reasonForm().getByRole('button', { name: 'Decline lead' })
+    expect(confirm).toBeDisabled()
+    expect(confirm).toHaveClass('button-destructive')
 
-    await userEvent.type(reasonForm().getByLabelText('Notes'), 'the roof is wrong')
-    await userEvent.click(reasonForm().getByRole('button', { name: 'Reject' }))
+    await userEvent.type(reasonForm().getByLabelText('Reason for the decline, kept on file'), 'the roof is wrong')
+    await userEvent.click(confirm)
 
     expect(posted[0]).toEqual({
       path: '/api/commands',
-      body: { type: 'reject', payload: { item_id: 17, reason: 'the roof is wrong' } },
+      body: { type: 'decline_lead', payload: { lead_id: 'LEAD-1', reason: 'the roof is wrong' } },
     })
   })
 
   it('replaces the choices with the chosen one’s form, one button per action, and Cancel brings them back', async () => {
     const posted = stubApi()
     item(packetItem)
-    await userEvent.click(screen.getByRole('button', { name: 'Reject' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Decline lead' }))
     expect(screen.queryByRole('button', { name: 'Send quote' })).toBeNull()
-    expect(screen.getAllByRole('button', { name: 'Reject' })).toHaveLength(1)
+    expect(screen.getAllByRole('button', { name: 'Decline lead' })).toHaveLength(1)
     await userEvent.click(reasonForm().getByRole('button', { name: 'Cancel' }))
 
-    expect(screen.queryByLabelText('Notes')).toBeNull()
+    expect(screen.queryByLabelText('Reason for the decline, kept on file')).toBeNull()
     expect(screen.getByRole('button', { name: 'Send quote' })).toBeInTheDocument()
     expect(posted).toEqual([])
   })
@@ -372,7 +376,7 @@ describe('a draft card', () => {
   it('folds the subject and body in a preview, and Edit inside it opens a form whose Save edits posts the new text with no reason', async () => {
     const posted = stubApi()
     item(packetItem)
-    const preview = screen.getByText('Preview the packet').closest('details')!
+    const preview = screen.getByText('Preview or edit the packet').closest('details')!
     expect(preview).not.toHaveAttribute('open')
     expect(within(preview).getByText('Your quote')).toBeInTheDocument()
     expect(within(preview).getByText('Coverage A: $500,000')).toBeInTheDocument()

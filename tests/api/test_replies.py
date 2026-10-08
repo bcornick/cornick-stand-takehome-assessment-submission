@@ -451,3 +451,30 @@ def test_a_fixture_reply_to_a_lead_whose_request_is_held_is_skipped_not_refused(
         assert [(r["lead_id"], r["accepted"]) for r in response.json()["replies"]] == [
             (LEAD_008, True)
         ]
+
+
+def test_declining_a_lead_whose_quote_waits_withdraws_the_quote_and_drafts_the_notice(
+    app: TestClient, db: sqlite3.Connection, mailbox: MailboxClient
+) -> None:
+    deliver(app, request_intent_id(db))
+
+    declined = app.post(
+        "/api/commands",
+        json={
+            "type": "decline_lead",
+            "payload": {"lead_id": LEAD_008, "reason": "the panel brand is outside appetite"},
+        },
+    ).json()
+
+    assert declined["accepted"] is True
+    states = dict(
+        db.execute(
+            "SELECT kind, state FROM intents WHERE lead_id = ? AND kind IN"
+            " ('quote_packet', 'decline_notice')",
+            (LEAD_008,),
+        ).fetchall()
+    )
+    assert states == {"quote_packet": "closed_unsent", "decline_notice": "draft"}
+    detail = app.get(f"/api/leads/{LEAD_008}").json()
+    assert detail["decline_reason_on_file"] is True
+    assert len(mailbox.list_for_lead(LEAD_008)) == 1  # the request; nothing else went out

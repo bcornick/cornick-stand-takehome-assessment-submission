@@ -1,6 +1,6 @@
 // ABOUTME: The actions of one open item (A.11): one card, one decision. The choices are buttons side by side; choosing one puts in their place a single reason field, with a confirm button that repeats the choice and Cancel.
 // ABOUTME: A draft folds its text into a preview with an edit form; a review the underwriter cannot decide shows how it closes; rejecting a decline notice says it sends the asks; a refusal reason shows under the choice.
-import { approve, editDraft, recordRuling, reject } from '@/api/client'
+import { approve, declineLead, editDraft, recordRuling, reject } from '@/api/client'
 import type { components } from '@/api/types'
 import { ActionForm } from '@/components/ActionForm'
 import { Badge } from '@/components/ui/badge'
@@ -25,7 +25,7 @@ const SEND_LABELS: Record<Draft['kind'], string> = {
 // The fold that holds a draft's text, named for what the draft is.
 const PREVIEW_LABELS: Record<Draft['kind'], string> = {
   decline_notice: 'Preview the notice',
-  quote_packet: 'Preview the packet',
+  quote_packet: 'Preview or edit the packet',
   routine_request: 'Preview or edit the request',
   sensitive_request: 'Preview or edit the request',
 }
@@ -94,7 +94,7 @@ function ItemActions({ lead, blocker, onChange }: Props & { blocker: Blocker }) 
   if (itemKind === 'draft') {
     const draft = lead.drafts.find((d) => d.intent_id === blocker.detail.intent_id)
     if (draft === undefined) return null
-    const rejectDraft =
+    const rejectDraft: Choice =
       draft.kind === 'decline_notice'
         ? rejectChoice(
             'Withdraw decline and send the asks',
@@ -102,7 +102,15 @@ function ItemActions({ lead, blocker, onChange }: Props & { blocker: Blocker }) 
             'Withdrawing the decline suppresses it for this lead and sends the requests for the facts still missing.',
           )
         : draft.kind === 'quote_packet'
-          ? rejectChoice('Reject', DRAFT_REJECT_PLACEHOLDER)
+          ? {
+              // Saying no to a quote is declining the lead: the decline supersedes the packet.
+              label: 'Decline lead',
+              style: 'destructive',
+              act: (reason) => declineLead(lead.lead_id, reason),
+              note: 'The quote is withdrawn and a decline notice is drafted for you to send.',
+              placeholder: DECLINE_PLACEHOLDER,
+              reasonLabel: DECLINE_REASON,
+            }
           : rejectChoice(
               'Discard request',
               'Optional. Why it should not go.',
