@@ -1,4 +1,4 @@
-# ABOUTME: The fresh-clone rehearsal (14): clones HEAD into a temporary directory, copies .env.example to .env with no keys, brings the stack up in replay mode under its own compose project and host ports, runs the demo's first pass, asks the example prompts and delivers the fixture replies, then removes the stack and the clone.
+# ABOUTME: The fresh-clone rehearsal (14): clones HEAD into a temporary directory, copies .env.example to .env with no keys and RUN_MODE=replay, brings the stack up in replay mode under its own compose project and host ports, runs the demo's first pass, asks the example prompts and delivers the fixture replies, then removes the stack and the clone.
 # ABOUTME: Prints one line per step and exits 0; a failing step prints its output and exits 1. Only committed files are cloned, so commit before rehearsing.
 import json
 import os
@@ -117,8 +117,11 @@ def rehearse(workdir: Path, project: str) -> None:
         return f"{commit[:12]} cloned"
 
     def copy_env() -> str:
-        shutil.copyfile(clone / ".env.example", clone / ".env")
-        return ".env copied from .env.example, no keys"
+        example = (clone / ".env.example").read_text(encoding="utf-8")
+        (clone / ".env").write_text(
+            example.replace("RUN_MODE=live", "RUN_MODE=replay"), encoding="utf-8"
+        )
+        return ".env copied from .env.example, no keys, RUN_MODE=replay"
 
     def bring_up() -> str:
         run([*compose, "up", "--build", "--detach", "--wait"], clone, env)

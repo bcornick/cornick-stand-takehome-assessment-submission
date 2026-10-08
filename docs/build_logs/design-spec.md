@@ -256,7 +256,7 @@ The promise is **no automatic resend after an ambiguous delivery**. The mailbox 
 
 ### 7.7 Run modes
 
-- **live:** model calls use the key from `.env`.
+- **live** (the default): model calls use the key from `.env`.
 - **replay:** model calls are served from `recordings/` keyed by skill, prompt version and input hash. A miss fails closed with a visible error, except a Jev call (10.4): its miss is recorded as a `replay_miss` event and the language model classifies the reply. The input hash covers only the content the model is shown (for `read_reply`, the reply body and the open asks), never run ids or intent ids. The prompt version is the hash of the `prompt.md` bytes and of the forced tool (its name, description and input schema), so a change to either records again. After any change to a `prompt.md` or a tool, the affected recordings are recorded again and committed. Replay uses its own app database.
 - **record:** a live run that also writes each model exchange to `recordings/` at the repository root, bind-mounted read-write in this mode and read-only in replay. Recordings are committed.
 

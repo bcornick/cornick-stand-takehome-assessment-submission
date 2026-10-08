@@ -56,7 +56,7 @@ Decisions stay in code because the playbook is written rules. Code makes each de
 
 ## Record and replay
 
-Each model exchange is stored under `recordings/`, keyed by the skill, its prompt and what the model was shown. In replay mode, the default, the demo and the evals use these answers, so they run without keys and give the same result every time. Changing a prompt changes the key, so that exchange is recorded again.
+Each model exchange is stored under `recordings/`, keyed by the skill, its prompt and what the model was shown. In replay mode the demo and the evals use these answers, so they run without keys and give the same result every time. Changing a prompt changes the key, so that exchange is recorded again.
 
 ## Trade-offs
 

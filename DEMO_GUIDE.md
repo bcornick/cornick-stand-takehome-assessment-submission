@@ -4,7 +4,7 @@ A walk through the morning queue, end to end, in about ten minutes. Set up and r
 
 ## Before you start
 
-- **Pick a mode.** `replay` (the default) needs no keys and gives the same result every time; the assistant then answers only its three example questions. `live` (`RUN_MODE=live` in `.env`, with `MODEL_API_KEY` and, for Jev, `TYPESAFE_API_KEY`) answers any question, and its email wording and reply readings can vary a little between runs. Run `make up` again after changing `.env`.
+- **Pick a mode.** `live` (the default) needs `MODEL_API_KEY` in `.env`, and `TYPESAFE_API_KEY` for Jev. The assistant answers any question, and email wording and reply readings can vary a little between runs. `replay` (`RUN_MODE=replay`) needs no keys and gives the same result every time; the assistant then answers only its three example questions. Run `make up` again after changing `.env`.
 - **In replay, keep to the order below.** Each recorded answer matches one exact situation, so a step taken out of order can meet "no recording" and stop with a visible error.
 - **Starting over:** **Load today's leads** clears the day and loads it again.
 

@@ -40,13 +40,13 @@ services:
     ports: ["${APP_PORT:-8000}:8000"]
     env_file: .env
     environment:
-      RUN_MODE: "${RUN_MODE:-replay}"
+      RUN_MODE: "${RUN_MODE:-live}"
       SEED: "${SEED:-42}"
       MODEL_ID: "${MODEL_ID:-deepseek-flash}"
       MODEL_BASE_URL: "${MODEL_BASE_URL:-https://api.deepseek.com/anthropic}"
       LEADGEN_URL: "http://leadgen:8080"
       MAILBOX_URL: "http://mailbox:8080"
-      UWH_DB: "/data/app-${RUN_MODE:-replay}.db"
+      UWH_DB: "/data/app-${RUN_MODE:-live}.db"
     volumes:
       - "app-data:/data"
       - "./recordings:/app/recordings:${RECORDINGS_ACCESS:-ro}"

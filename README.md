@@ -17,13 +17,12 @@ make up
 
 Open `http://localhost:8000` (the first build takes a few minutes), click **Load today's leads** in **Demo controls** at the bottom right, and follow `DEMO_GUIDE.md`.
 
-**Keys.** None are needed. The default mode, `replay`, serves every model answer from `recordings/`, so the demo runs the same way every time. To use the models live, set these in `.env` and run `make up` again:
+**Keys.** The app runs in `live` mode by default and calls the models. Before `make up`, fill in `.env`:
 
-- `RUN_MODE=live`
 - `MODEL_API_KEY`: a DeepSeek key
 - `TYPESAFE_API_KEY` (optional): turns on Jev for reading replies; without it, DeepSeek reads them
 
-In replay, the assistant answers only its three example questions; live mode answers anything.
+**No keys?** Live mode without a key still loads the queue, but replies go to the underwriter unread and the assistant cannot answer. Set `RUN_MODE=replay` in `.env` instead. Every model answer then comes from `recordings/`, so the demo runs the same way every time with no network calls to a model. In replay the assistant answers only its three example questions. Run `make up` again after changing `.env`.
 
 **Other commands.**
 
