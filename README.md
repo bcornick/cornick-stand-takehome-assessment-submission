@@ -65,7 +65,7 @@ A fixed workflow in Python processes each lead. Code makes every decision; the l
 
 `make eval` replays the morning against fresh copies of Stand's services. Nine graders check that each lead took the right path, that each email asks for exactly what is missing and nothing more, that nothing is escalated without need, and that nothing is sent twice or without approval. The truth comes from labels Brett signed, Stand's own answer key (190 records agree, none disagree) and held-back producer replies. Three deliberately broken runs prove the graders can fail. Every run adds a row to `evals/results.jsonl`, and one recorded improvement cycle shows the loop at work.
 
-`docs/eval-loop.md` explains what is measured, how a run works, and the plan for iterating from here.
+The loop turns every mistake into a permanent test and checks every change against the whole suite, so fixes build up without breaking what already works. Every underwriter override is already recorded with its reason, which is the supply of new cases. `docs/eval-loop.md` explains the loop, a real cycle from this project, how it leads to automated improvement, and its current limits.
 
 ## Skills
 
