@@ -87,7 +87,8 @@ export function EventView(props: ViewProps) {
   const { events, lead } = props
   if (!events.some((event) => String(event.id) === String(props.target.id))) return <NotFound />
   return (
-    <ol aria-label="Timeline" className="flex flex-col gap-3 border-l border-border-strong pl-0 text-sm [&>li]:-ml-[5px]">
+    // The rows are one line each, so the timeline reads at a column's width rather than stretching the panel to its maximum.
+    <ol aria-label="Timeline" className="flex w-[540px] flex-col gap-3 border-l border-border-strong pl-0 text-sm [&>li]:-ml-[5px]">
       {events.map((event) => (
         <TimelineEvent
           key={event.id}
