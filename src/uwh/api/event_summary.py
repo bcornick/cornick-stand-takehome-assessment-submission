@@ -162,13 +162,9 @@ def event_summary(payload: StrictModel) -> str:
             return f"Waiting on {_OWNERS[owner]}. {_sentence(detail.text)}"
         case BlockerClosed(kind=kind):
             return f"The {_words(kind)} wait is over"
-        case IntentCreated(
-            kind=kind, recipient=recipient, subject=subject, rewritten_by_model=rewritten
-        ):
-            drafted = f"Drafted a {_words(kind)} to {recipient} with the subject {subject}"
-            if rewritten:
-                return f"{drafted}. The opening and closing were written by the model."
-            return drafted
+        case IntentCreated(kind=kind, recipient=recipient, subject=subject):
+            # Whether the model wrote the opening and closing stays on the event, not in the sentence.
+            return f"Drafted a {_words(kind)} to {recipient} with the subject {subject}"
         case MessageSent():
             return "Sent the message to the producer"
         case DeliveryUnknown():

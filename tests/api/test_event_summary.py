@@ -246,15 +246,6 @@ def test_a_reply_classified_by_jev_shows_its_confidence_against_the_threshold(
     )
 
 
-def test_a_rewrite_the_model_wrote_is_said_in_the_summary_of_the_draft() -> None:
-    created = PAYLOADS[EventType.intent_created].model_copy(update={"rewritten_by_model": True})  # type: ignore[attr-defined]
-
-    assert event_summary(created) == (
-        "Drafted a routine request to p@example.com with the subject Questions. "
-        "The opening and closing were written by the model."
-    )
-
-
 def test_a_rejected_rewrite_says_which_check_rejected_it_and_that_the_rendered_request_is_used() -> (
     None
 ):
