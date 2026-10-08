@@ -27,7 +27,7 @@ export function DemoPanel({ run, onChange }: Props) {
         <button
           type="button"
           onClick={() => setMinimised(false)}
-          className="console border border-console-ink bg-console px-3 py-1 font-console text-xs text-console-ink shadow-[0_14px_44px_rgba(0,0,0,0.55)]"
+          className="console border border-console-ink bg-console px-3 py-1 font-console text-xs text-console-ink"
         >
           Demo controls
         </button>
@@ -38,7 +38,7 @@ export function DemoPanel({ run, onChange }: Props) {
   return (
     <aside
       aria-label="Demo controls"
-      className="console fixed bottom-4 right-4 z-10 w-72 space-y-3 border border-console-ink bg-console p-4 font-console text-sm text-console-ink shadow-[0_14px_44px_rgba(0,0,0,0.55)]"
+      className="console fixed bottom-4 right-4 z-10 w-72 space-y-3 border border-console-ink bg-console p-4 font-console text-sm text-console-ink"
     >
       <div className="flex items-center justify-between">
         <h2>Demo controls</h2>
