@@ -3,7 +3,7 @@
 #
 # Held back from the read_reply implementer until the eval run (section 13.2). The round-1 request asks for
 # residence_held_in_trust, trust_name (follow-on), coverage_a, is_rental, roof_shape, electrical_panel_brand and
-# dist_to_nearest_fire_hydrant (seed42 label); none is answered. The architecture names this classification
+# dist_to_nearest_fire_hydrant (seed42 label); none is answered. The design spec names this classification
 # `declines_to_answer` (sections 10.4 and A.9).
 
 lead_id: LEAD-00000042-002

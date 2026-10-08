@@ -1,4 +1,4 @@
-# Architecture: underwriting triage on a skill-and-eval harness
+# Design spec: underwriting triage on a skill-and-eval harness
 
 This document is the single authority for the build. Where another file disagrees with it, this document wins. Findings from `docs/build_logs/critique.md` are dispositioned in section 16.
 

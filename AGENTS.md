@@ -7,7 +7,7 @@ A take-home submission for Stand Insurance: a small skill-and-eval harness whose
 ## Authority
 
 - `docs/build_logs/plan.md` gives the scope, the cut list and the milestones. Work one milestone at a time, in order. Where the architecture describes something the plan lists as cut, the plan wins.
-- `docs/architecture.md` describes the design of what is built.
+- `docs/build_logs/design-spec.md` describes the design of what is built. `ARCHITECTURE.md` is its short overview for readers; keep the two in step.
 - Where the architecture is silent or disagrees with itself, take the simplest reading that keeps a lead moving safely, record it in one line in `docs/build_logs/progress.md`, and carry on. Stop for Brett only when the choice changes what an underwriter or a producer sees, or spends money.
 - `docs/build_logs/acceptance.json` holds at most three checks per milestone, each a command that proves a "done when" line. Set `passes` to true only after running the command and seeing the stated result.
 - `docs/build_logs/progress.md` is the log. Read the latest entry before starting. Add an entry when a milestone ends.

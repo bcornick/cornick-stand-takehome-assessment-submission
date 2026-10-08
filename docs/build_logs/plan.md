@@ -1,6 +1,6 @@
 # Development plan: underwriting triage harness
 
-This is a take-home submission, reviewed in 45 minutes, for a brief that sets a 5 to 6 hour box and grades the choice of what to cut. The plan builds the smallest system that does the job well and can be read quickly. `docs/architecture.md` describes the design; where it describes something this plan lists as cut, the plan wins and the architecture text is deleted in milestone 0. `AGENTS.md` holds the working rules.
+This is a take-home submission, reviewed in 45 minutes, for a brief that sets a 5 to 6 hour box and grades the choice of what to cut. The plan builds the smallest system that does the job well and can be read quickly. `docs/build_logs/design-spec.md` describes the design; where it describes something this plan lists as cut, the plan wins and the architecture text is deleted in milestone 0. `AGENTS.md` holds the working rules.
 
 ## What is built
 
@@ -44,7 +44,7 @@ Each item is listed in the README under "Cut and why". A lead that would have re
 ### 0. Reset
 
 - Merge the stage 3 and stage 4 branches into one branch and remove the other worktrees.
-- Delete from `docs/architecture.md` every section, table row, event, route, command, setting and contract that exists only for a cut item, and state the cut list in §4. Update `AGENTS.md` and the `stage` skill to the rules above.
+- Delete from `docs/build_logs/design-spec.md` every section, table row, event, route, command, setting and contract that exists only for a cut item, and state the cut list in §4. Update `AGENTS.md` and the `stage` skill to the rules above.
 - Delete the code, fixtures and data for cut items, with their tests. Delete the tests the test rule excludes.
 - Mark the interpretation rows of the seven built pages, and the rows that apply to every page, `reviewed_by: Brett`. Brett has reviewed them and accepts each as written, with one change: I18 puts a non-Class A roof at exactly 0.50 in the stricter band.
 - Replace `docs/build_logs/acceptance.json` with the checks for milestone 1.

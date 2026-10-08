@@ -1,4 +1,4 @@
-# ABOUTME: The exemption counts of Stand's answer-key grader for seed 42 (architecture 13.2): the key records the system's first pass is exempt from, by reason.
+# ABOUTME: The exemption counts of Stand's answer-key grader for seed 42 (design spec 13.2): the key records the system's first pass is exempt from, by reason.
 # ABOUTME: Lead 000, the one proposed decline, holds back its 26 asks and confirmations; no ask is blocked on a field the key expects asked.
 
 exemptions: {proposed_decline: 26, blocked: 0}

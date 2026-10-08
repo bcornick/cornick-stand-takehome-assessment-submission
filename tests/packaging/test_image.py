@@ -1,4 +1,4 @@
-# ABOUTME: Builds the app image from a temporary copy of the build inputs and checks the guarantees of architecture section 14.
+# ABOUTME: Builds the app image from a temporary copy of the build inputs and checks the guarantees of design spec section 14.
 # ABOUTME: Needs Docker only; a sentinel skill with a cases/ folder and an evals/ file exist in the copy, never in the repository.
 import io
 import subprocess

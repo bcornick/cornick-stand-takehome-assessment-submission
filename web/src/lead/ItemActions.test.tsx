@@ -1,4 +1,4 @@
-// ABOUTME: Tests the actions of one open item against fetch stubbed at the boundary: each action posts the command and payload the architecture names, a refusal reason renders, and a reason cannot be left empty.
+// ABOUTME: Tests the actions of one open item against fetch stubbed at the boundary: each action posts the command and payload the design spec names, a refusal reason renders, and a reason cannot be left empty.
 // ABOUTME: The lead is a typed object of the generated API types, so a shape the backend does not serve fails the type check.
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'

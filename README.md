@@ -1,6 +1,6 @@
 # Underwriting triage on a skill-and-eval harness
 
-Brett Cornick's submission for the Stand Insurance take-home (`docs/brief/agentic_uw_takehome.md`). The app takes the ten seed-42 leads that Stand's generator posts and drives each to a sent quote packet, one sent request to the producer, or a wait on the underwriter with a stated reason. Every send of a quote packet or decline notice waits for an underwriter's approval. `docs/architecture.md` is the design authority; `docs/build_logs/plan.md` is the scope. `DEMO_GUIDE.md` walks through the demo step by step.
+Brett Cornick's submission for the Stand Insurance take-home (`docs/brief/agentic_uw_takehome.md`). The app takes the ten seed-42 leads that Stand's generator posts and drives each to a sent quote packet, one sent request to the producer, or a wait on the underwriter with a stated reason. Every send of a quote packet or decline notice waits for an underwriter's approval. `ARCHITECTURE.md` gives the architecture in a few minutes; `docs/build_logs/` holds the full design spec, the plan and the build log. `DEMO_GUIDE.md` walks through the demo step by step.
 
 ## Run it
 
@@ -90,33 +90,9 @@ Stand's mailbox <-- send path <-- command layer <-- underwriter UI, chat, workfl
                                   event log + fact ledger (SQLite) under all of it
 ```
 
-**Lead workflow.** "Load today's leads" posts the queue from the leadgen service. Each lead runs through a fixed list of steps: field triage against Stand's registry, data resolution (derive, fetch from the stand-in providers, assume), playbook evaluation over the seven built pages, the ask plan, and the rendered request. A lead holds a status and a set of open blockers (producer reply, underwriter review, underwriter question, data, delivery unknown); its next action is the highest-priority blocker. A producer's reply is read, its values enter the ledger, and the lead re-evaluates from the top until it reaches a packet draft or a stated wait. A routine request goes out on its own, unless an open choice could still decline the lead, in which case it is held for the underwriter. A sensitive request, the packet and the decline notice go out only on approval.
+A fixed workflow in Python runs each lead through the same steps: check the fields against Stand's registry, fill what can be looked up or worked out, apply the playbook, then write the request or draft the quote. Code makes every decision. The language model (DeepSeek, with Jev in front for reply classification) only reads replies, softens request wording and answers the underwriter's questions. Every change goes through one command layer into an event log, so every value has a source and every decision has a reason. There is no agent framework.
 
-**Command layer and actors.** Every state change is a typed command: nothing else writes. The actors are the workflow, the underwriter, the assistant (chat) and the reply endpoint, and the transport sets the actor, never a model argument. Routine requests send automatically unless held for an open choice; every other message waits for approval. An approval binds to a hash of the exact artifact shown, the lead revision and the ruleset, so a stale browser cannot approve changed content. Every underwriter decision is captured as the structured choice (approve, reject, the option chosen) with an optional note as context. A decline needs a reason, asked once, where the underwriter decides it: declining a lead, choosing decline at a choice, or approving a decline notice the playbook proposed. A notice that follows the underwriter's own decline carries that reason and asks for none. The reason is kept on file.
-
-**Fact ledger.** Every value is an observation with a source: `submitted`, `fetched`, `derived`, `assumed`, `reply` or `underwriter`. An underwriter ruling outranks everything. A reply fills a missing producer field directly; a reply that differs from an existing value waits as a pending review and changes nothing until the underwriter approves it. A reply never sets a system-owned field. Event rows rebuild the effective facts.
-
-**The send path's promise.** An intent moves `draft`, `dispatching`, `sent` (or `unknown`). The state `dispatching` commits before the mailbox post, and the post runs outside any transaction. After an ambiguous result the system lists the lead's emails and matches the intent id; with no match it opens a `delivery_unknown` item. The one promise is that nothing resends automatically after an ambiguous delivery. The mailbox has no idempotency key, so exactly-once delivery is not claimed. A lead with an open `delivery_unknown` sends nothing automatically.
-
-**Skills as workflow steps.** A skill is a folder with a manifest (purpose, trigger, command classes it may issue, fallback), an entry point, and cases or a prompt where it has them. Six skills are code and two use the language model (`polish_message`, `read_reply`); five of them run as the workflow's steps. The model never writes a question: code renders every request from the ask plan, and the model writes only an opening and a closing that two checks hold to adding no consequence, price, deadline or request. A command that sends refuses a class the issuing skill's manifest does not declare. There is no agent framework and no model-driven control flow outside the chat.
-
-**The conversation is the surface.** A lead's conversation is its event log written as sentences by code, with the underwriter's items as cards at the event that raised them; the drill-down panel shows the fact, event, message or playbook page behind any line. The assistant below it is a second client of the command layer. It reads through seven named lookups in at most eight steps (the last of which must answer, and a repeated lookup is not run again), cites what it was shown by a reference number the server resolves, and can only propose: a directive becomes a card on its lead that the underwriter applies. A directive to approve, reject or send is refused, and the answer points to the open item in the lead's conversation. The turn streams its lookups as server-sent events, and the answer arrives whole.
-
-**Record and replay.** A model exchange is keyed by the skill, the hash of its prompt and forced tool, and the content the model is shown. Recordings are committed under `recordings/`, and they are the only model answers the tests and the replay demo see. Changing a prompt or tool changes the key, so its recordings are recorded again.
-
-**Trade-offs.** The main choices, and what each one costs:
-
-| Chose | Over | Why | Cost |
-|---|---|---|---|
-| A fixed workflow in code | an agent framework driving a model through tools | The playbook is written rules; "one message per lead" and approval before sending are easier to guarantee in code | Cases the rules do not cover go to the underwriter instead of being improvised |
-| Code makes every decision; the model reads and writes words | a model on the decision path | Every decline and requirement has a rule trace and a test | The model's judgment is not used to fill gaps |
-| Code writes the questions | model-written emails | No question is dropped, invented or reworded | Plainer emails, softened only by the opening and closing |
-| An event log and a fact ledger in SQLite | a graph database per lead | Every value has a source, and the "why" is rebuilt from events | One process |
-| Recorded model answers | live calls in tests and the demo | Repeatable evals and a keyless demo | A prompt change means recording again |
-
-`docs/architecture.md` section 17 lists the other alternatives considered.
-
-For the rest (rules core, the interpretation table, ledger rules, message classes, appendices) see `docs/architecture.md`; the reviewer's counterweight is `docs/build_logs/critique.md`, dispositioned in its section 16.
+`ARCHITECTURE.md` explains the pieces, the flow of a lead, where the model is used, what keeps sending safe, and the trade-offs, in a few minutes. The full design is `docs/build_logs/design-spec.md`.
 
 ## The eval loop
 
@@ -152,7 +128,7 @@ The runner also grades reply facts and chat, and four critical errors fail a run
 
 1. `polish_message` has no cases and no repeat check. Its judge call decides whether an opening and closing add a consequence; measure its consistency across repeats and build a case table of rewrites it should reject.
 2. Reply reading on confirmations and catalogue questions. The reply suite's eight fixtures are mostly field answers; add fixtures where the producer restates, corrects or partly answers a confirmation, and extend the held-back set.
-3. Jev's confidence. The 0.7 threshold is the architecture's default, applied to three outcomes (on topic, off topic, declines to answer). The nine Jev recordings exercise the cascade in replay, where Jev classifies seven of the eight reply fixtures and the model the other; record more replies and set the threshold from their probabilities.
+3. Jev's confidence. The 0.7 threshold is the design spec's default, applied to three outcomes (on topic, off topic, declines to answer). The nine Jev recordings exercise the cascade in replay, where Jev classifies seven of the eight reply fixtures and the model the other; record more replies and set the threshold from their probabilities.
 4. The assistant. Chat threads live in the browser; keep them on the server so a reload and a second reviewer see them. Give the assistant a dry-run lookup, so a card can say what its command would change before the underwriter applies it.
 5. Token counts. `tokens_in` on an event is the provider's `input_tokens` alone; DeepSeek reports cached input separately, so the stored input counts undercount what a call read (lead 008's reading shows 135 input tokens for a prompt longer than that). Count cached input too and compare the totals with the provider's billing page.
 
@@ -213,7 +189,7 @@ What is left as it is in this proof of concept, from the reviews and from `docs/
 - Dismissing a proposal card writes outside the command layer and records no event.
 - A round-2 rewrite runs inside the command's transaction, so a slow model call holds the write lock for other leads.
 - The runtime does not gate a skill on its eval status; the results log is read by `make eval` and by people.
-- `Reply facts` is scored on the seed-42 run beside the nine graders of the architecture.
+- `Reply facts` is scored on the seed-42 run beside the nine graders of the design spec.
 - Stored input-token counts leave out cached input, so the budget totals undercount.
 - Two reply tests and the deck-height test feed hand-made model readings to test the code after the model.
 
@@ -229,5 +205,6 @@ AI coding agents (Claude Code) wrote the code, under the working rules in `AGENT
 - `recordings/`: committed model exchanges; `fixtures/replies/`: producer replies for the fixture control.
 - `tests/`: fast, slow and integration tests; `tools/` and `scripts/`: the fresh-clone rehearsal, type generation and the discipline check.
 - `DEMO_GUIDE.md`: the demo, step by step.
-- `docs/`: `architecture.md`; `docs/build_logs/` holds the plan, the critique, the chat-surface design, the progress log and the acceptance checks; `docs/brief/` and `docs/playbook/` are Stand's source material.
+- `ARCHITECTURE.md`: the architecture in a few minutes.
+- `docs/build_logs/`: the full design spec, the plan, the critique, the chat-surface design, the progress log and the acceptance checks. `docs/brief/` and `docs/playbook/` are Stand's source material.
 - `sim-harness/`: Stand's leadgen and mailbox, unmodified.

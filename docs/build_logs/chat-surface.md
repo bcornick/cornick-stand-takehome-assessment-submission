@@ -4,7 +4,7 @@
 
 The underwriter surface is a chat-first, three-column agent interface in the style of Claude, ChatGPT and Perplexity. The conversation is the central surface. Every claim drills down into its evidence. Demo-only controls live in a separate floating panel. Stand's branding is applied lightly.
 
-This is a take-home submission for an Agentic Engineer role, graded on clean code and YAGNI. The builder goes vertical: one lead's conversation end to end before widening. This document governs the underwriter surface until its documentation changes land in `docs/architecture.md`.
+This is a take-home submission for an Agentic Engineer role, graded on clean code and YAGNI. The builder goes vertical: one lead's conversation end to end before widening. This document governs the underwriter surface until its documentation changes land in `docs/build_logs/design-spec.md`.
 
 | Value | Setting |
 |---|---|
@@ -201,14 +201,14 @@ Each item is named in the README under "Cut and why" or "Known limits".
 
 ## Documentation changes
 
-- **`docs/architecture.md` section 11.** Rewritten to describe this surface. "No numeric confidence is displayed" is replaced by "A confidence is shown only with its threshold."
-- **The server-sent-events cut.** Removed from `docs/build_logs/plan.md` "What is cut", from the README "Cut and why", and from `docs/architecture.md` section 4.1, which lists it too.
-- **`docs/architecture.md` A.5.** The `POST /api/chat` row says the turn answers as a server-sent-events stream.
+- **`docs/build_logs/design-spec.md` section 11.** Rewritten to describe this surface. "No numeric confidence is displayed" is replaced by "A confidence is shown only with its threshold."
+- **The server-sent-events cut.** Removed from `docs/build_logs/plan.md` "What is cut", from the README "Cut and why", and from `docs/build_logs/design-spec.md` section 4.1, which lists it too.
+- **`docs/build_logs/design-spec.md` A.5.** The `POST /api/chat` row says the turn answers as a server-sent-events stream.
 - **README walkthrough.** Rewritten for the demo panel and the conversation: "Load today's leads", lead 008's conversation, "Deliver the producers' replies", and the inline "Send quote".
 - **README replay sentences.** The run-modes sentence and the known limit about the chat in replay say the composer is disabled in replay, with "Questions need live mode", unless the example prompts pass the replay attempt.
 - **README sections.** "Cut and why" and "Known limits" take the wording above. "What to iterate on next" adds server-side threads and a dry-run lookup. The chat paragraph under "Architecture" and the `web/` line under "Where things are" name the conversation and the panel.
 - **Chat skill wording.** The text in `src/uwh/chat/skill.py` that points to "lead X's detail pane" points to the conversation.
-- **`docs/architecture.md` proposals.** The sentence that a proposal "cannot carry approve or reject" names the four proposable commands.
+- **`docs/build_logs/design-spec.md` proposals.** The sentence that a proposal "cannot carry approve or reject" names the four proposable commands.
 
 ## Milestones
 

@@ -1,6 +1,6 @@
-# Critique of `docs/architecture.md`
+# Critique of `docs/build_logs/design-spec.md`
 
-Independent review for the build team. Citations use `file:line`. `arch` means `docs/architecture.md`. Claims about the generator were checked by running Stand's unmodified `leadgen/generator.py` from a scratch copy with seed 42, and with seeds 1 to 50 and 0 to 1999 for sweep claims. A claim that could not be checked is marked "unverified".
+Independent review for the build team. Citations use `file:line`. `arch` means `docs/build_logs/design-spec.md`. Claims about the generator were checked by running Stand's unmodified `leadgen/generator.py` from a scratch copy with seed 42, and with seeds 1 to 50 and 0 to 1999 for sweep claims. A claim that could not be checked is marked "unverified".
 
 ## Verdict
 

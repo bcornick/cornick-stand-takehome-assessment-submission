@@ -8,7 +8,7 @@ One entry per stage or handed-back task, latest last. Format is in `.agents/skil
 **Not done:** no application code exists. Stage 1 starts from an empty `src/`.
 **Checks:** `python3 scripts/check_discipline.py` passes on the handoff files. The handoff went through three rounds of four-lens review with a cross-model panel each round; the last round found no blocker.
 **Friction:** none recorded.
-**Next:** Stage 1, first task. Read `docs/architecture.md` in full before starting. Stage 3 has a human gate: Brett reviews every interpretation row in architecture section 9.7 and signs the ten lead labels.
+**Next:** Stage 1, first task. Read `docs/build_logs/design-spec.md` in full before starting. Stage 3 has a human gate: Brett reviews every interpretation row in architecture section 9.7 and signs the ten lead labels.
 
 ## Stage 01, task 2: SDK and library verification (stage-01-scaffold-t0)
 
@@ -52,7 +52,7 @@ Per-task review findings that were fixed: the compose test pins the default-prof
 
 Decisions made in the stage, for Brett to confirm or change:
 1. `UWH_DB` has no default anywhere in the plan or the architecture. `Settings.load()` requires it and raises a `ValueError` naming it. Compose sets it; tests that build settings pass a placeholder path.
-2. The plan gives ruff `extend-exclude = ["sim-harness"]`. That alone fails `ruff format --check .`, because ruff 0.16.10 formats Python blocks inside Markdown and wants to reformat the A.9 block in `docs/architecture.md`. `pyproject.toml` keeps the plan's `extend-exclude` and adds `[tool.ruff.format] exclude = ["*.md"]`. Plan task 1 does not mention this.
+2. The plan gives ruff `extend-exclude = ["sim-harness"]`. That alone fails `ruff format --check .`, because ruff 0.16.10 formats Python blocks inside Markdown and wants to reformat the A.9 block in `docs/build_logs/design-spec.md`. `pyproject.toml` keeps the plan's `extend-exclude` and adds `[tool.ruff.format] exclude = ["*.md"]`. Plan task 1 does not mention this.
 3. The app is built by a factory: `create_app(settings=None)`, started with `uvicorn --factory uwh.api.app:create_app`. Nothing reads the environment at import, and the eval runner can pass its own settings (§13.1).
 4. `tests/runtime/test_bootstrap.py` uses standard-library HTTP servers on localhost as a wrong service at the configured URL (HTML, wrong-shaped JSON, or leadgen-shaped answers with one wrong answer). The assertions are on the bootstrap's own error, never on the server's answer. Lead and reviewer both read this as inside the AGENTS.md mock rules; Brett has the final say.
 5. Configuration files: `Dockerfile`, `Makefile` and `compose.yaml` carry the two `ABOUTME:` lines; `pyproject.toml`, `.env.example` and `.dockerignore` do not. The discipline script checks only `.py`, `.ts`, `.tsx` and `.sh`.
@@ -219,7 +219,7 @@ Open with Brett, not blocking: the `blocker_opened` payload accepts what the API
 
 **Done:** tasks 1 to 3 of the tier-0 pass, by the rules-data author (builders on Sonnet), each reviewed by the reviewer on Opus and its findings fixed.
 - Task 1: `tools/capture_world.py` records Stand's unmodified generator in process and writes `src/uwh/providers/data/world-42.json`, `world-11.json` and `world-15.json`. Seed 42's archetypes match §2.2. The two leads §9.4 names hold: `LEAD-00000011-008` has `kyc_score` not found with name and date of birth present; `LEAD-00000015-003` has `protection_class` not found with the full address present. Seed 15 also holds `protection_class` not found on 15-004 and 15-007 (the rural archetype nulled each).
-- Tasks 2 and 3: `src/uwh/rules/data/derivations.yaml`, `interpretation.yaml` (rows I01 to I57, twelve choices on ten rows, seven fan-outs), `catalogue.yaml` (the eleven A.7 questions) and `wording.yaml` (61 field questions, six preambles, twelve confirmation templates). The test parses §9.7, the choices table, §9.5 and A.7 out of `docs/architecture.md` and reads the registry and Stand's class maps, so the files cannot drift from their sources. No row carries `reviewed_by`.
+- Tasks 2 and 3: `src/uwh/rules/data/derivations.yaml`, `interpretation.yaml` (rows I01 to I57, twelve choices on ten rows, seven fan-outs), `catalogue.yaml` (the eleven A.7 questions) and `wording.yaml` (61 field questions, six preambles, twelve confirmation templates). The test parses §9.7, the choices table, §9.5 and A.7 out of `docs/build_logs/design-spec.md` and reads the registry and Stand's class maps, so the files cannot drift from their sources. No row carries `reviewed_by`.
 
 **Not done:** task 4, Brett's review of every interpretation row (S03-A4). Tasks 5 to 7 and 12 (cases, labels, reply fixtures, held-back replies) wait on it, and task 8 is Brett's second gate. Tasks 9 to 11 are tier 1.
 
@@ -249,7 +249,7 @@ Left for later stages: the fingerprint must be taken over the raw `fields` as th
 
 ## Stage 03: Brett's gate rulings applied; the row review is still open (stage-03-labels-t0, 627f944)
 
-**Done:** Brett ruled on the ten points of the gate entry above and edited `docs/architecture.md` himself (committed at 537fb93 with the plan reconciled to it). Builders on Sonnet applied the rulings, and the reviewer on Opus read the result and found no blocker.
+**Done:** Brett ruled on the ten points of the gate entry above and edited `docs/build_logs/design-spec.md` himself (committed at 537fb93 with the plan reconciled to it). Builders on Sonnet applied the rulings, and the reviewer on Opus read the result and found no blocker.
 - §9.7 text: the YAML follows the amended cells of I03, I06, I14, I35, I39, I44, I47, I49 and I50. I39 states the boundary rule: exactly 4,000 square feet is in the middle band, and exactly 7,500 is treated as larger than 7,500 in Branches B and C, as in Branch A.
 - One road-access choice, `I14.road_access` (`multiple`, `limited`), carried by I14, I44 and I49: ten choices on ten rows.
 - `applied_in` takes the form `<category>: <what> (<citation>)`, the category one of the six §9.6 names, a graph page named by its playbook folder. 23 rows carry it: validator I01, I53; derivation I20; resolution rule I31, I51, I57; rendering step I47; effect field I45, I56; graph page I02, I05, I06, I10, I12, I19, I22, I23, I25, I29, I34, I43, I48, I55. The test ties a graph page to the row's source page and a validator to its §9.5 row.
@@ -628,10 +628,12 @@ Brett's decisions carried into milestone 1: an underwriter's value that still tr
 
 ## Submission docs: the five decisions and the demo guide (Brett)
 
-**Done:** the README answers the brief's five product decisions in its own section (when the system acts alone, queue orchestration, outbound messages, what the underwriter sees, integrations with a connected and stand-in table), adds a trade-offs table under Architecture, a "How this was built" note (Brett's choice), and one known-limits list in place of two. Stale lines on autonomy now state the held request. `DEMO_GUIDE.md` holds the step-by-step demo, separate from the README (Brett); its chat prompts are the chat suite's tested ones, and it points to lead 007 for Jev (Brett's choice among the three options). `docs/architecture.md` 10.2 no longer claims a pre-send check on edited drafts, matching the known limit.
+**Done:** the README answers the brief's five product decisions in its own section (when the system acts alone, queue orchestration, outbound messages, what the underwriter sees, integrations with a connected and stand-in table), adds a trade-offs table under Architecture, a "How this was built" note (Brett's choice), and one known-limits list in place of two. Stale lines on autonomy now state the held request. `DEMO_GUIDE.md` holds the step-by-step demo, separate from the README (Brett); its chat prompts are the chat suite's tested ones, and it points to lead 007 for Jev (Brett's choice among the three options). `docs/build_logs/design-spec.md` 10.2 no longer claims a pre-send check on edited drafts, matching the known limit.
 
 **Checks:** `make eval` at db1c78f in replay: seed42, replies and chat pass with no critical errors; the three controls are each caught; Stand's key 190 agree, 0 disagree.
 
 **Live calls:** none.
 
 **Build logs (Brett):** the plan, the critique, the chat-surface design, this log and the acceptance checks live under `docs/build_logs/`; every reference names the new path.
+
+**A short architecture (Brett):** `ARCHITECTURE.md` is a one-page overview for the reviewer (the pieces, the flow of a lead, where the model is used, what keeps sending safe, the trade-offs); the full document moved to `docs/build_logs/design-spec.md`, which code comments and the agent rules cite. The README's architecture section is a summary that points to the page.

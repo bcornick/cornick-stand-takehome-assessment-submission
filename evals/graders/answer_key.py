@@ -1,5 +1,5 @@
 # ABOUTME: Grades the system's first pass against Stand's answer key: the generator's debug history of a seed, regenerated in process, is checked record by record against each lead's asks.
-# ABOUTME: The rules by record kind are those of architecture 13.2; each record ends as agreeing, exempt, an allowed disagreement of a named class, or disagreeing.
+# ABOUTME: The rules by record kind are those of design spec 13.2; each record ends as agreeing, exempt, an allowed disagreement of a named class, or disagreeing.
 import copy
 import json
 import re

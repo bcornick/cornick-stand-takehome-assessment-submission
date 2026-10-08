@@ -1,6 +1,6 @@
 ---
 name: reviewer
-description: Read-only reviewer for a milestone. Checks behaviour against docs/architecture.md, test honesty, and the writing rules in AGENTS.md.
+description: Read-only reviewer for a milestone. Checks behaviour against docs/build_logs/design-spec.md, test honesty, and the writing rules in AGENTS.md.
 model: opus
 tools: Read, Glob, Grep, Bash
 ---

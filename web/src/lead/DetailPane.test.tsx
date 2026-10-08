@@ -1,4 +1,4 @@
-// ABOUTME: Tests the full lead view against fetch stubbed at the boundary: what the lead waits on is read-only, and each action on the lead posts the command and payload the architecture names.
+// ABOUTME: Tests the full lead view against fetch stubbed at the boundary: what the lead waits on is read-only, and each action on the lead posts the command and payload the design spec names.
 // ABOUTME: The lead is a typed object of the generated API types, so a shape the backend does not serve fails the type check.
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'

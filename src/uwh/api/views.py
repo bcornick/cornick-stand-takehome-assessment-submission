@@ -1,4 +1,4 @@
-# ABOUTME: Request and response models of the app's HTTP routes (A.5, A.11, section 11), with the checks that tie a blocker, an item and a page to the architecture's rules.
+# ABOUTME: Request and response models of the app's HTTP routes (A.5, A.11, section 11), with the checks that tie a blocker, an item and a page to the design spec's rules.
 # ABOUTME: Value sets are the Literal types of event_types and settings; the literals defined in this module belong to one view's own shape; no shape holds a model confidence (section 11).
 from typing import Annotated, Literal, Self
 

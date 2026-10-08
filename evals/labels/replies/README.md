@@ -4,7 +4,7 @@ Expected results for the reply fixtures in `fixtures/replies/`, one YAML per fix
 
 ## A reply label
 
-- `intent` names the request the reply answers (`first_request` is round 1). `classification` is the architecture's: `answers_all`, `answers_some`, `off_topic`, `declines_to_answer`.
+- `intent` names the request the reply answers (`first_request` is round 1). `classification` is the design spec's: `answers_all`, `answers_some`, `off_topic`, `declines_to_answer`.
 - `facts` are the values that become effective facts (section 7.3 rule 2); `pending_review` the values that differ from an existing value (rule 3, or rule 6 when a confirmation is answered with a different value). Values use the registry's types and option spellings: a select answer is one of its options, dates are `YYYY-MM-DD` strings, integers are numbers, toggles are booleans.
 - `confirmations` holds, per confirmation asked, `restated` (closes the conflict) or `changed` (follows rule 3). `unanswered` lists asks the reply does not answer; a follow-on whose condition the reply makes inactive is neither answered nor unanswered. `dropped` lists values the code must drop: a field not asked or a value outside its type or options.
 - `state_after`: `round_closed`, the `underwriter_review` the reply raises (a review cause, or `observation` for the review of a pending value; or null), and `next`: `quote_packet_waiting`, `request_round_2`, `underwriter_card` or `declined_pending`.
