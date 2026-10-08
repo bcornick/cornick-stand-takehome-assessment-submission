@@ -522,6 +522,8 @@ export interface components {
          * @description One of the lead's intents (A.1). A reply is accepted only for one in state `sent`.
          */
         DraftView: {
+            /** Ask Ids */
+            ask_ids: string[];
             /** Body */
             body: string;
             /** Intent Id */
@@ -537,6 +539,8 @@ export interface components {
             recipient: string;
             /** Round */
             round: number;
+            /** Sent At */
+            sent_at: string | null;
             /**
              * State
              * @enum {string}
@@ -883,6 +887,10 @@ export interface components {
             age_business_days: number;
             /** Ask Count */
             ask_count: number;
+            /** Asked At */
+            asked_at: string | null;
+            /** Decision */
+            decision: string | null;
             /** Effective Date */
             effective_date: string | null;
             /**
@@ -896,6 +904,8 @@ export interface components {
             lead_id: string;
             /** Primary Next Action */
             primary_next_action: ("delivery_unknown" | "underwriter_question" | "underwriter_review" | "data" | "producer_reply") | null;
+            /** Request Round */
+            request_round: number | null;
             /** Service Level Breached */
             service_level_breached: boolean;
             /**

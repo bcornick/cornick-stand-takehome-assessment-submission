@@ -37,6 +37,9 @@ const row: Schemas['QueueRow'] = {
   service_level_breached: false,
   effective_date: '2026-07-23',
   ask_count: 2,
+  decision: 'Review quote',
+  request_round: null,
+  asked_at: null,
   group: 'blocked_on_underwriter',
 }
 const rows: Schemas['QueueRow'][] = [
@@ -48,6 +51,9 @@ const rows: Schemas['QueueRow'][] = [
     label: 'LEAD-00000042-001',
     primary_next_action: 'producer_reply',
     waits_on: 'producer',
+    decision: null,
+    request_round: 1,
+    asked_at: '2026-07-03T09:30:00.000000Z',
     service_level_breached: true,
     group: 'waiting_on_data_or_producer',
   },
@@ -65,26 +71,38 @@ describe('LeadList', () => {
       expect.stringContaining('Lead 009'),
       expect.stringContaining('Lead 008'),
     ])
-    expect(within(blocked).getAllByText('Needs your decision')).toHaveLength(2)
-    expect(within(waiting).getByText('Waiting on producer')).toBeInTheDocument()
+    expect(within(blocked).getAllByText('Review quote')).toHaveLength(2)
+    expect(within(waiting).getByText('2 asks · round 1')).toBeInTheDocument()
     expect(within(waiting).getByText(/Past service level/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Lead 008/ })).toHaveAttribute('aria-current', 'true')
     expect(screen.getByRole('button', { name: /Lead 009/ })).not.toHaveAttribute('aria-current')
   })
 
   it.each<[string, Partial<Schemas['QueueRow']>, string | null]>([
-    ['data', { waits_on: 'data_team' }, 'Waiting on data'],
-    ['a sent quote', { status: 'quote_sent', waits_on: null }, 'Quote sent'],
-    ['a decline', { status: 'declined', waits_on: null }, 'Declined'],
-    ['nothing', { waits_on: null }, null],
+    ['the underwriter', {}, 'Review quote'],
+    ['a choice', { decision: 'Fire simulation choice' }, null],
+    ['the producer', { waits_on: 'producer', decision: null, ask_count: 1, request_round: 2 }, '1 ask · round 2'],
+    ['a producer with no request out', { waits_on: 'producer', decision: null }, 'Waiting on producer'],
+    ['data', { waits_on: 'data_team', decision: null }, 'Waiting on data'],
+    ['a sent quote', { status: 'quote_sent', waits_on: null, decision: null }, 'Quote sent'],
+    ['a decline', { status: 'declined', waits_on: null, decision: null }, 'Declined'],
+    ['nothing', { waits_on: null, decision: null }, null],
   ])('chips a lead waiting on %s', (_name, change, chip) => {
     render(<LeadList run={run} rows={[{ ...row, ...change }]} selected={QUEUE} onSelect={() => undefined} />)
     const entry = screen.getByRole('button', { name: /Lead 008/ })
-    const labels = ['Needs your decision', 'Waiting on producer', 'Waiting on data', 'Quote sent', 'Declined', 'In progress']
+    const labels = ['Review quote', '1 ask · round 2', 'Waiting on producer', 'Waiting on data', 'Quote sent', 'Declined', 'In progress']
     for (const label of labels) {
       if (label === chip) expect(within(entry).getByText(label)).toBeInTheDocument()
       else expect(within(entry).queryByText(label)).toBeNull()
     }
+  })
+
+  it('says when the request went out, in place of the queue age, for a lead waiting on the producer', () => {
+    const asked = { waits_on: 'producer', decision: null, request_round: 1, asked_at: '2026-07-03T09:30:00.000000Z' } as const
+    render(
+      <LeadList run={run} rows={[{ ...row, ...asked, age_business_days: 3.2, service_level_breached: true }]} selected={QUEUE} onSelect={() => undefined} />,
+    )
+    expect(screen.getByText('Effective Jul 23 · asked Jul 3 · Past service level')).toBeInTheDocument()
   })
 
   it.each<[number, string]>([

@@ -87,6 +87,9 @@ class QueueRow(StrictModel):
     service_level_breached: bool  # age against the assumed two-business-day service level
     effective_date: str | None  # the lead's effective date, None while missing
     ask_count: int  # the distinct asks put to the producer, across the lead's requests
+    decision: str | None  # what the underwriter is asked to decide, in a few words; None otherwise
+    request_round: int | None  # the round of the request to the producer that is out
+    asked_at: str | None  # the simulated time that request went out
     group: QueueGroup  # the ordering group of section 11
 
 
@@ -150,6 +153,8 @@ class DraftView(StrictModel):
     body: str
     state: IntentState
     round: int
+    ask_ids: list[str]  # the fields and questions the message asks; empty for a packet or a notice
+    sent_at: str | None  # the simulated time the message went out
 
 
 class PlanPage(StrictModel):

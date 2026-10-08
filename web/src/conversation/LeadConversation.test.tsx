@@ -1,11 +1,12 @@
 // ABOUTME: Tests a lead's conversation against fetch stubbed at the boundary: the summary opens it, the open item follows as a card, and the event timeline is folded under a count of its steps.
 // ABOUTME: The step count leaves out the assistant's own events, model bookkeeping and a close that a card shows.
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { components } from '@/api/types'
 import type { Chat } from '@/surface'
-import { LeadConversation, shownSteps } from './LeadConversation'
+import { formatTime } from '@/format'
+import { LeadConversation,shownSteps } from './LeadConversation'
 import type { PanelTarget } from '@/surface'
 import { narrate } from './narrate'
 
@@ -106,12 +107,60 @@ function respond(body: unknown): Response {
   return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } })
 }
 
-function renderLead(panel: PanelTarget | null = null, onOpen: (target: PanelTarget) => void = () => {}) {
+const requestOut: Schemas['LeadDetail'] = {
+  ...lead,
+  summary: 'I asked the producer for the 2 missing fields and am waiting for the reply.',
+  blockers: [
+    {
+      item_id: 20,
+      kind: 'producer_reply',
+      owner: 'producer',
+      detail: { ...lead.blockers[0]!.detail, item_kind: null, intent_id: 'intent-ask', text: 'waiting' },
+      observation: null,
+    },
+  ],
+  fields: [
+    { key: 'coverage_a', label: 'Dwelling coverage', section: 'Primary Coverages', kind: 'integer', options: [] },
+    { key: 'q:contact_email', label: 'Contact email', section: 'Contact', kind: 'text', options: [] },
+  ],
+  drafts: [
+    {
+      intent_id: 'intent-old',
+      payload_hash: 'b'.repeat(64),
+      kind: 'routine_request',
+      recipient: 'p@example.com',
+      subject: 's',
+      body: 'b',
+      state: 'closed_unsent',
+      round: 1,
+      ask_ids: ['year_built'],
+      sent_at: '2026-06-27T09:00:00.000000Z',
+    },
+    {
+      intent_id: 'intent-ask',
+      payload_hash: 'c'.repeat(64),
+      kind: 'routine_request',
+      recipient: 'p@example.com',
+      subject: 's',
+      body: 'b',
+      state: 'sent',
+      round: 2,
+      ask_ids: ['coverage_a', 'q:contact_email'],
+      sent_at: '2026-06-28T08:00:00.000000Z',
+    },
+  ],
+}
+
+function renderLead(
+  panel: PanelTarget | null = null,
+  onOpen: (target: PanelTarget) => void = () => {},
+  detail: Schemas['LeadDetail'] = lead,
+) {
   vi.stubGlobal(
     'fetch',
     vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
-      if (url === `/api/leads/${lead.lead_id}`) return respond(lead)
+      if (url === `/api/leads/${lead.lead_id}`) return respond(detail)
       if (url === `/api/leads/${lead.lead_id}/events`) return respond({ events })
       return new Response('{}', { status: 404 })
     }),
@@ -155,6 +204,28 @@ describe('LeadConversation', () => {
     expect(fold).not.toHaveAttribute('open')
     await userEvent.click(screen.getByText('Show the work (3 steps)'))
     expect(fold).toHaveAttribute('open')
+  })
+
+  it('shows the request that is out: its round, when it went out and how long ago, its asks by label, and a link to the message', async () => {
+    const onOpen = vi.fn()
+    renderLead(null, onOpen, requestOut)
+
+    const card = await screen.findByRole('region', { name: 'Request to the producer' })
+    expect(card).toHaveTextContent('Round 2')
+    expect(card).toHaveTextContent(formatTime('2026-06-28T08:00:00.000000Z'))
+    expect(card).toHaveTextContent('1 day ago')
+    expect(card).toHaveTextContent('Dwelling coverage')
+    expect(card).toHaveTextContent('Contact email')
+    expect(card).not.toHaveTextContent('year_built')
+
+    await userEvent.click(within(card).getByRole('button', { name: 'View the request' }))
+    expect(onOpen).toHaveBeenCalledWith({ kind: 'message', lead_id: lead.lead_id, id: 'intent-ask' })
+  })
+
+  it('shows no request card for a lead that is not waiting on the producer', async () => {
+    renderLead()
+    await screen.findByText(lead.summary)
+    expect(screen.queryByRole('region', { name: 'Request to the producer' })).toBeNull()
   })
 
   it('hides "Full detail" while the panel shows this lead', async () => {

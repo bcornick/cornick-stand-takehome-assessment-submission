@@ -683,6 +683,13 @@
         "additionalProperties": false,
         "description": "One of the lead's intents (A.1). A reply is accepted only for one in state `sent`.",
         "properties": {
+          "ask_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ask Ids",
+            "type": "array"
+          },
           "body": {
             "title": "Body",
             "type": "string"
@@ -713,6 +720,17 @@
             "title": "Round",
             "type": "integer"
           },
+          "sent_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sent At"
+          },
           "state": {
             "enum": [
               "draft",
@@ -737,7 +755,9 @@
           "subject",
           "body",
           "state",
-          "round"
+          "round",
+          "ask_ids",
+          "sent_at"
         ],
         "title": "DraftView",
         "type": "object"
@@ -1629,6 +1649,28 @@
             "title": "Ask Count",
             "type": "integer"
           },
+          "asked_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asked At"
+          },
+          "decision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision"
+          },
           "effective_date": {
             "anyOf": [
               {
@@ -1675,6 +1717,17 @@
             ],
             "title": "Primary Next Action"
           },
+          "request_round": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Round"
+          },
           "service_level_breached": {
             "title": "Service Level Breached",
             "type": "boolean"
@@ -1717,6 +1770,9 @@
           "service_level_breached",
           "effective_date",
           "ask_count",
+          "decision",
+          "request_round",
+          "asked_at",
           "group"
         ],
         "title": "QueueRow",

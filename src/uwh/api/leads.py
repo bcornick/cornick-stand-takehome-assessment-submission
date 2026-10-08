@@ -11,6 +11,7 @@ from uwh.api.pages import plan_pages
 from uwh.api.readings import choice_readings
 from uwh.api.runtime import RuntimeDependency
 from uwh.api.summary import ask_count, summary_line
+from uwh.api.waiting import decision_phrase, open_request, sent_times
 from uwh.api.views import (
     BlockerView,
     DraftView,
@@ -80,6 +81,7 @@ def queue_rows(db: sqlite3.Connection, now: datetime) -> list[QueueRow]:
         action = primary_next_action(db, lead_id)
         facts = effective_facts(db, lead_id)
         effective_date = facts["effective_date"].value if "effective_date" in facts else None
+        request = open_request(db, lead_id)
         age = age_business_days(datetime.fromisoformat(received_at), now)
         rows.append(
             QueueRow(
@@ -92,6 +94,11 @@ def queue_rows(db: sqlite3.Connection, now: datetime) -> list[QueueRow]:
                 service_level_breached=age > SERVICE_LEVEL_BUSINESS_DAYS,
                 effective_date=effective_date if isinstance(effective_date, str) else None,
                 ask_count=ask_count(db, lead_id),
+                decision=decision_phrase(db, action)
+                if action is not None and action.owner == "underwriter"
+                else None,
+                request_round=None if request is None else request[0],
+                asked_at=None if request is None or request[1] is None else request[1].isoformat(),
                 group=_group(status, action),
             )
         )
@@ -168,11 +175,13 @@ def lead_detail(db: sqlite3.Connection, lead_id: str, registry: Registry) -> Lea
     blockers = open_blockers(db, lead_id)
     facts = effective_facts(db, lead_id)
     drafts = db.execute(
-        "SELECT id, payload_hash, kind, recipient, subject, body, state, round FROM intents"
+        "SELECT id, payload_hash, kind, recipient, subject, body, state, round,"
+        " ask_ids_json FROM intents"
         " WHERE lead_id = ? ORDER BY round, rowid",
         (lead_id,),
     ).fetchall()
     graphs = load_graphs()
+    sent = sent_times(db, lead_id)
     return LeadDetail(
         lead_id=lead_id,
         label=lead_label(db, lead_id),
@@ -201,6 +210,8 @@ def lead_detail(db: sqlite3.Connection, lead_id: str, registry: Registry) -> Lea
                 body=d[5],
                 state=d[6],
                 round=d[7],
+                ask_ids=json.loads(d[8]),
+                sent_at=sent[d[0]].isoformat() if d[0] in sent else None,
             )
             for d in drafts
         ],

@@ -17,6 +17,8 @@ const packet: Schemas['DraftView'] = {
   body: 'Coverage A: $500,000',
   state: 'draft',
   round: 2,
+  ask_ids: [],
+  sent_at: null,
 }
 const decline: Schemas['DraftView'] = {
   ...packet,

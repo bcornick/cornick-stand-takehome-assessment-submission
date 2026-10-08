@@ -17,6 +17,8 @@ const sentRequest: Schemas['DraftView'] = {
   body: 'Please send the roof material.',
   state: 'sent',
   round: 1,
+  ask_ids: [],
+  sent_at: null,
 }
 const packet: Schemas['DraftView'] = {
   intent_id: 'intent-packet',
@@ -27,6 +29,8 @@ const packet: Schemas['DraftView'] = {
   body: 'Coverage A: $500,000',
   state: 'draft',
   round: 2,
+  ask_ids: [],
+  sent_at: null,
 }
 
 const packetBlocker: Schemas['BlockerView'] = {

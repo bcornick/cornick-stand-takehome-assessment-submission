@@ -8,6 +8,7 @@ import { AssistantLabel } from './AssistantLabel'
 import { Conversation, type ConversationProps } from './Conversation'
 import { type Block, narrate } from './narrate'
 import { Narrative } from './Narrative'
+import { RequestOut } from './RequestOut'
 
 type Props = ConversationProps & { leadId: string }
 
@@ -62,6 +63,7 @@ export function LeadConversation({ leadId, ...shared }: Props) {
           View event timeline
         </button>
       )}
+      <RequestOut lead={lead} simNow={shared.run.sim_now} onOpen={shared.onOpen} />
       {lead.blockers.length > 0 && (
         <ul className="flex flex-col gap-3">
           {lead.blockers.filter((blocker) => blocker.owner === 'underwriter').map((blocker) => (

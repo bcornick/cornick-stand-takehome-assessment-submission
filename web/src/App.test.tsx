@@ -36,6 +36,9 @@ const row: Schemas['QueueRow'] = {
   service_level_breached: false,
   effective_date: '2026-07-23',
   ask_count: 2,
+  decision: 'Review quote',
+  request_round: null,
+  asked_at: null,
   group: 'blocked_on_underwriter',
 }
 const rows: Schemas['QueueRow'][] = [
@@ -60,6 +63,8 @@ const packet: Schemas['DraftView'] = {
   body: 'Thank you for your submission.\n\nCoverages as submitted\n- Coverage A (Dwelling): $875,000',
   state: 'draft',
   round: 2,
+  ask_ids: [],
+  sent_at: null,
 }
 
 const LEAD_000 = 'LEAD-00000042-000'

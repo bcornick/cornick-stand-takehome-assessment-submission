@@ -29,12 +29,16 @@ type RowProps = {
 // What differs between leads: who the lead waits on, or that it is finished.
 type State = 'needs' | 'waiting' | 'done' | 'declined'
 
-// What differs between leads, as the chip says it and the state that colours it.
+// What differs between leads, as the chip says it (the decision asked of the underwriter, the open request, the wait on data or the outcome), and the state that colours it.
 function chip(row: Schemas['QueueRow']): { label: string; state: State } | null {
   if (row.status === 'quote_sent') return { label: 'Quote sent', state: 'done' }
   if (row.status === 'declined') return { label: 'Declined', state: 'declined' }
-  if (row.waits_on === 'underwriter') return { label: 'Needs your decision', state: 'needs' }
-  if (row.waits_on === 'producer') return { label: 'Waiting on producer', state: 'waiting' }
+  if (row.decision !== null) return { label: row.decision, state: 'needs' }
+  if (row.waits_on === 'producer') {
+    if (row.request_round === null) return { label: 'Waiting on producer', state: 'waiting' }
+    const asks = `${row.ask_count} ${row.ask_count === 1 ? 'ask' : 'asks'}`
+    return { label: `${asks} · round ${row.request_round}`, state: 'waiting' }
+  }
   if (row.waits_on === 'data_team') return { label: 'Waiting on data', state: 'waiting' }
   return null
 }
@@ -43,6 +47,12 @@ function queueTime(businessDays: number): string {
   const days = Math.round(businessDays)
   if (businessDays < 0.5) return 'in queue today'
   return `${days} ${days === 1 ? 'day' : 'days'} in queue`
+}
+
+// How long the lead has been waiting: when its request to the producer went out, or its age in the queue.
+function waitingTime(row: Schemas['QueueRow']): string {
+  if (row.waits_on === 'producer' && row.asked_at !== null) return `asked ${formatDate(row.asked_at)}`
+  return queueTime(row.age_business_days)
 }
 
 function LeadRow({ row, isSelected, onSelect }: RowProps) {
@@ -61,7 +71,7 @@ function LeadRow({ row, isSelected, onSelect }: RowProps) {
       <span className="block truncate">{row.label === row.lead_id ? 'no address' : row.label}</span>
       <span className="block text-xs text-muted-foreground">
         {row.effective_date === null ? 'No effective date' : `Effective ${formatDate(row.effective_date)}`}
-        {` · ${queueTime(row.age_business_days)}`}
+        {` · ${waitingTime(row)}`}
         {row.service_level_breached && ' · Past service level'}
       </span>
     </button>
