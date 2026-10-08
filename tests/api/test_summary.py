@@ -65,7 +65,7 @@ HELD_REQUEST = item(
     "underwriter",
     item_kind="draft",
     intent_id="I-r",
-    text="This request waits for your decision on the open choice.",
+    text="Not sent yet, in case you decline this lead. Send it to the producer, or decline at the choice above.",
 )
 OBSERVATION = item("underwriter_review", "underwriter", item_kind="observation", observation_id=3)
 WAIT_REPLY = item("producer_reply", "producer", intent_id="I-L-1")
@@ -102,7 +102,7 @@ CASES = [
         "a request draft says it was drafted and why it waits",
         "This lead failed the fire simulation at 0.79. "
         "I need you to choose between a decline and legacy underwriting. "
-        "I drafted a request to the producer. This request waits for your decision on the open choice.",
+        "I drafted a request to the producer. Not sent yet, in case you decline this lead. Send it to the producer, or decline at the choice above.",
         [FIRE, HELD_REQUEST],
         ActionPlan(open_choices=[FIRE_CHOICE]),
         intents={"I-r": "routine_request"},

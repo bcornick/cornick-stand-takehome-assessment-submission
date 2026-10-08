@@ -26,7 +26,7 @@
               "kind": "underwriter_review",
               "lead_id": "LEAD-00000042-003",
               "ref": 3,
-              "text": "This request waits for your decision on the open choice, so a lead you decline is not asked. Send it now, or decide the choice first."
+              "text": "Not sent yet, in case you decline this lead. Send it to the producer, or decline at the choice above."
             },
             {
               "kind": "underwriter_question",
@@ -38,7 +38,7 @@
               "kind": "underwriter_review",
               "lead_id": "LEAD-00000042-006",
               "ref": 5,
-              "text": "This request waits for your decision on the open choice, so a lead you decline is not asked. Send it now, or decide the choice first."
+              "text": "Not sent yet, in case you decline this lead. Send it to the producer, or decline at the choice above."
             }
           ],
           "summary": {
@@ -54,13 +54,13 @@
       }
     ]
   },
-  "input_hash": "17a293bab6f3c36e09cb7fb0d44f39266946b358198437a42b0dc96c17ec09bd",
+  "input_hash": "14f86ba4c3e62adccb9530327eba158e4502eb930b9cd5d5c5180378f3eb7af9",
   "model_id": "deepseek-flash",
   "prompt_version": "aea8f22ee4ea599cce8f5576dacb9d0aae9c3ea93bc67753b932b93a5223f522",
   "request_id": "",
   "skill": "chat",
   "stop_reason": "tool_use",
-  "tokens_in": 500,
+  "tokens_in": 360,
   "tokens_out": 57,
   "tool_input": {
     "action": "queue_facts",

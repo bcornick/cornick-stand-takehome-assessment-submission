@@ -422,8 +422,8 @@ def _prepare_ask_producer(
 
 
 HELD_FOR_A_CHOICE = (
-    "This request waits for your decision on the open choice, so a lead you decline is not asked. "
-    "Send it now, or decide the choice first."
+    "Not sent yet, in case you decline this lead. "
+    "Send it to the producer, or decline at the choice above."
 )
 
 

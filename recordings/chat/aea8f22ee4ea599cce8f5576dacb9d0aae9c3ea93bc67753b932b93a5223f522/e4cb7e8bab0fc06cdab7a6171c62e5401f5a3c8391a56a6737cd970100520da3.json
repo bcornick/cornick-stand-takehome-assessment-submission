@@ -26,7 +26,7 @@
               "kind": "underwriter_review",
               "lead_id": "LEAD-00000042-003",
               "ref": 3,
-              "text": "This request waits for your decision on the open choice, so a lead you decline is not asked. Send it now, or decide the choice first."
+              "text": "Not sent yet, in case you decline this lead. Send it to the producer, or decline at the choice above."
             },
             {
               "kind": "underwriter_question",
@@ -38,7 +38,7 @@
               "kind": "underwriter_review",
               "lead_id": "LEAD-00000042-006",
               "ref": 5,
-              "text": "This request waits for your decision on the open choice, so a lead you decline is not asked. Send it now, or decide the choice first."
+              "text": "Not sent yet, in case you decline this lead. Send it to the producer, or decline at the choice above."
             }
           ],
           "summary": {
@@ -202,17 +202,17 @@
       }
     ]
   },
-  "input_hash": "538ca88e310bc4c7873382425d5fc87dd5bcb759c6dea400091d34eee8864937",
+  "input_hash": "e4cb7e8bab0fc06cdab7a6171c62e5401f5a3c8391a56a6737cd970100520da3",
   "model_id": "deepseek-flash",
   "prompt_version": "aea8f22ee4ea599cce8f5576dacb9d0aae9c3ea93bc67753b932b93a5223f522",
   "request_id": "",
   "skill": "chat",
   "stop_reason": "tool_use",
-  "tokens_in": 879,
-  "tokens_out": 242,
+  "tokens_in": 867,
+  "tokens_out": 219,
   "tool_input": {
     "action": "answer",
-    "answer": "Three leads are waiting on you:\n\n- LEAD-000 (LEAD-00000042-000): a decline notice is waiting for your review before it is sent.\n- 9273 Hillside Ct (LEAD-00000042-003): the fire simulation failed, so you must decide whether to decline or continue under legacy underwriting (the legacy checklist values are shown). A request on this lead is also held until that choice is made — send it now or decide the choice first.\n- 3730 Hillside Ct (LEAD-00000042-006): same situation — the fire simulation failed, so decide decline or legacy underwriting, and a held request waits on that choice.\n\nThe other seven leads are waiting on producer replies, not on you.",
+    "answer": "Three leads are waiting on you:\n\n- LEAD-000 (LEAD-00000042-000): a decline notice is drafted and needs your review before it is sent.\n- 9273 Hillside Ct (LEAD-00000042-003): the fire simulation failed, so you must decide whether to decline or continue under legacy underwriting. A message to the producer is also held back pending that decision.\n- 3730 Hillside Ct (LEAD-00000042-006): same situation — fire simulation failed, decline or continue under legacy underwriting, with a producer message held back.\n\nThe other seven leads are waiting on producer replies.",
     "citations": [
       1,
       2,

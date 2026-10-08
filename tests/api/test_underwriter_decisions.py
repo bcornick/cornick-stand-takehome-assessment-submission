@@ -14,6 +14,7 @@ from uwh.runtime.rulings import rulings_in_force
 from uwh.runtime.store import open_store
 from uwh.runtime.waits import open_blockers
 from uwh.settings import Settings
+from uwh.skills.steps import HELD_FOR_A_CHOICE
 
 LEAD_000, LEAD_003, LEAD_006, LEAD_009 = (
     f"LEAD-00000042-{n}" for n in ("000", "003", "006", "009")
@@ -92,7 +93,7 @@ def test_a_request_waits_for_the_underwriter_while_a_choice_could_decline_the_le
 ) -> None:
     draft, item = held_request(app, lead_id)
 
-    assert item["kind"] == "underwriter_review" and "decision" in item["detail"]["text"]
+    assert item["kind"] == "underwriter_review" and item["detail"]["text"] == HELD_FOR_A_CHOICE
     assert draft["asks"] != []
     assert mailbox.list_for_lead(lead_id) == []
 
@@ -176,7 +177,7 @@ def test_a_closed_question_card_is_matched_to_its_ruling_through_the_choice_ids_
     assert card["item_id"] is not None and card["choice_ids"] == ["I13.fire_fail"]
     assert ruling["choice_ids"] == ["I13.fire_fail"] and ruling["actor"] == "underwriter"
     # The request held for the underwriter's decision is an item of the underwriter's too.
-    held = [r for r in rows if r["type"] == "blocker_opened" and "decision" in r["summary"]]
+    held = [r for r in rows if r["type"] == "blocker_opened" and HELD_FOR_A_CHOICE in r["summary"]]
     assert held and all(r["item_id"] is not None for r in held)
 
 

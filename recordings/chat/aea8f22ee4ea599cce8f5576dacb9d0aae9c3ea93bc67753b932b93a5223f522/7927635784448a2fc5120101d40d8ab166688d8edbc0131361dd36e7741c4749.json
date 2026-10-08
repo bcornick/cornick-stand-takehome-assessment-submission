@@ -863,20 +863,17 @@
   "skill": "chat",
   "stop_reason": "tool_use",
   "tokens_in": 139,
-  "tokens_out": 218,
+  "tokens_out": 187,
   "tool_input": {
     "action": "answer",
-    "answer": "Lead 000 is a proposed decline because of the post-and-pier page: rule PP-1 fired and committed a decline. The lead's foundation is Piers and the post-pier supports the living area, which is the branch that declines.\n\nThe other pages did not drive it: roof and siding came back no action, and occupancy, profile, replacement cost, electrical and plumbing were not decided (occupancy waits on months unoccupied, profile on the identity score, replacement cost on the coverage-to-RC ratio, and electrical and plumbing are not evaluated).\n\nThe decline notice is drafted and sitting with you for review before it goes out.",
+    "answer": "Lead 000 is a proposed decline because of the post-and-pier page of the playbook: rule PP-1 fired on the branch for a pier foundation whose posts support the living area, and that effect is committed. The plan built from it is a decline, and a decline notice to the owner is drafted and waiting on your review.\n\nThe other pages did not drive it: roof and siding came back no action, and occupancy, profile, replacement cost, electrical and plumbing either still wait on a field or were not evaluated.",
     "citations": [
       35,
+      120,
+      121,
+      33,
       38,
-      39,
-      34,
-      36,
-      37,
-      40,
-      41,
-      33
+      39
     ]
   }
 }

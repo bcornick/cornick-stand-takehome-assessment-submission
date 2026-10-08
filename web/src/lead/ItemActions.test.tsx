@@ -277,12 +277,12 @@ describe('a draft card', () => {
       blocker(31, 'underwriter_review', {
         item_kind: 'draft',
         intent_id: request.intent_id,
-        text: 'This request waits for your decision on the open choice.',
+        text: 'Not sent yet, in case you decline this lead. Send it to the producer, or decline at the choice above.',
       }),
       { ...lead, drafts: [request] },
     )
     expect(screen.getByText('Preview the request')).toBeInTheDocument()
-    expect(screen.getByText('This request waits for your decision on the open choice.')).toBeInTheDocument()
+    expect(screen.getByText('Not sent yet, in case you decline this lead. Send it to the producer, or decline at the choice above.')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Send request' }))
     await userEvent.click(reasonForm().getByRole('button', { name: 'Send request' }))
 
