@@ -67,5 +67,6 @@ Each model exchange is stored under `recordings/`, keyed by the skill, its promp
 | Code writes the questions | model-written emails | No question is dropped, invented or reworded | Plainer emails, softened only by the opening and closing |
 | An event log and a fact ledger in SQLite | a graph database per lead | Every value has a source, and the "why" is rebuilt from events | One process |
 | Recorded model answers | live calls in tests and the demo | Repeatable evals and a keyless demo | A prompt change means recording again |
+| DeepSeek `deepseek-flash`, with Jev classifying replies | a frontier model for every call | Cost and token efficiency: the model only reads and writes words, so a small model does; classification runs through the whole workflow, and Jev does it well with a confidence the model does not give | Two calls per reply when Jev is on; a model hosted outside the US needs a data-handling review before production |
 
 Section 17 of the design spec lists the other alternatives considered.
