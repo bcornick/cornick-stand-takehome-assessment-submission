@@ -637,3 +637,5 @@ Brett's decisions carried into milestone 1: an underwriter's value that still tr
 **Build logs (Brett):** the plan, the critique, the chat-surface design, this log and the acceptance checks live under `docs/build_logs/`; every reference names the new path.
 
 **A short architecture (Brett):** `ARCHITECTURE.md` is a one-page overview for the reviewer (the pieces, the flow of a lead, where the model is used, what keeps sending safe, the trade-offs); the full document moved to `docs/build_logs/design-spec.md`, which code comments and the agent rules cite. The README's architecture section is a summary that points to the page.
+
+**A short README (Brett):** the README keeps only what a reviewer needs to start the app and what the brief asks that `ARCHITECTURE.md` does not answer (the five decisions, the eval loop and what to iterate on, the skills and hit list, the cut list, the main known limits), at about 1,750 words; the full list of known limits is `docs/build_logs/known-limits.md`.
