@@ -21,7 +21,7 @@ const badgeVariants = cva(
           "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
         link: "text-primary underline-offset-4 hover:underline",
         // The three states of a lead or an item; a colour means one thing.
-        needs: "bg-accent text-white",
+        needs: "border-accent bg-accent/10 text-accent",
         waiting: "bg-muted text-primary-hover",
         done: "bg-done/10 text-done",
       },
