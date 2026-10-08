@@ -117,19 +117,22 @@
   },
   "input_hash": "9fa0bdb466b30bb43a2111b0ce1036424a43a6312b2c3f5cf757a3072f8f2efd",
   "model_id": "deepseek-flash",
-  "prompt_version": "420913c0db29baac7517388cbb115533f26f7da68705919bb22a7dd16032634d",
+  "prompt_version": "aea8f22ee4ea599cce8f5576dacb9d0aae9c3ea93bc67753b932b93a5223f522",
   "request_id": "",
   "skill": "chat",
   "stop_reason": "tool_use",
-  "tokens_in": 638,
-  "tokens_out": 100,
+  "tokens_in": 677,
+  "tokens_out": 168,
   "tool_input": {
     "action": "answer",
-    "answer": "Three leads are in Florida: 3948 Old Mill Rd, 4452 Meadowlark Ln, and 903 Lakeview Blvd.",
+    "answer": "Three leads are in Florida:\n\n- 3948 Old Mill Rd (LEAD-00000042-004)\n- 4452 Meadowlark Ln (LEAD-00000042-007)\n- 903 Lakeview Blvd (LEAD-00000042-009)\n\nThree more leads have no state recorded: LEAD-00000042-000, 3567 Lakeview Blvd and 3730 Hillside Ct.",
     "citations": [
       5,
       8,
-      10
+      10,
+      1,
+      6,
+      7
     ]
   }
 }

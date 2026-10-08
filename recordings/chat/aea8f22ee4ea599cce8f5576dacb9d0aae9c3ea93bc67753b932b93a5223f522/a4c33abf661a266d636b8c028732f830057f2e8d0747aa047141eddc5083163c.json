@@ -7,7 +7,7 @@
     "steps": [
       {
         "action": "lead_summary",
-        "lead_id": "LEAD-00000042-008",
+        "lead_id": "008",
         "result": {
           "facts": [
             {
@@ -353,23 +353,61 @@
           "open_items": [],
           "status": "received"
         }
+      },
+      {
+        "action": "queue_summary",
+        "lead_id": null,
+        "result": {
+          "open_items": [],
+          "summary": {
+            "declines_approved": 0,
+            "delivery_unknown": 0,
+            "follow_ups_sent": 0,
+            "quotes_sent": 0,
+            "waiting_on_data": 0,
+            "waiting_on_producer": 0,
+            "waiting_on_underwriter": 0
+          }
+        }
+      },
+      {
+        "action": "current_draft",
+        "lead_id": "008",
+        "result": {
+          "draft": null
+        }
+      },
+      {
+        "action": "messages",
+        "lead_id": "008",
+        "result": {
+          "replies": [],
+          "requests": []
+        }
+      },
+      {
+        "action": "playbook_path",
+        "lead_id": "008",
+        "result": {
+          "pages": []
+        }
       }
     ]
   },
-  "input_hash": "05d846aef3b66828915826e9e73342c9e794aec9f505585657ccaaad7a8de7a2",
+  "input_hash": "a4c33abf661a266d636b8c028732f830057f2e8d0747aa047141eddc5083163c",
   "model_id": "deepseek-flash",
-  "prompt_version": "420913c0db29baac7517388cbb115533f26f7da68705919bb22a7dd16032634d",
+  "prompt_version": "aea8f22ee4ea599cce8f5576dacb9d0aae9c3ea93bc67753b932b93a5223f522",
   "request_id": "",
   "skill": "chat",
   "stop_reason": "tool_use",
-  "tokens_in": 1779,
-  "tokens_out": 132,
+  "tokens_in": 185,
+  "tokens_out": 131,
   "tool_input": {
     "action": "propose_command",
     "command_payload": {
       "lead_id": "LEAD-00000042-008"
     },
     "command_type": "send_quote_packet",
-    "rationale": "The underwriter asked to approve the quote packet for this lead; the lead has no open items or open choices, so the quote packet can be sent."
+    "rationale": "The underwriter asked to approve the quote packet for this lead. The lead has no open items or open choices, so the packet can be sent."
   }
 }

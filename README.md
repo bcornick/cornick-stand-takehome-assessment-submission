@@ -77,7 +77,7 @@ For the rest (rules core, the interpretation table, ledger rules, message classe
 
 - `seed42`: the ten leads against the ten labels in `evals/labels/seed42/`, graded at the settle point and again after scripted underwriter actions. The labels were written from the playbook, the registry and the data files without reading the rules code.
 - `replies`: eight reply fixtures (three held back under `fixtures/replies/held/`; lead 008's reply, the ninth, is the demo's) read by `read_reply`, graded against `evals/labels/replies/`.
-- `chat`: five cases with twelve recordings (the three example questions have nine more), one a cross-lead question answered from the queue facts; a question causes zero commands, a refused directive stays refused when reworded, and a producer's reply that carries an instruction is read back without one being followed.
+- `chat`: five cases with 18 recordings (the three example questions have 9 more), one a cross-lead question answered from the queue facts; a question causes zero commands, a refused directive stays refused when reworded, and a producer's reply that carries an instruction is read back without one being followed.
 
 **The nine graders.**
 

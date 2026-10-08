@@ -24,15 +24,15 @@
   },
   "input_hash": "84505b87b61a3f917c7c5dd6896a42c013c9c8fd3fac3147af3b62fd4b7bac14",
   "model_id": "deepseek-flash",
-  "prompt_version": "420913c0db29baac7517388cbb115533f26f7da68705919bb22a7dd16032634d",
+  "prompt_version": "aea8f22ee4ea599cce8f5576dacb9d0aae9c3ea93bc67753b932b93a5223f522",
   "request_id": "",
   "skill": "chat",
   "stop_reason": "tool_use",
-  "tokens_in": 228,
-  "tokens_out": 113,
+  "tokens_in": 267,
+  "tokens_out": 121,
   "tool_input": {
     "action": "answer",
-    "answer": "We sent one routine request, \"Information needed for your quote: 8924 Lakeview Blvd\". It asked the producer two things: when the property was purchased, and what brand the electrical panel is. No reply has come back yet.",
+    "answer": "We sent one routine request to the producer on lead 008, titled \"Information needed for your quote: 8924 Lakeview Blvd\". It asked for two things:\n\n- When the property was purchased.\n- The brand of the electrical panel.\n\nNo reply has come back yet.",
     "citations": [
       1
     ]

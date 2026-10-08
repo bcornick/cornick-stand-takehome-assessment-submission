@@ -858,20 +858,26 @@
   },
   "input_hash": "91a9e4d48926011b4371b234c075e4091b7fb5605c5fd3f1346fa0b2ec93167c",
   "model_id": "deepseek-flash",
-  "prompt_version": "420913c0db29baac7517388cbb115533f26f7da68705919bb22a7dd16032634d",
+  "prompt_version": "aea8f22ee4ea599cce8f5576dacb9d0aae9c3ea93bc67753b932b93a5223f522",
   "request_id": "",
   "skill": "chat",
   "stop_reason": "tool_use",
-  "tokens_in": 3300,
-  "tokens_out": 136,
+  "tokens_in": 3467,
+  "tokens_out": 222,
   "tool_input": {
     "action": "answer",
-    "answer": "The playbook's post-and-pier page committed a decline under rule PP-1. The lead's foundation is Piers and the post-pier supports the living area, which is the condition that page declines on. That decline is what produced the drafted decline notice now waiting on your review.",
+    "answer": "Lead 000 is a proposed decline because of the post-and-pier page: rule PP-1 fired on the branch for a pier foundation whose posts support the living area, and that effect is committed. The lead's foundation is recorded as Piers with post_pier_supports_living_area = yes, which is what that branch keys on.\n\nThe other pages did not drive it: roof and siding returned no action, and occupancy, profile, replacement cost, electrical and plumbing either wait on missing fields or were not evaluated. A decline notice to the owner has been drafted and is waiting on your review before it is sent.",
     "citations": [
       35,
       10,
       23,
-      121,
+      38,
+      39,
+      34,
+      36,
+      37,
+      40,
+      41,
       33
     ]
   }

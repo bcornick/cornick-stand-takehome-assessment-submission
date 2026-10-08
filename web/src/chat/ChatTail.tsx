@@ -5,6 +5,7 @@ import { Chip } from '@/components/Chip'
 import { AssistantLabel } from '@/conversation/AssistantLabel'
 import { leadName } from '@/format'
 import { QUEUE, type PanelTarget, type Turn } from '@/surface'
+import { AnswerText } from './AnswerText'
 import { ProposalCard } from './ProposalCard'
 
 type Props = {
@@ -45,7 +46,7 @@ export function ChatTail({ turns, proposals, leadId, onOpen, onSelect, onChange 
                 {closing?.type === 'answer' && (
                   <div className="flex flex-col gap-1">
                     <AssistantLabel />
-                    <p className="text-sm">{closing.answer}</p>
+                    <AnswerText answer={closing.answer} />
                     <p className="flex gap-1">
                       {sourcesOf(closing).map((citation) => (
                         <Chip

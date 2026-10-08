@@ -1,0 +1,394 @@
+{
+  "input": {
+    "final": false,
+    "history": [],
+    "lead_id": "LEAD-00000042-008",
+    "message": "Approve the quote packet for this lead.",
+    "steps": [
+      {
+        "action": "lead_summary",
+        "lead_id": "008",
+        "result": {
+          "facts": [
+            {
+              "key": "acreage",
+              "ref": 1,
+              "source": "submitted",
+              "value": 2.47
+            },
+            {
+              "key": "broker_tier",
+              "ref": 2,
+              "source": "submitted",
+              "value": "Tier 2"
+            },
+            {
+              "key": "city",
+              "ref": 3,
+              "source": "submitted",
+              "value": "Santa Rosa"
+            },
+            {
+              "key": "construction_type",
+              "ref": 4,
+              "source": "submitted",
+              "value": "Frame"
+            },
+            {
+              "key": "county",
+              "ref": 5,
+              "source": "submitted",
+              "value": "Sonoma"
+            },
+            {
+              "key": "coverage_a",
+              "ref": 6,
+              "source": "submitted",
+              "value": 875000
+            },
+            {
+              "key": "coverage_e",
+              "ref": 7,
+              "source": "submitted",
+              "value": "100000"
+            },
+            {
+              "key": "coverage_f",
+              "ref": 8,
+              "source": "submitted",
+              "value": "3000"
+            },
+            {
+              "key": "dist_to_nearest_fire_hydrant",
+              "ref": 9,
+              "source": "submitted",
+              "value": 65
+            },
+            {
+              "key": "distance_to_fire_department",
+              "ref": 10,
+              "source": "submitted",
+              "value": 0.9
+            },
+            {
+              "key": "dwelling_type",
+              "ref": 11,
+              "source": "submitted",
+              "value": "Owner Occupied Single Family Residence"
+            },
+            {
+              "key": "dwelling_use_type",
+              "ref": 12,
+              "source": "submitted",
+              "value": "Primary"
+            },
+            {
+              "key": "effective_date",
+              "ref": 13,
+              "source": "submitted",
+              "value": "2026-08-01"
+            },
+            {
+              "key": "electrical_panel_size_amps",
+              "ref": 14,
+              "source": "submitted",
+              "value": 200
+            },
+            {
+              "key": "fire_alarm",
+              "ref": 15,
+              "source": "submitted",
+              "value": "Central Alarm"
+            },
+            {
+              "key": "fire_department_type",
+              "ref": 16,
+              "source": "submitted",
+              "value": "Mostly Career"
+            },
+            {
+              "key": "first_name",
+              "ref": 17,
+              "source": "submitted",
+              "value": "Lena"
+            },
+            {
+              "key": "foundation_type",
+              "ref": 18,
+              "source": "submitted",
+              "value": "Slab"
+            },
+            {
+              "key": "has_animals",
+              "ref": 19,
+              "source": "submitted",
+              "value": false
+            },
+            {
+              "key": "has_knob_and_tube_wiring",
+              "ref": 20,
+              "source": "submitted",
+              "value": false
+            },
+            {
+              "key": "has_primary_policy_with_stand",
+              "ref": 21,
+              "source": "submitted",
+              "value": false
+            },
+            {
+              "key": "heating_source",
+              "ref": 22,
+              "source": "submitted",
+              "value": "Central Gas"
+            },
+            {
+              "key": "insured_dob",
+              "ref": 23,
+              "source": "submitted",
+              "value": "1975-04-17"
+            },
+            {
+              "key": "is_7a_compliant",
+              "ref": 24,
+              "source": "submitted",
+              "value": true
+            },
+            {
+              "key": "is_gated_community",
+              "ref": 25,
+              "source": "submitted",
+              "value": false
+            },
+            {
+              "key": "is_rental",
+              "ref": 26,
+              "source": "submitted",
+              "value": "No"
+            },
+            {
+              "key": "kyc_score",
+              "ref": 27,
+              "source": "submitted",
+              "value": 2
+            },
+            {
+              "key": "last_name",
+              "ref": 28,
+              "source": "submitted",
+              "value": "Ahn"
+            },
+            {
+              "key": "listed_for_sale",
+              "ref": 29,
+              "source": "submitted",
+              "value": false
+            },
+            {
+              "key": "months_unoccupied",
+              "ref": 30,
+              "source": "submitted",
+              "value": 0
+            },
+            {
+              "key": "num_stories",
+              "ref": 31,
+              "source": "submitted",
+              "value": 1
+            },
+            {
+              "key": "number_of_residents",
+              "ref": 32,
+              "source": "submitted",
+              "value": 4
+            },
+            {
+              "key": "owner_email",
+              "ref": 33,
+              "source": "submitted",
+              "value": "owner@example.com"
+            },
+            {
+              "key": "owner_phone_number",
+              "ref": 34,
+              "source": "submitted",
+              "value": "+1-555-0158"
+            },
+            {
+              "key": "p_f",
+              "ref": 35,
+              "source": "submitted",
+              "value": 0.14
+            },
+            {
+              "key": "plumbing_age_years",
+              "ref": 36,
+              "source": "submitted",
+              "value": 6
+            },
+            {
+              "key": "pool_has_diving_board_or_slide",
+              "ref": 37,
+              "source": "submitted",
+              "value": false
+            },
+            {
+              "key": "pool_security",
+              "ref": 38,
+              "source": "submitted",
+              "value": "None"
+            },
+            {
+              "key": "pool_type",
+              "ref": 39,
+              "source": "submitted",
+              "value": "None"
+            },
+            {
+              "key": "protection_class",
+              "ref": 40,
+              "source": "submitted",
+              "value": "5"
+            },
+            {
+              "key": "residence_held_in_trust",
+              "ref": 41,
+              "source": "submitted",
+              "value": false
+            },
+            {
+              "key": "road_access",
+              "ref": 42,
+              "source": "submitted",
+              "value": "Multiple Access Points"
+            },
+            {
+              "key": "roof_classification",
+              "ref": 43,
+              "source": "derived",
+              "value": "Class A"
+            },
+            {
+              "key": "roof_material",
+              "ref": 44,
+              "source": "submitted",
+              "value": "Standing Seam Metal"
+            },
+            {
+              "key": "roof_replacement_year",
+              "ref": 45,
+              "source": "submitted",
+              "value": 2017
+            },
+            {
+              "key": "roof_shape",
+              "ref": 46,
+              "source": "submitted",
+              "value": "Gable"
+            },
+            {
+              "key": "siding_classification",
+              "ref": 47,
+              "source": "derived",
+              "value": "B"
+            },
+            {
+              "key": "siding_material",
+              "ref": 48,
+              "source": "submitted",
+              "value": "Stucco"
+            },
+            {
+              "key": "square_feet",
+              "ref": 49,
+              "source": "submitted",
+              "value": 3200
+            },
+            {
+              "key": "state",
+              "ref": 50,
+              "source": "submitted",
+              "value": "CA"
+            },
+            {
+              "key": "street_address",
+              "ref": 51,
+              "source": "submitted",
+              "value": "8924 Lakeview Blvd"
+            },
+            {
+              "key": "structure_type",
+              "ref": 52,
+              "source": "submitted",
+              "value": "Single Family"
+            },
+            {
+              "key": "vegetation_clearance",
+              "ref": 53,
+              "source": "submitted",
+              "value": "Adequate"
+            },
+            {
+              "key": "water_heater_type",
+              "ref": 54,
+              "source": "submitted",
+              "value": "Tankless"
+            },
+            {
+              "key": "year_built",
+              "ref": 55,
+              "source": "submitted",
+              "value": 1993
+            },
+            {
+              "key": "zip",
+              "ref": 56,
+              "source": "submitted",
+              "value": "95404"
+            }
+          ],
+          "label": "8924 Lakeview Blvd",
+          "lead_id": "LEAD-00000042-008",
+          "open_choices": [],
+          "open_items": [],
+          "status": "received"
+        }
+      },
+      {
+        "action": "queue_summary",
+        "lead_id": null,
+        "result": {
+          "open_items": [],
+          "summary": {
+            "declines_approved": 0,
+            "delivery_unknown": 0,
+            "follow_ups_sent": 0,
+            "quotes_sent": 0,
+            "waiting_on_data": 0,
+            "waiting_on_producer": 0,
+            "waiting_on_underwriter": 0
+          }
+        }
+      },
+      {
+        "action": "current_draft",
+        "lead_id": "008",
+        "result": {
+          "draft": null
+        }
+      }
+    ]
+  },
+  "input_hash": "c0dfed0b611bc2a4105326df1ea10dc801e0f8a5f7ab14d73da5cd5cc44495e7",
+  "model_id": "deepseek-flash",
+  "prompt_version": "aea8f22ee4ea599cce8f5576dacb9d0aae9c3ea93bc67753b932b93a5223f522",
+  "request_id": "",
+  "skill": "chat",
+  "stop_reason": "tool_use",
+  "tokens_in": 136,
+  "tokens_out": 49,
+  "tool_input": {
+    "action": "messages",
+    "lead_id": "008"
+  }
+}

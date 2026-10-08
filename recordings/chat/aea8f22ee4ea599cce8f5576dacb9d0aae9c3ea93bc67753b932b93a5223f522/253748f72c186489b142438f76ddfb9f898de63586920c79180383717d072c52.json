@@ -7,7 +7,7 @@
     "steps": [
       {
         "action": "lead_events",
-        "lead_id": "LEAD-00000042-008",
+        "lead_id": "008",
         "result": {
           "events": [
             {
@@ -705,16 +705,16 @@
       }
     ]
   },
-  "input_hash": "fb3b320af8918a96faf15def740219596b47127f78ca15fce6984ce4b3359b01",
+  "input_hash": "253748f72c186489b142438f76ddfb9f898de63586920c79180383717d072c52",
   "model_id": "deepseek-flash",
-  "prompt_version": "420913c0db29baac7517388cbb115533f26f7da68705919bb22a7dd16032634d",
+  "prompt_version": "aea8f22ee4ea599cce8f5576dacb9d0aae9c3ea93bc67753b932b93a5223f522",
   "request_id": "",
   "skill": "chat",
   "stop_reason": "tool_use",
-  "tokens_in": 4531,
-  "tokens_out": 58,
+  "tokens_in": 4691,
+  "tokens_out": 51,
   "tool_input": {
     "action": "lead_events",
-    "lead_id": "LEAD-00000042-008"
+    "lead_id": "008"
   }
 }

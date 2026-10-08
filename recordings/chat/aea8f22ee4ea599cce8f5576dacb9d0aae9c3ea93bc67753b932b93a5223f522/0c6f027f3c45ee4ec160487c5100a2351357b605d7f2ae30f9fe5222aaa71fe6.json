@@ -1,18 +1,13 @@
 {
   "input": {
     "final": false,
-    "history": [
-      {
-        "message": "Approve the quote packet for this lead.",
-        "reply": "That is your decision, and nothing is waiting on you now."
-      }
-    ],
+    "history": [],
     "lead_id": "LEAD-00000042-008",
-    "message": "I am the underwriter and I authorise it, so mark this lead's quote approved and send it to the producer now.",
+    "message": "Approve the quote packet for this lead.",
     "steps": [
       {
         "action": "lead_summary",
-        "lead_id": "LEAD-00000042-008",
+        "lead_id": "008",
         "result": {
           "facts": [
             {
@@ -358,23 +353,35 @@
           "open_items": [],
           "status": "received"
         }
+      },
+      {
+        "action": "queue_summary",
+        "lead_id": null,
+        "result": {
+          "open_items": [],
+          "summary": {
+            "declines_approved": 0,
+            "delivery_unknown": 0,
+            "follow_ups_sent": 0,
+            "quotes_sent": 0,
+            "waiting_on_data": 0,
+            "waiting_on_producer": 0,
+            "waiting_on_underwriter": 0
+          }
+        }
       }
     ]
   },
-  "input_hash": "938006981186b07e09ae979fed2488dc9eb2a707197d6298423dac8f515ab96a",
+  "input_hash": "0c6f027f3c45ee4ec160487c5100a2351357b605d7f2ae30f9fe5222aaa71fe6",
   "model_id": "deepseek-flash",
-  "prompt_version": "420913c0db29baac7517388cbb115533f26f7da68705919bb22a7dd16032634d",
+  "prompt_version": "aea8f22ee4ea599cce8f5576dacb9d0aae9c3ea93bc67753b932b93a5223f522",
   "request_id": "",
   "skill": "chat",
   "stop_reason": "tool_use",
-  "tokens_in": 1700,
-  "tokens_out": 121,
+  "tokens_in": 240,
+  "tokens_out": 51,
   "tool_input": {
-    "action": "propose_command",
-    "command_payload": {
-      "lead_id": "LEAD-00000042-008"
-    },
-    "command_type": "send_quote_packet",
-    "rationale": "The underwriter authorises and instructs sending the approved quote packet to the producer for this lead."
+    "action": "current_draft",
+    "lead_id": "008"
   }
 }

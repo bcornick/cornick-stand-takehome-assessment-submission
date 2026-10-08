@@ -7,7 +7,7 @@
     "steps": [
       {
         "action": "lead_events",
-        "lead_id": "LEAD-00000042-008",
+        "lead_id": "008",
         "result": {
           "events": [
             {
@@ -705,7 +705,7 @@
       },
       {
         "action": "lead_events",
-        "lead_id": "LEAD-00000042-008",
+        "lead_id": "008",
         "result": {
           "note": "You already have this result above. Answer from what you have.",
           "repeated": true
@@ -713,17 +713,17 @@
       }
     ]
   },
-  "input_hash": "aba0ee179981be8bace8e7875060f884e24734412c22d9411af09ca1a31de7d6",
+  "input_hash": "b461c1ad8be549b791046d1d4120ed1d2769797a0649f4518b59a622e9d28d67",
   "model_id": "deepseek-flash",
-  "prompt_version": "420913c0db29baac7517388cbb115533f26f7da68705919bb22a7dd16032634d",
+  "prompt_version": "aea8f22ee4ea599cce8f5576dacb9d0aae9c3ea93bc67753b932b93a5223f522",
   "request_id": "",
   "skill": "chat",
   "stop_reason": "tool_use",
-  "tokens_in": 228,
-  "tokens_out": 115,
+  "tokens_in": 253,
+  "tokens_out": 147,
   "tool_input": {
     "action": "answer",
-    "answer": "The most recent record is that siding_classification was recorded as B (derived) and selected for use. Just before that, roof_classification was recorded as Class A (derived) and selected.",
+    "answer": "The most recent record for this lead is the selection of siding_classification as B, derived by the workflow. Just before it, roof_classification was recorded and selected as Class A, also derived.\n\nEverything recorded so far is from the initial intake: the submitted facts (address, owner details, dwelling and construction characteristics, protection details) and the two derived classifications.",
     "citations": [
       114,
       115,
