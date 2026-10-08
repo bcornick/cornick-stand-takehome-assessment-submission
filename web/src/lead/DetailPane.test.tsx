@@ -55,6 +55,7 @@ const lead: Schemas['LeadDetail'] = {
   pages: [],
   plan: null,
   blockers: [packetBlocker],
+  readings: {},
   fields: [
     { key: 'coverage_a', label: 'Coverage A', kind: 'integer', options: [] },
     { key: 'zip_code', label: 'Zip code', kind: 'text', options: [] },

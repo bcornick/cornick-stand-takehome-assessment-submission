@@ -6,13 +6,21 @@ import { ActionForm } from '@/components/ActionForm'
 import { Badge } from '@/components/ui/badge'
 import { useAction } from '@/components/useAction'
 import { fieldLabel, formatValue } from '@/format'
-import { BLOCKER_KIND_LABELS, OWNER_LABELS } from '@/labels'
+import { BLOCKER_KIND_LABELS } from '@/labels'
 import { useState } from 'react'
 
 type Schemas = components['schemas']
 type LeadDetail = Schemas['LeadDetail']
 type Blocker = LeadDetail['blockers'][number]
 type Draft = LeadDetail['drafts'][number]
+
+// The approve button of a draft names the action, not a verdict on the lead.
+const SEND_LABELS: Record<Draft['kind'], string> = {
+  decline_notice: 'Send decline notice',
+  quote_packet: 'Send quote',
+  routine_request: 'Send request',
+  sensitive_request: 'Send request',
+}
 
 const DRAFT_REJECT_PLACEHOLDER = 'Optional. What is wrong with it; this is how the system learns.'
 
@@ -22,7 +30,8 @@ type Props = { lead: LeadDetail; onChange: () => void }
 // `confirm` is the confirm button's words when they differ from the choice's own.
 type Choice = {
   label: string
-  outline: boolean
+  // `destructive` is a decline, which looks apart from the other choices.
+  style: 'primary' | 'outline' | 'destructive'
   act: (reason: string) => Promise<string | null>
   confirm?: string
   note?: string
@@ -37,9 +46,6 @@ export function OpenItem({ lead, blocker, onChange }: Props & { blocker: Blocker
     <div className="flex flex-col gap-2">
       <p className="flex flex-wrap items-baseline gap-2">
         <Badge variant="outline">{BLOCKER_KIND_LABELS[blocker.kind]}</Badge>
-        <Badge variant={blocker.owner === 'underwriter' ? 'needs' : 'waiting'}>
-          {`Waits on ${OWNER_LABELS[blocker.owner].toLowerCase()}`}
-        </Badge>
         {blocker.kind !== 'underwriter_question' && <span>{blocker.detail.text}</span>}
       </p>
       <ItemActions lead={lead} blocker={blocker} onChange={onChange} />
@@ -55,16 +61,17 @@ function ItemActions({ lead, blocker, onChange }: Props & { blocker: Blocker }) 
     placeholder = 'Optional.',
     hash?: string,
     reasonLabel?: string,
+    style: Choice['style'] = 'primary',
   ): Choice => ({
     label,
-    outline: false,
+    style,
     act: (reason) => approve(itemId, reason, hash),
     placeholder,
     reasonLabel,
   })
   const rejectChoice = (label = 'Reject', placeholder = 'Optional.', note?: string): Choice => ({
     label,
-    outline: true,
+    style: 'outline',
     act: (reason) => reject(itemId, reason),
     placeholder,
     note,
@@ -86,9 +93,15 @@ function ItemActions({ lead, blocker, onChange }: Props & { blocker: Blocker }) 
         : rejectChoice('Reject', DRAFT_REJECT_PLACEHOLDER)
     const approveDraft =
       draft.kind === 'decline_notice'
-        ? approveChoice('Approve', undefined, draft.payload_hash, 'Reason for the decline, kept on file')
+        ? approveChoice(
+            SEND_LABELS.decline_notice,
+            undefined,
+            draft.payload_hash,
+            'Reason for the decline, kept on file',
+            'destructive',
+          )
         : approveChoice(
-            'Approve',
+            SEND_LABELS[draft.kind],
             'Optional. Anything the file should carry about this quote.',
             draft.payload_hash,
           )
@@ -134,6 +147,12 @@ function ItemActions({ lead, blocker, onChange }: Props & { blocker: Blocker }) 
 
 // The choices as buttons, none chosen. Choosing one opens the single notes field; the confirm is
 // enabled with it empty, except where the choice names a required reason.
+const BUTTON_CLASSES: Record<Choice['style'], string> = {
+  primary: 'button-primary',
+  outline: 'button-outline',
+  destructive: 'button-destructive',
+}
+
 function Decision({ choices, onChange }: { choices: Choice[]; onChange: () => void }) {
   const [chosen, setChosen] = useState<Choice | null>(null)
   const [reason, setReason] = useState('')
@@ -158,7 +177,7 @@ function Decision({ choices, onChange }: { choices: Choice[]; onChange: () => vo
             type="button"
             aria-pressed={chosen === choice}
             onClick={() => setChosen(choice)}
-            className={choice.outline ? 'button-outline' : 'button-primary'}
+            className={BUTTON_CLASSES[choice.style]}
           >
             {choice.label}
           </button>
@@ -178,7 +197,11 @@ function Decision({ choices, onChange }: { choices: Choice[]; onChange: () => vo
             />
           </label>
           <span className="flex flex-wrap items-center gap-2">
-            <button type="submit" disabled={busy || (chosen.reasonLabel !== undefined && reason.trim() === '')} className="button-primary">
+            <button
+              type="submit"
+              disabled={busy || (chosen.reasonLabel !== undefined && reason.trim() === '')}
+              className={chosen.style === 'destructive' ? 'button-destructive' : 'button-primary'}
+            >
               {chosen.confirm ?? chosen.label}
             </button>
             <button type="button" onClick={close} className="button-outline">
@@ -250,9 +273,17 @@ function QuestionCard({ lead, blocker, onChange }: Props & { blocker: Blocker })
         <section key={choice.choice_id} aria-label={choice.choice_id} className="flex flex-col gap-2">
           <p className="text-sm">{choice.prompt}</p>
           <ul className="text-sm text-muted-foreground">
-            {choice.show.map((key) => (
-              <li key={key}>{`${fieldLabel(lead.fields, key)}: ${formatValue(facts.get(key))}`}</li>
-            ))}
+            {choice.show.map((key) => {
+              const reading = lead.readings[choice.choice_id]?.[key]
+              return (
+                <li key={key}>
+                  {`${fieldLabel(lead.fields, key)}: ${formatValue(facts.get(key))}`}
+                  {reading !== undefined && (
+                    <span className={reading.problem ? 'text-accent' : undefined}>{` · ${reading.text}`}</span>
+                  )}
+                </li>
+              )
+            })}
           </ul>
           <Decision
             choices={choice.options.map((option) => {
@@ -261,7 +292,7 @@ function QuestionCard({ lead, blocker, onChange }: Props & { blocker: Blocker })
                 label: words.charAt(0).toUpperCase() + words.slice(1),
                 confirm: `Choose ${words}`,
                 placeholder: 'Optional. What tipped the choice, e.g. 14 ft to the neighbour.',
-                outline: true,
+                style: option === 'decline' ? 'destructive' : 'outline',
                 act: (reason) => recordRuling(lead.lead_id, choice.choice_id, option, reason),
               }
             })}

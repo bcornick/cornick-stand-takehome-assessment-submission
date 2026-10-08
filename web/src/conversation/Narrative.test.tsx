@@ -73,6 +73,7 @@ const lead: Schemas['LeadDetail'] = {
     not_evaluated: [],
   },
   blockers: [draftItem],
+  readings: {},
   fields: [],
   drafts: [packet],
 }
@@ -115,7 +116,7 @@ const notNarrated: Event['type'][] = ['model_called', 'skill_fallback_used', 're
   it('shows an open item at its event as its line, since its card sits above the fold', () => {
     narrative([event(1, 'plan_built'), event(2, 'blocker_opened', { item_id: 7, summary: 'Waiting on you.' })])
     expect(screen.getByText('Waiting on you.')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Approve' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Send quote' })).toBeNull()
   })
 
   it('shows an approved item as one line and the approval once', () => {

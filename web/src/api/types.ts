@@ -419,6 +419,17 @@ export interface components {
             message: string;
         };
         /**
+         * ChoiceReading
+         * @description What the playbook makes of one value shown with an open choice; `problem` marks a value that
+         *     fails the page or declines.
+         */
+        ChoiceReading: {
+            /** Problem */
+            problem: boolean;
+            /** Text */
+            text: string;
+        };
+        /**
          * Citation
          * @description What a reference number of one chat turn stands for. `id` is an event id for an `event`, for a
          *     `fact` (the event that recorded it) and for a `reply` (its `reply_received` event), an intent id
@@ -722,6 +733,12 @@ export interface components {
             /** Pages */
             pages: components["schemas"]["PlanPage"][];
             plan: components["schemas"]["ActionPlan"] | null;
+            /** Readings */
+            readings: {
+                [key: string]: {
+                    [key: string]: components["schemas"]["ChoiceReading"];
+                };
+            };
             /** Revision */
             revision: number;
             /**

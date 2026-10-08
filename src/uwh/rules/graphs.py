@@ -272,6 +272,18 @@ def _holds(clause: str, operand: JsonValue, value: JsonValue) -> bool:
     }[clause]
 
 
+def matching_case(node: FieldTest, value: JsonValue) -> Case | None:
+    """The case of the test that the value falls in, or None when no case covers it."""
+    return next(
+        (
+            case
+            for case in node.cases
+            if all(_holds(clause, operand, value) for clause, operand in case.when.items())
+        ),
+        None,
+    )
+
+
 def _derived_input(name: str, facts: Mapping[str, JsonValue]) -> JsonValue:
     """A derived input of `derivations.yaml`, or None when an input is unknown or the divisor is zero."""
     spec = read_yaml("derivations.yaml")["derived_inputs"][name]
@@ -478,14 +490,7 @@ class _Walker:
     ) -> Walk:
         value = _value(node.field, self.facts)
         if value is not None:
-            chosen = next(
-                (
-                    case
-                    for case in node.cases
-                    if all(_holds(clause, operand, value) for clause, operand in case.when.items())
-                ),
-                None,
-            )
+            chosen = matching_case(node, value)
             if chosen is None:
                 raise ValueError(
                     f"the {self.graph.id} graph has no case for {node.field} = {value}"

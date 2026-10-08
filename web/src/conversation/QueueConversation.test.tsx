@@ -73,6 +73,7 @@ const lead: Schemas['LeadDetail'] = {
       observation: null,
     },
   ],
+  readings: {},
   fields: [],
   drafts: [packet],
 }
@@ -125,13 +126,13 @@ afterEach(() => {
 })
 
 describe('QueueConversation', () => {
-  it('shows an open item as a card with a link to its lead and its Approve choice', async () => {
+  it('shows an open item as a card with a link to its lead and its Send quote choice', async () => {
     stubLead(lead)
     const onSelect = vi.fn()
     renderQueue({ onSelect })
 
     expect(screen.getByText('The quote packet is ready to send.')).toBeInTheDocument()
-    expect(await screen.findByRole('button', { name: 'Approve' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Send quote' })).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: 'Lead 008 · 8924 Lakeview Blvd' }))
     expect(onSelect).toHaveBeenCalledWith(lead.lead_id)

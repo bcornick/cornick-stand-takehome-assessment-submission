@@ -65,6 +65,7 @@ const lead: Schemas['LeadDetail'] = {
       observation: null,
     },
   ],
+  readings: {},
   fields: [],
   drafts: [],
 }

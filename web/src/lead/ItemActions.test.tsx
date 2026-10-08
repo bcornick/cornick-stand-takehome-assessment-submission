@@ -142,6 +142,12 @@ const lead: Schemas['LeadDetail'] = {
     not_evaluated: [],
   },
   blockers: [],
+  readings: {
+    'I13.fire_fail': {
+      roof_age: { text: 'Fails: above 0.50', problem: true },
+      wall_type: { text: 'Not provided', problem: false },
+    },
+  },
   fields: [
     { key: 'months_unoccupied', label: 'Months unoccupied', kind: 'number', options: [] },
     { key: 'roof_age', label: 'Roof age', kind: 'number', options: [] },
@@ -190,16 +196,17 @@ describe('a draft card', () => {
   it('shows one notes field only after Approve is chosen, then approves against the hash shown with no note', async () => {
     const posted = stubApi()
     item(packetItem)
-    expect(screen.getByRole('button', { name: 'Approve' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Send quote' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Reject' })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: 'Approve' })).toBeNull()
     expect(screen.queryByLabelText('Notes')).toBeNull()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Approve' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Send quote' }))
     expect(screen.getAllByLabelText('Notes')).toHaveLength(1)
     expect(screen.getByPlaceholderText('Optional. Anything the file should carry about this quote.')).toBeInTheDocument()
-    expect(reasonForm().getByRole('button', { name: 'Approve' })).toBeEnabled()
+    expect(reasonForm().getByRole('button', { name: 'Send quote' })).toBeEnabled()
 
-    await userEvent.click(reasonForm().getByRole('button', { name: 'Approve' }))
+    await userEvent.click(reasonForm().getByRole('button', { name: 'Send quote' }))
 
     expect(posted).toEqual([
       {
@@ -261,17 +268,35 @@ describe('a draft card', () => {
       blocker(30, 'underwriter_review', { item_kind: 'draft', intent_id: decline.intent_id, text: 'Review the notice.' }),
       { ...lead, drafts: [decline] },
     )
-    await userEvent.click(screen.getByRole('button', { name: 'Approve' }))
+    expect(screen.queryByRole('button', { name: 'Approve' })).toBeNull()
+    const send = screen.getByRole('button', { name: 'Send decline notice' })
+    expect(send).toHaveClass('button-destructive')
+    await userEvent.click(send)
     expect(screen.queryByLabelText('Notes')).toBeNull()
-    expect(reasonForm().getByRole('button', { name: 'Approve' })).toBeDisabled()
+    expect(reasonForm().getByRole('button', { name: 'Send decline notice' })).toBeDisabled()
+    expect(reasonForm().getByRole('button', { name: 'Send decline notice' })).toHaveClass('button-destructive')
 
     await userEvent.type(reasonForm().getByLabelText('Reason for the decline, kept on file'), 'outside appetite')
-    await userEvent.click(reasonForm().getByRole('button', { name: 'Approve' }))
+    await userEvent.click(reasonForm().getByRole('button', { name: 'Send decline notice' }))
 
     expect(posted[0].body).toEqual({
       type: 'approve',
       payload: { item_id: 30, artifact_hash: decline.payload_hash, reason: 'outside appetite' },
     })
+  })
+
+  it.each([
+    ['routine_request', 'Send request'],
+    ['sensitive_request', 'Send request'],
+  ] as const)('names the approval of a %s as sending it', (kind, label) => {
+    item(packetItem, { ...lead, drafts: [{ ...packet, kind }] })
+    expect(screen.getByRole('button', { name: label })).toBeEnabled()
+  })
+
+  it('shows no owner badge beside the kind of the item', () => {
+    item(packetItem)
+    expect(screen.getByText('Underwriter review')).toBeInTheDocument()
+    expect(screen.queryByText(/^Waits on/)).toBeNull()
   })
 
   it('folds the subject and body in a preview, and Edit inside it posts the new text with no reason', async () => {
@@ -364,6 +389,15 @@ describe('the question card', () => {
     const buttons = within(card).getAllByRole('button')
     expect(buttons.map((b) => b.textContent)).toEqual(['Decline', 'Legacy underwriting'])
     for (const button of buttons) expect(button).toBeEnabled()
+    expect(buttons[0]).toHaveClass('button-destructive')
+    expect(buttons[1]).toHaveClass('button-outline')
+  })
+
+  it('shows what the playbook makes of each value, a problem in the accent', () => {
+    item(questionItem)
+    const card = within(screen.getByRole('region', { name: 'I13.fire_fail' }))
+    expect(card.getByText('· Fails: above 0.50')).toHaveClass('text-accent')
+    expect(card.getByText('· Not provided')).not.toHaveClass('text-accent')
   })
 
   it('posts the ruling after an option is chosen, with no note', async () => {

@@ -113,6 +113,7 @@ const lead: Schemas['LeadDetail'] = {
   pages: [],
   plan,
   blockers: [],
+  readings: {},
   fields: [{ key: 'roof_year', label: 'Roof year', kind: 'integer', options: [] }],
   drafts: [],
 }
@@ -264,10 +265,10 @@ describe('App', () => {
     await userEvent.click(demo.getByRole('button', { name: "Deliver the producers' replies" }))
 
     expect(await conversation.findByText('The roof was replaced in 2019.')).toBeInTheDocument()
-    await userEvent.click(conversation.getByRole('button', { name: 'Approve' }))
+    await userEvent.click(conversation.getByRole('button', { name: 'Send quote' }))
     const confirm = within(conversation.getByRole('form', { name: 'Confirm the choice' }))
     await userEvent.type(confirm.getByRole('textbox'), 'matches the plan')
-    await userEvent.click(confirm.getByRole('button', { name: 'Approve' }))
+    await userEvent.click(confirm.getByRole('button', { name: 'Send quote' }))
 
     expect(calls).toContain('POST /api/run/start?wait=true')
     expect(calls).toContain('POST /api/replies/fixtures')

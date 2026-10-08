@@ -427,6 +427,26 @@
         "title": "ChatRequest",
         "type": "object"
       },
+      "ChoiceReading": {
+        "additionalProperties": false,
+        "description": "What the playbook makes of one value shown with an open choice; `problem` marks a value that\nfails the page or declines.",
+        "properties": {
+          "problem": {
+            "title": "Problem",
+            "type": "boolean"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "problem"
+        ],
+        "title": "ChoiceReading",
+        "type": "object"
+      },
       "Citation": {
         "additionalProperties": false,
         "description": "What a reference number of one chat turn stands for. `id` is an event id for an `event`, for a\n`fact` (the event that recorded it) and for a `reply` (its `reply_received` event), an intent id\nfor a `message`, and a page key for a `page`.",
@@ -1200,6 +1220,16 @@
               }
             ]
           },
+          "readings": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "$ref": "#/components/schemas/ChoiceReading"
+              },
+              "type": "object"
+            },
+            "title": "Readings",
+            "type": "object"
+          },
           "revision": {
             "title": "Revision",
             "type": "integer"
@@ -1231,6 +1261,7 @@
           "pages",
           "blockers",
           "drafts",
+          "readings",
           "fields"
         ],
         "title": "LeadDetail",

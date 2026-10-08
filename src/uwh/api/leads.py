@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException
 
 from uwh.api.event_summary import event_summary
 from uwh.api.pages import plan_pages
+from uwh.api.readings import choice_readings
 from uwh.api.runtime import RuntimeDependency
 from uwh.api.summary import ask_count, summary_line
 from uwh.api.views import (
@@ -151,6 +152,7 @@ def lead_detail(db: sqlite3.Connection, lead_id: str, registry: Registry) -> Lea
         " WHERE lead_id = ? ORDER BY round, rowid",
         (lead_id,),
     ).fetchall()
+    graphs = load_graphs()
     return LeadDetail(
         lead_id=lead_id,
         label=lead_label(db, lead_id),
@@ -159,7 +161,15 @@ def lead_detail(db: sqlite3.Connection, lead_id: str, registry: Registry) -> Lea
         revision=revision,
         facts=[FactView(**vars(fact)) for fact in facts.values()],
         plan=plan,
-        pages=[] if plan is None else plan_pages(plan, load_graphs()),
+        pages=[] if plan is None else plan_pages(plan, graphs),
+        readings={}
+        if plan is None
+        else {
+            choice.choice_id: choice_readings(
+                choice, graphs, {key: fact.value for key, fact in facts.items()}
+            )
+            for choice in plan.open_choices
+        },
         blockers=[_blocker_view(db, blocker) for blocker in blockers],
         drafts=[
             DraftView(

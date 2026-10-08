@@ -94,7 +94,8 @@
 /* The buttons of standinsurance.com: a pill in ink that lightens on hover, or an outlined pill whose border darkens; both press in slightly. */
 @layer components {
   .button-primary,
-  .button-outline {
+  .button-outline,
+  .button-destructive {
     @apply inline-flex items-center justify-center rounded-full border px-4 py-1.5 text-sm font-semibold whitespace-nowrap transition-[background-color,color,border-color,transform] duration-150 enabled:active:scale-[0.97] disabled:opacity-50;
     }
   .button-primary {
@@ -102,6 +103,9 @@
     }
   .button-outline {
     @apply border-border-strong bg-transparent text-foreground enabled:hover:border-primary;
+    }
+  .button-destructive {
+    @apply border-accent bg-transparent text-accent enabled:hover:bg-accent/10;
     }
   /* On the black, the pill is white and the outline a translucent white, as on the site's dark sections. */
   .on-inverse .button-primary {

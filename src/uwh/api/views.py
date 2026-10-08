@@ -162,6 +162,14 @@ class PlanPage(StrictModel):
     not_evaluated: list[NotEvaluatedNote]
 
 
+class ChoiceReading(StrictModel):
+    """What the playbook makes of one value shown with an open choice; `problem` marks a value that
+    fails the page or declines."""
+
+    text: str
+    problem: bool
+
+
 class LeadDetail(StrictModel):
     """`GET /api/leads/{id}`. The rule traces are the plan's (`effects[].trace`,
     `declines_on_every_branch`); its open choices and `not_evaluated` notes are the plan's too."""
@@ -176,6 +184,7 @@ class LeadDetail(StrictModel):
     pages: list[PlanPage]  # the plan grouped by playbook page
     blockers: list[BlockerView]
     drafts: list[DraftView]  # every message of the lead, oldest first
+    readings: dict[str, dict[str, ChoiceReading]]  # by open choice id, then by shown field key
     fields: list[
         FactField
     ]  # the keys `resolve_fact` accepts, with the label and type each is offered by
