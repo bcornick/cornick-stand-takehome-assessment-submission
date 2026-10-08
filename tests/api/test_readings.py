@@ -89,8 +89,8 @@ SUPPORTS = "Post & pier supports living area (not just decking)"
         (
             _declined("FS-1", ["04:ROOT", "04:FAIL", "04:D_FAIL"], ["I13.fire_fail"]),
             {"p_f": 0.79},
-            "P(F) - Probability of Failure (fire simulation) is 0.79 and you chose decline,"
-            " so the fire simulation page declines it (FS-1)",
+            "P(F) - Probability of Failure (fire simulation) is 0.79 and you chose decline"
+            " (“too steep to defend”), so the fire simulation page declines it (FS-1)",
         ),
         (
             ActionPlan(underwriter_decline="the roof is beyond repair", proposed_decline=True),
@@ -105,4 +105,6 @@ def test_a_decline_is_explained_by_the_values_that_led_to_it(
 ) -> None:
     fields = fact_fields(load_registry(str(REGISTRY)))
 
-    assert decline_reason(plan, load_graphs(), facts, fields) == reason  # type: ignore[arg-type]
+    reasons = {"I13.fire_fail": "too steep to defend"}
+
+    assert decline_reason(plan, load_graphs(), facts, fields, reasons) == reason  # type: ignore[arg-type]

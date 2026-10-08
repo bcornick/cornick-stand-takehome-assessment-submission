@@ -20,7 +20,13 @@ from tests.runtime.helpers import (
     state_of,
 )
 from tests.runtime.helpers import LEAD_ID as LEAD
-from uwh.rules.models import ActionPlan, OpenChoice
+from uwh.rules.models import (
+    ActionPlan,
+    DeclineEffect,
+    OpenChoice,
+    PlannedEffect,
+    RuleTrace,
+)
 from uwh.runtime.commands import CommandResult, submit_command
 from uwh.runtime.event_types import (
     Actor,
@@ -46,7 +52,7 @@ from uwh.runtime.facts import (
 from uwh.runtime.leadgen_client import LeadgenClient
 from uwh.runtime.mailbox_client import MailboxClient
 from uwh.runtime.runs import RunEnvironment
-from uwh.runtime.rulings import rulings_in_force
+from uwh.runtime.rulings import rulings_in_force, write_ruling
 from uwh.runtime.send import create_draft
 from uwh.runtime.store import open_store
 from uwh.runtime.waits import open_blocker, open_blockers
@@ -729,3 +735,60 @@ def test_resolve_fact_refuses_a_key_that_is_not_a_registry_field_or_catalogue_id
     assert_refused(db, result, key)
     assert [e.type for e in read_events(db)[before:]] == [EventType.command_refused]
     assert effective_facts(db, LEAD) == {}
+
+
+def test_a_ruling_that_declines_needs_the_reason_for_the_decline(
+    db: sqlite3.Connection, env: RunEnvironment
+) -> None:
+    payload = {**open_choice(db), "option": "decline", "reason": ""}
+
+    refused = submit_command(db, env, "underwriter", "record_ruling", payload)
+    accepted = submit_command(
+        db, env, "underwriter", "record_ruling", {**payload, "reason": "too steep to defend"}
+    )
+
+    assert_refused(db, refused, "the reason for the decline")
+    assert accepted.accepted
+
+
+def _declined_by_the_fire_choice(db: sqlite3.Connection) -> None:
+    """The plan of a lead the underwriter declined at the fire simulation choice."""
+    trace = RuleTrace(board_path=["04:ROOT", "04:FAIL", "04:D_FAIL"], choice_ids=["I13.fire_fail"])
+    decline = PlannedEffect(
+        effect=DeclineEffect(type="decline", rule="FS-1"), trace=trace, committed=True
+    )
+    plan = ActionPlan(effects=[decline], proposed_decline=True)
+    db.execute("UPDATE leads SET plan_json = ? WHERE lead_id = ?", (plan.model_dump_json(), LEAD))
+
+
+@pytest.mark.parametrize(
+    ("ruling", "on_file"),
+    [
+        (None, None),
+        (("decline", None, None, "outside our appetite"), "outside our appetite"),
+        (("choice", "I13.fire_fail", "decline", "too steep to defend"), "too steep to defend"),
+    ],
+    ids=["the playbook's decline", "a decline_lead", "a declining choice"],
+)
+def test_a_decline_notice_needs_a_reason_unless_the_ruling_that_declined_the_lead_gave_one(
+    db: sqlite3.Connection,
+    env: RunEnvironment,
+    ruling: tuple[str, str | None, str | None, str] | None,
+    on_file: str | None,
+) -> None:
+    if ruling is not None:
+        kind, choice_id, option, reason = ruling
+        if choice_id is not None:
+            _declined_by_the_fire_choice(db)
+        write_ruling(db, SETUP, LEAD, kind, reason, choice_id=choice_id, option=option)  # type: ignore[arg-type]
+    intent_id = make_draft(db, "decline_notice")
+    payload = {**approve_payload(db, intent_id, item_of(db, intent_id)), "reason": ""}
+
+    result = submit_command(db, env, "underwriter", "approve", payload)
+
+    if on_file is None:
+        assert_refused(db, result, "the reason for the decline")
+    else:
+        assert result.accepted
+        (approval,) = db.execute("SELECT reason FROM approvals").fetchall()
+        assert approval == (on_file,)

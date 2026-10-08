@@ -157,6 +157,7 @@ const lead: Schemas['LeadDetail'] = {
   ],
   missing_fields: [],
   decline_reason: null,
+  decline_reason_on_file: false,
   drafts: [packet],
 }
 
@@ -238,13 +239,16 @@ describe('a draft card', () => {
     })
   })
 
-  it('hides the notes field again on Cancel', async () => {
+  it('replaces the choices with the chosen one’s form, one button per action, and Cancel brings them back', async () => {
     const posted = stubApi()
     item(packetItem)
     await userEvent.click(screen.getByRole('button', { name: 'Reject' }))
+    expect(screen.queryByRole('button', { name: 'Send quote' })).toBeNull()
+    expect(screen.getAllByRole('button', { name: 'Reject' })).toHaveLength(1)
     await userEvent.click(reasonForm().getByRole('button', { name: 'Cancel' }))
 
     expect(screen.queryByLabelText('Notes')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Send quote' })).toBeInTheDocument()
     expect(posted).toEqual([])
   })
 
@@ -285,6 +289,7 @@ describe('a draft card', () => {
     expect(send).toHaveClass('button-destructive')
     await userEvent.click(send)
     expect(screen.queryByLabelText('Notes')).toBeNull()
+    expect(screen.getByPlaceholderText('Required. Why this lead is declined; kept on file.')).toBeInTheDocument()
     expect(reasonForm().getByRole('button', { name: 'Send decline notice' })).toBeDisabled()
     expect(reasonForm().getByRole('button', { name: 'Send decline notice' })).toHaveClass('button-destructive')
 
@@ -294,6 +299,22 @@ describe('a draft card', () => {
     expect(posted[0].body).toEqual({
       type: 'approve',
       payload: { item_id: 30, artifact_hash: decline.payload_hash, reason: 'outside appetite' },
+    })
+  })
+
+  it('sends a decline notice with no reason when the ruling that declined the lead gave one', async () => {
+    const posted = stubApi()
+    item(
+      blocker(30, 'underwriter_review', { item_kind: 'draft', intent_id: decline.intent_id, text: 'Review the notice.' }),
+      { ...lead, drafts: [decline], decline_reason_on_file: true },
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Send decline notice' }))
+    expect(screen.queryByLabelText('Reason for the decline, kept on file')).toBeNull()
+    await userEvent.click(reasonForm().getByRole('button', { name: 'Send decline notice' }))
+
+    expect(posted[0].body).toEqual({
+      type: 'approve',
+      payload: { item_id: 30, artifact_hash: decline.payload_hash, reason: '' },
     })
   })
 
@@ -410,6 +431,22 @@ describe('the question card', () => {
     const card = within(screen.getByRole('region', { name: 'I13.fire_fail' }))
     expect(card.getByText('· Fails: above 0.50')).toHaveClass('text-accent')
     expect(card.getByText('· Passes')).not.toHaveClass('text-accent')
+  })
+
+  it('asks for the reason for the decline when Decline is chosen, and posts it', async () => {
+    const posted = stubApi()
+    item(questionItem)
+    await userEvent.click(screen.getByRole('button', { name: 'Decline' }))
+    const confirm = reasonForm().getByRole('button', { name: 'Choose decline' })
+    expect(confirm).toBeDisabled()
+    expect(screen.getByPlaceholderText('Required. Why this lead is declined; kept on file.')).toBeInTheDocument()
+    await userEvent.type(reasonForm().getByLabelText('Reason for the decline, kept on file'), 'too steep')
+    await userEvent.click(confirm)
+
+    expect(posted[0].body).toEqual({
+      type: 'record_ruling',
+      payload: { lead_id: 'LEAD-1', choice_id: 'I13.fire_fail', option: 'decline', reason: 'too steep' },
+    })
   })
 
   it('posts the ruling after an option is chosen, with no note', async () => {

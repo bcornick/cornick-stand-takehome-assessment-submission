@@ -1,4 +1,4 @@
-// ABOUTME: The actions of one open item (A.11): one card, one decision. The choices are buttons side by side; choosing one opens a single reason field with a confirm button that repeats the choice.
+// ABOUTME: The actions of one open item (A.11): one card, one decision. The choices are buttons side by side; choosing one puts in their place a single reason field, with a confirm button that repeats the choice and Cancel.
 // ABOUTME: A draft folds its text into a preview with an edit form; a review the underwriter cannot decide shows how it closes; rejecting a decline notice says it sends the asks; a refusal reason shows under the choice.
 import { approve, editDraft, recordRuling, reject } from '@/api/client'
 import type { components } from '@/api/types'
@@ -23,6 +23,9 @@ const SEND_LABELS: Record<Draft['kind'], string> = {
 }
 
 const DRAFT_REJECT_PLACEHOLDER = 'Optional. What is wrong with it; this is how the system learns.'
+// A decline keeps its reason on file, asked once: where the underwriter decides to decline.
+const DECLINE_REASON = 'Reason for the decline, kept on file'
+const DECLINE_PLACEHOLDER = 'Required. Why this lead is declined; kept on file.'
 
 type Props = { lead: LeadDetail; onChange: () => void }
 
@@ -36,7 +39,7 @@ type Choice = {
   confirm?: string
   note?: string
   placeholder?: string
-  // Set where the reason is required: approving a decline notice.
+  // Set where the reason is required: a decline, at a choice or on a notice whose decline has no reason on file.
   reasonLabel?: string
 }
 
@@ -93,13 +96,15 @@ function ItemActions({ lead, blocker, onChange }: Props & { blocker: Blocker }) 
         : rejectChoice('Reject', DRAFT_REJECT_PLACEHOLDER)
     const approveDraft =
       draft.kind === 'decline_notice'
-        ? approveChoice(
-            SEND_LABELS.decline_notice,
-            undefined,
-            draft.payload_hash,
-            'Reason for the decline, kept on file',
-            'destructive',
-          )
+        ? lead.decline_reason_on_file
+          ? approveChoice(SEND_LABELS.decline_notice, undefined, draft.payload_hash, undefined, 'destructive')
+          : approveChoice(
+              SEND_LABELS.decline_notice,
+              DECLINE_PLACEHOLDER,
+              draft.payload_hash,
+              DECLINE_REASON,
+              'destructive',
+            )
         : approveChoice(
             SEND_LABELS[draft.kind],
             'Optional. Anything the file should carry about this quote.',
@@ -173,19 +178,21 @@ function Decision({ choices, onChange }: { choices: Choice[]; onChange: () => vo
 
   return (
     <div className="flex flex-col gap-2">
-      <span className="flex flex-wrap gap-2">
-        {choices.map((choice) => (
-          <button
-            key={choice.label}
-            type="button"
-            aria-pressed={chosen === choice}
-            onClick={() => setChosen(choice)}
-            className={BUTTON_CLASSES[choice.style]}
-          >
-            {choice.label}
-          </button>
-        ))}
-      </span>
+      {/* Once a choice is made its form takes the place of the choices, so each action has one button. */}
+      {chosen === null && (
+        <span className="flex flex-wrap gap-2">
+          {choices.map((choice) => (
+            <button
+              key={choice.label}
+              type="button"
+              onClick={() => setChosen(choice)}
+              className={BUTTON_CLASSES[choice.style]}
+            >
+              {choice.label}
+            </button>
+          ))}
+        </span>
+      )}
       {chosen !== null && (
         <form aria-label="Confirm the choice" onSubmit={submit} className="flex flex-col gap-2">
           {chosen.note !== undefined && <p className="text-sm text-muted-foreground">{chosen.note}</p>}
@@ -291,11 +298,13 @@ function QuestionCard({ lead, blocker, onChange }: Props & { blocker: Blocker })
           <Decision
             choices={choice.options.map((option) => {
               const words = option.replace(/_/g, ' ')
+              const declines = option === 'decline'
               return {
                 label: words.charAt(0).toUpperCase() + words.slice(1),
                 confirm: `Choose ${words}`,
-                placeholder: 'Optional. What tipped the choice, e.g. 14 ft to the neighbour.',
-                style: option === 'decline' ? 'destructive' : 'outline',
+                placeholder: declines ? DECLINE_PLACEHOLDER : 'Optional. What tipped the choice, e.g. 14 ft to the neighbour.',
+                reasonLabel: declines ? DECLINE_REASON : undefined,
+                style: declines ? 'destructive' : 'outline',
                 act: (reason) => recordRuling(lead.lead_id, choice.choice_id, option, reason),
               }
             })}

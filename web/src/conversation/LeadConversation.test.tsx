@@ -70,6 +70,7 @@ const lead: Schemas['LeadDetail'] = {
   fields: [],
   missing_fields: [],
   decline_reason: null,
+  decline_reason_on_file: false,
   drafts: [],
 }
 

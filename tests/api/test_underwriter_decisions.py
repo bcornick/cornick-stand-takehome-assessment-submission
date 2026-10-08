@@ -141,14 +141,13 @@ def test_choosing_to_decline_drafts_the_notice_and_approving_it_sends_it_and_end
 
     assert kinds(db, LEAD_006) == [("producer_reply", None), ("underwriter_review", "draft")]
     item_id, payload_hash = notice_item(app, LEAD_006)
-    # A decline is kept on file with its reason; without one the notice does not go.
-    unreasoned = command(app, "approve", item_id=item_id, artifact_hash=payload_hash, reason="")
-    assert unreasoned["accepted"] is False and "reason" in unreasoned["reason"]
-    approved = command(
-        app, "approve", item_id=item_id, artifact_hash=payload_hash, reason="the fire risk"
-    )
+    # The choice gave the decline its reason, so the notice goes without another one.
+    approved = command(app, "approve", item_id=item_id, artifact_hash=payload_hash, reason="")
 
     assert approved["accepted"] is True
+    assert db.execute("SELECT reason FROM approvals WHERE intent_id IS NOT NULL").fetchall()[
+        -1
+    ] == ("the underwriter decided",)
     assert sorted(m["metadata"]["kind"] for m in mailbox.list_for_lead(LEAD_006)) == [
         "decline_notice",
         "routine_request",

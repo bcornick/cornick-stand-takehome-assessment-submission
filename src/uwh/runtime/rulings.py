@@ -1,4 +1,4 @@
-# ABOUTME: The underwriter's rulings on a lead (A.11): `ruling_recorded` events are written here, and the rulings in force are read back from them for the graphs and for the rejection of a decline notice.
+# ABOUTME: The underwriter's rulings on a lead (A.11): `ruling_recorded` events are written here, and the rulings in force are read back from them for the graphs, for the rejection of a decline notice and for the reason a decline already has on file.
 # ABOUTME: A ruling moves the lead revision, so a draft built before it is replaced; a withdrawal or a reopened choice removes the ruling it refers to from those in force.
 import sqlite3
 from collections.abc import Sequence
@@ -76,3 +76,29 @@ def declines_of(plan: ActionPlan) -> list[tuple[str, list[str]]]:
     for trace in plan.declines_on_every_branch:
         declines += [(branch.rule, []) for branch in trace.alternatives]
     return declines
+
+
+def decline_reason_on_file(
+    db: sqlite3.Connection, lead_id: str, plan: ActionPlan | None
+) -> str | None:
+    """The underwriter's reason for the lead's decline when a ruling made it: a `decline_lead`
+    ruling's, or that of the choice whose option leads straight to a committed decline. None for a
+    decline the playbook reached alone, whose reason the underwriter gives on the notice."""
+    choices = {c for _, choice_ids in (declines_of(plan) if plan else []) for c in choice_ids}
+    return next(
+        (
+            r.reason
+            for r in active_rulings(db, lead_id).values()
+            if r.reason and (r.kind == "decline" or r.choice_id in choices)
+        ),
+        None,
+    )
+
+
+def choice_reasons(db: sqlite3.Connection, lead_id: str) -> dict[str, str]:
+    """The underwriter's reason for each choice ruled on the lead and in force, by choice id."""
+    return {
+        r.choice_id: r.reason
+        for r in active_rulings(db, lead_id).values()
+        if r.choice_id is not None and r.reason
+    }

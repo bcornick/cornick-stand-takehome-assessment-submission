@@ -129,9 +129,14 @@ def _path(graph: Graph, name: str, target: str, facts: Mapping[str, JsonValue]) 
 
 
 def _why(
-    graph: Graph, path: list[str], facts: Mapping[str, JsonValue], fields: Mapping[str, FactField]
+    graph: Graph,
+    path: list[str],
+    facts: Mapping[str, JsonValue],
+    fields: Mapping[str, FactField],
+    choice_reasons: Mapping[str, str],
 ) -> list[str]:
-    """What led along the path: the value the page applies on, each value tested, each choice taken."""
+    """What led along the path: the value the page applies on, each value tested, each choice taken
+    with the underwriter's reason for it."""
 
     def value_of(key: str) -> str:
         label = fields[key].label if key in fields else key.replace("_", " ")
@@ -148,7 +153,9 @@ def _why(
             reasons.append(value_of(node.field))
         elif isinstance(node, Choice):
             option = next(o for o, target in node.options.items() if target == then)
-            reasons.append(f"you chose {option.replace('_', ' ')}")
+            given = choice_reasons.get(node.choice)
+            said = f" (“{given}”)" if given else ""
+            reasons.append(f"you chose {option.replace('_', ' ')}{said}")
     return reasons
 
 
@@ -157,9 +164,11 @@ def decline_reason(
     graphs: Sequence[Graph],
     facts: Mapping[str, JsonValue],
     fields: Mapping[str, FactField],
+    choice_reasons: Mapping[str, str],
 ) -> str:
     """Why the lead is declined: the underwriter's own reason, or for each committed decline the
-    values on its path through the page's graph, the page and the rule."""
+    values on its path through the page's graph, the page and the rule; `choice_reasons` holds the
+    underwriter's reason for each choice ruled, by choice id."""
     if plan.underwriter_decline is not None:
         return plan.underwriter_decline
     reasons = []
@@ -181,7 +190,7 @@ def decline_reason(
             path = None if outcome is None else _path(graph, graph.root, outcome, facts)
             if path is not None:
                 page = graph.id.replace("_", " ")
-                why = _why(graph, path, facts, fields)
+                why = _why(graph, path, facts, fields, choice_reasons)
                 led = f"{_listed(why)}, so " if why else ""
                 reasons.append(f"{led}the {page} page declines it ({rule})")
                 break

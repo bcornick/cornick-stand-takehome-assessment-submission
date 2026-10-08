@@ -13,6 +13,7 @@ from uwh.rules.registry import FactField
 from uwh.runtime.event_types import REQUEST_KINDS, EventType, MessageSent
 from uwh.runtime.events import read_events
 from uwh.runtime.facts import effective_facts
+from uwh.runtime.rulings import choice_reasons
 from uwh.runtime.waits import Blocker
 
 # The choices that name the fact that raised them: what failed, and the fact it failed on.
@@ -81,11 +82,15 @@ def _observation_sentence(
 
 
 def _decline_reason(
-    plan: ActionPlan | None, facts: Mapping[str, JsonValue], fields: dict[str, FactField]
+    db: sqlite3.Connection,
+    lead_id: str,
+    plan: ActionPlan | None,
+    facts: Mapping[str, JsonValue],
+    fields: dict[str, FactField],
 ) -> str:
     if plan is None:
         return "no reason is recorded"
-    return decline_reason(plan, load_graphs(), facts, fields)
+    return decline_reason(plan, load_graphs(), facts, fields, choice_reasons(db, lead_id))
 
 
 def _draft_sentence(
@@ -101,7 +106,7 @@ def _draft_sentence(
     if row is not None and row[0] == "quote_packet":
         return "The quote packet is ready. I need you to send it to the producer."
     return (
-        f"I propose to decline this lead: {_decline_reason(plan, facts, fields)}. "
+        f"I propose to decline this lead: {_decline_reason(db, blocker.lead_id, plan, facts, fields)}. "
         "I need you to send the decline notice, or withdraw the decline."
     )
 
@@ -151,7 +156,7 @@ def summary_line(
         when = _sent_on(db, lead_id, _FINISHED_KINDS[status])
         if status == "quote_sent":
             return f"Quote packet sent on {when}."
-        return f"Declined on {when}: {_decline_reason(plan, facts, fields)}."
+        return f"Declined on {when}: {_decline_reason(db, lead_id, plan, facts, fields)}."
     asked_of_underwriter = [b for b in blockers if b.owner == "underwriter"]
     sentences = [_underwriter_sentence(db, b, plan, facts, fields) for b in asked_of_underwriter]
     for blocker in blockers:

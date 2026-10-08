@@ -615,7 +615,7 @@ One page for an underwriter's desk, at least 1280px wide: the lead list on the l
 
 ## 12. Underwriter input
 
-- Every approval, edit, rejection and ruling is captured with the actor, the artifact hash and a note. The structured choice (approve, reject, the option chosen) is the captured decision; the note is optional context, except for a decline: declining a lead and approving a decline notice keep a required reason, which the file carries as the underwriter's decline. For a ruling the artifact hash is the lead's plan hash at that moment. Each becomes a **candidate** eval case; it joins the suite when reviewed.
+- Every approval, edit, rejection and ruling is captured with the actor, the artifact hash and a note. The structured choice (approve, reject, the option chosen) is the captured decision; the note is optional context, except for a decline: a decline keeps a required reason, asked once where the underwriter decides it: declining a lead, choosing decline at a choice, or approving a decline notice the playbook proposed; a notice that follows the underwriter's reasoned decline carries that reason and asks for none. The file carries it as the underwriter's decline. For a ruling the artifact hash is the lead's plan hash at that moment. Each becomes a **candidate** eval case; it joins the suite when reviewed.
 
 ## 13. Evals
 

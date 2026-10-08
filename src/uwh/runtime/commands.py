@@ -8,7 +8,7 @@ from functools import partial
 import anthropic
 from pydantic import JsonValue
 
-from uwh.rules.models import FieldTriage
+from uwh.rules.models import ActionPlan, FieldTriage
 from uwh.rules.registry import CONTACT_EMAIL_KEY, fact_fields
 from uwh.runtime.event_types import (
     Actor,
@@ -38,7 +38,12 @@ from uwh.runtime.model import append_fallback, append_model_calls, append_replay
 from uwh.runtime.modes import RecordingMiss
 from uwh.runtime.runs import RunEnvironment, begin_run, command_context, current_run, pass_context
 from uwh.runtime.proposals import create_proposal, is_proposable
-from uwh.runtime.rulings import active_rulings, declines_of, write_ruling
+from uwh.runtime.rulings import (
+    active_rulings,
+    decline_reason_on_file,
+    declines_of,
+    write_ruling,
+)
 from uwh.runtime.send import (
     Intent,
     close_unsent,
@@ -542,6 +547,13 @@ def _resolve_fact(
     return _Outcome(event_id, lead_id)
 
 
+def _plan_or_none(db: sqlite3.Connection, lead_id: str) -> ActionPlan | None:
+    try:
+        return stored_plan(db, lead_id)
+    except ValueError:
+        return None
+
+
 def _record_ruling(
     db: sqlite3.Connection,
     context: EventContext,
@@ -560,6 +572,8 @@ def _record_ruling(
     (choice,) = [c for c in stored_plan(db, lead_id).open_choices if c.choice_id == choice_id]
     if option not in choice.options:
         raise _Refusal(f"{option} is not an option of {choice_id}: {', '.join(choice.options)}")
+    if option == "decline" and not reason:
+        raise _Refusal("declining at a choice needs the reason for the decline")
     event_id = write_ruling(
         db, context, lead_id, "choice", reason, choice_id=choice_id, option=option
     )
@@ -642,7 +656,12 @@ def _settle(
         assert detail.intent_id is not None  # a draft item names its draft
         artifact = _intent_in_state(db, detail.intent_id, "draft")
         if approve and artifact.kind == "decline_notice" and not reason:
-            raise _Refusal("approving a decline notice needs the reason for the decline")
+            # A decline the underwriter ruled already has its reason on file; the approval carries it.
+            plan = _plan_or_none(db, item.lead_id)
+            on_file = decline_reason_on_file(db, item.lead_id, plan)
+            if on_file is None:
+                raise _Refusal("approving a decline notice needs the reason for the decline")
+            reason = on_file
         _settle_draft(db, context, payload, artifact, reason, approve=approve)
     elif detail.item_kind == "delivery_unknown":
         assert detail.intent_id is not None  # a delivery_unknown item names its intent

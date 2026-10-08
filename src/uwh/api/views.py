@@ -203,6 +203,8 @@ class LeadDetail(StrictModel):
     ]  # the keys `resolve_fact` accepts, with the label and type each is offered by
     missing_fields: list[MissingField]  # what the current triage found missing and still needs
     decline_reason: str | None  # why the lead is declined, while its plan proposes a decline
+    # True when a ruling of the underwriter declined the lead with a reason, so the notice asks for none
+    decline_reason_on_file: bool
 
 
 # ---- events (A.1) --------------------------------------------------------------------------------

@@ -1210,6 +1210,10 @@
             ],
             "title": "Decline Reason"
           },
+          "decline_reason_on_file": {
+            "title": "Decline Reason On File",
+            "type": "boolean"
+          },
           "drafts": {
             "items": {
               "$ref": "#/components/schemas/DraftView"
@@ -1307,7 +1311,8 @@
           "readings",
           "fields",
           "missing_fields",
-          "decline_reason"
+          "decline_reason",
+          "decline_reason_on_file"
         ],
         "title": "LeadDetail",
         "type": "object"

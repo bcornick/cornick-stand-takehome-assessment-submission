@@ -728,6 +728,8 @@ export interface components {
             blockers: components["schemas"]["BlockerView"][];
             /** Decline Reason */
             decline_reason: string | null;
+            /** Decline Reason On File */
+            decline_reason_on_file: boolean;
             /** Drafts */
             drafts: components["schemas"]["DraftView"][];
             /** Facts */

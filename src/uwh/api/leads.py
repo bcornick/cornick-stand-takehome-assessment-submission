@@ -46,6 +46,7 @@ from uwh.runtime.events import StoredEvent, read_events
 from uwh.runtime.facts import effective_facts
 from uwh.runtime.runs import current_run, run_sim_now
 from uwh.runtime.waits import Blocker, open_blockers, primary_next_action
+from uwh.runtime.rulings import choice_reasons, decline_reason_on_file
 from uwh.skills.steps import lead_label
 
 router = APIRouter()
@@ -218,9 +219,10 @@ def lead_detail(db: sqlite3.Connection, lead_id: str, registry: Registry) -> Lea
         ],
         fields=list(fields.values()),
         missing_fields=_missing_fields(db, lead_id),
-        decline_reason=decline_reason(plan, graphs, values, fields)
+        decline_reason=decline_reason(plan, graphs, values, fields, choice_reasons(db, lead_id))
         if plan is not None and plan.proposed_decline
         else None,
+        decline_reason_on_file=decline_reason_on_file(db, lead_id, plan) is not None,
     )
 
 
