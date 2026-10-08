@@ -33,7 +33,8 @@ export function Panel({ target, refresh, onOpen, onClose, onChange }: Props) {
     <aside
       aria-label="Detail"
       // A layer over the conversation: as wide as its content, up to 700px, and never scrolling sideways.
-      className="fixed top-0 right-0 z-10 flex h-screen w-fit max-w-[700px] min-w-[360px] flex-col gap-4 overflow-x-hidden overflow-y-auto border-l bg-background p-4 shadow-[-12px_0_32px_rgba(0,0,0,0.12)]"
+      // Its own scrollbar is the right-hand gutter, so the content sits as close to both edges.
+      className="fixed top-0 right-0 z-10 flex h-screen w-fit max-w-[700px] min-w-[360px] flex-col gap-4 overflow-x-hidden overflow-y-auto border-l bg-background py-4 pr-1 pl-4 shadow-[-12px_0_32px_rgba(0,0,0,0.12)]"
     >
       <header className="flex items-center justify-between">
         <h2 className="text-base font-semibold">{TITLES[target.kind]}</h2>
