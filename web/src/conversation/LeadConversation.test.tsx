@@ -207,7 +207,7 @@ describe('LeadConversation', () => {
     expect(fold).toHaveAttribute('open')
   })
 
-  it('shows the request that is out: its round, when it went out and how long ago, its asks by label, and a link to the message', async () => {
+  it('shows the request that is out: its round, when it went out and how long ago, its asks listed by label, and a link to the message', async () => {
     const onOpen = vi.fn()
     renderLead(null, onOpen, requestOut)
 
@@ -215,8 +215,8 @@ describe('LeadConversation', () => {
     expect(card).toHaveTextContent('Round 2')
     expect(card).toHaveTextContent(formatTime('2026-06-28T08:00:00.000000Z'))
     expect(card).toHaveTextContent('1 day ago')
-    expect(card).toHaveTextContent('Dwelling coverage')
-    expect(card).toHaveTextContent('Contact email')
+    const asks = within(within(card).getByRole('list', { name: 'Asks' })).getAllByRole('listitem')
+    expect(asks.map((ask) => ask.textContent)).toEqual(['Dwelling coverage', 'Contact email'])
     expect(card).not.toHaveTextContent('year_built')
 
     await userEvent.click(within(card).getByRole('button', { name: 'View the request' }))

@@ -33,7 +33,14 @@ export function RequestOut({ lead, simNow, onOpen }: Props) {
         {request.sent_at !== null && ` · sent ${formatTime(request.sent_at)}`}
         {request.sent_at !== null && simNow !== null && ` (${ago(request.sent_at, simNow)})`}
       </p>
-      <p className="text-muted-foreground">{`Asks for ${request.asks.join(', ')}`}</p>
+      <div className="flex flex-col gap-1">
+        <p className="text-muted-foreground">Asks for:</p>
+        <ul aria-label="Asks" className="list-disc pl-5">
+          {request.asks.map((ask) => (
+            <li key={ask}>{ask}</li>
+          ))}
+        </ul>
+      </div>
       <button
         type="button"
         className="button-outline self-start"
