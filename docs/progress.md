@@ -625,3 +625,11 @@ Brett's decisions carried into milestone 1: an underwriter's value that still tr
 **Discarding a request (Brett):** rejecting a request now discards it: the draft is closed unsent with its item, the approval records the rejection, and the workflow drafts no request again until the lead's revision moves (`request_discarded` in `src/uwh/runtime/send.py`). The card's button reads "Discard request" and says nothing is sent; Edit stays in the fold, now "Preview or edit the request". A request that is the lead's only open underwriter item cannot be discarded ("edit it, or decline the lead"), since the lead would stall. Rejecting a quote packet still returns it to editing; the command test that pinned return-to-editing now uses a packet.
 
 **Declining from a quote (Brett):** a quote packet's card offers Send quote and Decline lead (in place of Reject, which only returned the draft to editing and showed no change); declining asks for the reason for the decline, kept on file, and the decline supersedes the packet and drafts the notice, which then sends without a second reason. Edit stays in the fold, "Preview or edit the packet".
+
+## Submission docs: the five decisions and the demo guide (Brett)
+
+**Done:** the README answers the brief's five product decisions in its own section (when the system acts alone, queue orchestration, outbound messages, what the underwriter sees, integrations with a connected and stand-in table), adds a trade-offs table under Architecture, a "How this was built" note (Brett's choice), and one known-limits list in place of two. Stale lines on autonomy now state the held request. `DEMO_GUIDE.md` holds the step-by-step demo, separate from the README (Brett); its chat prompts are the chat suite's tested ones, and it points to lead 007 for Jev (Brett's choice among the three options). `docs/architecture.md` 10.2 no longer claims a pre-send check on edited drafts, matching the known limit.
+
+**Checks:** `make eval` at db1c78f in replay: seed42, replies and chat pass with no critical errors; the three controls are each caught; Stand's key 190 agree, 0 disagree.
+
+**Live calls:** none.

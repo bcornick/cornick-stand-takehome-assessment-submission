@@ -1,6 +1,6 @@
 # Underwriting triage on a skill-and-eval harness
 
-Brett Cornick's submission for the Stand Insurance take-home (`docs/brief/agentic_uw_takehome.md`). The app takes the ten seed-42 leads that Stand's generator posts and drives each to a sent quote packet, one sent request to the producer, or a wait on the underwriter with a stated reason. Every send of a quote packet or decline notice waits for an underwriter's approval. `docs/architecture.md` is the design authority; `docs/plan.md` is the scope.
+Brett Cornick's submission for the Stand Insurance take-home (`docs/brief/agentic_uw_takehome.md`). The app takes the ten seed-42 leads that Stand's generator posts and drives each to a sent quote packet, one sent request to the producer, or a wait on the underwriter with a stated reason. Every send of a quote packet or decline notice waits for an underwriter's approval. `docs/architecture.md` is the design authority; `docs/plan.md` is the scope. `DEMO_GUIDE.md` walks through the demo step by step.
 
 ## Run it
 
@@ -13,16 +13,7 @@ make up
 
 Open `http://localhost:8000`. The first build takes a few minutes. Stand's leadgen answers on host port 8081 and the mock mailbox on 8025; `APP_PORT`, `LEADGEN_PORT` and `MAILBOX_PORT` move the three.
 
-To see the demo:
-
-1. In **Demo controls**, bottom right, click **Load today's leads**. The app posts the ten leads and settles them; the lead list on the left fills.
-2. Open lead 008. Its conversation is what the system did, oldest first: the fields it triaged, the values it fetched, the plan it built and the request it sent to the producer. Each line carries a chip that opens its evidence in the panel on the right; **Full detail** opens the lead's facts with their sources, its plan and its messages.
-3. Click **Deliver the producers' replies**. Every stored reply whose lead has a request out is delivered and read; lead 008's conversation gains the reply, what was read from it, and a quote packet as a card.
-4. **Send quote** on the packet's card. The mailbox then holds one request and one packet for it.
-
-Leads 000, 003 and 006 need the underwriter on the first pass, and the **Queue** conversation lists their cards: 000 is a proposed decline that waits for approval, and 003 and 006 each show the failed fire simulation's choice beside their request to the producer, which is drafted and held until the underwriter sends it or declines: the producer is not asked about a lead that may be declined. Send lead 003's request before delivering the replies to see its reply read.
-
-Below a conversation's timeline the underwriter can type a question or an instruction. An answer lists what it rests on under **Related artifacts**, each line opening it in the panel; an instruction becomes a card that the underwriter applies or dismisses. In replay, try one of the three example questions in the **Queue** conversation before delivering the replies; typing needs `RUN_MODE=live` and a key.
+In **Demo controls**, bottom right, click **Load today's leads**, then follow `DEMO_GUIDE.md`.
 
 ### Run modes
 
@@ -32,7 +23,7 @@ Below a conversation's timeline the underwriter can type a question or an instru
 - `live`: calls DeepSeek with `MODEL_API_KEY`. Nothing reads or writes a recording.
 - `record`: as live, and each exchange is written to `recordings/`. Also set `RECORDINGS_ACCESS=rw`, because the folder is mounted read-only otherwise.
 
-`MODEL_API_KEY` is a DeepSeek key; `MODEL_BASE_URL` and `MODEL_ID` default to the Anthropic-format endpoint and `deepseek-flash`. `TYPESAFE_API_KEY` switches on Jev, which classifies a reply first; with it empty the language model classifies every reply, and the system works fully without Jev. Without `MODEL_API_KEY`, live mode records a delivered reply unread and raises an underwriter review.
+`MODEL_API_KEY` is a DeepSeek key; `MODEL_BASE_URL` and `MODEL_ID` default to the Anthropic-format endpoint and `deepseek-flash`. `TYPESAFE_API_KEY` switches on Jev, which classifies a reply first; with it empty the language model classifies every reply, and the system works fully without Jev. Lead 007's partial reply shows Jev at work (`DEMO_GUIDE.md`, step 7). Without `MODEL_API_KEY`, live mode records a delivered reply unread and raises an underwriter review.
 
 ### Commands
 
@@ -47,6 +38,50 @@ uv run python tools/fresh_clone.py
 
 `tools/fresh_clone.py` clones HEAD into a temporary directory, copies `.env.example` with no keys, brings the stack up in replay under its own compose project and ports, runs the first pass and the fixture replies, then removes everything. It clones committed files only. Platforms: the rehearsal has been run on macOS arm64. Linux amd64 and Windows with WSL2: not run. Images are defined for amd64 and arm64.
 
+## The five decisions
+
+The brief names five product decisions. In short:
+
+**1. When the system acts alone, and when it asks the underwriter.** It acts alone where the playbook and the registry settle the answer, and it stops where judgment or a commitment is at stake.
+
+- **Acts alone:** checks every field, looks up or works out what it can, sends a routine request for missing information, reads a reply, fills missing fields from it, and sends one follow-up for anything a partial reply left out.
+- **Asks the underwriter:** every decline, every quote, any request with a mitigation question, every playbook choice (such as a failed fire simulation), a reply that contradicts a value already on file, a reply it could not read, and an email the mailbox did not confirm.
+- **Holds a request** while an open choice could still decline the lead, so the producer is not asked to do work on a lead that may be declined.
+- **Keeps the underwriter's input:** each choice and ruling is stored with its reason and outranks every other source of a value. An approval is tied to the exact text shown, so a stale screen cannot approve changed content.
+
+**2. Queue orchestration.** Loading posts all ten leads, and up to four run at once. Each lead runs the same steps in order and ends with a list of what it is waiting on; its next action is the most urgent one. The lead list puts leads waiting on the underwriter first, then those waiting on the producer or on data, then finished ones, each group by earliest effective date. A reply re-runs its lead from the top. A lead has at most one open request, and after two rounds it goes to the underwriter.
+
+**3. Outbound messages.** One message per lead per round.
+
+- It asks only for what the producer owns and the system cannot look up or work out. It never asks for system-owned or bind-only fields; the Forbidden asks grader checks this.
+- Code writes every question, grouped by section and numbered.
+- The model writes only a friendly opening and closing. Two checks, one in code and one by the model, reject any opening or closing that adds a question, a consequence, a price or a deadline; when one is rejected, the plain version goes.
+- A partial reply produces one follow-up for the rest, not one message per missing field.
+- Quote packets and decline notices go only on the underwriter's approval.
+
+**4. What the underwriter sees.** The lead list gives one row per lead, with a short tag saying what is different and who it waits on. Each lead is a conversation:
+
+- Its opening line says what the underwriter needs to do and why.
+- Below that, the conversation lists what the system did as plain sentences, with a card wherever the underwriter decides. Buttons name what they send ("Send decline notice", "Send quote").
+- Every line opens its evidence in a side panel: the fact and where it came from, the playbook page, or the message.
+- A choice card shows what each value means for the decision, such as "Fails: above 0.50".
+- An assistant answers questions from the record, linking to what it read, and turns instructions into cards the underwriter applies. It cannot approve or send anything itself.
+
+**5. Integrations.**
+
+| Service | What it gives | Status |
+|---|---|---|
+| Stand's lead generator and mailbox | the queue in, email out, replies tracked | connected |
+| DeepSeek (`deepseek-flash`) | reads replies, softens request wording, answers chat | connected; recorded for replay |
+| Jev (TypeSafe) | a first reading of each reply, with a confidence | connected; optional |
+| Replacement cost estimator | replacement cost | stand-in |
+| Verisk PPC | protection class | stand-in |
+| Identity and adverse-media screen | KYC score | stand-in |
+| Stand's fire model and geospatial data | fire probability, slope, neighbour distance, vegetation clearance, road access | stand-in |
+| Stand's policy and distribution systems | broker tier, existing Stand policy | stand-in |
+
+A stand-in answers from data captured for seed 42 (`src/uwh/providers/data/world-42.json`) and checks the inputs a real lookup would need: with no street address, the address lookups report blocked. The stand-ins come first on the hit list, because looked-up values are what spare the producer the most questions. Next would be a real inbox, so replies arrive without the paste box or the fixtures.
+
 ## Architecture
 
 ```
@@ -55,9 +90,9 @@ Stand's mailbox <-- send path <-- command layer <-- underwriter UI, chat, workfl
                                   event log + fact ledger (SQLite) under all of it
 ```
 
-**Lead workflow.** "Load today's leads" posts the queue from the leadgen service. Each lead runs through a fixed list of steps: field triage against Stand's registry, data resolution (derive, fetch from the stand-in providers, assume), playbook evaluation over the seven built pages, the ask plan, and the rendered request. A lead holds a status and a set of open blockers (producer reply, underwriter review, underwriter question, data, delivery unknown); its next action is the highest-priority blocker. A producer's reply is read, its values enter the ledger, and the lead re-evaluates from the top until it reaches a packet draft or a stated wait. A routine request goes out on its own; a sensitive request, the packet and the decline notice go out only on approval.
+**Lead workflow.** "Load today's leads" posts the queue from the leadgen service. Each lead runs through a fixed list of steps: field triage against Stand's registry, data resolution (derive, fetch from the stand-in providers, assume), playbook evaluation over the seven built pages, the ask plan, and the rendered request. A lead holds a status and a set of open blockers (producer reply, underwriter review, underwriter question, data, delivery unknown); its next action is the highest-priority blocker. A producer's reply is read, its values enter the ledger, and the lead re-evaluates from the top until it reaches a packet draft or a stated wait. A routine request goes out on its own, unless an open choice could still decline the lead, in which case it is held for the underwriter. A sensitive request, the packet and the decline notice go out only on approval.
 
-**Command layer and actors.** Every state change is a typed command: nothing else writes. The actors are the workflow, the underwriter, the assistant (chat) and the reply endpoint, and the transport sets the actor, never a model argument. Routine requests send automatically; every other message waits for approval. An approval binds to a hash of the exact artifact shown, the lead revision and the ruleset, so a stale browser cannot approve changed content. Every underwriter decision is captured as the structured choice (approve, reject, the option chosen) with an optional note as context; A decline keeps a required reason, asked once where the underwriter decides it: declining a lead, choosing decline at a choice, or approving a decline notice the playbook proposed; a notice that follows the underwriter's reasoned decline carries that reason and asks for none. The file carries it.
+**Command layer and actors.** Every state change is a typed command: nothing else writes. The actors are the workflow, the underwriter, the assistant (chat) and the reply endpoint, and the transport sets the actor, never a model argument. Routine requests send automatically unless held for an open choice; every other message waits for approval. An approval binds to a hash of the exact artifact shown, the lead revision and the ruleset, so a stale browser cannot approve changed content. Every underwriter decision is captured as the structured choice (approve, reject, the option chosen) with an optional note as context. A decline needs a reason, asked once, where the underwriter decides it: declining a lead, choosing decline at a choice, or approving a decline notice the playbook proposed. A notice that follows the underwriter's own decline carries that reason and asks for none. The reason is kept on file.
 
 **Fact ledger.** Every value is an observation with a source: `submitted`, `fetched`, `derived`, `assumed`, `reply` or `underwriter`. An underwriter ruling outranks everything. A reply fills a missing producer field directly; a reply that differs from an existing value waits as a pending review and changes nothing until the underwriter approves it. A reply never sets a system-owned field. Event rows rebuild the effective facts.
 
@@ -68,6 +103,18 @@ Stand's mailbox <-- send path <-- command layer <-- underwriter UI, chat, workfl
 **The conversation is the surface.** A lead's conversation is its event log written as sentences by code, with the underwriter's items as cards at the event that raised them; the drill-down panel shows the fact, event, message or playbook page behind any line. The assistant below it is a second client of the command layer. It reads through seven named lookups in at most eight steps (the last of which must answer, and a repeated lookup is not run again), cites what it was shown by a reference number the server resolves, and can only propose: a directive becomes a card on its lead that the underwriter applies. A directive to approve, reject or send is refused, and the answer points to the open item in the lead's conversation. The turn streams its lookups as server-sent events, and the answer arrives whole.
 
 **Record and replay.** A model exchange is keyed by the skill, the hash of its prompt and forced tool, and the content the model is shown. Recordings are committed under `recordings/`, and they are the only model answers the tests and the replay demo see. Changing a prompt or tool changes the key, so its recordings are recorded again.
+
+**Trade-offs.** The main choices, and what each one costs:
+
+| Chose | Over | Why | Cost |
+|---|---|---|---|
+| A fixed workflow in code | an agent framework driving a model through tools | The playbook is written rules; "one message per lead" and approval before sending are easier to guarantee in code | Cases the rules do not cover go to the underwriter instead of being improvised |
+| Code makes every decision; the model reads and writes words | a model on the decision path | Every decline and requirement has a rule trace and a test | The model's judgment is not used to fill gaps |
+| Code writes the questions | model-written emails | No question is dropped, invented or reworded | Plainer emails, softened only by the opening and closing |
+| An event log and a fact ledger in SQLite | a graph database per lead | Every value has a source, and the "why" is rebuilt from events | One process |
+| Recorded model answers | live calls in tests and the demo | Repeatable evals and a keyless demo | A prompt change means recording again |
+
+`docs/architecture.md` section 17 lists the other alternatives considered.
 
 For the rest (rules core, the interpretation table, ledger rules, message classes, appendices) see `docs/architecture.md`; the reviewer's counterweight is `docs/critique.md`, dispositioned in its section 16.
 
@@ -139,7 +186,7 @@ The brief sets a 5 to 6 hour box and grades what is cut. A lead that would have 
 - **The MCP transport.** The chat calls the same functions the pages use; a transport adds a protocol and no behaviour.
 - **The 50-seed sweep.** The system and its evals run seed 42, whose ten leads carry the failure modes the brief names.
 - **The rule-change flow and the model-driven triage comparison.** Rules change by a reviewed commit to the data files, which keeps one reviewed table.
-- **Settings screens, the skills screen and the emergency stop.** Autonomy levels are constants in code: a routine request sends automatically and everything else waits for approval.
+- **Settings screens, the skills screen and the emergency stop.** Autonomy levels are constants in code: a routine request sends automatically unless an open choice could still decline the lead, and everything else waits for approval.
 - **Stopping a chat turn.** A turn is a few bounded model calls and can write at most a card, so a closed tab lets it finish.
 - **Server-side chat history.** Typed messages live in the browser and are lost on reload; the timeline above them is the event log, which persists.
 - **Streamed answer text.** The answer is a field of a forced tool call, so it arrives whole; the lookups stream as steps.
@@ -148,18 +195,15 @@ The brief sets a 5 to 6 hour box and grades what is cut. A lead that would have 
 - **Controls and graders beyond the named ones.** The three controls and nine graders cover each failure the plan names.
 - **The constructed packet cases and the outcome-case sample.** Cases are a table per page.
 
-Known limits, recorded in `docs/progress.md`:
+## Known limits
+
+What is left as it is in this proof of concept, from the reviews and from `docs/progress.md`.
 
 - A post in flight when a run is replaced may still reach the mailbox; every commit checks its run id, so the work writes nothing else.
 - A stale browser tab after a new run is refused on an item it does not know.
 - Paths no seed-42 lead reaches stop with a stated `data` blocker: the KYC range validator and its identity-score reviews, and the no-contact-route item.
 - Round 2 goes beyond the fixtures: the reply fixtures answer a first request, so a second round has no fixture reply.
 - No pricing or rating, no live third-party data (addresses are synthetic), and reply text comes from fixtures or the paste box, not a simulator.
-
-## Known limits
-
-What the reviews found and what is left as it is in this proof of concept.
-
 - The graders score each request from the ask ids stored on the intent, not from the delivered email text; a body that dropped a question would pass Asks and Forbidden asks.
 - An edited draft is not checked for pricing, a decline reason or internal notes before it is sent; the underwriter approves every edited draft and sees its text.
 - A chat turn that finishes after a new run has started writes its proposal card into the new run.
@@ -173,6 +217,10 @@ What the reviews found and what is left as it is in this proof of concept.
 - Stored input-token counts leave out cached input, so the budget totals undercount.
 - Two reply tests and the deck-height test feed hand-made model readings to test the code after the model.
 
+## How this was built
+
+AI coding agents (Claude Code) wrote the code, under the working rules in `AGENTS.md`. A lead session planned each milestone and read every diff. Builder agents wrote the tests first and then the code, and a separate reviewer agent read each finished milestone. Brett made the product and design decisions, reviewed the reading of the playbook, and signed the eval labels. That is why the repository is larger than a 5 to 6 hour project would be. The cut list above is what was left out on purpose.
+
 ## Where things are
 
 - `src/uwh/`: the application. `runtime/` (event log, ledger, commands, send path, workflow), `rules/` (registry loader, validators, graph interpreter, reviewed data files), `skills/` (one folder each), `providers/` (stand-in lookups from captured world files), `chat/`, `api/` (FastAPI routes).
@@ -180,5 +228,6 @@ What the reviews found and what is left as it is in this proof of concept.
 - `evals/`: the runner, graders, controls, labels and `results.jsonl`.
 - `recordings/`: committed model exchanges; `fixtures/replies/`: producer replies for the fixture control.
 - `tests/`: fast, slow and integration tests; `tools/` and `scripts/`: the fresh-clone rehearsal, type generation and the discipline check.
+- `DEMO_GUIDE.md`: the demo, step by step.
 - `docs/`: `architecture.md`, `plan.md`, `critique.md`, `progress.md`, `acceptance.json`; `docs/brief/` and `docs/playbook/` are Stand's source material.
 - `sim-harness/`: Stand's leadgen and mailbox, unmodified.
