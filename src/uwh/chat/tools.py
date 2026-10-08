@@ -192,7 +192,13 @@ def queue_facts(db: sqlite3.Connection, keys: list[str], references: References)
         label = lead_label(db, lead_id)
         rows.append(
             {
-                "ref": references.number(lead_id, "lead", lead_id, f"Lead: {label}"),
+                # A lead with no address is named by its number, not its id.
+                "ref": references.number(
+                    lead_id,
+                    "lead",
+                    lead_id,
+                    f"Lead: {label}" if label != lead_id else short_name(lead_id).capitalize(),
+                ),
                 "lead_id": lead_id,
                 "label": label,
                 "status": status,
