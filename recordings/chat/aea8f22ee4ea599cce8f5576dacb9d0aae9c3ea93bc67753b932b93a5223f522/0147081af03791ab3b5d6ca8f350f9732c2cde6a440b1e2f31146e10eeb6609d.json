@@ -1060,18 +1060,16 @@
   "request_id": "",
   "skill": "chat",
   "stop_reason": "tool_use",
-  "tokens_in": 1761,
-  "tokens_out": 160,
+  "tokens_in": 225,
+  "tokens_out": 136,
   "tool_input": {
     "action": "answer",
-    "answer": "The most recent records for this lead are the derived classifications: roof_classification was recorded and selected as Class A (derived), then siding_classification was recorded and selected as B (derived). Before those, the last submitted fact was vegetation_clearance, recorded and selected as Adequate.\n\nThe lead's status is still \"received\", with no open items or open choices.",
+    "answer": "The most recent record for this lead is the derived siding classification: siding_classification recorded as B (derived), then selected for use. Before that, the derived roof classification Class A was recorded and selected.\n\nThe lead's status is still \"received\", with no open items or open choices.",
     "citations": [
-      112,
-      113,
       114,
       115,
-      110,
-      111,
+      112,
+      113,
       116
     ]
   }

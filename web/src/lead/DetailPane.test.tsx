@@ -66,6 +66,7 @@ const lead: Schemas['LeadDetail'] = {
     { key: 'fire_alarm', label: 'Fire alarm', section: 'Protection', kind: 'toggle', options: [] },
   ],
   missing_fields: [],
+  decline_reason: null,
   drafts: [sentRequest, packet],
 }
 

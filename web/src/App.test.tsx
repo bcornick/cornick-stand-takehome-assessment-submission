@@ -121,6 +121,7 @@ const lead: Schemas['LeadDetail'] = {
   readings: {},
   fields: [{ key: 'roof_year', label: 'Roof year', section: 'Construction', kind: 'integer', options: [] }],
   missing_fields: [],
+  decline_reason: null,
   drafts: [],
 }
 

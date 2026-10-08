@@ -4,9 +4,11 @@ import json
 import sqlite3
 from collections.abc import Mapping
 
-from uwh.api.pages import plan_pages
+from pydantic import JsonValue
+
+from uwh.api.readings import decline_reason
 from uwh.rules.graphs import load_graphs
-from uwh.rules.models import ActionPlan, DeclineEffect
+from uwh.rules.models import ActionPlan
 from uwh.rules.registry import FactField
 from uwh.runtime.event_types import REQUEST_KINDS, EventType, MessageSent
 from uwh.runtime.events import read_events
@@ -38,7 +40,9 @@ def _words(option: str) -> str:
     return option.replace("_", " ")
 
 
-def _choice_sentence(blocker: Blocker, plan: ActionPlan | None, facts: Mapping[str, object]) -> str:
+def _choice_sentence(
+    blocker: Blocker, plan: ActionPlan | None, facts: Mapping[str, JsonValue]
+) -> str:
     choice = next(
         (
             c
@@ -60,25 +64,10 @@ def _choice_sentence(blocker: Blocker, plan: ActionPlan | None, facts: Mapping[s
     return f"I need you to choose. {choice.prompt} The options are {' or '.join(options)}."
 
 
-def _decline_reason(plan: ActionPlan | None) -> str:
-    if plan is None:
-        return "no reason is recorded"
-    if plan.underwriter_decline is not None:
-        return plan.underwriter_decline
-    # A committed decline is named by its playbook page and rule: "the post and pier page (PP-1)".
-    pages = [
-        f"the {page.key.replace('_', ' ')} page ({planned.effect.rule})"
-        for page in plan_pages(plan, load_graphs())
-        for planned in page.effects
-        if planned.committed and isinstance(planned.effect, DeclineEffect)
-    ]
-    return ", ".join(pages) if pages else "the playbook declines it"
-
-
 def _observation_sentence(
     db: sqlite3.Connection,
     blocker: Blocker,
-    facts: Mapping[str, object],
+    facts: Mapping[str, JsonValue],
     fields: dict[str, FactField],
 ) -> str:
     key, value = db.execute(
@@ -91,15 +80,29 @@ def _observation_sentence(
     return f"{sentence}. I need you to accept or reject it."
 
 
-def _draft_sentence(db: sqlite3.Connection, blocker: Blocker, plan: ActionPlan | None) -> str:
+def _decline_reason(
+    plan: ActionPlan | None, facts: Mapping[str, JsonValue], fields: dict[str, FactField]
+) -> str:
+    if plan is None:
+        return "no reason is recorded"
+    return decline_reason(plan, load_graphs(), facts, fields)
+
+
+def _draft_sentence(
+    db: sqlite3.Connection,
+    blocker: Blocker,
+    plan: ActionPlan | None,
+    facts: Mapping[str, JsonValue],
+    fields: dict[str, FactField],
+) -> str:
     row = db.execute(
         "SELECT kind FROM intents WHERE id = ?", (blocker.detail.intent_id,)
     ).fetchone()
     if row is not None and row[0] == "quote_packet":
-        return "The quote packet is ready. I need you to approve it before it goes to the producer."
+        return "The quote packet is ready. I need you to send it to the producer."
     return (
-        f"I propose to decline this lead: {_decline_reason(plan)}. "
-        "I need you to approve the notice, or withdraw the decline."
+        f"I propose to decline this lead: {_decline_reason(plan, facts, fields)}. "
+        "I need you to send the decline notice, or withdraw the decline."
     )
 
 
@@ -107,7 +110,7 @@ def _underwriter_sentence(
     db: sqlite3.Connection,
     blocker: Blocker,
     plan: ActionPlan | None,
-    facts: Mapping[str, object],
+    facts: Mapping[str, JsonValue],
     fields: dict[str, FactField],
 ) -> str:
     if blocker.kind == "underwriter_question":
@@ -115,7 +118,7 @@ def _underwriter_sentence(
     if blocker.kind == "delivery_unknown":
         return "The mailbox did not confirm a message. I need you to check it before anything else goes."
     if blocker.detail.item_kind == "draft":
-        return _draft_sentence(db, blocker, plan)
+        return _draft_sentence(db, blocker, plan, facts, fields)
     if blocker.detail.item_kind == "observation":
         return _observation_sentence(db, blocker, facts, fields)
     return f"I need you to review this: {_sentence(blocker.detail.text)}"
@@ -143,12 +146,12 @@ def summary_line(
     fields: dict[str, FactField],
 ) -> str:
     """The opening line of the lead's conversation."""
+    facts = {key: fact.value for key, fact in effective_facts(db, lead_id).items()}
     if not blockers and status in _FINISHED_KINDS:
         when = _sent_on(db, lead_id, _FINISHED_KINDS[status])
         if status == "quote_sent":
             return f"Quote packet sent on {when}."
-        return f"Declined on {when}: {_decline_reason(plan)}."
-    facts = {key: fact.value for key, fact in effective_facts(db, lead_id).items()}
+        return f"Declined on {when}: {_decline_reason(plan, facts, fields)}."
     asked_of_underwriter = [b for b in blockers if b.owner == "underwriter"]
     sentences = [_underwriter_sentence(db, b, plan, facts, fields) for b in asked_of_underwriter]
     for blocker in blockers:

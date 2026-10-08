@@ -401,12 +401,9 @@
   "skill": "chat",
   "stop_reason": "tool_use",
   "tokens_in": 185,
-  "tokens_out": 69,
+  "tokens_out": 51,
   "tool_input": {
-    "action": "queue_facts",
-    "keys": [
-      "status"
-    ],
+    "action": "lead_events",
     "lead_id": "008"
   }
 }

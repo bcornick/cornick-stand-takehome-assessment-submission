@@ -300,7 +300,8 @@ def _derived_input(name: str, facts: Mapping[str, JsonValue]) -> JsonValue:
             raise ValueError(f"the derived input operation {operation} is unknown")
 
 
-def _value(field: str, facts: Mapping[str, JsonValue]) -> JsonValue:
+def input_value(field: str, facts: Mapping[str, JsonValue]) -> JsonValue:
+    """The value a test reads: a derived input of `derivations.yaml`, or the fact."""
     if field in read_yaml("derivations.yaml")["derived_inputs"]:
         return _derived_input(field, facts)
     return facts.get(field)
@@ -488,7 +489,7 @@ class _Walker:
         path: tuple[str, ...],
         assumed: tuple[Assumption, ...],
     ) -> Walk:
-        value = _value(node.field, self.facts)
+        value = input_value(node.field, self.facts)
         if value is not None:
             chosen = matching_case(node, value)
             if chosen is None:

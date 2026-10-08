@@ -121,17 +121,18 @@
   "request_id": "",
   "skill": "chat",
   "stop_reason": "tool_use",
-  "tokens_in": 669,
-  "tokens_out": 148,
+  "tokens_in": 157,
+  "tokens_out": 163,
   "tool_input": {
     "action": "answer",
-    "answer": "Three leads are in Florida:\n\n- 3948 Old Mill Rd (LEAD-004)\n- 4452 Meadowlark Ln (LEAD-007)\n- 903 Lakeview Blvd (LEAD-009)\n\nTwo leads have no state recorded (LEAD-000 and 3567 Lakeview Blvd), so they cannot be placed.",
+    "answer": "Three leads are in Florida:\n\n- 3948 Old Mill Rd (LEAD-004)\n- 4452 Meadowlark Ln (LEAD-007)\n- 903 Lakeview Blvd (LEAD-009)\n\nThree more have no state recorded: LEAD-000, 3567 Lakeview Blvd (LEAD-005) and 3730 Hillside Ct (LEAD-006).",
     "citations": [
       5,
       8,
       10,
       1,
-      6
+      6,
+      7
     ]
   }
 }

@@ -596,3 +596,14 @@ Brett's decisions carried into milestone 1: an underwriter's value that still tr
 **Checks:** `make check` clean (818 fast Python tests, 161 web tests).
 
 **Friction:** this shell's PATH has Homebrew's Node 25 without pnpm; `make check` runs with `~/.nvm/versions/node/v22.23.3/bin` first on PATH. Builders in worktrees could not run the pnpm steps and ran `tsc`/`vitest` through a temporary `node_modules` link.
+
+## Chat surface: the seed, single tags and reasons (6a54ca9 and after)
+
+**Done, at Brett's direction:**
+- No reader sees the run's seed in a lead id: a lead with no address is labelled "LEAD-000" (`without_seed` in `src/uwh/skills/steps.py`), so the decline notice's subject reads "Regarding your submission: LEAD-000", and a chat answer's lead ids are shortened before the underwriter reads them. The model still reads full ids, so the commands it proposes keep naming leads in full.
+- Full detail's "Waiting on" tags an item once, by its kind, coloured by who it waits on; `OWNER_LABELS` had no other reader and is gone.
+- A decision carries its reason. A decline is explained by the values on its path through the page's graph (`decline_reason`), in the lead's opening line, the finished "Declined on …" line and the decline notice card ("Why: …"); the line asks the underwriter to send the decline notice or withdraw it, and a ready packet to be sent, matching the buttons. The narrative's plan sentence names the committed effects and a choice left open ("Built the action plan: a decline (PP-1)"). An edit with no note no longer ends in a stray period. This replaces the page-and-rule-only reason ("the post and pier page (PP-1)").
+
+**Live calls:** the chat suite and the three example prompts were recorded twice, since their lookups show the label and then the event sentences: 16,241 in / 5,394 out and 14,698 in / 5,425 out for the suite, 9 calls each for the examples (7,303 in / 840 out, then 1,935 in / 893 out as logged). Jev: none.
+
+**Checks:** `make check` clean (829 fast Python tests, 163 web tests).

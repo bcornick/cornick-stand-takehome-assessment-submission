@@ -1199,6 +1199,17 @@
             "title": "Blockers",
             "type": "array"
           },
+          "decline_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decline Reason"
+          },
           "drafts": {
             "items": {
               "$ref": "#/components/schemas/DraftView"
@@ -1295,7 +1306,8 @@
           "drafts",
           "readings",
           "fields",
-          "missing_fields"
+          "missing_fields",
+          "decline_reason"
         ],
         "title": "LeadDetail",
         "type": "object"

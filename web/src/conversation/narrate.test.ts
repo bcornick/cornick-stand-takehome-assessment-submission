@@ -57,6 +57,7 @@ function leadWith(blockers: Schemas['LeadDetail']['blockers']): Schemas['LeadDet
     readings: {},
     fields: [],
     missing_fields: [],
+  decline_reason: null,
     drafts: [],
   }
 }

@@ -202,6 +202,7 @@ class LeadDetail(StrictModel):
         FactField
     ]  # the keys `resolve_fact` accepts, with the label and type each is offered by
     missing_fields: list[MissingField]  # what the current triage found missing and still needs
+    decline_reason: str | None  # why the lead is declined, while its plan proposes a decline
 
 
 # ---- events (A.1) --------------------------------------------------------------------------------

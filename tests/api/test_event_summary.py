@@ -6,7 +6,16 @@ import pytest
 
 from uwh.api.event_summary import event_summary
 from uwh.providers.models import ProviderResult
-from uwh.rules.models import StrictModel
+from uwh.rules.models import (
+    ActionPlan,
+    AdvisoryEffect,
+    DeclineEffect,
+    OpenChoice,
+    PlannedEffect,
+    RuleTrace,
+    StrictModel,
+    SurchargeEffect,
+)
 from uwh.runtime.event_types import (
     ApprovalRecorded,
     BlockerClosed,
@@ -260,3 +269,48 @@ def test_a_rejected_rewrite_says_which_check_rejected_it_and_that_the_rendered_r
         "The rewrite of the request was rejected by the model check (it adds a deadline); "
         "the rendered request is used"
     )
+
+
+def _built(*effects: tuple[object, bool], choices: int = 0) -> PlanBuilt:
+    trace = RuleTrace(board_path=["07:ROOT"])
+    plan = ActionPlan(
+        effects=[PlannedEffect(effect=e, trace=trace, committed=c) for e, c in effects],  # type: ignore[arg-type]
+        proposed_decline=any(isinstance(e, DeclineEffect) and c for e, c in effects),
+        open_choices=[
+            OpenChoice(choice_id=f"I13.c{n}", options=["a", "b"], prompt="Which?", show=[])
+            for n in range(choices)
+        ],
+    )
+    return PlanBuilt(plan=plan.model_dump(mode="json"), plan_hash="h")
+
+
+@pytest.mark.parametrize(
+    ("payload", "expected"),
+    [
+        (
+            _built((DeclineEffect(type="decline", rule="PP-1"), True)),
+            "Built the action plan: a decline (PP-1)",
+        ),
+        (
+            _built(
+                (SurchargeEffect(type="surcharge", rule="PP-3", percent=15), True),
+                (AdvisoryEffect(type="advisory", rule="FS-2", text="t"), True),
+            ),
+            "Built the action plan: an advisory (FS-2) and a 15% surcharge (PP-3)",
+        ),
+        (
+            _built((DeclineEffect(type="decline", rule="FS-1"), False), choices=1),
+            "Built the action plan: a choice for you",
+        ),
+        (_built(), "Built the action plan: nothing changes the quote"),
+    ],
+    ids=["a decline", "a surcharge and an advisory", "an open choice", "nothing"],
+)
+def test_the_plan_sentence_says_what_the_plan_decided(payload: PlanBuilt, expected: str) -> None:
+    assert event_summary(payload) == expected
+
+
+def test_an_edit_with_no_note_is_one_sentence() -> None:
+    edited = PAYLOADS[EventType.draft_edited].model_copy(update={"reason": ""})
+
+    assert event_summary(edited) == "Edited the routine request draft"

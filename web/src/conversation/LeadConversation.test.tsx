@@ -69,6 +69,7 @@ const lead: Schemas['LeadDetail'] = {
   readings: {},
   fields: [],
   missing_fields: [],
+  decline_reason: null,
   drafts: [],
 }
 

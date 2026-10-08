@@ -18,7 +18,7 @@
     "action": "propose_command",
     "command_payload": {
       "lead_id": "LEAD-00000042-008",
-      "reason": "Building is a vacant warehouse and outside our appetite."
+      "reason": "Building is a vacant warehouse, outside our appetite."
     },
     "command_type": "decline_lead",
     "rationale": "The underwriter instructed to decline this lead because the building is a vacant warehouse outside the appetite."

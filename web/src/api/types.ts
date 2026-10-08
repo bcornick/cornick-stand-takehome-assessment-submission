@@ -726,6 +726,8 @@ export interface components {
         LeadDetail: {
             /** Blockers */
             blockers: components["schemas"]["BlockerView"][];
+            /** Decline Reason */
+            decline_reason: string | null;
             /** Drafts */
             drafts: components["schemas"]["DraftView"][];
             /** Facts */

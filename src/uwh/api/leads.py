@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException
 
 from uwh.api.event_summary import event_summary
 from uwh.api.pages import plan_pages
-from uwh.api.readings import choice_readings
+from uwh.api.readings import choice_readings, decline_reason
 from uwh.api.runtime import RuntimeDependency
 from uwh.api.summary import ask_count, summary_line
 from uwh.api.waiting import ask_label, decision_phrase, open_request, sent_times
@@ -184,6 +184,7 @@ def lead_detail(db: sqlite3.Connection, lead_id: str, registry: Registry) -> Lea
     graphs = load_graphs()
     sent = sent_times(db, lead_id)
     fields = fact_fields(registry)
+    values = {key: fact.value for key, fact in facts.items()}
     return LeadDetail(
         lead_id=lead_id,
         label=lead_label(db, lead_id),
@@ -196,9 +197,7 @@ def lead_detail(db: sqlite3.Connection, lead_id: str, registry: Registry) -> Lea
         readings={}
         if plan is None
         else {
-            choice.choice_id: choice_readings(
-                choice, graphs, {key: fact.value for key, fact in facts.items()}
-            )
+            choice.choice_id: choice_readings(choice, graphs, values)
             for choice in plan.open_choices
         },
         blockers=[_blocker_view(db, blocker) for blocker in blockers],
@@ -219,6 +218,9 @@ def lead_detail(db: sqlite3.Connection, lead_id: str, registry: Registry) -> Lea
         ],
         fields=list(fields.values()),
         missing_fields=_missing_fields(db, lead_id),
+        decline_reason=decline_reason(plan, graphs, values, fields)
+        if plan is not None and plan.proposed_decline
+        else None,
     )
 
 

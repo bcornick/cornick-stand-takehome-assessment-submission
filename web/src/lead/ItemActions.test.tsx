@@ -156,6 +156,7 @@ const lead: Schemas['LeadDetail'] = {
     { key: 'wall_type', label: 'Wall type', section: 'Construction', kind: 'text', options: [] },
   ],
   missing_fields: [],
+  decline_reason: null,
   drafts: [packet],
 }
 
@@ -263,6 +264,14 @@ describe('a draft card', () => {
     await userEvent.click(reasonForm().getByRole('button', { name: 'Withdraw decline and send the asks' }))
 
     expect(posted[0].body).toEqual({ type: 'reject', payload: { item_id: 30, reason: 'the roof is fine' } })
+  })
+
+  it('says why the lead is declined on the decline notice card', () => {
+    item(
+      blocker(30, 'underwriter_review', { item_kind: 'draft', intent_id: decline.intent_id, text: 'Review the notice.' }),
+      { ...lead, drafts: [decline], decline_reason: 'Foundation Type is Piers, so the post and pier page declines it (PP-1)' },
+    )
+    expect(screen.getByText('Why: Foundation Type is Piers, so the post and pier page declines it (PP-1).')).toBeInTheDocument()
   })
 
   it('approves a decline notice only with the reason for the decline', async () => {

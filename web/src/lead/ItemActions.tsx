@@ -107,6 +107,9 @@ function ItemActions({ lead, blocker, onChange }: Props & { blocker: Blocker }) 
           )
     return (
       <>
+        {draft.kind === 'decline_notice' && lead.decline_reason !== null && (
+          <p className="text-sm">{`Why: ${lead.decline_reason}.`}</p>
+        )}
         <DraftPreview draft={draft} onChange={onChange} />
         <Decision
           // A new hash is a new draft, which the reason given for the old one does not cover.

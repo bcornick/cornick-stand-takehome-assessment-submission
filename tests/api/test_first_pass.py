@@ -258,4 +258,6 @@ def test_a_lead_with_no_address_is_named_without_the_runs_seed(
     assert detail.label == "LEAD-000"
     (notice,) = [draft for draft in detail.drafts if draft.kind == "decline_notice"]
     assert notice.subject == "Regarding your submission: LEAD-000"
+    assert detail.decline_reason is not None
+    assert detail.decline_reason.endswith("so the post and pier page declines it (PP-1)")
     assert not any("00000042" in draft.subject + draft.body for draft in detail.drafts)

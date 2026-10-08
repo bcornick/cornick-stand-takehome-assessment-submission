@@ -79,14 +79,14 @@ CASES = [
     ),
     Case(
         "quote packet draft",
-        "The quote packet is ready. I need you to approve it before it goes to the producer.",
+        "The quote packet is ready. I need you to send it to the producer.",
         [PACKET_REVIEW],
         intents={"I-q": "quote_packet"},
     ),
     Case(
         "decline notice draft gives the underwriter's reason",
         "I propose to decline this lead: the roof is beyond repair. "
-        "I need you to approve the notice, or withdraw the decline.",
+        "I need you to send the decline notice, or withdraw the decline.",
         [NOTICE_REVIEW],
         ActionPlan(underwriter_decline="the roof is beyond repair", proposed_decline=True),
         intents={"I-d": "decline_notice"},
@@ -123,7 +123,7 @@ CASES = [
     ),
     Case(
         "waiting on the producer while an underwriter item is open",
-        "The quote packet is ready. I need you to approve it before it goes to the producer. "
+        "The quote packet is ready. I need you to send it to the producer. "
         "Meanwhile I asked the producer for the 1 missing field and am waiting for the reply.",
         [WAIT_REPLY, PACKET_REVIEW],
         intents={"I-q": "quote_packet"},

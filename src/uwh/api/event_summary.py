@@ -5,7 +5,7 @@ from collections import Counter
 from pydantic import JsonValue
 
 from uwh.providers.models import ProviderResult
-from uwh.rules.models import StrictModel
+from uwh.rules.models import ActionPlan, StrictModel, SurchargeEffect
 from uwh.runtime.event_types import (
     ApprovalRecorded,
     BlockerClosed,
@@ -129,6 +129,33 @@ def _reading(
     return f"The model classified this reply. {says}"
 
 
+# How the plan sentence names an effect; a no-action effect changes nothing and is not named.
+_EFFECT_NAMES = {
+    "decline": "a decline",
+    "requirement": "a requirement",
+    "exclusion_or_endorsement": "an exclusion or endorsement",
+    "coverage_adjustment": "a coverage adjustment",
+    "advisory": "an advisory",
+    "obligation": "an obligation",
+}
+
+
+def _plan_decisions(plan: ActionPlan) -> str:
+    """What the plan decided: its committed effects with their rules, and a choice left to the underwriter."""
+    named = [
+        f"a {e.percent}% surcharge ({e.rule})"
+        if isinstance(e, SurchargeEffect)
+        else f"{_EFFECT_NAMES[e.type]} ({e.rule})"
+        for e in (planned.effect for planned in plan.effects if planned.committed)
+        if e.type in _EFFECT_NAMES or isinstance(e, SurchargeEffect)
+    ]
+    if plan.open_choices:
+        named.append("a choice for you")
+    if not named:
+        return "nothing changes the quote"
+    return named[0] if len(named) == 1 else f"{', '.join(named[:-1])} and {named[-1]}"
+
+
 def event_summary(payload: StrictModel) -> str:
     """What the event says: its fact, result and consequence, in one bullet."""
     match payload:
@@ -137,7 +164,8 @@ def event_summary(payload: StrictModel) -> str:
         case ReplayMiss(skill=skill):
             return f"No recording was found for a {skill} call"
         case DraftEdited(kind=kind, reason=reason):
-            return f"Edited the {_words(kind)} draft. {_sentence(reason)}"
+            edited = f"Edited the {_words(kind)} draft"
+            return f"{edited}. {_sentence(reason)}" if reason else edited
         case ProposalCreated():
             return "The assistant proposed a command for the underwriter to apply"
         case LeadReceived(source=source):
@@ -156,8 +184,8 @@ def event_summary(payload: StrictModel) -> str:
             return f"Triaged the fields: {_triaged(fields)}"
         case ProviderCalled(key=key, result=result):
             return _fetched(key, result)
-        case PlanBuilt():
-            return "Built the action plan"
+        case PlanBuilt(plan=plan):
+            return f"Built the action plan: {_plan_decisions(ActionPlan.model_validate(plan))}"
         case BlockerOpened(owner=owner, detail=detail):
             return f"Waiting on {_OWNERS[owner]}. {_sentence(detail.text)}"
         case BlockerClosed(kind=kind):
