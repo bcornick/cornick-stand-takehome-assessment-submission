@@ -42,7 +42,7 @@ function App() {
   const [run, rows, items, proposals] = surface.data
   const shared = { run, proposals, chat, refresh, panel, onOpen: setPanel, onSelect: select, onChange: refetch }
   return (
-    <div className="grid h-screen min-w-[1280px] grid-cols-[280px_minmax(0,1fr)]">
+    <div className="grid h-screen min-w-[1280px] grid-cols-[340px_minmax(0,1fr)]">
       <LeadList run={run} rows={rows} selected={conversation} onSelect={select} />
       <main className="min-h-0 border-x">
         {conversation === QUEUE ? (

@@ -98,7 +98,7 @@ export function LeadList({ run, rows, selected, onSelect }: Props) {
           return (
             <section key={group} aria-label={GROUP_LABELS[group]}>
               <h2
-                className={`flex items-center gap-2 px-4 pb-1 pt-4 text-xs font-medium uppercase ${group === 'blocked_on_underwriter' ? 'text-accent' : 'text-muted-foreground'}`}
+                className={`flex items-center justify-between gap-2 px-4 pb-1 pt-4 text-xs font-medium uppercase whitespace-nowrap ${group === 'blocked_on_underwriter' ? 'text-accent' : 'text-muted-foreground'}`}
               >
                 {GROUP_LABELS[group]}
                 {group === 'blocked_on_underwriter' && <Badge variant="needs">{`Needs you · ${inGroup.length}`}</Badge>}
