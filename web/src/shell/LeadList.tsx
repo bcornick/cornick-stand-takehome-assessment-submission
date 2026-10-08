@@ -74,12 +74,17 @@ export function LeadList({ run, rows, selected, onSelect }: Props) {
       <div className="px-4 py-3">
         <h1 className="text-4xl font-semibold tracking-wide">STAND</h1>
       </div>
+      {/* The queue is the hub every lead returns to: it reads as a heading, with a mark, and a rule sets it off from the groups. */}
       <button
         type="button"
         aria-current={selected === QUEUE ? 'true' : undefined}
         onClick={() => onSelect(QUEUE)}
-        className={entryClass(selected === QUEUE)}
+        className={`${entryClass(selected === QUEUE)} mb-1 flex items-center gap-2 border-b py-3 text-base font-semibold`}
       >
+        <svg aria-hidden="true" viewBox="0 0 20 20" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 9.5 10 3.5l7 6" />
+          <path d="M5 8.5V16h10V8.5" />
+        </svg>
         Queue
       </button>
       {run.run_id === null ? (

@@ -34,7 +34,7 @@ The shape of the surface is also settled. It is desktop only, with no drawer or 
 
 ### Shell
 
-- **Left column.** The name STAND in capitals, then the lead list. A "Queue" entry at the top of the list opens the queue-level conversation, whose greeting carries the run's counts.
+- **Left column.** The name STAND in capitals, then the lead list. A "Queue" entry at the top of the list, set as a heading with a home mark and a rule beneath it, opens the queue-level conversation, the hub every lead returns to; its greeting carries the run's counts.
 - **Lead groups.** Waiting on the underwriter; waiting on the producer or data; finished. The groups and their order are the `group` field and the row order `GET /api/leads` returns. `GROUP_LABELS` in `web/src/labels.ts` carries the two relabelled names. The middle group includes data waits, so its label names them.
 - **Lead row.** The lead's short name ("Lead 008"), address or "no address", and a chip that says what differs between leads: "Needs your decision", "Waiting on producer", "Waiting on data", "Quote sent" or "Declined". A second line reads "Effective Jul 21 · 2 days in queue", with the age in whole business days ("in queue today" under half a day) and "Past service level" when breached. A row shows "no address" when its `label` equals its lead id, which is what `lead_label` in `src/uwh/skills/steps.py` returns for a lead with no address.
 - **Centre column.** The conversation, fluid width. Its header names the lead and holds the "Full detail" link.
