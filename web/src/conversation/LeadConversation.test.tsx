@@ -104,7 +104,7 @@ function respond(body: unknown): Response {
   return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } })
 }
 
-function renderLead(panel: PanelTarget | null = null) {
+function renderLead(panel: PanelTarget | null = null, onOpen: (target: PanelTarget) => void = () => {}) {
   vi.stubGlobal(
     'fetch',
     vi.fn(async (input: RequestInfo | URL) => {
@@ -123,7 +123,7 @@ function renderLead(panel: PanelTarget | null = null) {
       chat={chat}
       refresh={0}
       panel={panel}
-      onOpen={() => {}}
+      onOpen={onOpen}
       onSelect={() => {}}
       onChange={() => {}}
     />,
@@ -159,5 +159,15 @@ describe('LeadConversation', () => {
     renderLead({ kind: 'lead', lead_id: lead.lead_id })
     await screen.findByText(lead.summary)
     expect(screen.queryByRole('button', { name: 'Full detail' })).toBeNull()
+  })
+
+  it('offers the event timeline under the opening message, opened on the latest event', async () => {
+    const onOpen = vi.fn()
+    renderLead(null, onOpen)
+    await screen.findByText(lead.summary)
+
+    await userEvent.click(screen.getByRole('button', { name: 'View event timeline' }))
+
+    expect(onOpen).toHaveBeenCalledWith({ kind: 'event', lead_id: lead.lead_id, id: events[events.length - 1]!.id })
   })
 })

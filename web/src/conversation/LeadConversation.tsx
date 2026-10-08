@@ -27,6 +27,7 @@ export function LeadConversation({ leadId, ...shared }: Props) {
     return <p role="alert" className="p-6">{`Could not load ${leadName(leadId)}: ${loaded.message}.`}</p>
   }
   const [lead, { events }] = loaded.data
+  const latest = events.at(-1)
   const hasAddress = lead.label !== lead.lead_id
   return (
     <Conversation
@@ -51,6 +52,16 @@ export function LeadConversation({ leadId, ...shared }: Props) {
         <AssistantLabel />
         <p className="text-sm">{lead.summary}</p>
       </div>
+      {latest !== undefined && (
+        // The timeline is one click away: the panel's event view, with the latest event expanded.
+        <button
+          type="button"
+          className="button-outline self-start"
+          onClick={() => shared.onOpen({ kind: 'event', lead_id: leadId, id: latest.id })}
+        >
+          View event timeline
+        </button>
+      )}
       {lead.blockers.length > 0 && (
         <ul className="flex flex-col gap-3">
           {lead.blockers.filter((blocker) => blocker.owner === 'underwriter').map((blocker) => (
