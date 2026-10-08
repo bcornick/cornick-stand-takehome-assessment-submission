@@ -619,3 +619,5 @@ Brett's decisions carried into milestone 1: an underwriter's value that still tr
 **Held-request wording (Brett):** the held request's item reads "Not sent yet, in case you decline this lead. Send it to the producer, or decline at the choice above." in place of the longer sentence, which did not say where to decline. The example prompts were recorded again (9 calls, 2,551 in / 820 out), since the queue's open items show the sentence.
 
 **Held-request wording, second pass (Brett):** the item ends "or decline this lead." ("the choice above" was wrong where the sentence opens the conversation), and the opening line reads "I also drafted a request to the producer for the missing information." after another sentence, "I drafted …" when it stands first. The example prompts were recorded again (9 calls, 2,543 in / 839 out).
+
+**Panel header (Brett):** the drill-down panel's header (its title and Close) stays at the top while the panel scrolls, spanning the panel's full width with a rule beneath it.

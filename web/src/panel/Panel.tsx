@@ -36,7 +36,9 @@ export function Panel({ target, refresh, onOpen, onClose, onChange }: Props) {
       // Its own scrollbar is the right-hand gutter, so the content sits as close to both edges.
       className="fixed top-0 right-0 z-10 flex h-screen w-fit max-w-[700px] min-w-[360px] flex-col gap-4 overflow-x-hidden overflow-y-auto border-l bg-background py-4 pr-1 pl-4 shadow-[-12px_0_32px_rgba(0,0,0,0.12)]"
     >
-      <header className="flex items-center justify-between">
+      {/* The header stays at the top while the panel scrolls, so Close is always in reach. It reaches over the
+          panel's padding on the top and both sides, so the content scrolls under it from edge to edge. */}
+      <header className="sticky -top-4 z-10 -mt-4 -mr-1 -ml-4 flex items-center justify-between border-b bg-background pt-4 pr-1 pb-3 pl-4">
         <h2 className="text-base font-semibold">{TITLES[target.kind]}</h2>
         <button type="button" onClick={onClose} className="button-outline">
           Close
