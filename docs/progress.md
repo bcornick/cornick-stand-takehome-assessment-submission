@@ -579,3 +579,20 @@ Brett's decisions carried into milestone 1: an underwriter's value that still tr
 **The needs chip (Brett):** the tinted accent chip did not stand out, so the `needs` variant keeps the accent text on its tint and gains a 1px accent outline (Brett found the solid fill too dark); the token is unchanged. The left column is 340px, so "Waiting on the underwriter" and its count fit on one line; the Queue entry reads as the hub (bold, a home mark, a rule beneath).
 
 **Finished states (Brett):** a quote sent keeps the green and a lead declined takes a muted slate (`--declined`, #3f4f6f, about 7:1 on its tint), a fourth `Badge` variant, so the three outcomes of a lead read apart.
+
+## Chat surface: the UI audit (4e6d8af to 1e2cba8)
+
+**Done, at Brett's direction** (from an audit of the UI against published underwriting-workbench, queue and human-in-the-loop guidance; three builders in isolated worktrees, the lead merging each):
+- A choice card's values carry what the page's graph makes of each (`LeadDetail.readings`, `src/uwh/api/readings.py`, reusing the graph's case matching through `matching_case`): "Fails: above 0.50", "Declines", "Passes", "Passes only if the client will mitigate", "Your call: the playbook sets no threshold" (I16) or "…does not settle it" (I14, I15). No threshold is invented. The readings are computed for the view and are no part of the hashed plan, so no recording moved.
+- A draft's approve button names what it sends ("Send decline notice", "Send quote", "Send request"), so approving a decline notice does not read as approving the lead; a decline and sending a decline notice are accent-outlined (`.button-destructive`); a card drops the "Waits on" tag its kind already implies.
+- Values read Yes/No and "Not provided", a date field as a date; a lead id drops the seed ("LEAD-003"). Stand's registry labels the date field `property_purchase_date` "Purchase Year"; the label stays Stand's.
+- A lead row's chip says what differs (`QueueRow.decision`, the open request's asks and round) and a producer-waiting row says when its request went out; a lead with a request out shows its round, send time, asks (`DraftView.asks`, labels: a field, a question, or "Confirm <field>" for a confirmation) and a link to the message.
+- Full detail groups facts under the registry's sections (`FactField.section`; catalogue questions under "Questions", the contact email under "Contact"), shows a source tag only when it is not Submitted, and lists the missing fields first, grouped by the triage's resolution (`LeadDetail.missing_fields`), so the producer's asks read apart from fields the system looks up.
+
+**Readings:** "in queue today" stays for leads not waiting on a request; the "ago" on the request card uses `run.sim_now` as last fetched. A row's ask count is the lead's distinct asks across its requests, as `ask_count` was.
+
+**Live calls:** none; the chat suite replays unchanged (6 passed).
+
+**Checks:** `make check` clean (818 fast Python tests, 161 web tests).
+
+**Friction:** this shell's PATH has Homebrew's Node 25 without pnpm; `make check` runs with `~/.nvm/versions/node/v22.23.3/bin` first on PATH. Builders in worktrees could not run the pnpm steps and ran `tsc`/`vitest` through a temporary `node_modules` link.

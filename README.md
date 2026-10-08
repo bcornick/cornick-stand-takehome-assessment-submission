@@ -18,7 +18,7 @@ To see the demo:
 1. In **Demo controls**, bottom right, click **Load today's leads**. The app posts the ten leads and settles them; the lead list on the left fills.
 2. Open lead 008. Its conversation is what the system did, oldest first: the fields it triaged, the values it fetched, the plan it built and the request it sent to the producer. Each line carries a chip that opens its evidence in the panel on the right; **Full detail** opens the lead's facts with their sources, its plan and its messages.
 3. Click **Deliver the producers' replies**. Every stored producer reply is delivered and read; lead 008's conversation gains the reply, what was read from it, and a quote packet as a card.
-4. **Approve** the packet on the card. The mailbox then holds one request and one packet for it.
+4. **Send quote** on the packet's card. The mailbox then holds one request and one packet for it.
 
 Leads 000, 003 and 006 need the underwriter on the first pass, and the **Queue** conversation lists their cards: 000 is a proposed decline that waits for approval, and 003 and 006 each show one question card.
 
