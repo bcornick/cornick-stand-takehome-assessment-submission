@@ -63,7 +63,7 @@ A fixed workflow in Python processes each lead. Code makes every decision; the l
 
 ## The eval loop
 
-`make eval` replays the morning against fresh copies of Stand's services. Nine graders check that each lead took the right path, that each email asks for exactly what is missing and nothing more, that nothing is escalated without need, and that nothing is sent twice or without approval. The truth comes from labels Brett signed, Stand's own answer key (190 records agree, none disagree) and held-back producer replies. Three deliberately broken runs prove the graders can fail. Every run adds a row to `evals/results.jsonl`, and one recorded improvement cycle shows the loop at work.
+`make eval` replays the morning against fresh copies of Stand's services. Nine graders check that each lead took the right path, that each email asks for exactly what is missing and nothing more, that nothing is escalated without need, and that nothing is sent twice or without approval. The truth comes from labels the author signed, Stand's own answer key (190 records agree, none disagree) and held-back producer replies. Three deliberately broken runs prove the graders can fail. Every run adds a row to `evals/results.jsonl`, and one recorded improvement cycle shows the loop at work.
 
 The loop turns every mistake into a permanent test and checks every change against the whole suite, so fixes build up without breaking what already works. Every underwriter override is already recorded with its reason, which is the supply of new cases. `docs/eval-loop.md` explains the loop, a real cycle from this project, how it leads to automated improvement, and its current limits.
 
@@ -112,4 +112,4 @@ The ones a reviewer is most likely to meet; the full list is in `docs/build_logs
 
 ## How this was built
 
-AI coding agents (Claude Code) wrote the code, under the working rules in `AGENTS.md`. A lead session planned each milestone and read every diff. Builder agents wrote the tests first and then the code, and a separate reviewer agent read each finished milestone. Brett made the product and design decisions, reviewed the reading of the playbook, and signed the eval labels. That is why the repository is larger than a 5 to 6 hour project would be. The cut list above is what was left out on purpose.
+AI coding agents (Claude Code) wrote the code, under the working rules in `AGENTS.md`. A lead session planned each milestone and read every diff. Builder agents wrote the tests first and then the code, and a separate reviewer agent read each finished milestone. I made the product and design decisions, reviewed the reading of the playbook, and signed the eval labels. That is why the repository is larger than a 5 to 6 hour project would be. The cut list above is what was left out on purpose.
