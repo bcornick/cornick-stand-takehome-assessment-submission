@@ -369,7 +369,7 @@ describe('a draft card', () => {
     expect(screen.queryByText(/^Waits on/)).toBeNull()
   })
 
-  it('folds the subject and body in a preview, and Edit inside it posts the new text with no reason', async () => {
+  it('folds the subject and body in a preview, and Edit inside it opens a form whose Save edits posts the new text with no reason', async () => {
     const posted = stubApi()
     item(packetItem)
     const preview = screen.getByText('Preview the packet').closest('details')!
@@ -378,7 +378,7 @@ describe('a draft card', () => {
     expect(within(preview).getByText('Coverage A: $500,000')).toBeInTheDocument()
 
     await userEvent.click(within(preview).getByRole('button', { name: 'Edit' }))
-    const edit = within(screen.getByRole('form', { name: 'Edit' }))
+    const edit = within(screen.getByRole('form', { name: 'Save edits' }))
     expect(edit.queryByLabelText('Reason')).toBeNull()
     for (const [label, text] of [
       ['Subject', 'Your quote, checked'],
@@ -387,7 +387,7 @@ describe('a draft card', () => {
       await userEvent.clear(edit.getByLabelText(label))
       await userEvent.type(edit.getByLabelText(label), text)
     }
-    await userEvent.click(edit.getByRole('button', { name: 'Edit' }))
+    await userEvent.click(edit.getByRole('button', { name: 'Save edits' }))
 
     expect(posted).toEqual([
       {

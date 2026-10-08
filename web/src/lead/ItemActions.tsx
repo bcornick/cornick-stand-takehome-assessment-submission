@@ -256,7 +256,7 @@ function DraftPreview({ draft, onChange }: { draft: Draft; onChange: () => void 
           <ActionForm
             // A new hash is a new draft; the fields start again from its text.
             key={draft.payload_hash}
-            label="Edit"
+            label="Save edits"
             fields={[
               { name: 'subject', label: 'Subject', initial: draft.subject },
               { name: 'body', label: 'Body', initial: draft.body, multiline: true },
