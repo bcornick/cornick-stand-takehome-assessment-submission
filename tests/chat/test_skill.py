@@ -314,3 +314,19 @@ def test_an_answer_names_leads_without_the_runs_seed(
     turn = run_turn(db, env, "Which leads wait on me?", None, [], lambda _: None)
 
     assert turn.answer == "LEAD-000 and 3948 Old Mill Rd (LEAD-004) wait on you."
+
+
+def test_an_answer_does_not_name_a_lead_with_no_address_twice(
+    db: sqlite3.Connection, scripted: Callable[..., tuple[RunEnvironment, Script]]
+) -> None:
+    env, script = scripted(
+        {
+            "action": "answer",
+            "answer": "LEAD-000 (LEAD-00000042-000) waits on you.",
+            "citations": [],
+        }
+    )
+
+    turn = run_turn(db, env, "Which leads wait on me?", None, [], lambda _: None)
+
+    assert turn.answer == "LEAD-000 waits on you."

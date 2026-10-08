@@ -1,7 +1,6 @@
 // ABOUTME: The typed messages of one conversation with what came back, and the open proposal cards that sit on its lead.
-// ABOUTME: A turn shows its lookups as they happen, then its answer with numbered citation chips and a source line per citation, its card or its error.
+// ABOUTME: A turn shows its lookups as they happen, then its answer with its sources folded under "Related artifacts", one line each that opens the panel, its card or its error.
 import type { components } from '@/api/types'
-import { Chip } from '@/components/Chip'
 import { AssistantLabel } from '@/conversation/AssistantLabel'
 import { leadName } from '@/format'
 import { QUEUE, type PanelTarget, type Turn } from '@/surface'
@@ -17,9 +16,17 @@ type Props = {
   onChange: () => void
 }
 
-// An answer's citations in number order, for the chips and the source lines alike.
+type Citation = components['schemas']['Citation']
+
+// An answer's citations in the order the lookups numbered them.
 function sourcesOf(closing: Extract<Turn['closing'], { type: 'answer' }>) {
   return [...closing.citations].sort((a, b) => a.number - b.number)
+}
+
+// A source as one line: what it is, then its lead, which a lead's own line already names.
+function sourceLine(citation: Citation): string {
+  const text = citation.text.replace(/\.$/, '')
+  return citation.kind === 'lead' ? text : `${text}, ${leadName(citation.lead_id).toLowerCase()}`
 }
 
 export function ChatTail({ turns, proposals, leadId, onOpen, onSelect, onChange }: Props) {
@@ -47,30 +54,23 @@ export function ChatTail({ turns, proposals, leadId, onOpen, onSelect, onChange 
                   <div className="flex flex-col gap-1">
                     <AssistantLabel />
                     <AnswerText answer={closing.answer} />
-                    <p className="flex gap-1">
-                      {sourcesOf(closing).map((citation) => (
-                        <Chip
-                          key={citation.number}
-                          label={citation.number}
-                          opens={`Open source ${citation.number}`}
-                          onClick={() => onOpen({ kind: citation.kind, lead_id: citation.lead_id, id: citation.id })}
-                        />
-                      ))}
-                    </p>
                     {closing.citations.length > 0 && (
-                      <ol aria-label="Sources" className="flex flex-col gap-0.5 text-xs text-muted-foreground">
-                        {sourcesOf(closing).map((citation) => (
-                          <li key={citation.number}>
-                            <button
-                              type="button"
-                              className="text-left hover:underline"
-                              onClick={() => onOpen({ kind: citation.kind, lead_id: citation.lead_id, id: citation.id })}
-                            >
-                              {`${citation.number} · ${citation.text}, ${leadName(citation.lead_id).toLowerCase()}`}
-                            </button>
-                          </li>
-                        ))}
-                      </ol>
+                      <details className="text-xs text-muted-foreground">
+                        <summary>{`Related artifacts (${closing.citations.length})`}</summary>
+                        <ul aria-label="Related artifacts" className="flex flex-col gap-0.5">
+                          {sourcesOf(closing).map((citation) => (
+                            <li key={citation.number}>
+                              <button
+                                type="button"
+                                className="text-left hover:underline"
+                                onClick={() => onOpen({ kind: citation.kind, lead_id: citation.lead_id, id: citation.id })}
+                              >
+                                {sourceLine(citation)}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
                     )}
                   </div>
                 )}

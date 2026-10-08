@@ -1,4 +1,4 @@
-// ABOUTME: Tests the surface against fetch stubbed at the boundary: lead 008 goes from "Load today's leads" to an approved packet inside its conversation, the queue conversation holds the cards of leads 000 and 003, and a citation chip opens the panel on what it cites.
+// ABOUTME: Tests the surface against fetch stubbed at the boundary: lead 008 goes from "Load today's leads" to an approved packet inside its conversation, the queue conversation holds the cards of leads 000 and 003, and a narrative chip opens the panel on what it cites.
 // ABOUTME: The stubbed responses are typed objects of the generated API types, so a shape the backend does not serve fails the type check; the stub keeps the run's state, so a control changes what the next fetch returns.
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -299,7 +299,7 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: /Lead 003/ })).toBeInTheDocument()
   })
 
-  it('opens the panel on the fact a chip cites, and closes it', async () => {
+  it('opens the panel on the fact a narrative chip names, and closes it', async () => {
     stubApi(true)
     render(<App />)
     const leads = within(await screen.findByRole('navigation', { name: 'Leads' }))

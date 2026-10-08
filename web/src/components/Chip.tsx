@@ -1,6 +1,6 @@
-// ABOUTME: A citation chip: a small numbered button that opens the drill-down panel on the thing it cites.
-// ABOUTME: Its accessible name says what it opens, since the number alone does not.
-type Props = { label: string | number; opens: string; onClick: () => void }
+// ABOUTME: A narrative chip: a small button labelled by the kind of thing it opens ("fact", "email", "reply") in the drill-down panel.
+// ABOUTME: Its accessible name says what it opens, since the kind alone does not.
+type Props = { label: string; opens: string; onClick: () => void }
 
 export function Chip({ label, opens, onClick }: Props) {
   return (

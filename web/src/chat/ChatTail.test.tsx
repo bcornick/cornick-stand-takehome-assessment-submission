@@ -1,4 +1,4 @@
-// ABOUTME: Tests the chat tail and the composer: a chip opens the panel on its citation, a card for another lead selects that lead, and Apply, Dismiss and a refusal reach the server.
+// ABOUTME: Tests the chat tail and the composer: a source line under "Related artifacts" opens the panel on its citation, a card for another lead selects that lead, and Apply, Dismiss and a refusal reach the server.
 // ABOUTME: The stubbed responses are typed objects of the generated API types, so a shape the backend does not serve fails the type check.
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -44,7 +44,7 @@ afterEach(() => {
 })
 
 describe('ChatTail', () => {
-  it('opens the panel on the thing a chip cites', async () => {
+  it('folds the answer’s sources under "Related artifacts", one line each that opens it in the panel', async () => {
     const turn: Turn = {
       message: 'How did it arrive?',
       steps: ['Read the lead.'],
@@ -52,8 +52,9 @@ describe('ChatTail', () => {
         type: 'answer',
         answer: 'It arrived by web.',
         citations: [
-          { number: 1, lead_id: 'LEAD-00000042-008', kind: 'event', id: 12, text: 'Event: Received the lead from web' },
           { number: 2, lead_id: 'LEAD-00000042-008', kind: 'fact', id: 15, text: 'Fact: Roof material' },
+          { number: 1, lead_id: 'LEAD-00000042-008', kind: 'event', id: 12, text: 'Event: Review this notice before it is sent.' },
+          { number: 3, lead_id: 'LEAD-00000042-000', kind: 'lead', id: 'LEAD-00000042-000', text: 'Lead: LEAD-000' },
         ],
       },
     }
@@ -61,18 +62,19 @@ describe('ChatTail', () => {
     render(<ChatTail {...handlers} turns={[turn]} proposals={[]} leadId="LEAD-00000042-008" onOpen={onOpen} />)
 
     expect(screen.getByText('It arrived by web.')).toBeInTheDocument()
-    expect(screen.getByText('What I looked at')).toBeInTheDocument()
-    expect(screen.queryByText('Working…')).toBeNull()
-    const sources = within(screen.getByRole('list', { name: 'Sources' })).getAllByRole('listitem')
+    expect(screen.queryByRole('button', { name: /^Open source/ })).toBeNull()
+    const fold = screen.getByText('Related artifacts (3)').closest('details')!
+    expect(fold).not.toHaveAttribute('open')
+    const sources = within(screen.getByRole('list', { name: 'Related artifacts' })).getAllByRole('listitem')
     expect(sources.map((source) => source.textContent)).toEqual([
-      '1 · Event: Received the lead from web, lead 008',
-      '2 · Fact: Roof material, lead 008',
+      'Event: Review this notice before it is sent, lead 008',
+      'Fact: Roof material, lead 008',
+      'Lead: LEAD-000',
     ])
-    await userEvent.click(screen.getByRole('button', { name: 'Open source 2' }))
+    await userEvent.click(screen.getByText('Related artifacts (3)'))
     await userEvent.click(within(sources[1]).getByRole('button'))
 
-    expect(onOpen).toHaveBeenCalledTimes(2)
-    expect(onOpen).toHaveBeenLastCalledWith({ kind: 'fact', lead_id: 'LEAD-00000042-008', id: 15 })
+    expect(onOpen).toHaveBeenCalledExactlyOnceWith({ kind: 'fact', lead_id: 'LEAD-00000042-008', id: 15 })
   })
 
   it('shows a turn that has not closed as working, with its steps open', () => {

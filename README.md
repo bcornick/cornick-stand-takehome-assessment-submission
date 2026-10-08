@@ -22,7 +22,7 @@ To see the demo:
 
 Leads 000, 003 and 006 need the underwriter on the first pass, and the **Queue** conversation lists their cards: 000 is a proposed decline that waits for approval, and 003 and 006 each show one question card.
 
-Below a conversation's timeline the underwriter can type a question or an instruction. An answer cites what it rests on as numbered chips; an instruction becomes a card that the underwriter applies or dismisses. In replay, try one of the three example questions in the **Queue** conversation before delivering the replies; typing needs `RUN_MODE=live` and a key.
+Below a conversation's timeline the underwriter can type a question or an instruction. An answer lists what it rests on under **Related artifacts**, each line opening it in the panel; an instruction becomes a card that the underwriter applies or dismisses. In replay, try one of the three example questions in the **Queue** conversation before delivering the replies; typing needs `RUN_MODE=live` and a key.
 
 ### Run modes
 

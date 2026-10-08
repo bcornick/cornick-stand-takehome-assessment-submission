@@ -1,5 +1,6 @@
 # ABOUTME: The chat skill (section 11, A.11): a bounded loop of forced tool calls in which the model looks something up, answers, or proposes a command, and code runs the lookups and submits `propose_command` as the assistant.
 # ABOUTME: A turn is at most MAX_STEPS steps. An answer cites only reference numbers a lookup showed this turn, and a proposal executes nothing: the command layer stores a card or refuses it.
+import re
 import sqlite3
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -191,6 +192,16 @@ def _propose(
     return f"I cannot propose that: {result.reason}.", None
 
 
+# A lead with no address is labelled by its id, so "label (id)" names it twice once the seed is gone.
+_NAMED_TWICE = re.compile(r"\b(LEAD-\d+) \(\1\)")
+
+
+def _for_the_underwriter(answer: str) -> str:
+    """The answer as the underwriter reads it: the model reads lead ids in full, the underwriter
+    without the run's seed, and a lead once."""
+    return _NAMED_TWICE.sub(r"\1", without_seed(answer))
+
+
 def run_turn(
     db: sqlite3.Connection,
     env: RunEnvironment,
@@ -259,5 +270,4 @@ def run_turn(
     finally:
         with unit_of_work(db):
             append_model_calls(db, _context(db, env), lead_id, exchanges)
-    # The model reads lead ids in full; the underwriter reads them without the run's seed.
-    return TurnResult(None if answer is None else without_seed(answer), cited, proposal_id)
+    return TurnResult(None if answer is None else _for_the_underwriter(answer), cited, proposal_id)
