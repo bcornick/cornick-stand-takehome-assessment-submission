@@ -2,7 +2,7 @@
 // ABOUTME: Loads the lead's detail and events together and refetches them with the page; a request that fails shows a plain message.
 import { getLead, getLeadEvents } from '@/api/client'
 import { useRemote } from '@/api/useRemote'
-import { leadName } from '@/format'
+import { leadName, leadTitle } from '@/format'
 import { OpenItem } from '@/lead/ItemActions'
 import { AssistantLabel } from './AssistantLabel'
 import { Conversation, type ConversationProps } from './Conversation'
@@ -29,12 +29,11 @@ export function LeadConversation({ leadId, ...shared }: Props) {
   }
   const [lead, { events }] = loaded.data
   const latest = events.at(-1)
-  const hasAddress = lead.label !== lead.lead_id
   return (
     <Conversation
       {...shared}
       conversation={leadId}
-      title={hasAddress ? `${leadName(leadId)} · ${lead.label}` : leadName(leadId)}
+      title={leadTitle(leadId, lead.label)}
       placeholder={`Ask about ${leadName(leadId).toLowerCase()}`}
       headerAction={
         // The link goes while the panel shows this lead's full detail, and returns when it closes.

@@ -3,7 +3,7 @@
 import { getLead } from '@/api/client'
 import type { components } from '@/api/types'
 import { useRemote } from '@/api/useRemote'
-import { greeting, leadName } from '@/format'
+import { greeting, leadName, leadTitle } from '@/format'
 import { OpenItem } from '@/lead/ItemActions'
 import { QUEUE } from '@/surface'
 import { AssistantLabel } from './AssistantLabel'
@@ -69,9 +69,7 @@ function ItemCard({ item, refresh, onSelect, onChange }: CardProps) {
         className="self-start text-sm font-medium underline-offset-2 hover:underline"
         onClick={() => onSelect(item.lead_id)}
       >
-        {lead.state === 'ready' && lead.data.label !== item.lead_id
-          ? `${leadName(item.lead_id)} · ${lead.data.label}`
-          : leadName(item.lead_id)}
+        {lead.state === 'ready' ? leadTitle(item.lead_id, lead.data.label) : leadName(item.lead_id)}
       </button>
       {lead.state === 'ready' && blocker !== undefined ? (
         <OpenItem lead={lead.data} blocker={blocker} onChange={onChange} />

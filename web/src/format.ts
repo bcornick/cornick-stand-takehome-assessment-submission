@@ -25,6 +25,16 @@ export function shortLeadId(leadId: string): string {
   return leadId.replace(/^LEAD-\d+-/, 'LEAD-')
 }
 
+// Whether the lead has an address: a lead with none is labelled by its short id.
+export function hasAddress(leadId: string, label: string): boolean {
+  return label !== shortLeadId(leadId)
+}
+
+// A lead as a title: "Lead 003 · 9273 Hillside Ct", or "Lead 000" for a lead with no address.
+export function leadTitle(leadId: string, label: string): string {
+  return hasAddress(leadId, label) ? `${leadName(leadId)} · ${label}` : leadName(leadId)
+}
+
 // An ISO date or timestamp as a short date, for example "Jul 21".
 export function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })

@@ -2,7 +2,7 @@
 // ABOUTME: The fields are typed objects of the generated API types.
 import { describe, expect, it } from 'vitest'
 import type { components } from '@/api/types'
-import { formatFieldValue, formatValue, shortLeadId } from './format'
+import { formatFieldValue, formatValue, leadTitle, shortLeadId } from './format'
 
 type Field = components['schemas']['FactField']
 
@@ -45,5 +45,14 @@ describe('shortLeadId', () => {
     ['LEAD-1', 'LEAD-1'],
   ])('shows %s as %s', (id, shown) => {
     expect(shortLeadId(id)).toBe(shown)
+  })
+})
+
+describe('leadTitle', () => {
+  it.each([
+    ['LEAD-00000042-003', '9273 Hillside Ct', 'Lead 003 · 9273 Hillside Ct'],
+    ['LEAD-00000042-000', 'LEAD-000', 'Lead 000'],
+  ])('names %s labelled %s as %s', (id, label, title) => {
+    expect(leadTitle(id, label)).toBe(title)
   })
 })

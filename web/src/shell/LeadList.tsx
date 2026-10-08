@@ -2,7 +2,7 @@
 // ABOUTME: Rows keep the order the API returns.
 import type { components } from '@/api/types'
 import { Badge } from '@/components/ui/badge'
-import { formatDate, leadName, shortLeadId } from '@/format'
+import { formatDate, hasAddress, leadName } from '@/format'
 import { GROUP_LABELS, GROUP_ORDER } from '@/labels'
 import { QUEUE } from '@/surface'
 
@@ -68,7 +68,7 @@ function LeadRow({ row, isSelected, onSelect }: RowProps) {
         <span className="font-medium">{leadName(row.lead_id)}</span>
         {state !== null && <Badge variant={state.state}>{state.label}</Badge>}
       </span>
-      <span className="block truncate">{row.label === shortLeadId(row.lead_id) ? 'no address' : row.label}</span>
+      <span className="block truncate">{hasAddress(row.lead_id, row.label) ? row.label : 'no address'}</span>
       <span className="block text-xs text-muted-foreground">
         {row.effective_date === null ? 'No effective date' : `Effective ${formatDate(row.effective_date)}`}
         {` · ${waitingTime(row)}`}
@@ -82,7 +82,7 @@ export function LeadList({ run, rows, selected, onSelect }: Props) {
   return (
     <nav aria-label="Leads" className="h-full overflow-y-auto border-r">
       <div className="px-4 py-3">
-        <h1 className="text-4xl font-semibold tracking-wide">STAND</h1>
+        <h1 className="text-4xl font-bold tracking-wide">STAND</h1>
       </div>
       {/* The queue is the hub every lead returns to: it reads as a heading, with a mark, and a rule sets it off from the groups. */}
       <button

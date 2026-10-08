@@ -1,5 +1,5 @@
 // ABOUTME: The demo controls, apart from the product: load the day's leads and deliver the producers' fixture replies.
-// ABOUTME: A small black card pinned to the bottom right corner, beside the composer; it starts as a pill reading "Demo controls" and opens on a click.
+// ABOUTME: A small console in the Terminal's black and green, pinned to the bottom right corner beside the composer, so it reads as apart from the app; it starts as a tab reading "Demo controls" and opens on a click.
 import { useState } from 'react'
 import type { components } from '@/api/types'
 import { deliverFixtureReplies, startRun } from '@/api/client'
@@ -27,7 +27,7 @@ export function DemoPanel({ run, onChange }: Props) {
         <button
           type="button"
           onClick={() => setMinimised(false)}
-          className="rounded-full bg-inverse px-3 py-1 text-xs text-white shadow-[0_14px_44px_rgba(0,0,0,0.55)]"
+          className="console border border-console-ink bg-console px-3 py-1 font-console text-xs text-console-ink shadow-[0_14px_44px_rgba(0,0,0,0.55)]"
         >
           Demo controls
         </button>
@@ -38,15 +38,15 @@ export function DemoPanel({ run, onChange }: Props) {
   return (
     <aside
       aria-label="Demo controls"
-      className="on-inverse fixed bottom-4 right-4 z-10 w-72 space-y-3 rounded-md bg-inverse p-4 text-sm text-white shadow-[0_14px_44px_rgba(0,0,0,0.55)]"
+      className="console fixed bottom-4 right-4 z-10 w-72 space-y-3 border border-console-ink bg-console p-4 font-console text-sm text-console-ink shadow-[0_14px_44px_rgba(0,0,0,0.55)]"
     >
       <div className="flex items-center justify-between">
-        <h2 className="font-medium">Demo controls</h2>
-        <button type="button" onClick={() => setMinimised(true)} className="text-xs text-white/70">
+        <h2>Demo controls</h2>
+        <button type="button" onClick={() => setMinimised(true)} className="text-xs text-console-ink/70">
           Minimise
         </button>
       </div>
-      <dl className="text-xs text-white/70">
+      <dl className="text-xs text-console-ink/70">
         <div>Mode: {run.mode}</div>
         <div>Seed: {run.seed}</div>
         <div>{runId}</div>

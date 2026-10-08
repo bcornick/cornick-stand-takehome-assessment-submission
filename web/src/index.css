@@ -24,7 +24,9 @@
     --color-soft: var(--soft);
     --color-done: var(--done);
     --color-declined: var(--declined);
-    --color-inverse: var(--inverse);
+    --color-console: var(--console);
+    --color-console-ink: var(--console-ink);
+    --font-console: 'Andale Mono', Menlo, Monaco, ui-monospace, monospace;
     --color-accent: var(--accent);
     --color-foreground: var(--foreground);
     --color-background: var(--background);
@@ -41,9 +43,11 @@
     --primary: #131311;
     --primary-hover: #4a4842;
     --border-strong: #b5b3ac;
-    /* The beige and the black of standinsurance.com: the conversation's ground and the demo controls. */
+    /* The beige of standinsurance.com: the conversation's ground. */
     --soft: #f3f1e6;
-    --inverse: #06080b;
+    /* The demo controls are a console apart from the product: the black and green of the Terminal's Homebrew profile. */
+    --console: #000000;
+    --console-ink: #28fe14;
     /* A colour means one thing: the accent is what needs the underwriter, --done is a quote sent, --declined a lead declined, grey is a wait. */
     --done: #335c3e;
     --declined: #3f4f6f;
@@ -107,11 +111,9 @@
   .button-destructive {
     @apply border-accent bg-transparent text-accent enabled:hover:bg-accent/10;
     }
-  /* On the black, the pill is white and the outline a translucent white, as on the site's dark sections. */
-  .on-inverse .button-primary {
-    @apply border-white bg-white text-primary enabled:hover:border-soft enabled:hover:bg-soft;
-    }
-  .on-inverse .button-outline {
-    @apply border-white/40 text-white enabled:hover:border-white;
+  /* On the console, a button is the green outline on the black, filled green on hover. */
+  .console .button-primary,
+  .console .button-outline {
+    @apply rounded-none border-console-ink bg-transparent px-3 font-console text-xs font-normal text-console-ink enabled:hover:bg-console-ink enabled:hover:text-console;
     }
 }

@@ -607,3 +607,5 @@ Brett's decisions carried into milestone 1: an underwriter's value that still tr
 **Live calls:** the chat suite and the three example prompts were recorded twice, since their lookups show the label and then the event sentences: 16,241 in / 5,394 out and 14,698 in / 5,425 out for the suite, 9 calls each for the examples (7,303 in / 840 out, then 1,935 in / 893 out as logged). Jev: none.
 
 **Checks:** `make check` clean (829 fast Python tests, 163 web tests).
+
+**The console and the logo (Brett):** the demo controls are a console in the Terminal's Homebrew black and green (#000000, #28fe14) with a monospace face and green-outlined buttons, so they read as a control for the demo and not part of the app; the `--inverse` token and the `.on-inverse` buttons had no other reader and are gone. STAND is bold. A lead with no address is titled "Lead 000" alone (`leadTitle`), not "Lead 000 · LEAD-000". The fresh-clone rehearsal passed on 7c7ed09 (keyless, replay: the first pass, the three example prompts from recordings with citations, six fixture replies).
