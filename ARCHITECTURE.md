@@ -1,6 +1,6 @@
 # Architecture
 
-This page covers the pieces, how a lead moves through them, where the language model is used and why, and the main trade-offs. It takes a few minutes to read. `docs/architecture-diagram.md` draws the system in seven diagrams. The full design (contracts, tables, and the reading of each playbook rule) is in `docs/build_logs/design-spec.md`. Section numbers in code comments, such as "9.4" or "A.11", refer to that spec.
+This page covers the pieces, how a lead moves through them, where the language model is used and why, and the main trade-offs. It takes a few minutes to read. `docs/architecture-diagram.md` draws the system, a lead's life and the eval loop, and maps the repository. The full design (contracts, tables, and the reading of each playbook rule) is in `docs/build_logs/design-spec.md`. Section numbers in code comments, such as "9.4" or "A.11", refer to that spec.
 
 ## The pieces
 

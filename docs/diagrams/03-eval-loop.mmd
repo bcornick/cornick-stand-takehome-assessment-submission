@@ -1,0 +1,36 @@
+flowchart TB
+    M["<b>1. A mistake is found</b><br/>a failing eval case,<br/>or an underwriter override,<br/>logged with its reason"]
+    C["<b>2. It becomes a case</b><br/>with the right answer,<br/>confirmed by a person"]
+    H["<b>3. One change, with a hypothesis</b><br/>a rule, a prompt or a threshold"]
+    R["<b>4. Rerun the whole suite</b><br/>make eval: fresh services,<br/>recorded model answers, every grader"]
+    G{"<b>5. Keep or discard?</b><br/>the new case passes,<br/>nothing else breaks,<br/>held-back cases hold,<br/>no critical error"}
+    K["<b>Keep</b><br/>decision row in results.jsonl;<br/>the case stays as a permanent test.<br/>Back to step 1 for the next mistake."]
+    D["<b>Discard</b><br/>decision row records why.<br/>Back to step 3: try another change."]
+
+    M --> C --> H --> R --> G
+    G -- "yes" --> K
+    G -- "no" --> D
+
+    subgraph TRUTH["What the suite checks against"]
+        direction LR
+        L["Lead labels<br/>from the playbook, signed"]
+        A["Stand's answer key"]
+        HB["Held-back replies"]
+        CT["Case tables"]
+    end
+
+    CTRL["Broken controls<br/>do nothing, email everything, send twice:<br/>each must be caught, so the graders can fail"]
+
+    TRUTH -.-> R
+    CTRL -.-> R
+
+    classDef step fill:#dbeafe,stroke:#1d4ed8,color:#0b1b3a
+    classDef gate fill:#fef9c3,stroke:#a16207,color:#422006
+    classDef keep fill:#dcfce7,stroke:#15803d,color:#052e16
+    classDef drop fill:#fee2e2,stroke:#b91c1c,color:#450a0a
+    classDef truth fill:#f8fafc,stroke:#64748b,color:#0f172a
+    class M,C,H,R step
+    class G gate
+    class K keep
+    class D drop
+    class L,A,HB,CT,CTRL truth
