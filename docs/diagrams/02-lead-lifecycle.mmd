@@ -4,14 +4,6 @@ flowchart TD
     C --> D["Evaluate the playbook pages that apply"]
     D --> E{"What does the plan say?"}
 
-    E -- "proposed decline" --> F["Draft decline notice"]
-    F --> G{{"Underwriter approves,<br/>with a reason"}}
-    G --> H["Decline notice sent"]
-
-    E -- "a choice the playbook leaves open" --> I{{"Underwriter decides"}}
-    I -- "decline" --> F
-    I -- "continue" --> D
-
     E -- "nothing missing, nothing to decide" --> R["Draft quote packet"]
     R --> S{{"Underwriter approves"}}
     S --> T["Quote sent"]
@@ -27,6 +19,14 @@ flowchart TD
     P -- "yes" --> Q{{"Underwriter reviews"}}
     P -- "no" --> B
     Q --> B
+
+    E -- "proposed decline" --> F["Draft decline notice"]
+    F --> G{{"Underwriter approves,<br/>with a reason"}}
+    G --> H["Decline notice sent"]
+
+    E -- "a choice the playbook leaves open" --> I{{"Underwriter decides"}}
+    I -- "decline" --> F
+    I -- "continue" --> D
 
     classDef human fill:#fef9c3,stroke:#a16207,color:#422006
     classDef done fill:#dcfce7,stroke:#15803d,color:#052e16
