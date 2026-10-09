@@ -4,6 +4,7 @@ Brett Cornick's submission for the Stand Insurance take-home (`docs/brief/agenti
 
 - `ARCHITECTURE.md`: the systems, the flow of a lead, where the model is used, and the trade-offs. A few minutes' read.
 - `docs/eval-loop.md`: the eval loop and the plan for iterating.
+- `docs/architecture-diagram.md`: diagrams of the system, a lead's life, a reply's round trip, the eval harness and the repository.
 - `DEMO_GUIDE.md`: the demo, step by step.
 - `docs/build_logs/`: the full design spec, the plan, the progress log and the full list of known limits.
 
