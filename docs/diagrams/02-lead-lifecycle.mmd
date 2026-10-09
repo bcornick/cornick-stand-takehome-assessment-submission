@@ -12,6 +12,10 @@ flowchart TD
     I -- "decline" --> F
     I -- "continue" --> D
 
+    E -- "nothing missing, nothing to decide" --> R["Draft quote packet"]
+    R --> S{{"Underwriter approves"}}
+    S --> T["Quote sent"]
+
     E -- "information missing" --> J["Plan the asks, render the request,<br/>model softens the opening and closing"]
     J --> K{"Could an open choice<br/>still decline the lead?"}
     K -- "yes" --> L{{"Held: underwriter sends it<br/>or declines"}}
@@ -23,10 +27,6 @@ flowchart TD
     P -- "yes" --> Q{{"Underwriter reviews"}}
     P -- "no" --> B
     Q --> B
-
-    E -- "nothing missing, nothing to decide" --> R["Draft quote packet"]
-    R --> S{{"Underwriter approves"}}
-    S --> T["Quote sent"]
 
     classDef human fill:#fef9c3,stroke:#a16207,color:#422006
     classDef done fill:#dcfce7,stroke:#15803d,color:#052e16
