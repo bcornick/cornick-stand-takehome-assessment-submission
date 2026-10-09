@@ -1,0 +1,34 @@
+flowchart TD
+    A["Lead arrives from the queue"] --> B["Triage fields against Stand's registry"]
+    B --> C["Resolve data:<br/>look up, derive or assume"]
+    C --> D["Evaluate the playbook pages that apply"]
+    D --> E{"What does the plan say?"}
+
+    E -- "proposed decline" --> F["Draft decline notice"]
+    F --> G{{"Underwriter approves,<br/>with a reason"}}
+    G --> H["Decline notice sent"]
+
+    E -- "a choice the playbook leaves open" --> I{{"Underwriter decides"}}
+    I -- "decline" --> F
+    I -- "continue" --> D
+
+    E -- "information missing" --> J["Plan the asks, render the request,<br/>model softens the opening and closing"]
+    J --> K{"Could an open choice<br/>still decline the lead?"}
+    K -- "yes" --> L{{"Held: underwriter sends it<br/>or declines"}}
+    K -- "no, routine" --> M["Request sent: one per round"]
+    L --> M
+    M --> N["Producer replies"]
+    N --> O["read_reply: values with<br/>the exact words they came from"]
+    O --> P{"Contradicts a value on file?"}
+    P -- "yes" --> Q{{"Underwriter reviews"}}
+    P -- "no" --> B
+    Q --> B
+
+    E -- "nothing missing, nothing to decide" --> R["Draft quote packet"]
+    R --> S{{"Underwriter approves"}}
+    S --> T["Quote sent"]
+
+    classDef human fill:#fef9c3,stroke:#a16207,color:#422006
+    classDef done fill:#dcfce7,stroke:#15803d,color:#052e16
+    class G,I,L,Q,S human
+    class H,T,M done

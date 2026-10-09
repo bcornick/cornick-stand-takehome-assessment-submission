@@ -1,0 +1,32 @@
+flowchart TB
+    subgraph TRUTH["Sources of truth"]
+        LB["Lead labels<br/>written from the playbook,<br/>signed by a person"]
+        AK["Stand's answer key<br/>regenerated per seed"]
+        RL["Reply labels,<br/>3 of 8 held back"]
+        CS["Case tables<br/>per playbook page,<br/>reply reading, chat"]
+    end
+
+    MK["make eval"] --> CT{"Working tree<br/>committed?"}
+    CT -- "no" --> X["Refused"]
+    CT -- "yes" --> RUN["Eval container, replay:<br/>fresh leadgen and mailbox"]
+    RUN --> FP["First pass:<br/>ten leads settle"]
+    FP --> G1["Grade"]
+    G1 --> SA["Scripted underwriter actions<br/>and producer replies"]
+    SA --> G2["Grade again"]
+
+    TRUTH -- "first pass" --> G1
+    TRUTH -- "after actions and replies" --> G2
+
+    G2 --> GR["9 graders:<br/>Coverage, One open request, Asks,<br/>Forbidden asks, Rule trace,<br/>Packet fidelity, Send safety,<br/>Stand's key, Reply reading"]
+    GR --> CE{"Any critical error?<br/>double send, unapproved send,<br/>missing requirement,<br/>reply approving an action"}
+    CE --> ROW[("results.jsonl:<br/>commit, prompt versions,<br/>hypothesis, scores")]
+    ROW --> DEC["Person adds a decision row:<br/>keep or discard, and why"]
+
+    CTRL["Controls: do nothing, email everything,<br/>send twice. Each must be caught."] --> RUN
+
+    classDef ours fill:#dbeafe,stroke:#1d4ed8,color:#0b1b3a
+    classDef truth fill:#fef9c3,stroke:#a16207,color:#422006
+    classDef store fill:#f8fafc,stroke:#64748b,color:#0f172a
+    class MK,RUN,FP,G1,SA,G2,GR,CE,DEC,CTRL,CT,X ours
+    class LB,AK,RL,CS truth
+    class ROW store

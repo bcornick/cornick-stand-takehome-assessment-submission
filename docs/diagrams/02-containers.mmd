@@ -1,0 +1,43 @@
+flowchart TB
+    BR(["Browser"])
+
+    subgraph DEMO["Demo stack: make up"]
+        direction LR
+        APPC["app<br/>FastAPI + built React UI<br/>port 8000"]
+        DB[("SQLite<br/>event log + fact ledger<br/>volume app-data")]
+        LGC["leadgen<br/>Stand, unmodified<br/>port 8081"]
+        MBC["mailbox<br/>Stand, unmodified<br/>port 8025"]
+    end
+
+    subgraph ANSWERS["Where model answers come from"]
+        direction LR
+        MODELS["DeepSeek and Jev<br/>live and record modes"]
+        REC[("recordings/<br/>replay mode, and every eval run")]
+    end
+
+    subgraph EVAL["Eval profile: make eval"]
+        direction LR
+        EVC["eval runner<br/>graders, controls, labels"]
+        LGE["leadgen-eval"]
+        MBE["mailbox-eval"]
+        RES[("evals/results.jsonl<br/>one row per run")]
+    end
+
+    BR --> APPC
+    APPC --> DB
+    APPC --> LGC
+    APPC --> MBC
+    APPC -- "by run mode" --> ANSWERS
+    EVAL -- "replay" --> ANSWERS
+    EVC --> LGE
+    EVC --> MBE
+    EVC -- "append" --> RES
+
+    classDef ours fill:#dbeafe,stroke:#1d4ed8,color:#0b1b3a
+    classDef stand fill:#e5e7eb,stroke:#4b5563,color:#111827
+    classDef ext fill:#ffedd5,stroke:#c2410c,color:#431407
+    classDef store fill:#f8fafc,stroke:#64748b,color:#0f172a
+    class APPC,EVC ours
+    class LGC,MBC,LGE,MBE stand
+    class MODELS ext
+    class DB,REC,RES store

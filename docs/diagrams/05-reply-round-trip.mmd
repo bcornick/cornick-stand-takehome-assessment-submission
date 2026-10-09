@@ -1,0 +1,38 @@
+sequenceDiagram
+    autonumber
+    actor PR as Producer
+    participant API as Reply endpoint
+    participant RR as read_reply
+    participant JV as Jev
+    participant DS as DeepSeek
+    participant CMD as Command layer
+    participant LOG as Event log + ledger
+    participant WF as Workflow
+    actor UW as Underwriter
+    participant SEND as Send path
+    participant MB as Mailbox
+
+    PR->>API: reply text
+    API->>CMD: deliver_reply, as the inbound actor
+    CMD->>RR: read against the open request's asks
+    RR->>JV: classify the reply
+    JV-->>RR: probabilities per type
+    RR->>DS: one call: the values and a classification
+    DS-->>RR: values, with the words they came from
+    alt Jev's confidence at or above 0.70
+        RR->>RR: Jev's classification stands
+    else below 0.70 or Jev unavailable
+        RR->>RR: the model's classification stands
+    end
+    RR->>RR: code checks each quote, drops what was not asked
+    RR-->>CMD: the reading
+    CMD->>LOG: reply values enter the ledger
+    CMD->>WF: re-run the lead from the top
+    WF->>CMD: draft the quote packet
+    CMD->>LOG: open an item for the underwriter
+    UW->>CMD: Send quote, bound to the packet's hash
+    CMD->>SEND: dispatch
+    SEND->>LOG: mark dispatching
+    SEND->>MB: post the packet
+    MB-->>SEND: accepted
+    SEND->>LOG: mark sent

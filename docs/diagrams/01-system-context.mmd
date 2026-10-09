@@ -1,0 +1,32 @@
+flowchart LR
+    UW(["Underwriter"])
+    PR(["Producer"])
+
+    subgraph SUB["Underwriting triage harness"]
+        APP["Triage app<br/>workflow, skills, evals"]
+    end
+
+    LG["Stand lead generator<br/>ten leads per seed"]
+    MB["Stand mock mailbox<br/>email out, replies tracked"]
+    DS["DeepSeek<br/>deepseek-flash"]
+    JV["Jev, TypeSafe<br/>reply classification"]
+    SI["Stand-in data services<br/>replacement cost, PPC, KYC,<br/>fire model, geospatial"]
+
+    UW -- "reviews, decides, asks questions" --> APP
+    APP -- "queue, cards, reasons, evidence" --> UW
+    LG -- "morning queue" --> APP
+    APP -- "requests, quotes, decline notices" --> MB
+    MB -- "emails" --> PR
+    PR -- "replies, through the paste box or stored fixtures" --> APP
+    APP -- "read replies, soften emails, chat" --> DS
+    APP -- "classify replies" --> JV
+    APP -. "look up system-owned fields" .-> SI
+
+    classDef ours fill:#dbeafe,stroke:#1d4ed8,color:#0b1b3a
+    classDef stand fill:#e5e7eb,stroke:#4b5563,color:#111827
+    classDef ext fill:#ffedd5,stroke:#c2410c,color:#431407
+    classDef stub fill:#dcfce7,stroke:#15803d,color:#052e16
+    class APP ours
+    class LG,MB stand
+    class DS,JV ext
+    class SI stub
